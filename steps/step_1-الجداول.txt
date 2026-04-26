@@ -1,0 +1,834 @@
+================================================================================
+                    steps_v3 — تعريف الجداول الكاملة
+================================================================================
+
+📋 الفلسفة:
+-----------
+بساطة Hamza_Perfumes + دعم كامل لجميع أنواع المنتجات + مخزون.
+لا تعقيد، لا جداول زائدة، كل جدول له وظيفة واحدة واضحة.
+
+📦 أنواع المنتجات المدعومة:
+   - عطور زيتية   → تُباع بالـ ml  | السعر من التير (A/B/C)
+   - عطور أصلية   → تُباع بالـ ml أو عبوة كاملة | سعر خاص لكل منتج
+   - بخور          → يُباع بالقطعة (pcs) | سعر خاص لكل منتج
+   - وشق           → يُباع بالغرام (g)   | سعر خاص لكل منتج
+
+📋 نظام الفواتير:
+   كل عملية بيع = فاتورة (invoice) تحتوي على سطر أو أكثر (invoice_items).
+   الفاتورة تتتبع حالة الدفع، والسطر يحفظ السعر وقت البيع (snapshot).
+
+================================================================================
+                        🗂️ الجداول (17 جدول)
+================================================================================
+
+   1.  users
+   2.  customers
+   3.  categories
+   4.  price_tiers
+   5.  sizes
+   6.  products
+   7.  tier_prices
+   8.  product_prices
+   9.  payment_methods
+   10. invoices
+   11. invoice_items
+   12. payments
+   13. original_perfume_details
+   14. suppliers
+   15. purchases
+   16. purchase_items
+   17. supplier_payments
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣  users                                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تخزين حسابات المستخدمين وتحديد صلاحياتهم في النظام.
+   ثلاثة أدوار: super-admin يرى كل شيء، admin يدير المنتجات والأسعار،
+   saler يسجل المبيعات فقط.
+
+الحقل          النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id             BIGINT          AUTO_INCREMENT        المعرف
+name           VARCHAR(255)    —                     الاسم الكامل
+username       VARCHAR(255)    —                     اسم المستخدم (للدخول)
+email          VARCHAR(255)    NULL                  البريد الإلكتروني
+password       VARCHAR(255)    —                     كلمة المرور (مشفرة)
+role           ENUM            'saler'               الدور
+created_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM role:
+   'super-admin' → صلاحيات كاملة + لوحة التحكم والإحصائيات
+   'admin'       → إدارة المنتجات والأسعار والتصنيفات
+   'saler'       → تسجيل المبيعات فقط
+
+Constraints:
+   UNIQUE (username)
+   UNIQUE (email)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2️⃣  customers                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تسجيل بيانات العملاء لتتبع مشترياتهم وديونهم.
+   العميل اختياري في الفاتورة — إذا لم يُحدَّد = عميل عابر (لا دين عليه).
+   إذا حُدِّد العميل وبقي due_amount > 0: يُسجَّل دين على حسابه.
+
+الحقل              النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          AUTO_INCREMENT        المعرف
+name               VARCHAR(255)    —                     اسم العميل
+phone              VARCHAR(20)     NULL                  رقم الهاتف
+email              VARCHAR(255)    NULL                  البريد الإلكتروني
+address            TEXT            NULL                  العنوان
+total_purchases    DECIMAL(10,2)   0                     إجمالي المشتريات
+total_debt         DECIMAL(10,2)   0                     إجمالي الديون الحالية
+is_active          BOOLEAN         TRUE                  حالة النشاط
+created_at         TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التسجيل
+updated_at         TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (phone)
+   INDEX (is_active)
+
+📌 قاعدة total_debt:
+   عند إنشاء فاتورة جديدة:  total_debt += due_amount
+   عند تسجيل دفعة جديدة:   total_debt -= payment.amount
+
+📌 أمثلة:
+   أحمد محمد  → phone: 0501234567 | total_purchases: 500 | total_debt: 50
+   عميل عابر  → لا يُسجَّل (customer_id = NULL في الفاتورة)
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 2️⃣  categories                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تصنيف المنتجات وتحديد وحدة القياس لكل تصنيف.
+   الوحدة هنا هي المحور الأساسي — تحدد كيف يُقاس المنتج ويُباع.
+   مثال: كل عطر زيتي يُقاس بـ ml، كل بخور يُقاس بالقطعة.
+
+الحقل          النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id             BIGINT          AUTO_INCREMENT        المعرف
+name           VARCHAR(255)    —                     اسم التصنيف
+unit           ENUM            —                     وحدة القياس
+created_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM unit:
+   'ml'  → مليلتر  (عطور زيتية، عطور أصلية)
+   'pcs' → قطعة    (بخور)
+   'g'   → غرام    (وشق)
+
+📌 أمثلة:
+   عطور زيتية  → unit: ml
+   عطور أصلية  → unit: ml
+   بخور         → unit: pcs
+   وشق          → unit: g
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 3️⃣  price_tiers                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تحديد مستويات الجودة للعطور الزيتية (A, B, C).
+   بدلاً من تسعير كل عطر على حدة، يكفي تحديد تيره —
+   كل العطور في نفس التير تشترك في نفس الأسعار تلقائياً.
+   هذا الجدول يُستخدم فقط مع العطور الزيتية (selling_type = 'tier_based').
+
+الحقل          النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id             BIGINT          AUTO_INCREMENT        المعرف
+name           VARCHAR(10)     —                     اسم التير (A / B / C)
+description    VARCHAR(255)    NULL                  وصف المستوى
+created_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (name)
+
+📌 أمثلة:
+   A → اقتصادي
+   B → متوسط
+   C → فاخر
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 4️⃣  sizes                                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تعريف الأحجام المتاحة للبيع.
+   كل حجم مرتبط بوحدة قياس — هذا يسمح بوجود أحجام مختلفة
+   لأنواع مختلفة من المنتجات (ml للعطور، pcs للبخور، g للوشق).
+   يُستخدم هذا الجدول في التسعير (tier_prices) وفي تسجيل المبيعات.
+
+الحقل          النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id             BIGINT          AUTO_INCREMENT        المعرف
+label          VARCHAR(50)     —                     التسمية المعروضة (3ml / 10pcs / 5g)
+value          DECIMAL(10,2)   —                     القيمة الرقمية (3 / 10 / 5)
+unit           ENUM            —                     الوحدة
+created_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM unit:
+   'ml'  → مليلتر
+   'pcs' → قطعة
+   'g'   → غرام
+
+📌 أمثلة:
+   label: '1ml'   | value: 1   | unit: ml
+   label: '3ml'   | value: 3   | unit: ml
+   label: '5ml'   | value: 5   | unit: ml
+   label: '10ml'  | value: 10  | unit: ml
+   label: '5pcs'  | value: 5   | unit: pcs
+   label: '10pcs' | value: 10  | unit: pcs
+   label: '5g'    | value: 5   | unit: g
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 5️⃣  products                                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   قلب النظام — يعرّف كل منتج ويحدد طريقة بيعه ومخزونه.
+   حقل selling_type هو المحور الذي يتحكم في كل شيء:
+   كيف يُسعَّر المنتج، كيف يُباع، وكيف يُخصم من المخزون.
+
+الحقل              النوع           العلاقة                  القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                       AUTO_INCREMENT        المعرف
+name               VARCHAR(255)    —                        —                     اسم المنتج
+category_id        BIGINT          FK → categories.id       —                     التصنيف
+price_tier_id      BIGINT          FK → price_tiers.id      NULL                  التير (للزيتية فقط)
+selling_type       ENUM            —                        —                     طريقة البيع
+stock              DECIMAL(10,2)   —                        0                     المخزون الحالي
+min_stock          DECIMAL(10,2)   —                        0                     الحد الأدنى للتنبيه
+created_at         TIMESTAMP       —                        CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at         TIMESTAMP       —                        CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM selling_type:
+   'tier_based'  → عطر زيتي: السعر من التير + الحجم (tier_prices)
+                   المخزون يُتتبع ويُخصم بقيمة size.value عند كل بيعة
+   'unit_priced' → عطر أصلي / بخور / وشق: سعر خاص لكل منتج (product_prices)
+                   المخزون يُتتبع ويُخصم عند كل بيعة
+
+📌 قاعدة:
+   - selling_type = 'tier_based'  → price_tier_id مطلوب، stock يُتتبع
+   - selling_type = 'unit_priced' → price_tier_id = NULL، stock يُتتبع
+
+📌 أمثلة:
+   Lacoste White  → category: عطور زيتية  | tier: A | selling_type: tier_based  | stock: 0
+   Dior Sauvage   → category: عطور أصلية  | tier: NULL | selling_type: unit_priced | stock: 200
+   بخور عود       → category: بخور        | tier: NULL | selling_type: unit_priced | stock: 100
+   وشق مسك        → category: وشق         | tier: NULL | selling_type: unit_priced | stock: 500
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 6️⃣  tier_prices                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   جدول الأسعار المركزي للعطور الزيتية.
+   يربط كل تير بكل حجم بسعر محدد (regular و vip).
+   تغيير سعر واحد هنا يؤثر على جميع العطور في نفس التير تلقائياً —
+   لا حاجة لتعديل كل عطر على حدة.
+
+الحقل              النوع           العلاقة                  القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                       AUTO_INCREMENT        المعرف
+tier_id            BIGINT          FK → price_tiers.id      —                     التير
+size_id            BIGINT          FK → sizes.id            —                     الحجم
+price_regular      DECIMAL(10,2)   —                        —                     سعر العميل العادي
+price_vip          DECIMAL(10,2)   —                        —                     سعر عميل VIP
+created_at         TIMESTAMP       —                        CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at         TIMESTAMP       —                        CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (tier_id, size_id)
+
+📌 منطق جلب السعر عند البيع:
+   SELECT price_regular / price_vip
+   FROM tier_prices
+   WHERE tier_id = product.price_tier_id
+     AND size_id = ?
+
+📌 أمثلة:
+   Tier A + 1ml  → regular: 5  | vip: 4
+   Tier A + 3ml  → regular: 12 | vip: 10
+   Tier A + 5ml  → regular: 18 | vip: 15
+   Tier B + 1ml  → regular: 7  | vip: 6
+   Tier C + 5ml  → regular: 30 | vip: 25
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 7️⃣  product_prices                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   جدول الأسعار الخاصة للمنتجات من نوع 'unit_priced'
+   (عطور أصلية، بخور، وشق).
+   كل منتج له سعر وحدة خاص به (سعر الـ ml أو القطعة أو الغرام).
+   للعطور الأصلية: يوجد أيضاً سعر العبوة الكاملة كخيار إضافي.
+
+الحقل                  النوع           العلاقة              القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                     BIGINT          PK                   AUTO_INCREMENT        المعرف
+product_id             BIGINT          FK → products.id     —                     المنتج
+price_per_unit_regular DECIMAL(10,2)   —                    —                     سعر الوحدة (عادي)
+price_per_unit_vip     DECIMAL(10,2)   —                    —                     سعر الوحدة (VIP)
+full_bottle_regular    DECIMAL(10,2)   —                    NULL                  سعر العبوة كاملة (عادي)
+full_bottle_vip        DECIMAL(10,2)   —                    NULL                  سعر العبوة كاملة (VIP)
+created_at             TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at             TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (product_id)
+
+📌 قاعدة:
+   - full_bottle_regular / full_bottle_vip → NULL للبخور والوشق (لا عبوة كاملة)
+   - للعطور الأصلية: يمكن ملؤهم أو تركهم NULL إذا لا يُباع بالعبوة
+
+📌 منطق جلب السعر عند البيع:
+   ┌─ بيع بالوحدة (ml / pcs / g):
+   │   السعر = price_per_unit_regular أو price_per_unit_vip × الكمية
+   │
+   └─ بيع عبوة كاملة (للعطور الأصلية فقط):
+       السعر = full_bottle_regular أو full_bottle_vip (سعر ثابت)
+
+📌 أمثلة:
+   Dior Sauvage (200ml) → per_unit_regular: 3.5 | per_unit_vip: 3
+                           full_bottle_regular: 500 | full_bottle_vip: 450
+   بخور عود             → per_unit_regular: 5   | per_unit_vip: 4
+                           full_bottle: NULL (لا يُباع بعبوة)
+   وشق مسك              → per_unit_regular: 2   | per_unit_vip: 1.5
+                           full_bottle: NULL (لا يُباع بعبوة)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8️⃣  invoices                                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   رأس كل عملية بيع — كل بيعة تبدأ بإنشاء فاتورة.
+   الفاتورة تجمع معلومات البائع ونوع العميل وحالة الدفع.
+   الإجمالي يُحسب من مجموع أسطر invoice_items.
+   تفاصيل الدفع (الوسيلة والمبلغ) تُسجَّل في جدول payments المنفصل.
+
+الحقل              النوع           العلاقة              القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                   AUTO_INCREMENT        المعرف
+user_id            BIGINT          FK → users.id        —                     البائع
+customer_id        BIGINT          FK → customers.id    NULL                  العميل (NULL = عابر)
+customer_type      ENUM            —                    'regular'             نوع العميل
+total              DECIMAL(10,2)   —                    0                     الإجمالي (يُحسب من الأسطر)
+paid_amount        DECIMAL(10,2)   —                    0                     إجمالي المدفوع (يُحسب من payments)
+due_amount         DECIMAL(10,2)   —                    0                     المتبقي = total - paid_amount
+payment_status     ENUM            —                    'unpaid'              حالة الدفع
+notes              TEXT            —                    NULL                  ملاحظات
+created_at         TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ الفاتورة
+updated_at         TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM customer_type:
+   'regular' → عميل عادي
+   'vip'     → عميل VIP
+
+ENUM payment_status:
+   'unpaid'  → لم يُدفع شيء بعد
+   'partial' → دُفع جزء من المبلغ
+   'paid'    → مدفوعة بالكامل
+
+📌 قاعدة total:
+   total = SUM(invoice_items.line_total)
+   يُحدَّث تلقائياً عند إضافة أو حذف أي سطر
+
+📌 قاعدة paid_amount و due_amount:
+   paid_amount = SUM(payments.amount) لهذه الفاتورة
+   due_amount  = total - paid_amount
+   payment_status يُحدَّث تلقائياً:
+     paid_amount = 0           → 'unpaid'
+     0 < paid_amount < total   → 'partial'
+     paid_amount >= total      → 'paid'
+
+📌 قاعدة الدين:
+   customer_id = NULL              → عميل عابر، لا دين
+   customer_id موجود + due_amount > 0 → customers.total_debt += due_amount
+   لا يمكن ترك due_amount > 0 إذا customer_id = NULL
+
+Constraints:
+   INDEX (user_id)
+   INDEX (customer_id)
+   INDEX (payment_status)
+   INDEX (created_at)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 9️⃣  invoice_items                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   سطر واحد لكل منتج داخل الفاتورة.
+   هنا يُحفظ السعر وقت البيع (snapshot) — حتى لو تغيرت الأسعار
+   لاحقاً، السجل التاريخي يبقى صحيحاً.
+   هنا أيضاً يُحدَّد نوع البيع: هل بالحجم أم بالعبوة الكاملة؟
+   وعند إنشاء السطر: يُخصم المخزون فوراً للمنتجات unit_priced.
+
+الحقل              النوع           العلاقة                  القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                       AUTO_INCREMENT        المعرف
+invoice_id         BIGINT          FK → invoices.id         —                     الفاتورة
+product_id         BIGINT          FK → products.id         —                     المنتج
+size_id            BIGINT          FK → sizes.id            NULL                  الحجم (NULL للعبوة الكاملة)
+sale_type          ENUM            —                        —                     نوع البيع
+quantity           DECIMAL(10,2)   —                        1                     الكمية
+unit_price         DECIMAL(10,2)   —                        —                     سعر الوحدة وقت البيع (snapshot)
+line_total         DECIMAL(10,2)   —                        —                     الإجمالي = unit_price × quantity
+created_at         TIMESTAMP       —                        CURRENT_TIMESTAMP     تاريخ الإنشاء
+
+ENUM sale_type:
+   'tier_decant'   → عطر زيتي بالحجم
+                     size_id مطلوب | quantity = size.value
+                     unit_price من tier_prices | stock -= size.value
+   'unit_decant'   → عطر أصلي بالتقسيم
+                     size_id مطلوب | quantity = size.value
+                     unit_price من product_prices.price_per_unit | stock -= size.value
+   'full_bottle'   → عطر أصلي بالعبوة الكاملة
+                     size_id = NULL | quantity = bottle_volume
+                     unit_price من product_prices.full_bottle | stock -= bottle_volume
+   'unit_based'    → بخور / وشق / مبخرة / فحم
+                     size_id = NULL | quantity يدخله البائع يدوياً
+                     unit_price من product_prices.price_per_unit | stock -= quantity
+
+📌 قاعدة size_id:
+   - sale_type = 'tier_decant'  → size_id مطلوب
+   - sale_type = 'unit_decant'  → size_id مطلوب
+   - sale_type = 'full_bottle'  → size_id = NULL
+   - sale_type = 'unit_based'   → size_id = NULL
+
+📌 قاعدة quantity:
+   - sale_type = 'tier_decant'  → quantity = size.value (تلقائي)
+   - sale_type = 'unit_decant'  → quantity = size.value (تلقائي)
+   - sale_type = 'full_bottle'  → quantity = original_perfume_details.bottle_volume
+   - sale_type = 'unit_based'   → quantity يدخله البائع يدوياً
+
+📌 قاعدة unit_price (snapshot):
+   - 'tier_decant'  → tier_prices.price_regular أو price_vip
+   - 'unit_decant'  → product_prices.price_per_unit_regular أو vip
+   - 'full_bottle'  → product_prices.full_bottle_regular أو vip
+   يُحدَّد حسب invoices.customer_type وقت البيع ولا يتغير بعدها
+
+📌 قاعدة خصم المخزون:
+   - 'tier_decant'  → products.stock -= sizes.value
+   - 'unit_decant'  → products.stock -= (sizes.value × quantity)
+   - 'full_bottle'  → products.stock -= products.stock (تصفير)
+
+Constraints:
+   FOREIGN KEY (invoice_id) ON DELETE CASCADE
+   INDEX (invoice_id)
+   INDEX (product_id)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🔟  payment_methods                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تعريف وسائل الدفع المتاحة في النظام.
+   جدول مستقل يسمح بإضافة وسائل جديدة بدون تعديل في الكود.
+   مثال: نقدي، بطاقة، تحويل بنكي.
+
+الحقل          النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id             BIGINT          AUTO_INCREMENT        المعرف
+name           VARCHAR(50)     —                     اسم الوسيلة
+is_active      BOOLEAN         TRUE                  هل هي متاحة حالياً؟
+created_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at     TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (name)
+
+📌 أمثلة:
+   نقدي          → is_active: TRUE
+   بطاقة         → is_active: TRUE
+   تحويل بنكي    → is_active: TRUE
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣1️⃣ payments                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تسجيل كل دفعة مرتبطة بفاتورة.
+   فاتورة واحدة يمكن أن يكون لها عدة دفعات —
+   سواء على مراحل زمنية أو بوسائل دفع مختلفة في نفس الوقت.
+   مثال: فاتورة 100 دينار → 60 نقدي + 40 بطاقة.
+
+الحقل                النوع           العلاقة                    القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────────
+id                   BIGINT          PK                         AUTO_INCREMENT        المعرف
+invoice_id           BIGINT          FK → invoices.id           —                     الفاتورة
+payment_method_id    BIGINT          FK → payment_methods.id    —                     وسيلة الدفع
+amount               DECIMAL(10,2)   —                          —                     المبلغ المدفوع
+notes                VARCHAR(255)    —                          NULL                  ملاحظة (رقم مرجعي مثلاً)
+created_at           TIMESTAMP       —                          CURRENT_TIMESTAMP     تاريخ الدفعة
+
+Constraints:
+   INDEX (invoice_id)
+   INDEX (created_at)
+
+📌 عند إضافة دفعة:
+   1. INSERT في payments
+   2. UPDATE invoices:
+        paid_amount = SUM(payments.amount) WHERE invoice_id = ?
+        due_amount  = total - paid_amount
+        payment_status يُحدَّث حسب القاعدة أعلاه
+
+📌 مثال — فاتورة 100 دينار تُدفع بوسيلتين:
+   INSERT payments (invoice_id=1, payment_method_id=1, amount=60)  ← نقدي
+   INSERT payments (invoice_id=1, payment_method_id=2, amount=40)  ← بطاقة
+   ─────────────────────────────────────────────────────────────────
+   invoices: paid_amount=100 | due_amount=0 | payment_status='paid'
+
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣3️⃣ original_perfume_details                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تخزين المعلومات الإضافية الخاصة بالعطور الأصلية فقط.
+   بدلاً من إضافة حقول NULL في جدول products لكل المنتجات،
+   هذا الجدول يوجد فقط للمنتجات التي تصنيفها "عطور أصلية".
+   يحدد حجم العبوة الكاملة لكل عطر — يُستخدم عند البيع بالعبوة
+   لمعرفة كم يُخصم من المخزون.
+
+الحقل              النوع           العلاقة              القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                   AUTO_INCREMENT        المعرف
+product_id         BIGINT          FK → products.id     —                     المنتج
+bottle_volume      DECIMAL(10,2)   —                    —                     حجم العبوة بالـ ml
+created_at         TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ الإنشاء
+updated_at         TIMESTAMP       —                    CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (product_id)
+
+📌 قاعدة:
+   - يوجد سجل هنا فقط إذا كان products.category_id = عطور أصلية
+   - عند بيع عبوة كاملة: products.stock -= bottle_volume
+   - عند بيع بالتقسيم: products.stock -= size.value × quantity
+
+📌 أمثلة:
+   Dior Sauvage   → bottle_volume: 200
+   Chanel No.5    → bottle_volume: 100
+   Bleu de Chanel → bottle_volume: 150
+
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣4️⃣ suppliers                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تسجيل بيانات الموردين لتتبع المشتريات والمدفوعات.
+   نفس منطق customers لكن من جهة الشراء —
+   أنت المشتري والمورد هو البائع.
+
+الحقل              النوع           القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          AUTO_INCREMENT        المعرف
+name               VARCHAR(255)    —                     اسم المورد
+phone              VARCHAR(20)     —                     رقم الهاتف (إلزامي)
+email              VARCHAR(255)    NULL                  البريد الإلكتروني
+address            TEXT            NULL                  العنوان
+total_purchases    DECIMAL(10,2)   0                     إجمالي المشتريات منه
+total_debt         DECIMAL(10,2)   0                     إجمالي ما تدين له
+is_active          BOOLEAN         TRUE                  حالة النشاط
+created_at         TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التسجيل
+updated_at         TIMESTAMP       CURRENT_TIMESTAMP     تاريخ التحديث
+
+Constraints:
+   UNIQUE (phone)
+   INDEX (is_active)
+
+📌 قاعدة total_debt:
+   عند إنشاء فاتورة شراء جديدة: total_debt += due_amount
+   عند تسجيل دفعة للمورد:       total_debt -= payment.amount
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣5️⃣ purchases                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   رأس فاتورة الشراء — نفس منطق invoices لكن معكوس.
+   كل عملية شراء من مورد = فاتورة شراء.
+   الإجمالي يُحسب من مجموع أسطر purchase_items.
+   تفاصيل الدفع للمورد تُسجَّل في supplier_payments.
+
+الحقل              النوع           العلاقة                القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                     AUTO_INCREMENT        المعرف
+supplier_id        BIGINT          FK → suppliers.id      —                     المورد
+total              DECIMAL(10,2)   —                      0                     الإجمالي
+paid_amount        DECIMAL(10,2)   —                      0                     المدفوع
+due_amount         DECIMAL(10,2)   —                      0                     المتبقي
+payment_status     ENUM            —                      'unpaid'              حالة الدفع
+notes              TEXT            —                      NULL                  ملاحظات
+created_at         TIMESTAMP       —                      CURRENT_TIMESTAMP     تاريخ الشراء
+updated_at         TIMESTAMP       —                      CURRENT_TIMESTAMP     تاريخ التحديث
+
+ENUM payment_status:
+   'unpaid'  → لم يُدفع شيء بعد
+   'partial' → دُفع جزء
+   'paid'    → مدفوع بالكامل
+
+Constraints:
+   INDEX (supplier_id)
+   INDEX (payment_status)
+   INDEX (created_at)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣6️⃣ purchase_items                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   أسطر فاتورة الشراء — نفس منطق invoice_items.
+   كل سطر يمثل منتجاً واحداً مع كميته وسعر شرائه.
+   عند إضافة السطر: products.stock += quantity تلقائياً.
+   يحفظ سعر الشراء وقت الشراء (snapshot) لتتبع تغير الأسعار.
+
+الحقل              النوع           العلاقة                القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────
+id                 BIGINT          PK                     AUTO_INCREMENT        المعرف
+purchase_id        BIGINT          FK → purchases.id      —                     فاتورة الشراء
+product_id         BIGINT          FK → products.id       —                     المنتج
+quantity           DECIMAL(10,2)   —                      —                     الكمية المشتراة
+unit_cost          DECIMAL(10,2)   —                      —                     سعر الوحدة وقت الشراء (snapshot)
+line_total         DECIMAL(10,2)   —                      —                     الإجمالي = unit_cost × quantity
+created_at         TIMESTAMP       —                      CURRENT_TIMESTAMP     تاريخ الإنشاء
+
+Constraints:
+   FOREIGN KEY (purchase_id) ON DELETE CASCADE
+   INDEX (purchase_id)
+   INDEX (product_id)
+
+📌 قاعدة تحديث المخزون:
+   عند إضافة سطر: products.stock += quantity
+   مثال: شراء 200ml من Dior Sauvage → stock += 200
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1️⃣7️⃣ supplier_payments                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+📌 الوظيفة:
+   تسجيل كل دفعة تدفعها للمورد — نفس منطق payments.
+   فاتورة شراء واحدة يمكن أن تُدفع على مراحل أو بوسائل متعددة.
+   مثال: فاتورة 500 دينار → 300 نقدي + 200 تحويل بنكي.
+
+الحقل                النوع           العلاقة                    القيمة الافتراضية    الوصف
+──────────────────────────────────────────────────────────────────────────────────────────
+id                   BIGINT          PK                         AUTO_INCREMENT        المعرف
+purchase_id          BIGINT          FK → purchases.id          —                     فاتورة الشراء
+payment_method_id    BIGINT          FK → payment_methods.id    —                     وسيلة الدفع
+amount               DECIMAL(10,2)   —                          —                     المبلغ المدفوع
+notes                VARCHAR(255)    —                          NULL                  ملاحظة
+created_at           TIMESTAMP       —                          CURRENT_TIMESTAMP     تاريخ الدفعة
+
+Constraints:
+   INDEX (purchase_id)
+   INDEX (created_at)
+
+📌 عند إضافة دفعة:
+   1. INSERT في supplier_payments
+   2. UPDATE purchases:
+        paid_amount = SUM(supplier_payments.amount) WHERE purchase_id = ?
+        due_amount  = total - paid_amount
+        payment_status يُحدَّث تلقائياً
+   3. UPDATE suppliers:
+        total_debt -= amount
+
+================================================================================
+                        🔄 مخطط العلاقات الكاملة
+================================================================================
+
+   users
+     └── invoices.user_id
+
+   customers
+     └── invoices.customer_id
+
+   categories (unit: ml/pcs/g)
+     └── products.category_id
+
+   price_tiers (A/B/C)
+     ├── products.price_tier_id  [tier_based فقط]
+     └── tier_prices.tier_id
+
+   sizes (value + unit)
+     ├── tier_prices.size_id
+     └── invoice_items.size_id
+
+   products (selling_type + stock)
+     ├── product_prices.product_id  [unit_priced فقط]
+     └── invoice_items.product_id
+
+   invoices  (رأس الفاتورة: بائع + عميل + إجمالي + حالة دفع)
+     ├── invoice_items.invoice_id   (أسطر الفاتورة: منتج + سعر snapshot)
+     └── payments.invoice_id        (دفعات الفاتورة: وسيلة + مبلغ)
+
+   payment_methods
+     └── payments.payment_method_id
+
+   tier_prices     ← سعر العطور الزيتية   (tier + size → price)
+   product_prices  ← سعر العطور الأصلية / البخور / الوشق
+
+   original_perfume_details
+     └── product_id  [عطور أصلية فقط — حجم العبوة]
+
+   suppliers
+     └── purchases.supplier_id
+
+   purchases  (رأس فاتورة الشراء: مورد + إجمالي + حالة دفع)
+     ├── purchase_items.purchase_id   (أسطر الشراء: منتج + كمية + سعر snapshot)
+     └── supplier_payments.purchase_id (مدفوعات للمورد: وسيلة + مبلغ)
+
+
+================================================================================
+                        📊 منطق التسعير حسب النوع
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ عطر زيتي — sale_type: tier_decant                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   البائع يختار: عطر + حجم + نوع عميل
+         ↓
+   إنشاء invoice (أو إضافة لفاتورة مفتوحة)
+         ↓
+   جلب tier_id من products
+   SELECT price_regular/vip FROM tier_prices
+   WHERE tier_id = ? AND size_id = ?
+         ↓
+   إنشاء invoice_item:
+     sale_type = 'tier_decant' | size_id = ? | quantity = 1
+     unit_price = السعر المجلوب | line_total = unit_price
+   خصم المخزون: products.stock -= sizes.value
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ عطر أصلي / بخور / وشق — sale_type: unit_decant                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   البائع يختار: منتج + كمية + نوع عميل
+         ↓
+   إنشاء invoice
+         ↓
+   SELECT price_per_unit_regular/vip FROM product_prices
+   WHERE product_id = ?
+         ↓
+   إنشاء invoice_item:
+     sale_type = 'unit_decant' | size_id = ? | quantity = الكمية
+     unit_price = price_per_unit | line_total = unit_price × quantity
+   خصم المخزون: products.stock -= (size.value × quantity)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ عطر أصلي — sale_type: full_bottle                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   البائع يختار: منتج + "عبوة كاملة" + نوع عميل
+         ↓
+   إنشاء invoice
+         ↓
+   SELECT full_bottle_regular/vip FROM product_prices
+   WHERE product_id = ?
+         ↓
+   إنشاء invoice_item:
+     sale_type = 'full_bottle' | size_id = NULL | quantity = 1
+     unit_price = full_bottle_price | line_total = unit_price
+   خصم المخزون: products.stock = 0
+
+
+================================================================================
+                        📊 مقارنة سريعة مع Hamza_Perfumes
+================================================================================
+
+الجانب                  Hamza_Perfumes              steps_v3
+──────────────────────────────────────────────────────────────────────────────
+تمييز النوع             تصنيف فقط                   تصنيف + unit + selling_type
+العطور الزيتية          category_prices             tier_prices (A/B/C)
+العطور الأصلية          perfume_prices + bottle     product_prices (per_unit + full_bottle)
+البخور / الوشق          ❌ غير مدعوم                product_prices (per_unit فقط)
+المخزون                 ❌ غير موجود                products.stock
+العملاء والديون         ❌ غير موجود                customers + total_debt
+نظام الفواتير           جدول sales مباشر            invoices + invoice_items
+حالة الدفع              ❌ غير موجود                invoices.payment_status
+نوع البيع (تقسيم/كامل)  is_full_bottle فقط          sale_type (3 قيم واضحة)
+وسائل الدفع             enum ثابت                   payment_methods (مرن)
+دفعات متعددة            ❌ غير مدعوم                payments (دفعات متعددة)
+عدد الجداول             7                           17
+
+
+================================================================================
+                        ⚠️ قواعد العمل المهمة
+================================================================================
+
+1.  ✅ selling_type = 'tier_based'  → price_tier_id مطلوب
+2.  ✅ selling_type = 'unit_priced' → price_tier_id = NULL
+3.  ✅ selling_type = 'unit_priced' → يجب وجود سجل في product_prices
+4.  ✅ full_bottle_regular/vip → NULL للبخور والوشق
+5.  ✅ sale_type = 'full_bottle'  → size_id = NULL في invoice_items
+6.  ✅ sale_type = 'tier_decant'  → selling_type يجب أن يكون 'tier_based'
+7.  ✅ sale_type = 'unit_decant' أو 'full_bottle' → selling_type يجب أن يكون 'unit_priced'
+8.  ✅ لا يمكن البيع إذا stock < الكمية المطلوبة (للـ tier_based و unit_priced)
+9.  ✅ unit_price يُسجَّل في invoice_items وقت البيع ولا يتغير (snapshot)
+10. ✅ تغيير tier_prices يؤثر على جميع عطور نفس التير (للمبيعات الجديدة فقط)
+11. ✅ invoices.total = SUM(invoice_items.line_total) يُحدَّث عند كل تغيير في الأسطر
+12. ✅ حذف invoice → يحذف جميع invoice_items تلقائياً (CASCADE)
+13. ✅ paid_amount = SUM(payments.amount) يُحدَّث عند كل دفعة جديدة
+14. ✅ لا يمكن أن يتجاوز paid_amount قيمة total
+15. ✅ إذا due_amount > 0 و customer_id = NULL → خطأ (لا دين على عميل عابر)
+16. ✅ customers.total_debt يُحدَّث تلقائياً عند كل فاتورة أو دفعة
+17. ✅ customers.total_purchases يُحدَّث عند كل فاتورة مكتملة الدفع
+
+
+================================================================================
+                        🎯 لماذا 17 جدول فقط؟
+================================================================================
+
+✅ users           → من يبيع؟
+✅ customers       → من العميل؟ وكم ديونه؟
+✅ categories      → ما نوع المنتج؟ وما وحدته؟
+✅ price_tiers     → ما مستوى جودة العطر الزيتي؟
+✅ sizes           → ما الحجم المتاح للبيع؟
+✅ products        → ما المنتج؟ وكيف يُباع؟ وكم مخزونه؟
+✅ tier_prices     → ما سعر العطر الزيتي؟ (tier + size)
+✅ product_prices  → ما سعر العطر الأصلي / البخور / الوشق؟
+✅ invoices        → من باع؟ لمن؟ وما إجمالي الفاتورة وحالة دفعها؟
+✅ invoice_items   → ما الذي بِيع؟ بأي نوع؟ وبكم السعر وقتها؟
+✅ payment_methods → ما وسائل الدفع المتاحة؟
+✅ payments        → كيف دُفعت الفاتورة؟ بكم؟ وبأي وسيلة؟
+✅ original_perfume_details → ما حجم عبوة العطر الأصلي؟
+✅ suppliers         → من هو المورد؟ وكم ديوني له؟
+✅ purchases         → ما فاتورة الشراء؟
+✅ purchase_items    → ما المنتجات المشتراة وبكم؟
+✅ supplier_payments → كم دفعت للمورد؟ وبأي وسيلة؟
+
+
+================================================================================
+                                    انتهى
+================================================================================
