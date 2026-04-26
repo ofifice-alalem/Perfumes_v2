@@ -26,18 +26,12 @@ class InitialDataSeeder extends Seeder
             Category::firstOrCreate(['name' => $cat['name']], $cat);
         }
 
-        // 2. Sizes
+        // 2. Sizes (ml فقط — للعطور الزيتية والأصلية)
         $sizes = [
             ['label' => '1ml',   'value' => 1,   'unit' => 'ml'],
             ['label' => '3ml',   'value' => 3,   'unit' => 'ml'],
             ['label' => '5ml',   'value' => 5,   'unit' => 'ml'],
             ['label' => '10ml',  'value' => 10,  'unit' => 'ml'],
-            ['label' => '1pcs',  'value' => 1,   'unit' => 'pcs'],
-            ['label' => '5pcs',  'value' => 5,   'unit' => 'pcs'],
-            ['label' => '10pcs', 'value' => 10,  'unit' => 'pcs'],
-            ['label' => '5g',    'value' => 5,   'unit' => 'g'],
-            ['label' => '10g',   'value' => 10,  'unit' => 'g'],
-            ['label' => '25g',   'value' => 25,  'unit' => 'g'],
         ];
         foreach ($sizes as $size) {
             Size::firstOrCreate(['label' => $size['label']], $size);
