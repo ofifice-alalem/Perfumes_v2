@@ -23,7 +23,6 @@ class SizeController extends Controller
         $data = $request->validate([
             'label' => 'required|string|max:50|unique:sizes,label',
             'value' => 'required|numeric|min:0.01',
-            'unit'  => 'required|in:ml',
         ]);
 
         $data['unit'] = 'ml';
