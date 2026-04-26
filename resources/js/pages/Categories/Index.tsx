@@ -139,67 +139,65 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                 <div key={cat.id} className="flex items-center justify-between p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
 
                   {editingId === cat.id ? (
-                    <div className="flex flex-col sm:flex-row gap-3 flex-1 ml-3">
+                    <div className="flex flex-col gap-3 flex-1">
                       <input
                         value={editForm.data.name}
                         onChange={e => editForm.setData('name', e.target.value)}
-                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold flex-1"
+                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full"
                       />
-                      <div className="w-48">
-                        <ModernSelect
-                          label=""
-                          options={[
-                            { label: 'مليلتر (ml)', badge: 'ml' },
-                            { label: 'قطعة (pcs)',  badge: 'pcs' },
-                            { label: 'غرام (g)',    badge: 'g' },
-                          ]}
-                          defaultValue={editForm.data.unit === 'ml' ? 'مليلتر (ml)' : editForm.data.unit === 'pcs' ? 'قطعة (pcs)' : 'غرام (g)'}
-                          onSelect={val => {
-                            const map: Record<string, 'ml'|'pcs'|'g'> = { 'مليلتر (ml)': 'ml', 'قطعة (pcs)': 'pcs', 'غرام (g)': 'g' };
-                            editForm.setData('unit', map[val]);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 flex-1">
-                      <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
-                      <span className="font-bold text-slate-800 dark:text-white">{cat.name}</span>
-                      <span className={`text-xs font-black px-2.5 py-1 rounded-[8px] ${unitColors[cat.unit]}`}>
-                        {unitLabels[cat.unit]}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {editingId === cat.id ? (
-                      <>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <ModernSelect
+                            label=""
+                            options={[
+                              { label: 'مليلتر (ml)', badge: 'ml' },
+                              { label: 'قطعة (pcs)',  badge: 'pcs' },
+                              { label: 'غرام (g)',    badge: 'g' },
+                            ]}
+                            defaultValue={editForm.data.unit === 'ml' ? 'مليلتر (ml)' : editForm.data.unit === 'pcs' ? 'قطعة (pcs)' : 'غرام (g)'}
+                            onSelect={val => {
+                              const map: Record<string, 'ml'|'pcs'|'g'> = { 'مليلتر (ml)': 'ml', 'قطعة (pcs)': 'pcs', 'غرام (g)': 'g' };
+                              editForm.setData('unit', map[val]);
+                            }}
+                          />
+                        </div>
                         <button onClick={() => submitEdit(cat.id)}
-                          className="w-9 h-9 rounded-[10px] bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all"
+                          className="w-11 h-11 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shrink-0"
                         >
                           <Check className="w-4 h-4" />
                         </button>
                         <button onClick={() => setEditingId(null)}
-                          className="w-9 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 flex items-center justify-center hover:bg-black/10 transition-all"
+                          className="w-11 h-11 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 flex items-center justify-center hover:bg-black/10 transition-all shrink-0"
                         >
                           <X className="w-4 h-4" />
                         </button>
-                      </>
-                    ) : (
-                      <>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                        <span className="font-bold text-slate-800 dark:text-white">{cat.name}</span>
+                        <span className={`text-xs font-black px-2.5 py-1 rounded-[8px] ${unitColors[cat.unit]}`}>
+                          {unitLabels[cat.unit]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 sm:mr-auto">
                         <button onClick={() => startEdit(cat)}
-                          className="w-9 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                          className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm"
                         >
-                          <Pencil className="w-4 h-4" />
+                          <Pencil className="w-3.5 h-3.5" />
+                          تعديل
                         </button>
                         <button onClick={() => deleteCategory(cat.id)}
-                          className="w-9 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                          className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-bold text-sm"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
+                          حذف
                         </button>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
