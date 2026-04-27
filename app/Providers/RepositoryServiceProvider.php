@@ -11,6 +11,10 @@ use App\Repositories\Contracts\PriceTierRepositoryInterface;
 use App\Repositories\PriceTierRepository;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use App\Repositories\ProductRepository;
+use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\UserRepository;
+use App\Repositories\Contracts\CustomerRepositoryInterface;
+use App\Repositories\CustomerRepository;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -20,5 +24,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(SizeRepositoryInterface::class, SizeRepository::class);
         $this->app->bind(PriceTierRepositoryInterface::class, PriceTierRepository::class);
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
+        $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+        $this->app->bind(CustomerRepositoryInterface::class, CustomerRepository::class);
     }
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\SizeController;
 use App\Http\Controllers\PriceTierController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CustomerController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
@@ -16,3 +18,5 @@ Route::resource('sizes', SizeController::class)->except(['create', 'edit', 'show
 Route::resource('price-tiers', PriceTierController::class)->except(['create', 'edit', 'show']);
 Route::put('price-tiers/{id}/prices', [PriceTierController::class, 'updatePrices'])->name('price-tiers.prices');
 Route::resource('products', ProductController::class)->except(['create', 'edit', 'show']);
+Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
+Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show']);

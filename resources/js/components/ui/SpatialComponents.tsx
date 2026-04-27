@@ -204,7 +204,7 @@ export function ModernSelect({
         )}
 
         {isOpen && isMobile && createPortal(
-          <div className="fixed inset-0 z-[500] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[9999] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
               <span className="text-base font-black text-slate-800 dark:text-white">{label}</span>
               <button onClick={() => { setIsOpen(false); setSearch(''); }} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60">
