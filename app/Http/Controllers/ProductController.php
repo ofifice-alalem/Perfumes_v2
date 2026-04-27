@@ -25,12 +25,18 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $base = $request->validate([
-            'name'         => 'required|string|max:255',
-            'category_id'  => 'required|exists:categories,id',
-            'selling_type' => 'required|in:tier_based,unit_priced',
-            'price_tier_id'=> 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',
-            'min_stock'    => 'nullable|numeric|min:0',
+            'name'          => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'selling_type'  => 'required|in:tier_based,unit_priced',
+            'price_tier_id' => 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',
+            'min_stock'     => 'nullable|numeric|min:0',
         ]);
+
+        // التحقق من توافق selling_type مع وحدة التصنيف
+        $category = Category::findOrFail($base['category_id']);
+        if ($category->unit !== 'ml' && $base['selling_type'] === 'tier_based') {
+            return back()->withErrors(['selling_type' => 'العطور الزيتية فقط تدعم نظام التير']);
+        }
 
         if ($base['selling_type'] === 'tier_based') {
             $this->products->createTierBased($base);
@@ -51,7 +57,7 @@ class ProductController extends Controller
                     'full_bottle_regular'    => $prices['full_bottle_regular'] ?? null,
                     'full_bottle_vip'        => $prices['full_bottle_vip'] ?? null,
                 ],
-                isset($prices['bottle_volume']) ? (float) $prices['bottle_volume'] : null
+                isset($prices['bottle_volume']) && $prices['bottle_volume'] ? (float) $prices['bottle_volume'] : null
             );
         }
 
@@ -61,11 +67,11 @@ class ProductController extends Controller
     public function update(Request $request, int $id)
     {
         $base = $request->validate([
-            'name'         => 'required|string|max:255',
-            'category_id'  => 'required|exists:categories,id',
-            'selling_type' => 'required|in:tier_based,unit_priced',
-            'price_tier_id'=> 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',
-            'min_stock'    => 'nullable|numeric|min:0',
+            'name'          => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'selling_type'  => 'required|in:tier_based,unit_priced',
+            'price_tier_id' => 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',
+            'min_stock'     => 'nullable|numeric|min:0',
         ]);
 
         $priceData    = null;
@@ -86,7 +92,7 @@ class ProductController extends Controller
                 'full_bottle_regular'    => $prices['full_bottle_regular'] ?? null,
                 'full_bottle_vip'        => $prices['full_bottle_vip'] ?? null,
             ];
-            $bottleVolume = isset($prices['bottle_volume']) ? (float) $prices['bottle_volume'] : null;
+            $bottleVolume = isset($prices['bottle_volume']) && $prices['bottle_volume'] ? (float) $prices['bottle_volume'] : null;
         }
 
         $this->products->updateProduct($id, $base, $priceData, $bottleVolume);

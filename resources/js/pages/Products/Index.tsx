@@ -45,40 +45,72 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
 }) {
   const catOptions  = categories.map(c => ({ label: c.name, badge: c.unit }));
   const tierOptions = tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name, meta: t.description ?? '' }));
-  const typeOptions = [{ label: 'عطر زيتي (تير)', badge: 'tier' }, { label: 'سعر خاص', badge: 'unit' }];
 
-  const getCatLabel  = (id: string) => categories.find(c => c.id === +id)?.name ?? '';
-  const getTierLabel = (id: string) => { const t = tiers.find(t => t.id === +id); return t ? `تير ${t.name}` : ''; };
+  const selectedCat = categories.find(c => c.id === +form.data.category_id);
+  const isML        = selectedCat?.unit === 'ml';
+  const isOriginal  = form.data.selling_type === 'unit_priced' && isML;
+  const isBottle    = isOriginal; // حجم العبوة فقط للعطور الأصلية
+
+  // عند تغيير التصنيف — نعيد ضبط selling_type
+  function handleCategoryChange(val: string) {
+    const cat = categories.find(c => c.name === val);
+    if (!cat) return;
+    form.setData(prev => ({
+      ...prev,
+      category_id:   String(cat.id),
+      selling_type:  cat.unit === 'ml' ? prev.selling_type : 'unit_priced',
+      price_tier_id: cat.unit === 'ml' ? prev.price_tier_id : '',
+    }));
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Row 1 — Selects */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="w-full sm:w-56">
-          <ModernSelect label="التصنيف" options={catOptions}
-            defaultValue={getCatLabel(form.data.category_id)}
-            onSelect={val => form.setData('category_id', String(categories.find(c => c.name === val)?.id ?? ''))}
-          />
-          {form.errors.category_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.category_id}</p>}
-        </div>
-        <div className="w-full sm:w-56">
-          <ModernSelect label="نوع البيع" options={typeOptions}
-            defaultValue={form.data.selling_type === 'tier_based' ? 'عطر زيتي (تير)' : 'سعر خاص'}
-            onSelect={val => form.setData('selling_type', val === 'عطر زيتي (تير)' ? 'tier_based' : 'unit_priced')}
-          />
-        </div>
-        {form.data.selling_type === 'tier_based' && (
-          <div className="w-full sm:w-56">
-            <ModernSelect label="التير" options={tierOptions}
-              defaultValue={getTierLabel(form.data.price_tier_id)}
-              onSelect={val => form.setData('price_tier_id', String(tiers.find(t => `تير ${t.name}` === val)?.id ?? ''))}
-            />
-            {form.errors.price_tier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.price_tier_id}</p>}
-          </div>
-        )}
+
+      {/* Row 1 — التصنيف */}
+      <div className="w-full sm:w-64">
+        <ModernSelect label="التصنيف" options={catOptions}
+          defaultValue={selectedCat?.name ?? ''}
+          onSelect={handleCategoryChange}
+        />
+        {form.errors.category_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.category_id}</p>}
       </div>
 
-      {/* Row 2 — Text inputs */}
+      {/* Row 2 — نوع البيع (ml فقط) */}
+      {isML && (
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex gap-3">
+            {[
+              { value: 'tier_based',  label: 'عطر زيتي', desc: 'سعر من التير' },
+              { value: 'unit_priced', label: 'عطر أصلي', desc: 'سعر خاص + عبوة' },
+            ].map(opt => (
+              <button key={opt.value} type="button"
+                onClick={() => form.setData('selling_type', opt.value as any)}
+                className={`flex-1 flex flex-col items-center gap-1 p-3 rounded-[16px] border-2 transition-all font-bold text-sm ${
+                  form.data.selling_type === opt.value
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'
+                }`}
+              >
+                <span>{opt.label}</span>
+                <span className="text-xs font-bold opacity-60">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* التير — عطر زيتي فقط */}
+      {form.data.selling_type === 'tier_based' && isML && (
+        <div className="w-full sm:w-56">
+          <ModernSelect label="التير" options={tierOptions}
+            defaultValue={tiers.find(t => t.id === +form.data.price_tier_id) ? `تير ${tiers.find(t => t.id === +form.data.price_tier_id)!.name}` : ''}
+            onSelect={val => form.setData('price_tier_id', String(tiers.find(t => `تير ${t.name}` === val)?.id ?? ''))}
+          />
+          {form.errors.price_tier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.price_tier_id}</p>}
+        </div>
+      )}
+
+      {/* اسم المنتج + حد المخزون */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex flex-col gap-2 flex-1">
           <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المنتج</label>
@@ -93,33 +125,52 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
         </div>
       </div>
 
-      {/* unit_priced fields */}
-      {form.data.selling_type === 'unit_priced' && (
+      {/* الأسعار — unit_priced فقط */}
+      {form.data.selling_type === 'unit_priced' && selectedCat && (
         <div className="flex flex-col gap-4 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
           <p className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الأسعار</p>
           <div className="grid grid-cols-2 gap-4">
-            {[
-              { key: 'price_per_unit_regular', label: 'سعر الوحدة (عادي)' },
-              { key: 'price_per_unit_vip',     label: 'سعر الوحدة (VIP)' },
-              { key: 'full_bottle_regular',    label: 'سعر العبوة (عادي)' },
-              { key: 'full_bottle_vip',        label: 'سعر العبوة (VIP)' },
-            ].map(({ key, label }) => (
-              <div key={key} className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75">{label}</label>
-                <input type="number" min="0" step="0.01"
-                  value={(form.data as any)[key]}
-                  onChange={e => form.setData(key as any, e.target.value)}
-                  placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
-              </div>
-            ))}
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-white/75">سعر الوحدة (عادي)</label>
+              <input type="number" min="0" step="0.01" value={form.data.price_per_unit_regular}
+                onChange={e => form.setData('price_per_unit_regular', e.target.value)}
+                placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-white/75">سعر الوحدة (VIP)</label>
+              <input type="number" min="0" step="0.01" value={form.data.price_per_unit_vip}
+                onChange={e => form.setData('price_per_unit_vip', e.target.value)}
+                placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+            </div>
+
+            {/* سعر العبوة — عطور أصلية فقط */}
+            {isBottle && (
+              <>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/75">سعر العبوة كاملة (عادي)</label>
+                  <input type="number" min="0" step="0.01" value={form.data.full_bottle_regular}
+                    onChange={e => form.setData('full_bottle_regular', e.target.value)}
+                    placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/75">سعر العبوة كاملة (VIP)</label>
+                  <input type="number" min="0" step="0.01" value={form.data.full_bottle_vip}
+                    onChange={e => form.setData('full_bottle_vip', e.target.value)}
+                    placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                </div>
+              </>
+            )}
           </div>
-          <div className="flex flex-col gap-2 w-full sm:w-48">
-            <label className="text-xs font-bold text-slate-700 dark:text-white/75">حجم العبوة (ml) — للعطور الأصلية فقط</label>
-            <input type="number" min="0" step="0.01"
-              value={form.data.bottle_volume}
-              onChange={e => form.setData('bottle_volume', e.target.value)}
-              placeholder="مثال: 200" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
-          </div>
+
+          {/* حجم العبوة — عطور أصلية فقط */}
+          {isBottle && (
+            <div className="flex flex-col gap-2 w-full sm:w-48">
+              <label className="text-xs font-bold text-slate-700 dark:text-white/75">حجم العبوة (ml)</label>
+              <input type="number" min="0" step="0.01" value={form.data.bottle_volume}
+                onChange={e => form.setData('bottle_volume', e.target.value)}
+                placeholder="مثال: 200" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+            </div>
+          )}
         </div>
       )}
 
