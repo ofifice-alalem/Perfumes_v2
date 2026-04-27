@@ -191,117 +191,122 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {flash?.error && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
         {/* Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-4 items-start">
 
           {/* ── Left: Input + Quick Products ── */}
           <div className="flex flex-col gap-4">
 
-            {/* بيانات الفاتورة */}
-            <SpatialCard title="بيانات الفاتورة">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <ModernSelect label="العميل" options={customerOptions} defaultValue="زبون نقدي"
-                    onSelect={val => {
-                      const c = customers.find(c => c.name === val);
-                      setCustomerId(c && c.id !== 1 ? String(c.id) : '');
-                    }}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">نوع العميل</label>
-                  <div className="flex gap-2 h-14">
-                    {(['regular', 'vip'] as const).map(type => (
-                      <button key={type} onClick={() => setCustomerType(type)}
-                        className={`flex-1 rounded-[20px] border-2 transition-all font-bold text-sm ${
-                          customerType === type ? 'border-primary bg-primary/10 text-primary' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50'
-                        }`}>
-                        {type === 'regular' ? 'عادي' : '⭐ VIP'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SpatialCard>
+            {/* إضافة منتج + منتجات سريعة */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
 
-            {/* إضافة منتج */}
-            <SpatialCard title="إضافة منتج" icon={<Package className="w-4 h-4" />}>
+              {/* إضافة منتج + بيانات الفاتورة */}
               <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <ModernSelect label="المنتج"
-                    options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
-                    defaultValue=""
-                    onSelect={val => {
-                      const p = products.find(p => p.name === val);
-                      setSelProduct(p ? String(p.id) : '');
-                      setSelSaleType(''); setSelSize(''); setSelQty('');
-                    }}
-                  />
-                  {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
-                    <ModernSelect label="نوع البيع" options={saleTypeOptions()} defaultValue=""
-                      onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
-                    />
-                  )}
-                  {needsSize && (
-                    <ModernSelect label="الحجم" options={sizes.map(s => ({ label: s.label, meta: s.value }))} defaultValue=""
-                      onSelect={val => setSelSize(String(sizes.find(s => s.label === val)?.id ?? ''))}
-                    />
-                  )}
-                  {needsQty && (
-                    <div className="flex flex-col gap-2">
-                      <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الكمية</label>
-                      <input type="number" min="0.01" step="0.01" value={selQty}
-                        onChange={e => setSelQty(e.target.value)}
-                        placeholder="أدخل الكمية" className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                    </div>
-                  )}
-                </div>
 
-                {/* معاينة + زر الإضافة */}
-                <div className="flex items-center gap-3">
-                  {previewTotal !== null && previewQty !== null && previewQty > 0 && (
-                    <div className="flex-1 grid grid-cols-3 gap-2">
-                      {[
-                        { label: 'سعر الوحدة', value: `${previewPrice} د` },
-                        { label: 'الكمية',     value: effectiveSaleType === 'full_bottle' ? `${previewQty} ml` : previewQty },
-                        { label: 'الإجمالي',   value: `${previewTotal?.toFixed(2)} د` },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="flex flex-col gap-0.5 p-3 rounded-[14px] bg-primary/5 border border-primary/20">
-                          <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">{label}</span>
-                          <span className="font-black text-primary text-sm">{value}</span>
+                {/* إضافة منتج */}
+                <SpatialCard title="إضافة منتج" icon={<Package className="w-4 h-4" />}>
+                  <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <ModernSelect label="المنتج"
+                        options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
+                        defaultValue=""
+                        onSelect={val => {
+                          const p = products.find(p => p.name === val);
+                          setSelProduct(p ? String(p.id) : '');
+                          setSelSaleType(''); setSelSize(''); setSelQty('');
+                        }}
+                      />
+                      {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
+                        <ModernSelect label="نوع البيع" options={saleTypeOptions()} defaultValue=""
+                          onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
+                        />
+                      )}
+                      {needsSize && (
+                        <ModernSelect label="الحجم" options={sizes.map(s => ({ label: s.label, meta: s.value }))} defaultValue=""
+                          onSelect={val => setSelSize(String(sizes.find(s => s.label === val)?.id ?? ''))}
+                        />
+                      )}
+                      {needsQty && (
+                        <div className="flex flex-col gap-2">
+                          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الكمية</label>
+                          <input type="number" min="0.01" step="0.01" value={selQty}
+                            onChange={e => setSelQty(e.target.value)}
+                            placeholder="أدخل الكمية" className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
-                  <button onClick={addToCart} disabled={!canAdd}
-                    className="spatial-button flex items-center gap-2 px-6 h-12 text-sm disabled:opacity-40 shrink-0">
-                    <Plus className="w-4 h-4" /> إضافة
-                  </button>
-                </div>
-              </div>
-            </SpatialCard>
+                    <div className="flex items-center gap-3">
+                      {previewTotal !== null && previewQty !== null && previewQty > 0 && (
+                        <div className="flex-1 grid grid-cols-3 gap-2">
+                          {[
+                            { label: 'سعر الوحدة', value: `${previewPrice} د` },
+                            { label: 'الكمية',     value: effectiveSaleType === 'full_bottle' ? `${previewQty} ml` : previewQty },
+                            { label: 'الإجمالي',   value: `${previewTotal?.toFixed(2)} د` },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="flex flex-col gap-0.5 p-3 rounded-[14px] bg-primary/5 border border-primary/20">
+                              <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">{label}</span>
+                              <span className="font-black text-primary text-sm">{value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={addToCart} disabled={!canAdd}
+                        className="spatial-button flex items-center gap-2 px-6 h-12 text-sm disabled:opacity-40 shrink-0">
+                        <Plus className="w-4 h-4" /> إضافة
+                      </button>
+                    </div>
+                  </div>
+                </SpatialCard>
 
-            {/* ⚡ منتجات سريعة */}
-            <SpatialCard title="منتجات سريعة" icon={<Zap className="w-4 h-4" />}
-              action={
-                <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 font-bold text-xs transition-all">
-                  <Settings className="w-3.5 h-3.5" /> تخصيص
-                </button>
-              }
-            >
-              <div className="grid grid-cols-3 gap-3">
-                {QUICK_PRODUCTS.map(qp => (
-                  <button key={qp.id}
-                    className={`relative flex flex-col items-center justify-center gap-2 p-4 rounded-[20px] bg-gradient-to-br border-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] ${qp.color}`}
-                  >
-                    <span className="text-2xl">{qp.emoji}</span>
-                    <span className="text-xs font-black text-center leading-tight">{qp.name}</span>
-                  </button>
-                ))}
+                {/* بيانات الفاتورة */}
+                <SpatialCard title="بيانات الفاتورة">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <ModernSelect label="العميل" options={customerOptions} defaultValue="زبون نقدي"
+                        onSelect={val => {
+                          const c = customers.find(c => c.name === val);
+                          setCustomerId(c && c.id !== 1 ? String(c.id) : '');
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">نوع العميل</label>
+                      <div className="flex gap-2 h-14">
+                        {(['regular', 'vip'] as const).map(type => (
+                          <button key={type} onClick={() => setCustomerType(type)}
+                            className={`flex-1 rounded-[20px] border-2 transition-all font-bold text-sm ${
+                              customerType === type ? 'border-primary bg-primary/10 text-primary' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50'
+                            }`}>
+                            {type === 'regular' ? 'عادي' : '⭐ VIP'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </SpatialCard>
+
               </div>
-              <p className="text-xs font-bold text-slate-400 dark:text-white/30 text-center mt-3">
-                اضغط على أي منتج لإضافته مباشرة للفاتورة
-              </p>
-            </SpatialCard>
+
+              {/* ⚡ منتجات سريعة */}
+              <SpatialCard title="منتجات سريعة" icon={<Zap className="w-4 h-4" />}
+                action={
+                  <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 font-bold text-xs transition-all">
+                    <Settings className="w-3.5 h-3.5" /> تخصيص
+                  </button>
+                }
+              >
+                <div className="grid grid-cols-3 gap-2">
+                  {QUICK_PRODUCTS.map(qp => (
+                    <button key={qp.id}
+                      className={`flex flex-col items-center justify-center gap-1.5 p-3 rounded-[18px] bg-gradient-to-br border-2 transition-all duration-200 hover:scale-[1.04] active:scale-[0.97] ${qp.color}`}
+                    >
+                      <span className="text-xl">{qp.emoji}</span>
+                      <span className="text-[11px] font-black text-center leading-tight">{qp.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </SpatialCard>
+
+            </div>
 
           </div>
 
@@ -309,14 +314,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
           <div className="flex flex-col gap-4 lg:sticky lg:top-4">
 
             {/* قائمة المنتجات */}
-            <SpatialCard title={`المنتجات ${cart.length > 0 ? `(${cart.length})` : ''}`} icon={<ShoppingCart className="w-4 h-4" />}>
+            <SpatialCard title={`المنتجات ${cart.length > 0 ? `(${cart.length})` : ''}`} icon={<ShoppingCart className="w-4 h-4" />} className="lg:-mt-[30px]">
               {cart.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-2 text-slate-400 dark:text-white/30">
                   <ShoppingCart className="w-8 h-8 opacity-30" />
                   <span className="font-bold text-sm">لا توجد منتجات بعد</span>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 max-h-[268px] overflow-y-auto pr-1">
                   {cart.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
                       <div className="flex-1 min-w-0">
