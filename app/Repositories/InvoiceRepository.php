@@ -60,7 +60,11 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
                 throw new \Exception("المخزون غير كافٍ. المتاح: {$product->stock}");
             }
 
-            $lineTotal = $unitPrice * $quantity;
+            // line_total حسب نوع البيع
+            $lineTotal = match($saleType) {
+                'tier_decant', 'full_bottle' => $unitPrice,          // سعر ثابت
+                default                      => $unitPrice * $quantity, // سعر × كمية
+            };
 
             // إضافة السطر
             InvoiceItem::create([

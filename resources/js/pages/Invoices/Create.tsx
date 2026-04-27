@@ -9,14 +9,13 @@ interface Size          { id: number; label: string; value: string; }
 interface Category      { id: number; name: string; unit: string; }
 interface ProductPrice  { price_per_unit_regular: string; price_per_unit_vip: string; full_bottle_regular: string | null; full_bottle_vip: string | null; }
 interface OriginalDetail { bottle_volume: string; }
-interface PriceTier     { id: number; name: string; }
+interface PriceTier     { id: number; name: string; tier_prices?: TierPrice[]; }
 interface TierPrice     { size_id: number; price_regular: string; price_vip: string; }
 interface Product {
   id: number; name: string; stock: string; selling_type: string;
   category: Category; price_tier: PriceTier | null;
   product_price: ProductPrice | null;
   original_perfume_detail: OriginalDetail | null;
-  tier_prices?: TierPrice[];
 }
 
 interface Props {
@@ -49,12 +48,13 @@ function resolvePrice(product: Product, saleType: string, sizeId: string, isVip:
   const pp = product.product_price;
   switch (saleType) {
     case 'tier_decant': {
-      const tp = product.tier_prices?.find(t => t.size_id === +sizeId);
+      const tp = product.price_tier?.tier_prices?.find((t: any) => t.size_id === +sizeId);
       return tp ? +(isVip ? tp.price_vip : tp.price_regular) : 0;
     }
     case 'unit_decant':
       return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
     case 'full_bottle':
+      // سعر ثابت — لا يُضرب في الكمية
       return pp ? +(isVip ? (pp.full_bottle_vip ?? 0) : (pp.full_bottle_regular ?? 0)) : 0;
     case 'unit_based':
       return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
@@ -77,6 +77,12 @@ function resolveQuantity(product: Product, saleType: string, sizeId: string, man
   }
 }
 
+function resolveLineTotal(saleType: string, price: number, quantity: number): number {
+  // عبوة كاملة و تير ديكانت → سعر ثابت
+  if (saleType === 'full_bottle' || saleType === 'tier_decant') return price;
+  return price * quantity;
+}
+
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash }: Props) {
   const [customerId,   setCustomerId]   = useState('');
   const [customerType, setCustomerType] = useState<'regular'|'vip'>('regular');
@@ -95,42 +101,51 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const isTier     = selectedProduct?.selling_type === 'tier_based';
   const isML       = selectedProduct?.category.unit === 'ml';
   const isOriginal = isML && !isTier;
-  const needsSize  = selSaleType === 'tier_decant' || selSaleType === 'unit_decant';
+  const needsSize  = isTier || selSaleType === 'unit_decant';
   const needsQty   = selSaleType === 'unit_based';
+
+  // عطر زيتي → tier_decant مباشرة
+  const effectiveSaleType = isTier ? 'tier_decant' : selSaleType;
 
   const saleTypeOptions = () => {
     if (!selectedProduct) return [];
-    if (isTier)     return [{ label: 'زيتي - تقسيم', badge: 'tier_decant' }];
+    if (isTier)     return []; // لا يظهر — tier_decant تلقائي
     if (isOriginal) return [{ label: 'أصلي - تقسيم', badge: 'unit_decant' }, { label: 'عبوة كاملة', badge: 'full_bottle' }];
     return [{ label: 'بالوحدة', badge: 'unit_based' }];
   };
 
   const saleTypeMap: Record<string, string> = { 'زيتي - تقسيم': 'tier_decant', 'أصلي - تقسيم': 'unit_decant', 'عبوة كاملة': 'full_bottle', 'بالوحدة': 'unit_based' };
 
-  const previewPrice = selectedProduct && selSaleType
-    ? resolvePrice(selectedProduct, selSaleType, selSize, isVip)
+  const previewPrice = selectedProduct && (isTier ? selSize : selSaleType)
+    ? resolvePrice(selectedProduct, effectiveSaleType, selSize, isVip)
     : null;
 
-  const previewQty = selectedProduct && selSaleType
-    ? resolveQuantity(selectedProduct, selSaleType, selSize, selQty, sizes)
+  const previewQty = selectedProduct && (isTier ? selSize : selSaleType)
+    ? resolveQuantity(selectedProduct, effectiveSaleType, selSize, selQty, sizes)
+    : null;
+
+  const previewTotal = previewPrice !== null && previewQty !== null && previewQty > 0
+    ? resolveLineTotal(effectiveSaleType, previewPrice, previewQty)
     : null;
 
   function addToCart() {
-    if (!selectedProduct || !selSaleType) return;
-    const qty   = resolveQuantity(selectedProduct, selSaleType, selSize, selQty, sizes);
-    const price = resolvePrice(selectedProduct, selSaleType, selSize, isVip);
+    if (!selectedProduct || (!isTier && !selSaleType)) return;
+    const qty   = resolveQuantity(selectedProduct, effectiveSaleType, selSize, selQty, sizes);
+    const price = resolvePrice(selectedProduct, effectiveSaleType, selSize, isVip);
     if (!qty || !price) return;
 
     const size = sizes.find(s => s.id === +selSize);
+    const lineTotal = resolveLineTotal(effectiveSaleType, price, qty);
+
     setCart(prev => [...prev, {
       product_id:   selectedProduct.id,
       product_name: selectedProduct.name,
-      sale_type:    selSaleType,
+      sale_type:    effectiveSaleType,
       size_id:      selSize,
       size_label:   size?.label ?? '',
       quantity:     String(qty),
       unit_price:   price,
-      line_total:   price * qty,
+      line_total:   lineTotal,
     }]);
 
     setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('');
@@ -191,7 +206,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   }}
                 />
 
-                {selectedProduct && (
+                {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
                   <ModernSelect label="نوع البيع" options={saleTypeOptions()}
                     defaultValue=""
                     onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
@@ -214,12 +229,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   </div>
                 )}
 
-                {previewPrice !== null && previewQty !== null && previewQty > 0 && (
+                {previewPrice !== null && previewQty !== null && previewQty > 0 && previewTotal !== null && (
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      { label: 'سعر الوحدة', value: `${previewPrice} د` },
-                      { label: 'الكمية',      value: previewQty },
-                      { label: 'الإجمالي',    value: `${(previewPrice * previewQty).toFixed(2)} د` },
+                      { label: effectiveSaleType === 'full_bottle' ? 'سعر العبوة' : 'سعر الوحدة', value: `${previewPrice} د` },
+                      { label: 'الكمية',      value: effectiveSaleType === 'full_bottle' ? `${previewQty} ml` : previewQty },
+                      { label: 'الإجمالي',    value: `${previewTotal.toFixed(2)} د` },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex flex-col gap-1 p-3 rounded-[14px] bg-primary/5 border border-primary/20">
                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
@@ -230,7 +245,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 )}
 
                 <button onClick={addToCart}
-                  disabled={!selectedProduct || !selSaleType || (needsSize && !selSize) || (needsQty && !selQty)}
+                  disabled={!selectedProduct || (!isTier && !selSaleType) || (needsSize && !selSize) || (needsQty && !selQty)}
                   className="spatial-button flex items-center justify-center gap-2 h-11 text-sm disabled:opacity-40">
                   <Plus className="w-4 h-4" /> إضافة للفاتورة
                 </button>
