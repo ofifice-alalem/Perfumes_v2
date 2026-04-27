@@ -3,6 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Category { id: number; name: string; unit: string; }
 interface Tier      { id: number; name: string; description: string | null; }
@@ -193,6 +194,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [deleteId, setDeleteId]     = useState<number | null>(null);
 
   const createForm = useForm({ ...emptyForm });
   const editForm   = useForm({ ...emptyForm });
@@ -221,8 +223,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
   }
 
   function deleteProduct(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    router.delete(`/products/${id}`);
+    router.delete(`/products/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
   return (
@@ -299,7 +300,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
                             <Pencil className="w-3.5 h-3.5" /> تعديل
                           </button>
-                          <button onClick={() => deleteProduct(product.id)}
+                          <button onClick={() => setDeleteId(product.id)}
                             className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
                             <Trash2 className="w-3.5 h-3.5" /> حذف
                           </button>
@@ -338,6 +339,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         </SpatialCard>
 
       </div>
+
+      <ConfirmModal
+        isOpen={deleteId !== null}
+        onConfirm={() => deleteId && deleteProduct(deleteId)}
+        onCancel={() => setDeleteId(null)}
+      />
+
     </AppShell>
   );
 }
