@@ -29,6 +29,11 @@ class Product extends Model
         return $this->belongsTo(PriceTier::class);
     }
 
+    public function tierPrices()
+    {
+        return $this->hasManyThrough(TierPrice::class, PriceTier::class, 'id', 'tier_id', 'price_tier_id', 'id');
+    }
+
     public function productPrice(): HasOne
     {
         return $this->hasOne(ProductPrice::class);

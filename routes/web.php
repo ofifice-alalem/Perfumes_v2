@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PaymentMethodController;
+use App\Http\Controllers\InvoiceController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
@@ -22,3 +23,8 @@ Route::resource('products', ProductController::class)->except(['create', 'edit',
 Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
 Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show']);
 Route::resource('payment-methods', PaymentMethodController::class)->except(['create', 'edit', 'show']);
+Route::post('invoices/with-items', [InvoiceController::class, 'storeWithItems'])->name('invoices.storeWithItems');
+Route::resource('invoices', InvoiceController::class)->except(['edit']);
+Route::post('invoices/{id}/items', [InvoiceController::class, 'addItem'])->name('invoices.items.add');
+Route::delete('invoices/{id}/items/{itemId}', [InvoiceController::class, 'removeItem'])->name('invoices.items.remove');
+Route::post('invoices/{id}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments.add');
