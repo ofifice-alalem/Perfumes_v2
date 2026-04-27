@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft } from 'lucide-react';
+import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock } from 'lucide-react';
 
 interface Customer      { id: number; name: string; }
 interface Size          { id: number; label: string; value: string; }
@@ -28,6 +28,19 @@ interface CartItem {
   unit_price: number; line_total: number;
 }
 interface PaymentEntry { payment_method_id: string; method_name: string; amount: string; }
+
+// Hold Invoice Interface
+interface HoldInvoice {
+  id: string;
+  customerId: string;
+  customerType: 'regular' | 'vip';
+  customerName: string;
+  notes: string;
+  cart: CartItem[];
+  payments: PaymentEntry[];
+  timestamp: number;
+  total: number;
+}
 
 const QUICK_PRODUCTS = [
   { id: 'q1', name: 'مبخرة صغيرة', emoji: '🪔', color: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-700 dark:text-amber-300' },
@@ -75,6 +88,7 @@ function resolveLineTotal(saleType: string, price: number, quantity: number): nu
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash }: Props) {
   const [customerId,   setCustomerId]   = useState('');
   const [customerType, setCustomerType] = useState<'regular'|'vip'>('regular');
+  const [notes,        setNotes]        = useState('');
   const [cart,         setCart]         = useState<CartItem[]>([]);
   const [payments,     setPayments]     = useState<PaymentEntry[]>([]);
   const [processing,   setProcessing]   = useState(false);
@@ -84,6 +98,27 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [selQty,       setSelQty]       = useState('');
   const [selMethod,    setSelMethod]    = useState('');
   const [selAmount,    setSelAmount]    = useState('');
+  
+  // Hold invoices state
+  const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
+  const [showHoldList, setShowHoldList] = useState(false);
+
+  // Load hold invoices from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('holdInvoices');
+    if (saved) {
+      try {
+        setHoldInvoices(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse hold invoices:', e);
+      }
+    }
+  }, []);
+
+  // Save hold invoices to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('holdInvoices', JSON.stringify(holdInvoices));
+  }, [holdInvoices]);
 
   const isVip           = customerType === 'vip';
   const isCashCustomer  = !customerId;
@@ -138,8 +173,62 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     setProcessing(true);
     router.post('/invoices/with-items', {
       customer_id: customerId || null, customer_type: customerType,
-      notes: '', items: cart, payments,
+      notes, items: cart, payments,
     }, { onFinish: () => setProcessing(false) });
+  }
+
+  // Hold invoice functions
+  function holdCurrentInvoice() {
+    if (cart.length === 0) return;
+    
+    const selectedCustomer = customerId 
+      ? customers.find(c => c.id === +customerId)
+      : null;
+    
+    const holdInvoice: HoldInvoice = {
+      id: Date.now().toString(),
+      customerId,
+      customerType,
+      customerName: selectedCustomer?.name ?? 'زبون نقدي',
+      notes,
+      cart: [...cart],
+      payments: [...payments],
+      timestamp: Date.now(),
+      total,
+    };
+    
+    setHoldInvoices(prev => [...prev, holdInvoice]);
+    clearCurrentInvoice();
+  }
+
+  function restoreHoldInvoice(holdInvoice: HoldInvoice) {
+    setCustomerId(holdInvoice.customerId);
+    setCustomerType(holdInvoice.customerType);
+    setNotes(holdInvoice.notes);
+    setCart([...holdInvoice.cart]);
+    setPayments([...holdInvoice.payments]);
+    
+    // Remove from hold list
+    setHoldInvoices(prev => prev.filter(h => h.id !== holdInvoice.id));
+    setShowHoldList(false);
+  }
+
+  function deleteHoldInvoice(holdId: string) {
+    setHoldInvoices(prev => prev.filter(h => h.id !== holdId));
+  }
+
+  function clearCurrentInvoice() {
+    setCustomerId('');
+    setCustomerType('regular');
+    setNotes('');
+    setCart([]);
+    setPayments([]);
+    setSelProduct('');
+    setSelSaleType('');
+    setSelSize('');
+    setSelQty('');
+    setSelMethod('');
+    setSelAmount('');
   }
 
   const customerOptions = [
@@ -170,8 +259,61 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               <span className="text-slate-300 dark:text-white/10">/</span>
               <span className="font-black text-slate-800 dark:text-white text-sm">فاتورة جديدة</span>
             </div>
-            {flash?.error && <span className="text-xs font-bold text-red-500">{flash.error}</span>}
+            <div className="flex items-center gap-2">
+              {/* Hold invoices indicator */}
+              {holdInvoices.length > 0 && (
+                <button
+                  onClick={() => setShowHoldList(!showHoldList)}
+                  className="relative flex items-center gap-2 px-3 h-8 rounded-[10px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs transition-all"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>معلقة ({holdInvoices.length})</span>
+                </button>
+              )}
+              {flash?.error && <span className="text-xs font-bold text-red-500">{flash.error}</span>}
+            </div>
           </div>
+
+          {/* Hold invoices dropdown */}
+          {showHoldList && holdInvoices.length > 0 && (
+            <div className="absolute top-16 left-5 right-5 z-50 bg-white dark:bg-slate-800 rounded-[20px] border border-black/10 dark:border-white/10 shadow-xl max-h-80 overflow-y-auto">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-black text-slate-800 dark:text-white text-sm">الفواتير المعلقة</span>
+                  <button onClick={() => setShowHoldList(false)} className="w-6 h-6 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-white/40">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {holdInvoices.map(hold => (
+                    <div key={hold.id} className="flex items-center gap-3 p-3 rounded-[14px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800 dark:text-white text-sm">{hold.customerName}</span>
+                          <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{hold.cart.length} منتج</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-bold text-slate-400 dark:text-white/30">{hold.total.toFixed(2)} د</span>
+                          <span className="text-xs text-slate-400 dark:text-white/30">•</span>
+                          <span className="text-xs text-slate-400 dark:text-white/30">{new Date(hold.timestamp).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => restoreHoldInvoice(hold)}
+                          className="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all">
+                          <Play className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => deleteHoldInvoice(hold.id)}
+                          className="w-8 h-8 rounded-[8px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Customer bar */}
           <div className="flex items-center gap-3 px-5 py-3 border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
@@ -392,18 +534,46 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               ))}
             </div>
 
+            {/* Notes */}
+            <div className="px-5 py-3 border-b border-black/5 dark:border-white/5">
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="ملاحظات الفاتورة... (اختياري)"
+                rows={2}
+                className="w-full spatial-input rounded-[14px] px-4 py-3 text-sm font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-white/20"
+              />
+            </div>
+
             {/* Submit */}
             <div className="px-5 py-4 flex flex-col gap-2">
+              {/* Hold button - only show if there are items */}
+              {cart.length > 0 && (
+                <button onClick={holdCurrentInvoice}
+                  className="w-full flex items-center justify-center gap-2 h-12 rounded-[16px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all">
+                  <Pause className="w-4 h-4" /> تعليق الفاتورة
+                </button>
+              )}
+              
               <button onClick={submit}
                 disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
                 className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-base font-black disabled:opacity-40">
                 <Check className="w-5 h-5" />
                 {cart.length > 0 ? `إتمام البيع — ${total.toFixed(2)} د` : 'إتمام البيع'}
               </button>
-              <Link href="/invoices"
-                className="w-full flex items-center justify-center gap-2 h-10 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/8 dark:hover:bg-white/8 text-slate-500 dark:text-white/40 font-bold text-sm transition-all">
-                <X className="w-4 h-4" /> إلغاء
-              </Link>
+              
+              <div className="flex gap-2">
+                <Link href="/invoices"
+                  className="flex-1 flex items-center justify-center gap-2 h-10 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/8 dark:hover:bg-white/8 text-slate-500 dark:text-white/40 font-bold text-sm transition-all">
+                  <X className="w-4 h-4" /> إلغاء
+                </Link>
+                {cart.length > 0 && (
+                  <button onClick={clearCurrentInvoice}
+                    className="flex-1 flex items-center justify-center gap-2 h-10 rounded-[16px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 font-bold text-sm transition-all">
+                    <Trash2 className="w-4 h-4" /> مسح
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
