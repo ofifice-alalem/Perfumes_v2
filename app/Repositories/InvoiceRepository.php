@@ -61,7 +61,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             }
 
             // line_total حسب نوع البيع
-            $lineTotal = match($saleType) {
+            $lineTotal = match($itemData['sale_type']) {
                 'tier_decant', 'full_bottle' => $unitPrice,          // سعر ثابت
                 default                      => $unitPrice * $quantity, // سعر × كمية
             };

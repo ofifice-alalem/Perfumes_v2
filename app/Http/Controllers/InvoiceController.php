@@ -36,16 +36,19 @@ class InvoiceController extends Controller
     public function storeWithItems(Request $request)
     {
         $data = $request->validate([
-            'customer_id'          => 'nullable|exists:customers,id',
-            'customer_type'        => 'required|in:regular,vip',
-            'notes'                => 'nullable|string',
-            'items'                => 'required|array|min:1',
-            'items.*.product_id'   => 'required|exists:products,id',
-            'items.*.sale_type'    => 'required|in:tier_decant,unit_decant,full_bottle,unit_based',
-            'items.*.size_id'      => 'nullable|exists:sizes,id',
-            'items.*.quantity'     => 'required|numeric|min:0.01',
-            'items.*.unit_price'   => 'required|numeric|min:0',
-            'items.*.line_total'   => 'required|numeric|min:0',
+            'customer_id'                  => 'nullable|exists:customers,id',
+            'customer_type'                => 'required|in:regular,vip',
+            'notes'                        => 'nullable|string',
+            'items'                        => 'required|array|min:1',
+            'items.*.product_id'           => 'required|exists:products,id',
+            'items.*.sale_type'            => 'required|in:tier_decant,unit_decant,full_bottle,unit_based',
+            'items.*.size_id'              => 'nullable|exists:sizes,id',
+            'items.*.quantity'             => 'required|numeric|min:0.01',
+            'items.*.unit_price'           => 'required|numeric|min:0',
+            'items.*.line_total'           => 'required|numeric|min:0',
+            'payments'                     => 'nullable|array',
+            'payments.*.payment_method_id' => 'required|exists:payment_methods,id',
+            'payments.*.amount'            => 'required|numeric|min:0.01',
         ]);
 
         $data['user_id'] = Auth::id() ?? 1;
@@ -53,6 +56,10 @@ class InvoiceController extends Controller
 
         foreach ($data['items'] as $item) {
             $this->invoices->addItem($invoice->id, $item);
+        }
+
+        foreach ($data['payments'] ?? [] as $payment) {
+            $this->invoices->addPayment($invoice->id, $payment);
         }
 
         return redirect()->route('invoices.show', $invoice->id)
