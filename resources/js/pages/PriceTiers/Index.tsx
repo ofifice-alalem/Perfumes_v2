@@ -3,6 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Tags, Save } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Size { id: number; label: string; value: string; }
 interface TierPrice { id: number; size_id: number; price_regular: string; price_vip: string; size: Size; }
@@ -22,10 +23,11 @@ const tierColors: Record<string, string> = {
 const defaultColor = 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20';
 
 export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
-  const [editingId, setEditingId]       = useState<number | null>(null);
+  const [editingId, setEditingId]             = useState<number | null>(null);
   const [editingPricesId, setEditingPricesId] = useState<number | null>(null);
-  const [showCreate, setShowCreate]     = useState(false);
-  const [pricesData, setPricesData]     = useState<Record<number, { price_regular: string; price_vip: string }>>({});
+  const [showCreate, setShowCreate]           = useState(false);
+  const [pricesData, setPricesData]           = useState<Record<number, { price_regular: string; price_vip: string }>>({});
+  const [deleteId, setDeleteId]               = useState<number | null>(null);
 
   const createForm = useForm({ name: '', description: '' });
   const editForm   = useForm({ name: '', description: '' });
@@ -72,8 +74,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
   }
 
   function deleteTier(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    router.delete(`/price-tiers/${id}`);
+    router.delete(`/price-tiers/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
   return (
@@ -177,7 +178,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                       className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
                       <Pencil className="w-3.5 h-3.5" /> تعديل
                     </button>
-                    <button onClick={() => deleteTier(tier.id)}
+                    <button onClick={() => setDeleteId(tier.id)}
                       className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
                       <Trash2 className="w-3.5 h-3.5" /> حذف
                     </button>
@@ -264,6 +265,13 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
         )}
 
       </div>
+
+      <ConfirmModal
+        isOpen={deleteId !== null}
+        onConfirm={() => deleteId && deleteTier(deleteId)}
+        onCancel={() => setDeleteId(null)}
+      />
+
     </AppShell>
   );
 }

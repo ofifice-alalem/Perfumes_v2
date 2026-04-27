@@ -3,6 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Ruler } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Size {
   id: number;
@@ -17,8 +18,9 @@ interface Props {
 }
 
 export default function SizesIndex({ sizes, flash }: Props) {
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId]   = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [deleteId, setDeleteId]     = useState<number | null>(null);
 
   const createForm = useForm({ label: '', value: '' });
   const editForm   = useForm({ label: '', value: '' });
@@ -41,8 +43,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
   }
 
   function deleteSize(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    router.delete(`/sizes/${id}`);
+    router.delete(`/sizes/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
   return (
@@ -181,7 +182,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
                         >
                           <Pencil className="w-3.5 h-3.5" /> تعديل
                         </button>
-                        <button onClick={() => deleteSize(size.id)}
+                        <button onClick={() => setDeleteId(size.id)}
                           className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-bold text-sm"
                         >
                           <Trash2 className="w-3.5 h-3.5" /> حذف
@@ -196,6 +197,13 @@ export default function SizesIndex({ sizes, flash }: Props) {
         </SpatialCard>
 
       </div>
+
+      <ConfirmModal
+        isOpen={deleteId !== null}
+        onConfirm={() => deleteId && deleteSize(deleteId)}
+        onCancel={() => setDeleteId(null)}
+      />
+
     </AppShell>
   );
 }
