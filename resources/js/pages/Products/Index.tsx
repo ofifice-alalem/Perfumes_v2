@@ -564,12 +564,12 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         return createPortal(
           <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingId(null)} />
-            <div className="relative w-full max-w-2xl max-h-[90dvh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl shadow-black/10 dark:shadow-black/40"
+            <div className="relative w-full max-w-2xl max-h-[90dvh] animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl shadow-black/10 dark:shadow-black/40"
               style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.97) 0%, rgba(220,230,245,0.95) 100%)' }}
             >
               <div className="dark:hidden absolute inset-0 rounded-[30px] pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(220,230,245,0.97) 100%)' }} />
               <div className="hidden dark:block absolute inset-0 rounded-[30px] pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(25,35,80,0.98) 0%, rgba(10,14,35,0.97) 100%)' }} />
-              <div className="relative p-6">
+              <div className="relative p-6 overflow-y-auto max-h-[90dvh] custom-scroll">
                 <div className="flex items-center justify-between mb-5">
                   <h3 className="text-lg font-black text-slate-800 dark:text-white">تعديل: {product.name}</h3>
                   <button onClick={() => setEditingId(null)}
