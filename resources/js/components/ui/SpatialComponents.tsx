@@ -135,6 +135,7 @@ export function ModernSelect({
         filtered.map((opt, idx) => (
           <div key={opt.label}>
             <li
+              onMouseDown={e => e.preventDefault()}
               onClick={() => { setSelected(opt.label); onSelect?.(opt.label); setIsOpen(false); setSearch(''); }}
               className={`flex items-center justify-between gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} ${selected === opt.label ? 'bg-primary text-white' : 'text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white'}`}
             >

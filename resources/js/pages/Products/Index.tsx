@@ -23,65 +23,36 @@ interface Props {
   flash?: { success?: string; error?: string };
 }
 
-const sellingTypeLabel = { tier_based: 'زيتي — تير', unit_priced: 'سعر خاص' };
 const sellingTypeColors = {
   tier_based:  'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20',
   unit_priced: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20',
 };
 
-const emptyCreate = {
+const emptyForm = {
   name: '', category_id: '', selling_type: 'tier_based' as 'tier_based'|'unit_priced',
   price_tier_id: '', min_stock: '0',
   price_per_unit_regular: '', price_per_unit_vip: '',
   full_bottle_regular: '', full_bottle_vip: '', bottle_volume: '',
 };
 
-export default function ProductsIndex({ products, categories, tiers, flash }: Props) {
-  const [showCreate, setShowCreate]   = useState(false);
-  const [editingId, setEditingId]     = useState<number | null>(null);
-  const [expandedId, setExpandedId]   = useState<number | null>(null);
+// ✅ خارج الـ component الرئيسي — لا يُعاد إنشاؤه عند كل render
+function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
+  form: ReturnType<typeof useForm<typeof emptyForm>>;
+  categories: Category[];
+  tiers: Tier[];
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  const catOptions  = categories.map(c => ({ label: c.name, badge: c.unit }));
+  const tierOptions = tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name, meta: t.description ?? '' }));
+  const typeOptions = [{ label: 'عطر زيتي (تير)', badge: 'tier' }, { label: 'سعر خاص', badge: 'unit' }];
 
-  const createForm = useForm({ ...emptyCreate });
-  const editForm   = useForm({ ...emptyCreate });
+  const getCatLabel  = (id: string) => categories.find(c => c.id === +id)?.name ?? '';
+  const getTierLabel = (id: string) => { const t = tiers.find(t => t.id === +id); return t ? `تير ${t.name}` : ''; };
 
-  const catOptions   = categories.map(c => ({ label: c.name, badge: c.unit }));
-  const tierOptions  = tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name, meta: t.description ?? '' }));
-  const typeOptions  = [{ label: 'عطر زيتي (تير)', badge: 'tier' }, { label: 'سعر خاص', badge: 'unit' }];
-
-  function getCatLabel(id: string) { return categories.find(c => c.id === +id)?.name ?? ''; }
-  function getTierLabel(id: string) { return tiers.find(t => t.id === +id) ? `تير ${tiers.find(t => t.id === +id)!.name}` : ''; }
-
-  function startEdit(p: Product) {
-    setEditingId(p.id);
-    editForm.setData({
-      name: p.name, category_id: String(p.category.id),
-      selling_type: p.selling_type,
-      price_tier_id: p.price_tier ? String(p.price_tier.id) : '',
-      min_stock: p.min_stock,
-      price_per_unit_regular: p.product_price?.price_per_unit_regular ?? '',
-      price_per_unit_vip:     p.product_price?.price_per_unit_vip ?? '',
-      full_bottle_regular:    p.product_price?.full_bottle_regular ?? '',
-      full_bottle_vip:        p.product_price?.full_bottle_vip ?? '',
-      bottle_volume:          p.original_perfume_detail?.bottle_volume ?? '',
-    });
-  }
-
-  function submitCreate() {
-    createForm.post('/products', { onSuccess: () => { createForm.reset(); setShowCreate(false); } });
-  }
-
-  function submitEdit(id: number) {
-    editForm.put(`/products/${id}`, { onSuccess: () => setEditingId(null) });
-  }
-
-  function deleteProduct(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    router.delete(`/products/${id}`);
-  }
-
-  const ProductForm = ({ form, onSubmit, onCancel }: { form: typeof createForm; onSubmit: () => void; onCancel: () => void }) => (
+  return (
     <div className="flex flex-col gap-4">
-      {/* Row 1 */}
+      {/* Row 1 — Selects */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="w-full sm:w-56">
           <ModernSelect label="التصنيف" options={catOptions}
@@ -107,7 +78,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         )}
       </div>
 
-      {/* Row 2 */}
+      {/* Row 2 — Text inputs */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex flex-col gap-2 flex-1">
           <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المنتج</label>
@@ -165,6 +136,43 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
       </div>
     </div>
   );
+}
+
+export default function ProductsIndex({ products, categories, tiers, flash }: Props) {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId]   = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  const createForm = useForm({ ...emptyForm });
+  const editForm   = useForm({ ...emptyForm });
+
+  function startEdit(p: Product) {
+    setEditingId(p.id);
+    editForm.setData({
+      name: p.name, category_id: String(p.category.id),
+      selling_type: p.selling_type,
+      price_tier_id: p.price_tier ? String(p.price_tier.id) : '',
+      min_stock: p.min_stock,
+      price_per_unit_regular: p.product_price?.price_per_unit_regular ?? '',
+      price_per_unit_vip:     p.product_price?.price_per_unit_vip ?? '',
+      full_bottle_regular:    p.product_price?.full_bottle_regular ?? '',
+      full_bottle_vip:        p.product_price?.full_bottle_vip ?? '',
+      bottle_volume:          p.original_perfume_detail?.bottle_volume ?? '',
+    });
+  }
+
+  function submitCreate() {
+    createForm.post('/products', { onSuccess: () => { createForm.reset(); setShowCreate(false); } });
+  }
+
+  function submitEdit(id: number) {
+    editForm.put(`/products/${id}`, { onSuccess: () => setEditingId(null) });
+  }
+
+  function deleteProduct(id: number) {
+    if (!confirm('هل أنت متأكد من الحذف؟')) return;
+    router.delete(`/products/${id}`);
+  }
 
   return (
     <AppShell pageTitle="Step 3 — المنتجات">
@@ -188,7 +196,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         {/* Create Form */}
         {showCreate && (
           <SpatialCard title="منتج جديد" icon={<Plus className="w-4 h-4" />}>
-            <ProductForm form={createForm} onSubmit={submitCreate} onCancel={() => { setShowCreate(false); createForm.reset(); }} />
+            <ProductForm form={createForm} categories={categories} tiers={tiers}
+              onSubmit={submitCreate} onCancel={() => { setShowCreate(false); createForm.reset(); }} />
           </SpatialCard>
         )}
 
@@ -206,11 +215,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                   {editingId === product.id ? (
                     <div className="p-4">
-                      <ProductForm form={editForm} onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
+                      <ProductForm form={editForm} categories={categories} tiers={tiers}
+                        onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
                     </div>
                   ) : (
                     <>
-                      {/* Main Row */}
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="w-10 h-10 rounded-[14px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -221,13 +230,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                               <span className="text-xs font-bold text-slate-400 dark:text-white/40">{product.category.name}</span>
                               <span className={`text-xs font-black px-2 py-0.5 rounded-[6px] ${sellingTypeColors[product.selling_type]}`}>
-                                {product.selling_type === 'tier_based' ? `تير ${product.price_tier?.name}` : sellingTypeLabel[product.selling_type]}
+                                {product.selling_type === 'tier_based' ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
                               </span>
-                              {product.stock !== undefined && (
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] ${+product.stock <= +product.min_stock ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'}`}>
-                                  مخزون: {product.stock}
-                                </span>
-                              )}
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] ${+product.stock <= +product.min_stock ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'}`}>
+                                مخزون: {product.stock}
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -248,7 +255,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         </div>
                       </div>
 
-                      {/* Expanded Details */}
                       {expandedId === product.id && product.product_price && (
                         <div className="px-4 pb-4 border-t border-black/5 dark:border-white/5 pt-3">
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
