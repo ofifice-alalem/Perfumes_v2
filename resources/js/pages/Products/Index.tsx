@@ -261,108 +261,145 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
               <span className="font-bold">لا توجد منتجات بعد</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-black/5 dark:border-white/5">
-                    {['المنتج', 'التصنيف', 'سعر الوحدة', 'سعر الوحدة VIP', 'سعر العبوة', 'حجم العبوة', 'المخزون', ''].map(h => (
-                      <th key={h} className="px-4 py-3 text-right text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((product, idx) => {
-                    const pp = product.product_price;
-                    const isTier = product.selling_type === 'tier_based';
-                    return (
-                      <tr key={product.id} className={`transition-colors hover:bg-black/2 dark:hover:bg-white/2 ${idx < products.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-
-                        {/* المنتج */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                              <Package className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-800 dark:text-white text-sm whitespace-nowrap">{product.name}</p>
-                              <span className={`text-xs font-black px-2 py-0.5 rounded-[6px] ${sellingTypeColors[product.selling_type]}`}>
-                                {isTier ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* التصنيف */}
-                        <td className="px-4 py-3">
-                          <span className="text-sm font-bold text-slate-600 dark:text-white/60 whitespace-nowrap">{product.category.name}</span>
-                        </td>
-
-                        {/* سعر الوحدة */}
-                        <td className="px-4 py-3 text-center">
-                          {isTier
-                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
-                            : <span className="font-black text-slate-800 dark:text-white text-sm">{pp?.price_per_unit_regular ?? '--'}</span>
-                          }
-                        </td>
-
-                        {/* سعر الوحدة VIP */}
-                        <td className="px-4 py-3 text-center">
-                          {isTier
-                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
-                            : <span className="font-black text-primary text-sm">{pp?.price_per_unit_vip ?? '--'}</span>
-                          }
-                        </td>
-
-                        {/* سعر العبوة */}
-                        <td className="px-4 py-3 text-center">
-                          {!pp?.full_bottle_regular
-                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
-                            : (
-                              <div className="flex flex-col items-center gap-0.5">
-                                <span className="font-black text-slate-800 dark:text-white text-sm">{pp.full_bottle_regular}</span>
-                                <span className="font-black text-primary text-xs">{pp.full_bottle_vip}</span>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-black/5 dark:border-white/5">
+                      {['المنتج', 'التصنيف', 'سعر الوحدة', 'سعر الوحدة VIP', 'سعر العبوة', 'حجم العبوة', 'المخزون', ''].map(h => (
+                        <th key={h} className="px-4 py-3 text-right text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {products.map((product, idx) => {
+                      const pp = product.product_price;
+                      const isTier = product.selling_type === 'tier_based';
+                      return (
+                        <tr key={product.id} className={`transition-colors hover:bg-black/2 dark:hover:bg-white/2 ${idx < products.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                <Package className="w-4 h-4" />
                               </div>
-                            )
-                          }
-                        </td>
+                              <div>
+                                <p className="font-bold text-slate-800 dark:text-white text-sm whitespace-nowrap">{product.name}</p>
+                                <span className={`text-xs font-black px-2 py-0.5 rounded-[6px] ${sellingTypeColors[product.selling_type]}`}>
+                                  {isTier ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-bold text-slate-600 dark:text-white/60 whitespace-nowrap">{product.category.name}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isTier ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                              : <span className="font-black text-slate-800 dark:text-white text-sm">{pp?.price_per_unit_regular ?? '--'}</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {isTier ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                              : <span className="font-black text-primary text-sm">{pp?.price_per_unit_vip ?? '--'}</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {!pp?.full_bottle_regular
+                              ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                              : <div className="flex flex-col items-center gap-0.5">
+                                  <span className="font-black text-slate-800 dark:text-white text-sm">{pp.full_bottle_regular}</span>
+                                  <span className="font-black text-primary text-xs">{pp.full_bottle_vip}</span>
+                                </div>
+                            }
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {product.original_perfume_detail
+                              ? <span className="font-black text-slate-800 dark:text-white text-sm">{product.original_perfume_detail.bottle_volume} ml</span>
+                              : <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] whitespace-nowrap ${
+                              +product.stock <= +product.min_stock
+                                ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            }`}>{product.stock}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2 justify-end">
+                              <button onClick={() => startEdit(product)}
+                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
+                                <Pencil className="w-3 h-3" /> تعديل
+                              </button>
+                              <button onClick={() => setDeleteId(product.id)}
+                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
+                                <Trash2 className="w-3 h-3" /> حذف
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-                        {/* حجم العبوة */}
-                        <td className="px-4 py-3 text-center">
-                          {product.original_perfume_detail
-                            ? <span className="font-black text-slate-800 dark:text-white text-sm">{product.original_perfume_detail.bottle_volume} ml</span>
-                            : <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
-                          }
-                        </td>
+              {/* Mobile Cards */}
+              <div className="md:hidden flex flex-col gap-3">
+                {products.map(product => {
+                  const pp = product.product_price;
+                  const isTier = product.selling_type === 'tier_based';
+                  return (
+                    <div key={product.id} className="flex flex-col gap-3 p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/8 dark:border-white/8">
 
-                        {/* المخزون */}
-                        <td className="px-4 py-3 text-center">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] whitespace-nowrap ${
-                            +product.stock <= +product.min_stock
-                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                          }`}>{product.stock}</span>
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 justify-end">
-                            <button onClick={() => startEdit(product)}
-                              className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
-                              <Pencil className="w-3 h-3" /> تعديل
-                            </button>
-                            <button onClick={() => setDeleteId(product.id)}
-                              className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
-                              <Trash2 className="w-3 h-3" /> حذف
-                            </button>
+                      {/* Header */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-slate-800 dark:text-white truncate">{product.name}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">{product.category.name}</span>
+                            <span className={`text-xs font-black px-2 py-0.5 rounded-[6px] ${sellingTypeColors[product.selling_type]}`}>
+                              {isTier ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
+                            </span>
                           </div>
-                        </td>
+                        </div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] shrink-0 ${
+                          +product.stock <= +product.min_stock
+                            ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        }`}>{product.stock}</span>
+                      </div>
 
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      {/* Info Grid */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'سعر الوحدة',     value: isTier ? null : (pp?.price_per_unit_regular ?? null), vip: false },
+                          { label: 'سعر الوحدة VIP', value: isTier ? null : (pp?.price_per_unit_vip ?? null),     vip: true  },
+                          { label: 'سعر العبوة',     value: pp?.full_bottle_regular ?? null,                      vip: false },
+                          { label: 'سعر العبوة VIP', value: pp?.full_bottle_vip ?? null,                          vip: true  },
+                          { label: 'حجم العبوة',     value: product.original_perfume_detail ? `${product.original_perfume_detail.bottle_volume} ml` : null, vip: false },
+                        ].filter(item => item.value !== null).map(({ label, value, vip }) => (
+                          <div key={label} className="flex flex-col gap-1 p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
+                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                            <span className={`font-black text-sm ${vip ? 'text-primary' : 'text-slate-800 dark:text-white'}`}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button onClick={() => startEdit(product)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
+                          <Pencil className="w-3.5 h-3.5" /> تعديل
+                        </button>
+                        <button onClick={() => setDeleteId(product.id)}
+                          className="flex-1 flex items-center justify-center gap-1.5 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
+                          <Trash2 className="w-3.5 h-3.5" /> حذف
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </SpatialCard>
 
@@ -380,17 +417,23 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         if (!product) return null;
         return createPortal(
           <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setEditingId(null)} />
-            <div className="relative spatial-card w-full max-w-2xl max-h-[90dvh] overflow-y-auto p-6 animate-in fade-in zoom-in-95 duration-200">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-black text-slate-800 dark:text-white">تعديل: {product.name}</h3>
-                <button onClick={() => setEditingId(null)}
-                  className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:bg-black/10 transition-all">
-                  <X className="w-4 h-4" />
-                </button>
+            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setEditingId(null)} />
+            <div className="relative w-full max-w-2xl max-h-[90dvh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl shadow-black/10 dark:shadow-black/40"
+              style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.97) 0%, rgba(220,230,245,0.95) 100%)' }}
+            >
+              <div className="dark:hidden absolute inset-0 rounded-[30px] pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(220,230,245,0.97) 100%)' }} />
+              <div className="hidden dark:block absolute inset-0 rounded-[30px] pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(25,35,80,0.98) 0%, rgba(10,14,35,0.97) 100%)' }} />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white">تعديل: {product.name}</h3>
+                  <button onClick={() => setEditingId(null)}
+                    className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:bg-black/10 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <ProductForm form={editForm} categories={categories} tiers={tiers}
+                  onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
               </div>
-              <ProductForm form={editForm} categories={categories} tiers={tiers}
-                onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
             </div>
           </div>,
           document.body

@@ -31,7 +31,10 @@ export function ConfirmModal({
       />
 
       {/* Modal */}
-      <div className="relative spatial-card w-full max-w-sm p-6 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-sm animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl shadow-black/10 dark:shadow-black/40 overflow-hidden">
+        <div className="absolute inset-0 dark:hidden" style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(220,230,245,0.97) 100%)' }} />
+        <div className="absolute inset-0 hidden dark:block" style={{ background: 'linear-gradient(145deg, rgba(25,35,80,0.98) 0%, rgba(10,14,35,0.97) 100%)' }} />
+        <div className="relative p-6">
 
         {/* Icon */}
         <div className="w-14 h-14 rounded-[20px] bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
@@ -60,6 +63,7 @@ export function ConfirmModal({
             <Trash2 className="w-4 h-4" />
             {confirmText}
           </button>
+        </div>
         </div>
       </div>
     </div>,
