@@ -3,7 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Category { id: number; name: string; unit: string; }
@@ -36,6 +36,73 @@ const emptyForm = {
   price_per_unit_regular: '', price_per_unit_vip: '',
   full_bottle_regular: '', full_bottle_vip: '', bottle_volume: '',
 };
+
+// Filter Panel Component
+function FilterPanel({ categories, catOptions, filterName, setFilterName, filterCatId, setFilterCatId, filterStockMin, setFilterStockMin, filterStockMax, setFilterStockMax, filterPriceMin, setFilterPriceMin, filterPriceMax, setFilterPriceMax, onReset }: {
+  categories: Category[];
+  catOptions: { label: string; badge: string }[];
+  filterName: string; setFilterName: (v: string) => void;
+  filterCatId: string; setFilterCatId: (v: string) => void;
+  filterStockMin: string; setFilterStockMin: (v: string) => void;
+  filterStockMax: string; setFilterStockMax: (v: string) => void;
+  filterPriceMin: string; setFilterPriceMin: (v: string) => void;
+  filterPriceMax: string; setFilterPriceMax: (v: string) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-5">
+
+      {/* اسم المنتج */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المنتج</label>
+        <input value={filterName} onChange={e => setFilterName(e.target.value)}
+          placeholder="بحث..."
+          className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+      </div>
+
+      {/* التصنيف */}
+      <ModernSelect label="التصنيف" options={[{ label: 'الكل', badge: '' }, ...catOptions]}
+        defaultValue={categories.find(c => c.id === +filterCatId)?.name ?? 'الكل'}
+        onSelect={val => setFilterCatId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
+      />
+
+      {/* نطاق المخزون */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">نطاق المخزون</label>
+        <div className="flex items-center gap-2">
+          <input type="number" value={filterStockMin} onChange={e => setFilterStockMin(e.target.value)}
+            placeholder="من" min="0"
+            className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-0 flex-1 min-w-0" />
+          <span className="text-slate-400 dark:text-white/30 font-bold text-sm shrink-0">—</span>
+          <input type="number" value={filterStockMax} onChange={e => setFilterStockMax(e.target.value)}
+            placeholder="إلى" min="0"
+            className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-0 flex-1 min-w-0" />
+        </div>
+      </div>
+
+      {/* نطاق سعر الوحدة */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر الوحدة</label>
+        <div className="flex items-center gap-2">
+          <input type="number" value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)}
+            placeholder="من" min="0"
+            className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-0 flex-1 min-w-0" />
+          <span className="text-slate-400 dark:text-white/30 font-bold text-sm shrink-0">—</span>
+          <input type="number" value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)}
+            placeholder="إلى" min="0"
+            className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-0 flex-1 min-w-0" />
+        </div>
+      </div>
+
+      {/* Reset */}
+      <button onClick={onReset}
+        className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+        إعادة تعيين
+      </button>
+
+    </div>
+  );
+}
 
 // ✅ خارج الـ component الرئيسي — لا يُعاد إنشاؤه عند كل render
 function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
@@ -195,6 +262,35 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
   const [deleteId, setDeleteId]     = useState<number | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Filter state
+  const [filterName, setFilterName]         = useState('');
+  const [filterCatId, setFilterCatId]       = useState('');
+  const [filterStockMin, setFilterStockMin] = useState('');
+  const [filterStockMax, setFilterStockMax] = useState('');
+  const [filterPriceMin, setFilterPriceMin] = useState('');
+  const [filterPriceMax, setFilterPriceMax] = useState('');
+
+  const catOptions = categories.map(c => ({ label: c.name, badge: c.unit }));
+
+  const filtered = products.filter(p => {
+    if (filterName && !p.name.toLowerCase().includes(filterName.toLowerCase())) return false;
+    if (filterCatId && p.category.id !== +filterCatId) return false;
+    if (filterStockMin && +p.stock < +filterStockMin) return false;
+    if (filterStockMax && +p.stock > +filterStockMax) return false;
+    if (filterPriceMin && p.product_price && +p.product_price.price_per_unit_regular < +filterPriceMin) return false;
+    if (filterPriceMax && p.product_price && +p.product_price.price_per_unit_regular > +filterPriceMax) return false;
+    return true;
+  });
+
+  function resetFilters() {
+    setFilterName(''); setFilterCatId('');
+    setFilterStockMin(''); setFilterStockMax('');
+    setFilterPriceMin(''); setFilterPriceMax('');
+  }
+
+  const hasFilter = filterName || filterCatId || filterStockMin || filterStockMax || filterPriceMin || filterPriceMax;
 
   const createForm = useForm({ ...emptyForm });
   const editForm   = useForm({ ...emptyForm });
@@ -253,12 +349,43 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
           </SpatialCard>
         )}
 
-        {/* List */}
-        <SpatialCard title={`المنتجات (${products.length})`} icon={<Package className="w-4 h-4" />} headerDot={false}>
-          {products.length === 0 ? (
+        {/* Mobile Filter Toggle */}
+        <div className="lg:hidden">
+          <button onClick={() => setFilterOpen(!filterOpen)}
+            className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              فلترة
+              {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
+            </div>
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {filterOpen && (
+            <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+              <FilterPanel
+                categories={categories} catOptions={catOptions}
+                filterName={filterName} setFilterName={setFilterName}
+                filterCatId={filterCatId} setFilterCatId={setFilterCatId}
+                filterStockMin={filterStockMin} setFilterStockMin={setFilterStockMin}
+                filterStockMax={filterStockMax} setFilterStockMax={setFilterStockMax}
+                filterPriceMin={filterPriceMin} setFilterPriceMin={setFilterPriceMin}
+                filterPriceMax={filterPriceMax} setFilterPriceMax={setFilterPriceMax}
+                onReset={resetFilters}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Main Layout */}
+        <div className="flex gap-6">
+
+          {/* List */}
+          <div className="flex-1 min-w-0">
+          <SpatialCard title={`المنتجات (${filtered.length})`} icon={<Package className="w-4 h-4" />} headerDot={false}>
+          {filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
               <span className="text-4xl">📦</span>
-              <span className="font-bold">لا توجد منتجات بعد</span>
+              <span className="font-bold">لا توجد نتائج</span>
             </div>
           ) : (
             <>
@@ -273,11 +400,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((product, idx) => {
+                    {filtered.map((product, idx) => {
                       const pp = product.product_price;
                       const isTier = product.selling_type === 'tier_based';
                       return (
-                        <tr key={product.id} className={`transition-colors hover:bg-black/2 dark:hover:bg-white/2 ${idx < products.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
+                        <tr key={product.id} className={`transition-colors hover:bg-black/2 dark:hover:bg-white/2 ${idx < filtered.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <div className="w-8 h-8 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -344,7 +471,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
               {/* Mobile Cards */}
               <div className="md:hidden flex flex-col gap-3">
-                {products.map(product => {
+                {filtered.map(product => {
                   const pp = product.product_price;
                   const isTier = product.selling_type === 'tier_based';
                   return (
@@ -402,6 +529,25 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             </>
           )}
         </SpatialCard>
+          </div>
+
+          {/* Desktop Filter Sidebar */}
+          <div className="hidden lg:block w-[300px] shrink-0">
+            <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
+              <FilterPanel
+                categories={categories} catOptions={catOptions}
+                filterName={filterName} setFilterName={setFilterName}
+                filterCatId={filterCatId} setFilterCatId={setFilterCatId}
+                filterStockMin={filterStockMin} setFilterStockMin={setFilterStockMin}
+                filterStockMax={filterStockMax} setFilterStockMax={setFilterStockMax}
+                filterPriceMin={filterPriceMin} setFilterPriceMin={setFilterPriceMin}
+                filterPriceMax={filterPriceMax} setFilterPriceMax={setFilterPriceMax}
+                onReset={resetFilters}
+              />
+            </SpatialCard>
+          </div>
+
+        </div>
 
       </div>
 
