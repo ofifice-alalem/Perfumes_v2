@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
+import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface Category { id: number; name: string; unit: string; }
@@ -193,7 +194,6 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
 export default function ProductsIndex({ products, categories, tiers, flash }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [deleteId, setDeleteId]     = useState<number | null>(null);
 
   const createForm = useForm({ ...emptyForm });
@@ -261,79 +261,107 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
               <span className="font-bold">لا توجد منتجات بعد</span>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              {products.map(product => (
-                <div key={product.id} className="flex flex-col rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-black/5 dark:border-white/5">
+                    {['المنتج', 'التصنيف', 'سعر الوحدة', 'سعر الوحدة VIP', 'سعر العبوة', 'حجم العبوة', 'المخزون', ''].map(h => (
+                      <th key={h} className="px-4 py-3 text-right text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product, idx) => {
+                    const pp = product.product_price;
+                    const isTier = product.selling_type === 'tier_based';
+                    return (
+                      <tr key={product.id} className={`transition-colors hover:bg-black/2 dark:hover:bg-white/2 ${idx < products.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
 
-                  {editingId === product.id ? (
-                    <div className="p-4">
-                      <ProductForm form={editForm} categories={categories} tiers={tiers}
-                        onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="w-10 h-10 rounded-[14px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                            <Package className="w-5 h-5" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-slate-800 dark:text-white truncate">{product.name}</span>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <span className="text-xs font-bold text-slate-400 dark:text-white/40">{product.category.name}</span>
+                        {/* المنتج */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-[10px] bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <Package className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800 dark:text-white text-sm whitespace-nowrap">{product.name}</p>
                               <span className={`text-xs font-black px-2 py-0.5 rounded-[6px] ${sellingTypeColors[product.selling_type]}`}>
-                                {product.selling_type === 'tier_based' ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
-                              </span>
-                              <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] ${+product.stock <= +product.min_stock ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'}`}>
-                                مخزون: {product.stock}
+                                {isTier ? `تير ${product.price_tier?.name}` : 'سعر خاص'}
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </td>
 
-                        <div className="flex items-center gap-2">
-                          <button onClick={() => setExpandedId(expandedId === product.id ? null : product.id)}
-                            className="flex items-center gap-1.5 px-3 h-9 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all font-bold text-sm">
-                            {expandedId === product.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => startEdit(product)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
-                            <Pencil className="w-3.5 h-3.5" /> تعديل
-                          </button>
-                          <button onClick={() => setDeleteId(product.id)}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
-                            <Trash2 className="w-3.5 h-3.5" /> حذف
-                          </button>
-                        </div>
-                      </div>
+                        {/* التصنيف */}
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-bold text-slate-600 dark:text-white/60 whitespace-nowrap">{product.category.name}</span>
+                        </td>
 
-                      {expandedId === product.id && product.product_price && (
-                        <div className="px-4 pb-4 border-t border-black/5 dark:border-white/5 pt-3">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            {[
-                              { label: 'سعر الوحدة (عادي)', value: product.product_price.price_per_unit_regular },
-                              { label: 'سعر الوحدة (VIP)',   value: product.product_price.price_per_unit_vip },
-                              { label: 'سعر العبوة (عادي)', value: product.product_price.full_bottle_regular ?? '—' },
-                              { label: 'سعر العبوة (VIP)',   value: product.product_price.full_bottle_vip ?? '—' },
-                            ].map(({ label, value }) => (
-                              <div key={label} className="flex flex-col gap-1 p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
-                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
-                                <span className="font-black text-slate-800 dark:text-white">{value}</span>
+                        {/* سعر الوحدة */}
+                        <td className="px-4 py-3 text-center">
+                          {isTier
+                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                            : <span className="font-black text-slate-800 dark:text-white text-sm">{pp?.price_per_unit_regular ?? '--'}</span>
+                          }
+                        </td>
+
+                        {/* سعر الوحدة VIP */}
+                        <td className="px-4 py-3 text-center">
+                          {isTier
+                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                            : <span className="font-black text-primary text-sm">{pp?.price_per_unit_vip ?? '--'}</span>
+                          }
+                        </td>
+
+                        {/* سعر العبوة */}
+                        <td className="px-4 py-3 text-center">
+                          {!pp?.full_bottle_regular
+                            ? <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                            : (
+                              <div className="flex flex-col items-center gap-0.5">
+                                <span className="font-black text-slate-800 dark:text-white text-sm">{pp.full_bottle_regular}</span>
+                                <span className="font-black text-primary text-xs">{pp.full_bottle_vip}</span>
                               </div>
-                            ))}
+                            )
+                          }
+                        </td>
+
+                        {/* حجم العبوة */}
+                        <td className="px-4 py-3 text-center">
+                          {product.original_perfume_detail
+                            ? <span className="font-black text-slate-800 dark:text-white text-sm">{product.original_perfume_detail.bottle_volume} ml</span>
+                            : <span className="text-slate-300 dark:text-white/20 font-bold text-sm">--</span>
+                          }
+                        </td>
+
+                        {/* المخزون */}
+                        <td className="px-4 py-3 text-center">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] whitespace-nowrap ${
+                            +product.stock <= +product.min_stock
+                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          }`}>{product.stock}</span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 justify-end">
+                            <button onClick={() => startEdit(product)}
+                              className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
+                              <Pencil className="w-3 h-3" /> تعديل
+                            </button>
+                            <button onClick={() => setDeleteId(product.id)}
+                              className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-xs whitespace-nowrap">
+                              <Trash2 className="w-3 h-3" /> حذف
+                            </button>
                           </div>
-                          {product.original_perfume_detail && (
-                            <div className="mt-3 flex items-center gap-2">
-                              <span className="text-xs font-bold text-slate-400 dark:text-white/40">حجم العبوة:</span>
-                              <span className="text-sm font-black text-slate-800 dark:text-white">{product.original_perfume_detail.bottle_volume} ml</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </SpatialCard>
@@ -345,6 +373,29 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         onConfirm={() => deleteId && deleteProduct(deleteId)}
         onCancel={() => setDeleteId(null)}
       />
+
+      {/* Edit Modal */}
+      {editingId !== null && (() => {
+        const product = products.find(p => p.id === editingId);
+        if (!product) return null;
+        return createPortal(
+          <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setEditingId(null)} />
+            <div className="relative spatial-card w-full max-w-2xl max-h-[90dvh] overflow-y-auto p-6 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-black text-slate-800 dark:text-white">تعديل: {product.name}</h3>
+                <button onClick={() => setEditingId(null)}
+                  className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:bg-black/10 transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <ProductForm form={editForm} categories={categories} tiers={tiers}
+                onSubmit={() => submitEdit(product.id)} onCancel={() => setEditingId(null)} />
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
 
     </AppShell>
   );
