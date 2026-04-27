@@ -15,6 +15,8 @@ use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\UserRepository;
 use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\CustomerRepository;
+use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
+use App\Repositories\PaymentMethodRepository;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -26,5 +28,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(ProductRepositoryInterface::class, ProductRepository::class);
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(CustomerRepositoryInterface::class, CustomerRepository::class);
+        $this->app->bind(PaymentMethodRepositoryInterface::class, PaymentMethodRepository::class);
     }
 }
