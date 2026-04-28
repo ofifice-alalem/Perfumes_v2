@@ -645,7 +645,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                               });
                             }}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-12 h-8 text-center bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded font-medium text-sm border-0 focus:ring-2 focus:ring-primary/50 focus:bg-white dark:focus:bg-gray-600"
+                            className="w-12 h-8 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-bold text-sm border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            style={{ MozAppearance: 'textfield' }}
                           />
                         </div>
                         
