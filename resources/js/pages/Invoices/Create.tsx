@@ -518,7 +518,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {/* ══════════════════════════════════════════════
             RIGHT PANEL — الفاتورة
         ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[520px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+        <div className="w-full lg:w-[580px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -580,13 +580,73 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     
                     return (
                       <div key={idx} className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
-                        {/* Count/Quantity */}
+                        {/* Count/Quantity with editable input */}
                         <div className="flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/20 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-all">
-                            <span className="font-black text-primary text-sm">
-                              {displayCount}
-                            </span>
-                          </div>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={displayCount}
+                            onChange={(e) => {
+                              const newCount = parseInt(e.target.value) || 1;
+                              const currentCount = displayCount;
+                              
+                              if (newCount === currentCount) return;
+                              
+                              // Get the first item to use as template
+                              const firstItem = cart.find((_, i) => groupedItem.originalIndices.includes(i));
+                              if (!firstItem) return;
+                              
+                              const product = products.find(p => p.id === firstItem.product_id);
+                              if (!product) return;
+                              
+                              // Remove all current items of this group
+                              setCart(prev => {
+                                let newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
+                                
+                                // Add the new quantity
+                                for (let i = 0; i < newCount; i++) {
+                                  const qty = resolveQuantity(product, firstItem.sale_type, firstItem.size_id, '1', sizes);
+                                  const price = resolvePrice(product, firstItem.sale_type, firstItem.size_id, isVip);
+                                  
+                                  if (qty && price) {
+                                    const size = sizes.find(s => s.id === +firstItem.size_id);
+                                    const newItem = {
+                                      product_id: product.id,
+                                      product_name: product.name,
+                                      sale_type: firstItem.sale_type,
+                                      size_id: firstItem.size_id,
+                                      size_label: size?.label ?? '',
+                                      quantity: String(qty),
+                                      unit_price: price,
+                                      line_total: resolveLineTotal(firstItem.sale_type, price, qty),
+                                    };
+                                    newCart.push(newItem);
+                                  }
+                                }
+                                
+                                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                
+                                // Update payment if only one payment exists
+                                if (payments.length === 1 && newTotal > 0) {
+                                  setTimeout(() => {
+                                    setPayments(prevPayments => [
+                                      {
+                                        ...prevPayments[0],
+                                        amount: newTotal.toFixed(2)
+                                      }
+                                    ]);
+                                  }, 0);
+                                } else if (newTotal === 0) {
+                                  setTimeout(() => setPayments([]), 0);
+                                }
+                                
+                                return newCart;
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-12 h-8 text-center bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded font-medium text-sm border-0 focus:ring-2 focus:ring-primary/50 focus:bg-white dark:focus:bg-gray-600"
+                          />
                         </div>
                         
                         {/* Product name + type */}
@@ -629,7 +689,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <div className="text-xs text-slate-400 dark:text-slate-500">د</div>
                           </div>
                           <button 
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               // Remove all instances of this grouped item
                               setCart(prev => {
                                 const newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
@@ -652,7 +713,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 return newCart;
                               });
                             }}
-                            className="w-8 h-8 rounded-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 opacity-0 group-hover:opacity-100"
+                            className="w-8 h-8 rounded-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
