@@ -141,7 +141,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
   const previewPrice = selectedProduct && (isTier ? selSize : selSaleType) ? resolvePrice(selectedProduct, effectiveST, selSize, isVip) : null;
   const previewQty   = selectedProduct && (isTier ? selSize : selSaleType) ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
-  const previewTotal = previewPrice !== null && previewQty !== null && previewQty > 0 ? resolveLineTotal(effectiveST, previewPrice, previewQty) : null;
+  const previewCount = effectiveST === 'unit_based' ? 1 : (parseInt(selQty) || 1);
+  const previewTotal = previewPrice !== null && previewQty !== null && previewQty > 0 ? 
+    (effectiveST === 'unit_based' ? 
+      resolveLineTotal(effectiveST, previewPrice, previewQty) : 
+      resolveLineTotal(effectiveST, previewPrice, previewQty) * previewCount
+    ) : null;
 
   const total     = cart.reduce((s, i) => s + i.line_total, 0);
   const totalPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0);
@@ -150,47 +155,102 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
   function addToCart() {
     if (!selectedProduct || (!isTier && !selSaleType)) return;
-    const qty   = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
-    const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
-    if (!qty || !price) return;
-    const size = sizes.find(s => s.id === +selSize);
-    const newItem = {
-      product_id: selectedProduct.id, product_name: selectedProduct.name,
-      sale_type: effectiveST, size_id: selSize, size_label: size?.label ?? '',
-      quantity: String(qty), unit_price: price,
-      line_total: resolveLineTotal(effectiveST, price, qty),
-    };
     
-    setCart(prev => {
-      const newCart = [...prev, newItem];
-      const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+    // For unit_based products, use selQty as the actual quantity, not count
+    if (effectiveST === 'unit_based') {
+      const qty = +selQty || 0;
+      const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
+      if (!qty || !price) return;
       
-      // Auto-add payment for the new total (only if no payments exist yet)
-      if (prev.length === 0 && paymentMethods.length > 0) {
-        const cardMethod = paymentMethods.find(m => m.name.includes('بطاقة') || m.name.toLowerCase().includes('card'));
-        const defaultMethod = cardMethod || paymentMethods[0];
+      const newItem = {
+        product_id: selectedProduct.id, product_name: selectedProduct.name,
+        sale_type: effectiveST, size_id: selSize, size_label: '',
+        quantity: String(qty), unit_price: price,
+        line_total: resolveLineTotal(effectiveST, price, qty),
+      };
+      
+      setCart(prev => {
+        const newCart = [...prev, newItem];
+        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
         
-        setTimeout(() => {
-          setPayments([{
-            payment_method_id: String(defaultMethod.id),
-            method_name: defaultMethod.name,
-            amount: newTotal.toFixed(2)
-          }]);
-        }, 0);
-      } else if (prev.length > 0 && payments.length === 1) {
-        // Update existing single payment
-        setTimeout(() => {
-          setPayments(prevPayments => [
-            {
-              ...prevPayments[0],
+        // Auto-add payment for the new total (only if no payments exist yet)
+        if (prev.length === 0 && paymentMethods.length > 0) {
+          const cardMethod = paymentMethods.find(m => m.name.includes('بطاقة') || m.name.toLowerCase().includes('card'));
+          const defaultMethod = cardMethod || paymentMethods[0];
+          
+          setTimeout(() => {
+            setPayments([{
+              payment_method_id: String(defaultMethod.id),
+              method_name: defaultMethod.name,
               amount: newTotal.toFixed(2)
-            }
-          ]);
-        }, 0);
+            }]);
+          }, 0);
+        } else if (prev.length > 0 && payments.length === 1) {
+          // Update existing single payment
+          setTimeout(() => {
+            setPayments(prevPayments => [
+              {
+                ...prevPayments[0],
+                amount: newTotal.toFixed(2)
+              }
+            ]);
+          }, 0);
+        }
+        
+        return newCart;
+      });
+    } else {
+      // For other products (tier_decant, unit_decant, full_bottle), use selQty as count
+      const qty = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
+      const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
+      if (!qty || !price) return;
+      const size = sizes.find(s => s.id === +selSize);
+      
+      // Get the count (how many times to add this item)
+      const count = parseInt(selQty) || 1;
+      
+      const newItems = [];
+      for (let i = 0; i < count; i++) {
+        const newItem = {
+          product_id: selectedProduct.id, product_name: selectedProduct.name,
+          sale_type: effectiveST, size_id: selSize, size_label: size?.label ?? '',
+          quantity: String(qty), unit_price: price,
+          line_total: resolveLineTotal(effectiveST, price, qty),
+        };
+        newItems.push(newItem);
       }
       
-      return newCart;
-    });
+      setCart(prev => {
+        const newCart = [...prev, ...newItems];
+        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+        
+        // Auto-add payment for the new total (only if no payments exist yet)
+        if (prev.length === 0 && paymentMethods.length > 0) {
+          const cardMethod = paymentMethods.find(m => m.name.includes('بطاقة') || m.name.toLowerCase().includes('card'));
+          const defaultMethod = cardMethod || paymentMethods[0];
+          
+          setTimeout(() => {
+            setPayments([{
+              payment_method_id: String(defaultMethod.id),
+              method_name: defaultMethod.name,
+              amount: newTotal.toFixed(2)
+            }]);
+          }, 0);
+        } else if (prev.length > 0 && payments.length === 1) {
+          // Update existing single payment
+          setTimeout(() => {
+            setPayments(prevPayments => [
+              {
+                ...prevPayments[0],
+                amount: newTotal.toFixed(2)
+              }
+            ]);
+          }, 0);
+        }
+        
+        return newCart;
+      });
+    }
     
     setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('');
   }
@@ -466,11 +526,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   />
                 </div>
               )}
-              {needsQty && (
-                <input type="number" min="0.01" step="0.01" value={selQty}
+              {/* Add quantity input for all product types */}
+              {selectedProduct && (isTier || selSaleType) && (
+                <input type="number" min="1" step="1" value={selQty || '1'}
                   onChange={e => setSelQty(e.target.value)}
-                  placeholder="الكمية"
-                  className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
+                  placeholder={needsQty ? "الكمية" : "العدد"}
+                  className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24" />
               )}
               {/* preview chips */}
               {previewTotal !== null && previewQty !== null && previewQty > 0 && (
