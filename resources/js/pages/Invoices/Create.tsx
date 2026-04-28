@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
+import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock } from 'lucide-react';
 
 interface Customer      { id: number; name: string; }
@@ -124,6 +125,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [numberPadTitle, setNumberPadTitle] = useState('');
   const [numberPadInitialValue, setNumberPadInitialValue] = useState('');
   const [numberPadCallback, setNumberPadCallback] = useState<((value: string) => void) | null>(null);
+  
+  // Sale type modal state
+  const [showSaleTypeModal, setShowSaleTypeModal] = useState(false);
 
   // Load hold invoices from localStorage on mount
   useEffect(() => {
@@ -153,21 +157,47 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
   const saleTypeOptions = () => {
     if (!selectedProduct || isTier) return [];
-    if (isOriginal) return [{ label: 'أصلي - تقسيم', badge: 'unit_decant' }, { label: 'عبوة كاملة', badge: 'full_bottle' }];
-    return [{ label: 'بالوحدة', badge: 'unit_based' }];
+    if (isOriginal) return [
+      { 
+        label: 'أصلي - تقسيم', 
+        badge: 'unit_decant',
+        description: 'بيع بالمليلتر حسب الحجم المطلوب',
+        icon: '📊'
+      }, 
+      { 
+        label: 'عبوة كاملة', 
+        badge: 'full_bottle',
+        description: 'بيع العبوة بالكامل بحجمها الأصلي',
+        icon: '🎁'
+      }
+    ];
+    return [{ 
+      label: 'بالوحدة', 
+      badge: 'unit_based',
+      description: 'بيع بالقطعة أو بالجرام',
+      icon: '⚖️'
+    }];
   };
-  const saleTypeMap: Record<string, string> = { 'أصلي - تقسيم': 'unit_decant', 'عبوة كاملة': 'full_bottle', 'بالوحدة': 'unit_based' };
+  const saleTypeMap: Record<string, string> = { 'unit_decant': 'unit_decant', 'full_bottle': 'full_bottle', 'unit_based': 'unit_based' };
 
   // Auto-select sale type when there's only one option
   useEffect(() => {
     if (selectedProduct && !isTier && !selSaleType) {
       const options = saleTypeOptions();
       if (options.length === 1) {
-        const autoSaleType = saleTypeMap[options[0].label];
+        const autoSaleType = options[0].badge;
         setSelSaleType(autoSaleType);
+      } else if (options.length > 1) {
+        // For original perfumes, default to unit_decant (تقسيم)
+        if (isOriginal) {
+          setSelSaleType('unit_decant');
+        } else {
+          // Show modal for other products with multiple options
+          setShowSaleTypeModal(true);
+        }
       }
     }
-  }, [selectedProduct, isTier, selSaleType]);
+  }, [selectedProduct, isTier, selSaleType, isOriginal]);
 
   const previewPrice = selectedProduct && (isTier ? selSize : selSaleType) ? resolvePrice(selectedProduct, effectiveST, selSize, isVip) : null;
   const previewQty   = selectedProduct && (isTier ? selSize : selSaleType) ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
@@ -562,12 +592,16 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     }}
                   />
                 </div>
-                {selectedProduct && !isTier && saleTypeOptions().length > 1 && (
-                  <div className="w-44">
-                    <ModernSelect label="" placeholder="نوع البيع" options={saleTypeOptions()} defaultValue=""
-                      onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
-                    />
-                  </div>
+                {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
+                  <button
+                    onClick={() => setShowSaleTypeModal(true)}
+                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-44 text-right cursor-pointer hover:border-primary/40 transition-all flex items-center justify-between"
+                  >
+                    <span>{saleTypeOptions().find(opt => opt.badge === selSaleType)?.label || 'نوع البيع'}</span>
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 )}
                 {/* Add quantity input for all product types */}
                 {selectedProduct && (isTier || selSaleType) && (
@@ -840,6 +874,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                   {customValue} مل
                                 </span>
                               );
+                            } else if (groupedItem.sale_type === 'full_bottle') {
+                              // For full bottle, show the bottle volume from original_perfume_detail
+                              const product = products.find(p => p.id === groupedItem.product_id);
+                              const bottleVolume = product?.original_perfume_detail?.bottle_volume;
+                              return (
+                                <span className="text-xs font-black text-white bg-emerald-500 px-2.5 py-1 rounded-full shadow-sm">
+                                  {bottleVolume} مل
+                                </span>
+                              );
                             } else if (groupedItem.size_label) {
                               return (
                                 <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-full shadow-sm">
@@ -1043,6 +1086,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
           </div>
         </div>
       </div>
+      
+      {/* Sale Type Modal */}
+      <SaleTypeModal
+        isOpen={showSaleTypeModal}
+        onClose={() => setShowSaleTypeModal(false)}
+        onSelect={(saleType) => {
+          setSelSaleType(saleType);
+          setSelSize('');
+          setSelQty('');
+        }}
+        options={saleTypeOptions()}
+        title="اختر نوع البيع"
+      />
       
       {/* Number Pad Modal */}
       <NumberPadModal
