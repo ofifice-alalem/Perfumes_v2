@@ -743,12 +743,13 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             ) : (
               <div className="flex flex-col gap-3">
                 {/* Table header */}
-                <div className="grid grid-cols-[70px_1fr_80px_90px_120px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                <div className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
                   <span className="text-center">عدد</span>
                   <span>المنتج</span>
                   <span className="text-center">حجم</span>
                   <span className="text-center">سعر الوحدة</span>
                   <span className="text-center">الإجمالي</span>
+                  <span className="text-center">إجراءات</span>
                 </div>
                 
                 {(() => {
@@ -779,7 +780,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       : groupedItem.count;
                     
                     return (
-                      <div key={idx} className="grid grid-cols-[70px_1fr_80px_90px_120px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
+                      <div key={idx} className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
                         {/* Count/Quantity with editable button */}
                         <div className="flex items-center justify-center">
                           <button
@@ -905,12 +906,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
                         
                         {/* Total + delete */}
-                        <div className="flex items-center justify-between">
-                          <div className="text-center flex-1">
-                            <span className="font-black text-slate-800 dark:text-white text-base">
-                              {groupedItem.totalAmount.toFixed(2)}
-                            </span>
-                          </div>
+                        <div className="flex items-center justify-center">
+                          <span className="font-black text-slate-800 dark:text-white text-base">
+                            {groupedItem.totalAmount.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {/* Actions column */}
+                        <div className="flex items-center justify-center">
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -936,9 +939,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 return newCart;
                               });
                             }}
-                            className="w-20 h-20 rounded-[16px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 active:scale-[0.95] shadow-sm hover:shadow-md"
+                            className="w-12 h-12 rounded-[12px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-[0.95] shadow-lg hover:shadow-xl"
                           >
-                            <Trash2 className="w-7 h-7" />
+                            <Trash2 className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
