@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock } from 'lucide-react';
 
 interface Customer      { id: number; name: string; }
@@ -105,6 +106,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   // Hold invoices state
   const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
   const [showHoldList, setShowHoldList] = useState(false);
+  
+  // Number pad modal state
+  const [showNumberPad, setShowNumberPad] = useState(false);
+  const [numberPadTitle, setNumberPadTitle] = useState('');
+  const [numberPadInitialValue, setNumberPadInitialValue] = useState('');
+  const [numberPadCallback, setNumberPadCallback] = useState<((value: string) => void) | null>(null);
 
   // Load hold invoices from localStorage on mount
   useEffect(() => {
@@ -528,10 +535,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               )}
               {/* Add quantity input for all product types */}
               {selectedProduct && (isTier || selSaleType) && (
-                <input type="number" min="1" step="1" value={selQty || '1'}
-                  onChange={e => setSelQty(e.target.value)}
-                  placeholder={needsQty ? "الكمية" : "العدد"}
-                  className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24" />
+                <button
+                  onClick={() => {
+                    setNumberPadTitle(needsQty ? "الكمية" : "العدد");
+                    setNumberPadInitialValue(selQty || '1');
+                    setNumberPadCallback(() => (value: string) => setSelQty(value));
+                    setShowNumberPad(true);
+                  }}
+                  className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24 text-left cursor-pointer hover:border-primary/40 transition-all"
+                >
+                  {selQty || '1'}
+                </button>
               )}
               {/* preview chips */}
               {previewTotal !== null && previewQty !== null && previewQty > 0 && (
@@ -666,74 +680,78 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     
                     return (
                       <div key={idx} className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
-                        {/* Count/Quantity with editable input */}
+                        {/* Count/Quantity with editable button */}
                         <div className="flex items-center justify-center">
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
+                          <button
+                            type="button"
                             value={displayCount}
-                            onChange={(e) => {
-                              const newCount = parseInt(e.target.value) || 1;
-                              const currentCount = displayCount;
-                              
-                              if (newCount === currentCount) return;
-                              
-                              // Get the first item to use as template
-                              const firstItem = cart.find((_, i) => groupedItem.originalIndices.includes(i));
-                              if (!firstItem) return;
-                              
-                              const product = products.find(p => p.id === firstItem.product_id);
-                              if (!product) return;
-                              
-                              // Remove all current items of this group
-                              setCart(prev => {
-                                let newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNumberPadTitle(groupedItem.sale_type === 'unit_based' ? "الكمية" : "العدد");
+                              setNumberPadInitialValue(String(displayCount));
+                              setNumberPadCallback(() => (value: string) => {
+                                const newCount = parseInt(value) || 1;
+                                const currentCount = displayCount;
                                 
-                                // Add the new quantity
-                                for (let i = 0; i < newCount; i++) {
-                                  const qty = resolveQuantity(product, firstItem.sale_type, firstItem.size_id, '1', sizes);
-                                  const price = resolvePrice(product, firstItem.sale_type, firstItem.size_id, isVip);
+                                if (newCount === currentCount) return;
+                                
+                                // Get the first item to use as template
+                                const firstItem = cart.find((_, i) => groupedItem.originalIndices.includes(i));
+                                if (!firstItem) return;
+                                
+                                const product = products.find(p => p.id === firstItem.product_id);
+                                if (!product) return;
+                                
+                                // Remove all current items of this group
+                                setCart(prev => {
+                                  let newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
                                   
-                                  if (qty && price) {
-                                    const size = sizes.find(s => s.id === +firstItem.size_id);
-                                    const newItem = {
-                                      product_id: product.id,
-                                      product_name: product.name,
-                                      sale_type: firstItem.sale_type,
-                                      size_id: firstItem.size_id,
-                                      size_label: size?.label ?? '',
-                                      quantity: String(qty),
-                                      unit_price: price,
-                                      line_total: resolveLineTotal(firstItem.sale_type, price, qty),
-                                    };
-                                    newCart.push(newItem);
+                                  // Add the new quantity
+                                  for (let i = 0; i < newCount; i++) {
+                                    const qty = resolveQuantity(product, firstItem.sale_type, firstItem.size_id, '1', sizes);
+                                    const price = resolvePrice(product, firstItem.sale_type, firstItem.size_id, isVip);
+                                    
+                                    if (qty && price) {
+                                      const size = sizes.find(s => s.id === +firstItem.size_id);
+                                      const newItem = {
+                                        product_id: product.id,
+                                        product_name: product.name,
+                                        sale_type: firstItem.sale_type,
+                                        size_id: firstItem.size_id,
+                                        size_label: size?.label ?? '',
+                                        quantity: String(qty),
+                                        unit_price: price,
+                                        line_total: resolveLineTotal(firstItem.sale_type, price, qty),
+                                      };
+                                      newCart.push(newItem);
+                                    }
                                   }
-                                }
-                                
-                                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                
-                                // Update payment if only one payment exists
-                                if (payments.length === 1 && newTotal > 0) {
-                                  setTimeout(() => {
-                                    setPayments(prevPayments => [
-                                      {
-                                        ...prevPayments[0],
-                                        amount: newTotal.toFixed(2)
-                                      }
-                                    ]);
-                                  }, 0);
-                                } else if (newTotal === 0) {
-                                  setTimeout(() => setPayments([]), 0);
-                                }
-                                
-                                return newCart;
+                                  
+                                  const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                  
+                                  // Update payment if only one payment exists
+                                  if (payments.length === 1 && newTotal > 0) {
+                                    setTimeout(() => {
+                                      setPayments(prevPayments => [
+                                        {
+                                          ...prevPayments[0],
+                                          amount: newTotal.toFixed(2)
+                                        }
+                                      ]);
+                                    }, 0);
+                                  } else if (newTotal === 0) {
+                                    setTimeout(() => setPayments([]), 0);
+                                  }
+                                  
+                                  return newCart;
+                                });
                               });
+                              setShowNumberPad(true);
                             }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-12 h-8 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-bold text-sm border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            style={{ MozAppearance: 'textfield' }}
-                          />
+                            className="w-12 h-8 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-bold text-sm border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-all cursor-pointer"
+                          >
+                            {displayCount}
+                          </button>
                         </div>
                         
                         {/* Product name + type */}
@@ -844,11 +862,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       onSelect={val => setSelMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
                     />
                   </div>
-                  <input type="number" min="0.01" step="0.01" 
-                    value={selAmount}
-                    onChange={e => setSelAmount(e.target.value)}
-                    placeholder={remaining.toFixed(2)}
-                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
+                  <button
+                    onClick={() => {
+                      setNumberPadTitle("المبلغ");
+                      setNumberPadInitialValue(selAmount || remaining.toFixed(2));
+                      setNumberPadCallback(() => (value: string) => setSelAmount(value));
+                      setShowNumberPad(true);
+                    }}
+                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28 text-left cursor-pointer hover:border-primary/40 transition-all"
+                  >
+                    {selAmount || remaining.toFixed(2)}
+                  </button>
                   <button onClick={addPayment} disabled={!selMethod || !selAmount}
                     className="spatial-button flex items-center justify-center w-14 h-14 text-sm disabled:opacity-40 shrink-0">
                     <Plus className="w-5 h-5" />
@@ -874,8 +898,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         min="0.01" 
                         step="0.01" 
                         value={editAmount}
-                        onChange={e => setEditAmount(e.target.value)}
-                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" 
+                        onClick={() => {
+                          setNumberPadTitle("المبلغ");
+                          setNumberPadInitialValue(editAmount);
+                          setNumberPadCallback(() => (value: string) => setEditAmount(value));
+                          setShowNumberPad(true);
+                        }}
+                        readOnly
+                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28 cursor-pointer hover:border-primary/40 transition-all" 
                       />
                       <button onClick={() => saveEditPayment(idx)} disabled={!editMethod || !editAmount}
                         className="spatial-button flex items-center justify-center w-12 h-14 text-sm disabled:opacity-40">
@@ -934,6 +964,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
           </div>
         </div>
       </div>
+      
+      {/* Number Pad Modal */}
+      <NumberPadModal
+        isOpen={showNumberPad}
+        onClose={() => setShowNumberPad(false)}
+        onConfirm={(value) => {
+          if (numberPadCallback) {
+            numberPadCallback(value);
+          }
+        }}
+        initialValue={numberPadInitialValue}
+        title={numberPadTitle}
+      />
     </AppShell>
   );
 }
