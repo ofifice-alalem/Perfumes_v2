@@ -518,7 +518,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {/* ══════════════════════════════════════════════
             RIGHT PANEL — الفاتورة
         ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[420px] xl:w-[460px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+        <div className="w-full lg:w-[500px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -542,46 +542,117 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {cart.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 px-4 py-3 rounded-[16px] bg-white/60 dark:bg-white/4 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product_name}</span>
-                        {item.size_label && (
-                          <span className="shrink-0 text-[11px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{item.size_label}</span>
-                        )}
+                {/* Table header */}
+                <div className="grid grid-cols-[50px_1fr_70px_70px_80px] gap-2 px-3 py-2 text-xs font-bold text-slate-400 dark:text-white/30 border-b border-black/5 dark:border-white/5">
+                  <span>عدد</span>
+                  <span>المنتج</span>
+                  <span>حجم</span>
+                  <span>سعر</span>
+                  <span>إجمالي</span>
+                </div>
+                
+                {(() => {
+                  // Group similar items
+                  const groupedItems = cart.reduce((acc, item, originalIdx) => {
+                    const key = `${item.product_id}-${item.size_id}-${item.sale_type}`;
+                    if (!acc[key]) {
+                      acc[key] = {
+                        ...item,
+                        count: 1,
+                        totalQuantity: +item.quantity,
+                        totalAmount: item.line_total,
+                        originalIndices: [originalIdx]
+                      };
+                    } else {
+                      acc[key].count += 1;
+                      acc[key].totalQuantity += +item.quantity;
+                      acc[key].totalAmount += item.line_total;
+                      acc[key].originalIndices.push(originalIdx);
+                    }
+                    return acc;
+                  }, {} as Record<string, any>);
+                  
+                  return Object.values(groupedItems).map((groupedItem: any, idx) => {
+                    // For unit_based items, show total quantity instead of count
+                    const displayCount = groupedItem.sale_type === 'unit_based' 
+                      ? groupedItem.totalQuantity 
+                      : groupedItem.count;
+                    
+                    return (
+                      <div key={idx} className="grid grid-cols-[50px_1fr_70px_70px_80px] gap-2 px-3 py-3 rounded-[12px] bg-white/60 dark:bg-white/4 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
+                        {/* Count/Quantity */}
+                        <div className="flex items-center justify-center">
+                          <span className="w-7 h-7 rounded-full bg-primary/10 text-primary font-black text-xs flex items-center justify-center">
+                            {displayCount}
+                          </span>
+                        </div>
+                        
+                        {/* Product name + type */}
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-800 dark:text-white text-sm truncate">
+                            {groupedItem.product_name}
+                          </div>
+                          <div className="text-[10px] font-bold text-slate-400 dark:text-white/30">
+                            {saleTypeLabels[groupedItem.sale_type]}
+                          </div>
+                        </div>
+                        
+                        {/* Size */}
+                        <div className="text-center">
+                          {groupedItem.size_label ? (
+                            <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                              {groupedItem.size_label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 dark:text-white/20">—</span>
+                          )}
+                        </div>
+                        
+                        {/* Unit price */}
+                        <div className="text-center">
+                          <span className="font-bold text-slate-700 dark:text-white/70 text-xs">
+                            {groupedItem.unit_price}
+                          </span>
+                        </div>
+                        
+                        {/* Total + delete */}
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-800 dark:text-white text-sm">
+                            {groupedItem.totalAmount.toFixed(2)}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              // Remove all instances of this grouped item
+                              setCart(prev => {
+                                const newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
+                                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                
+                                // Update payment if only one payment exists
+                                if (payments.length === 1 && newTotal > 0) {
+                                  setTimeout(() => {
+                                    setPayments(prevPayments => [
+                                      {
+                                        ...prevPayments[0],
+                                        amount: newTotal.toFixed(2)
+                                      }
+                                    ]);
+                                  }, 0);
+                                } else if (newTotal === 0) {
+                                  setTimeout(() => setPayments([]), 0);
+                                }
+                                
+                                return newCart;
+                              });
+                            }}
+                            className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all ml-1"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-[11px] font-bold text-slate-400 dark:text-white/30">{saleTypeLabels[item.sale_type]} · {item.unit_price} د/وحدة</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-black text-slate-800 dark:text-white">{item.line_total.toFixed(2)} د</span>
-                      <button onClick={() => setCart(prev => {
-                        const newCart = prev.filter((_, i) => i !== idx);
-                        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                        
-                        // Update payment if only one payment exists
-                        if (payments.length === 1 && newTotal > 0) {
-                          setTimeout(() => {
-                            setPayments(prevPayments => [
-                              {
-                                ...prevPayments[0],
-                                amount: newTotal.toFixed(2)
-                              }
-                            ]);
-                          }, 0);
-                        } else if (newTotal === 0) {
-                          // Clear payments if no items left
-                          setTimeout(() => setPayments([]), 0);
-                        }
-                        
-                        return newCart;
-                      })}
-                        className="w-7 h-7 rounded-[8px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  });
+                })()}
               </div>
             )}
           </div>
