@@ -158,6 +158,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   };
   const saleTypeMap: Record<string, string> = { 'أصلي - تقسيم': 'unit_decant', 'عبوة كاملة': 'full_bottle', 'بالوحدة': 'unit_based' };
 
+  // Auto-select sale type when there's only one option
+  useEffect(() => {
+    if (selectedProduct && !isTier && !selSaleType) {
+      const options = saleTypeOptions();
+      if (options.length === 1) {
+        const autoSaleType = saleTypeMap[options[0].label];
+        setSelSaleType(autoSaleType);
+      }
+    }
+  }, [selectedProduct, isTier, selSaleType]);
+
   const previewPrice = selectedProduct && (isTier ? selSize : selSaleType) ? resolvePrice(selectedProduct, effectiveST, selSize, isVip) : null;
   const previewQty   = selectedProduct && (isTier ? selSize : selSaleType) ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
   const previewCount = effectiveST === 'unit_based' ? 1 : (parseInt(selQty) || 1);
@@ -551,7 +562,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     }}
                   />
                 </div>
-                {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
+                {selectedProduct && !isTier && saleTypeOptions().length > 1 && (
                   <div className="w-44">
                     <ModernSelect label="" placeholder="نوع البيع" options={saleTypeOptions()} defaultValue=""
                       onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
