@@ -718,7 +718,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {/* ══════════════════════════════════════════════
             RIGHT PANEL — الفاتورة
         ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[580px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+        <div className="w-full lg:w-[650px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -743,7 +743,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             ) : (
               <div className="flex flex-col gap-3">
                 {/* Table header */}
-                <div className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                <div className="grid grid-cols-[70px_1fr_80px_90px_120px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
                   <span className="text-center">عدد</span>
                   <span>المنتج</span>
                   <span className="text-center">حجم</span>
@@ -779,7 +779,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       : groupedItem.count;
                     
                     return (
-                      <div key={idx} className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
+                      <div key={idx} className="grid grid-cols-[70px_1fr_80px_90px_120px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
                         {/* Count/Quantity with editable button */}
                         <div className="flex items-center justify-center">
                           <button
@@ -936,9 +936,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 return newCart;
                               });
                             }}
-                            className="w-16 h-16 rounded-[12px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 active:scale-[0.95]"
+                            className="w-20 h-20 rounded-[16px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 active:scale-[0.95] shadow-sm hover:shadow-md"
                           >
-                            <Trash2 className="w-6 h-6" />
+                            <Trash2 className="w-7 h-7" />
                           </button>
                         </div>
                       </div>
