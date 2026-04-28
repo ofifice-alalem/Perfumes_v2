@@ -673,12 +673,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         
                         {/* Unit price */}
                         <div className="flex items-center justify-center">
-                          <div className="text-center">
-                            <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
-                              {groupedItem.unit_price}
-                            </span>
-                            <div className="text-xs text-slate-400 dark:text-slate-500">د</div>
-                          </div>
+                          <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                            {groupedItem.unit_price}
+                          </span>
                         </div>
                         
                         {/* Total + delete */}
@@ -687,7 +684,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <span className="font-black text-slate-800 dark:text-white text-base">
                               {groupedItem.totalAmount.toFixed(2)}
                             </span>
-                            <div className="text-xs text-slate-400 dark:text-slate-500">د</div>
                           </div>
                           <button 
                             onClick={(e) => {
