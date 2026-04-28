@@ -588,25 +588,28 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               ))}
             </div>
             
-            {/* Notes and Hold Invoice Section */}
-            <div className="space-y-3">
-              {/* Notes and Hold Invoice in same row */}
+            {/* Notes and Hold Invoice Section - positioned at bottom */}
+            <div className="mt-auto">
               <div>
                 <label className="block text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2">ملاحظات و إدارة الفاتورة</label>
-                <div className="flex gap-3">
+                <div className="flex gap-3 h-[200px]">
                   <textarea
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     placeholder="ملاحظات الفاتورة... (اختياري)"
-                    rows={3}
-                    className="flex-1 spatial-input rounded-[14px] px-4 py-3 text-sm font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-white/20"
+                    className="flex-1 spatial-input rounded-[14px] px-4 py-3 text-sm font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-white/20 h-full"
                   />
                   {cart.length > 0 && (
                     <button onClick={holdCurrentInvoice}
-                      className="w-32 flex flex-col items-center justify-center gap-1 h-[84px] rounded-[16px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs transition-all shrink-0">
-                      <Pause className="w-4 h-4" />
-                      <span>تعليق</span>
-                      <span>الفاتورة</span>
+                      className="w-40 flex flex-col items-center justify-center gap-2 h-full rounded-[20px] bg-gradient-to-br from-amber-400/15 to-amber-600/15 hover:from-amber-400/25 hover:to-amber-600/25 border-2 border-amber-500/30 hover:border-amber-500/50 text-amber-700 dark:text-amber-300 font-black text-sm transition-all duration-200 shrink-0 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]">
+                      <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mb-1">
+                        <Pause className="w-6 h-6" />
+                      </div>
+                      <div className="text-center leading-tight">
+                        <div className="text-base font-black">تعليق</div>
+                        <div className="text-sm font-bold opacity-80">الفاتورة</div>
+                      </div>
+                      <div className="text-xs opacity-60 mt-1">حفظ مؤقت</div>
                     </button>
                   )}
                 </div>
