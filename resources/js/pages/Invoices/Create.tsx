@@ -518,7 +518,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {/* ══════════════════════════════════════════════
             RIGHT PANEL — الفاتورة
         ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[500px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+        <div className="w-full lg:w-[520px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -541,14 +541,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 <span className="text-xs">أضف منتجاً من اليسار</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 {/* Table header */}
-                <div className="grid grid-cols-[50px_1fr_70px_70px_80px] gap-2 px-3 py-2 text-xs font-bold text-slate-400 dark:text-white/30 border-b border-black/5 dark:border-white/5">
-                  <span>عدد</span>
+                <div className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                  <span className="text-center">عدد</span>
                   <span>المنتج</span>
-                  <span>حجم</span>
-                  <span>سعر</span>
-                  <span>إجمالي</span>
+                  <span className="text-center">حجم</span>
+                  <span className="text-center">سعر الوحدة</span>
+                  <span className="text-center">الإجمالي</span>
                 </div>
                 
                 {(() => {
@@ -579,47 +579,55 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       : groupedItem.count;
                     
                     return (
-                      <div key={idx} className="grid grid-cols-[50px_1fr_70px_70px_80px] gap-2 px-3 py-3 rounded-[12px] bg-white/60 dark:bg-white/4 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
+                      <div key={idx} className="grid grid-cols-[60px_1fr_80px_90px_100px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
                         {/* Count/Quantity */}
                         <div className="flex items-center justify-center">
-                          <span className="w-7 h-7 rounded-full bg-primary/10 text-primary font-black text-xs flex items-center justify-center">
-                            {displayCount}
-                          </span>
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 border-2 border-primary/20 flex items-center justify-center group-hover:from-primary/30 group-hover:to-primary/20 transition-all">
+                            <span className="font-black text-primary text-sm">
+                              {displayCount}
+                            </span>
+                          </div>
                         </div>
                         
                         {/* Product name + type */}
-                        <div className="min-w-0">
-                          <div className="font-bold text-slate-800 dark:text-white text-sm truncate">
+                        <div className="min-w-0 flex flex-col justify-center">
+                          <div className="font-bold text-slate-800 dark:text-white text-sm truncate mb-1">
                             {groupedItem.product_name}
                           </div>
-                          <div className="text-[10px] font-bold text-slate-400 dark:text-white/30">
+                          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
                             {saleTypeLabels[groupedItem.sale_type]}
                           </div>
                         </div>
                         
                         {/* Size */}
-                        <div className="text-center">
+                        <div className="flex items-center justify-center">
                           {groupedItem.size_label ? (
-                            <span className="text-[10px] font-black text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
+                            <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-full shadow-sm">
                               {groupedItem.size_label}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 dark:text-white/20">—</span>
+                            <span className="text-sm text-slate-400 dark:text-slate-500 font-medium">—</span>
                           )}
                         </div>
                         
                         {/* Unit price */}
-                        <div className="text-center">
-                          <span className="font-bold text-slate-700 dark:text-white/70 text-xs">
-                            {groupedItem.unit_price}
-                          </span>
+                        <div className="flex items-center justify-center">
+                          <div className="text-center">
+                            <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                              {groupedItem.unit_price}
+                            </span>
+                            <div className="text-xs text-slate-400 dark:text-slate-500">د</div>
+                          </div>
                         </div>
                         
                         {/* Total + delete */}
                         <div className="flex items-center justify-between">
-                          <span className="font-black text-slate-800 dark:text-white text-sm">
-                            {groupedItem.totalAmount.toFixed(2)}
-                          </span>
+                          <div className="text-center flex-1">
+                            <span className="font-black text-slate-800 dark:text-white text-base">
+                              {groupedItem.totalAmount.toFixed(2)}
+                            </span>
+                            <div className="text-xs text-slate-400 dark:text-slate-500">د</div>
+                          </div>
                           <button 
                             onClick={() => {
                               // Remove all instances of this grouped item
@@ -644,9 +652,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 return newCart;
                               });
                             }}
-                            className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all ml-1"
+                            className="w-8 h-8 rounded-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 opacity-0 group-hover:opacity-100"
                           >
-                            <Trash2 className="w-2.5 h-2.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
