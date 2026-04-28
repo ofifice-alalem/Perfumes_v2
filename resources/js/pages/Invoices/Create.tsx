@@ -98,6 +98,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [selQty,       setSelQty]       = useState('');
   const [selMethod,    setSelMethod]    = useState('');
   const [selAmount,    setSelAmount]    = useState('');
+  const [editingPayment, setEditingPayment] = useState<number | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editMethod, setEditMethod] = useState('');
   
   // Hold invoices state
   const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
@@ -151,22 +154,109 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
     if (!qty || !price) return;
     const size = sizes.find(s => s.id === +selSize);
-    setCart(prev => [...prev, {
+    const newItem = {
       product_id: selectedProduct.id, product_name: selectedProduct.name,
       sale_type: effectiveST, size_id: selSize, size_label: size?.label ?? '',
       quantity: String(qty), unit_price: price,
       line_total: resolveLineTotal(effectiveST, price, qty),
-    }]);
+    };
+    
+    setCart(prev => {
+      const newCart = [...prev, newItem];
+      const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+      
+      // Auto-add payment for the new total (only if no payments exist yet)
+      if (prev.length === 0 && paymentMethods.length > 0) {
+        const cardMethod = paymentMethods.find(m => m.name.includes('بطاقة') || m.name.toLowerCase().includes('card'));
+        const defaultMethod = cardMethod || paymentMethods[0];
+        
+        setTimeout(() => {
+          setPayments([{
+            payment_method_id: String(defaultMethod.id),
+            method_name: defaultMethod.name,
+            amount: newTotal.toFixed(2)
+          }]);
+        }, 0);
+      } else if (prev.length > 0 && payments.length === 1) {
+        // Update existing single payment
+        setTimeout(() => {
+          setPayments(prevPayments => [
+            {
+              ...prevPayments[0],
+              amount: newTotal.toFixed(2)
+            }
+          ]);
+        }, 0);
+      }
+      
+      return newCart;
+    });
+    
     setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('');
   }
 
   function addPayment() {
     if (!selMethod || !selAmount || +selAmount <= 0) return;
+    
+    // Check if total payments would exceed invoice total
+    const currentPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0);
+    if (currentPaid + (+selAmount) > total) {
+      alert(`المبلغ يتجاوز إجمالي الفاتورة. المتاح: ${(total - currentPaid).toFixed(2)} د`);
+      return;
+    }
+    
     const method = paymentMethods.find(m => m.id === +selMethod);
     if (!method) return;
     setPayments(prev => [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }]);
     setSelMethod(''); setSelAmount('');
   }
+
+  function startEditPayment(idx: number) {
+    const payment = payments[idx];
+    setEditingPayment(idx);
+    setEditAmount(payment.amount);
+    setEditMethod(payment.payment_method_id);
+  }
+
+  function saveEditPayment(idx: number) {
+    if (!editMethod || !editAmount || +editAmount <= 0) return;
+    
+    // Check if edited payment would exceed total
+    const otherPayments = payments.filter((_, i) => i !== idx);
+    const otherPaid = otherPayments.reduce((s, p) => s + (+p.amount || 0), 0);
+    if (otherPaid + (+editAmount) > total) {
+      alert(`المبلغ يتجاوز إجمالي الفاتورة. المتاح: ${(total - otherPaid).toFixed(2)} د`);
+      return;
+    }
+    
+    const method = paymentMethods.find(m => m.id === +editMethod);
+    if (!method) return;
+    
+    setPayments(prev => prev.map((p, i) => i === idx ? {
+      payment_method_id: editMethod,
+      method_name: method.name,
+      amount: editAmount
+    } : p));
+    
+    setEditingPayment(null);
+    setEditAmount('');
+    setEditMethod('');
+  }
+
+  function cancelEditPayment() {
+    setEditingPayment(null);
+    setEditAmount('');
+    setEditMethod('');
+  }
+
+  // Auto-select default payment method (بطاقة)
+  useEffect(() => {
+    if (!selMethod && paymentMethods.length > 0) {
+      const cardMethod = paymentMethods.find(m => m.name.includes('بطاقة') || m.name.toLowerCase().includes('card'));
+      const defaultMethod = cardMethod || paymentMethods[0];
+      setSelMethod(String(defaultMethod.id));
+    }
+  }, [paymentMethods, selMethod]);
 
   function submit() {
     if (cart.length === 0 || (isCashCustomer && Math.abs(remaining) > 0.01)) return;
@@ -465,7 +555,27 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="font-black text-slate-800 dark:text-white">{item.line_total.toFixed(2)} د</span>
-                      <button onClick={() => setCart(prev => prev.filter((_, i) => i !== idx))}
+                      <button onClick={() => setCart(prev => {
+                        const newCart = prev.filter((_, i) => i !== idx);
+                        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                        
+                        // Update payment if only one payment exists
+                        if (payments.length === 1 && newTotal > 0) {
+                          setTimeout(() => {
+                            setPayments(prevPayments => [
+                              {
+                                ...prevPayments[0],
+                                amount: newTotal.toFixed(2)
+                              }
+                            ]);
+                          }, 0);
+                        } else if (newTotal === 0) {
+                          // Clear payments if no items left
+                          setTimeout(() => setPayments([]), 0);
+                        }
+                        
+                        return newCart;
+                      })}
                         className="w-7 h-7 rounded-[8px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -500,14 +610,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   ⚠️ زبون نقدي — يجب الدفع الكامل
                 </div>
               )}
-              {remaining > 0.01 && (
+              
+              {/* Payment input - always show when there are items */}
+              {cart.length > 0 && (
                 <div className="flex gap-2 mb-2">
                   <div className="flex-1">
-                    <ModernSelect label="" options={paymentMethods.map(m => ({ label: m.name }))} defaultValue="" placeholder="وسيلة الدفع"
+                    <ModernSelect label="" options={paymentMethods.map(m => ({ label: m.name }))} 
+                      defaultValue={paymentMethods.find(m => m.id === +selMethod)?.name || ""} 
+                      placeholder="وسيلة الدفع"
                       onSelect={val => setSelMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
                     />
                   </div>
-                  <input type="number" min="0.01" step="0.01" value={selAmount}
+                  <input type="number" min="0.01" step="0.01" 
+                    value={selAmount}
                     onChange={e => setSelAmount(e.target.value)}
                     placeholder={remaining.toFixed(2)}
                     className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
@@ -517,19 +632,56 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   </button>
                 </div>
               )}
+              
               {payments.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-[10px] bg-emerald-500/5 border border-emerald-500/15 mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                    <span className="font-bold text-slate-700 dark:text-white/70 text-sm">{p.method_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{p.amount} د</span>
-                    <button onClick={() => setPayments(prev => prev.filter((_, i) => i !== idx))}
-                      className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
+                <div key={idx} className="mb-1.5">
+                  {editingPayment === idx ? (
+                    <div className="flex gap-2 p-3 rounded-[10px] bg-blue-500/5 border border-blue-500/20">
+                      <div className="flex-1">
+                        <ModernSelect 
+                          label="" 
+                          options={paymentMethods.map(m => ({ label: m.name }))} 
+                          defaultValue={paymentMethods.find(m => m.id === +editMethod)?.name || ""}
+                          placeholder="وسيلة الدفع"
+                          onSelect={val => setEditMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                        />
+                      </div>
+                      <input 
+                        type="number" 
+                        min="0.01" 
+                        step="0.01" 
+                        value={editAmount}
+                        onChange={e => setEditAmount(e.target.value)}
+                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" 
+                      />
+                      <button onClick={() => saveEditPayment(idx)} disabled={!editMethod || !editAmount}
+                        className="spatial-button flex items-center justify-center w-12 h-14 text-sm disabled:opacity-40">
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button onClick={cancelEditPayment}
+                        className="w-12 h-14 rounded-[16px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-[10px] bg-emerald-500/5 border border-emerald-500/15 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                         onClick={() => startEditPayment(idx)}>
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+                        <span className="font-bold text-slate-700 dark:text-white/70 text-sm">{p.method_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{p.amount} د</span>
+                        <button onClick={(e) => {
+                          e.stopPropagation();
+                          setPayments(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                          className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
