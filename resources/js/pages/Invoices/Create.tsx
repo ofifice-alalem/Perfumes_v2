@@ -3,6 +3,7 @@ import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { SizeSelect } from '@/components/ui/SizeSelect';
 import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock } from 'lucide-react';
 
 interface Customer      { id: number; name: string; }
@@ -64,6 +65,10 @@ function resolvePrice(product: Product, saleType: string, sizeId: string, isVip:
   const pp = product.product_price;
   switch (saleType) {
     case 'tier_decant': {
+      // Handle custom sizes - use unit_decant pricing for custom sizes
+      if (sizeId.startsWith('-custom-')) {
+        return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
+      }
       const tp = product.price_tier?.tier_prices?.find((t: any) => t.size_id === +sizeId);
       return tp ? +(isVip ? tp.price_vip : tp.price_regular) : 0;
     }
@@ -76,7 +81,14 @@ function resolvePrice(product: Product, saleType: string, sizeId: string, isVip:
 function resolveQuantity(product: Product, saleType: string, sizeId: string, manualQty: string, sizes: Size[]): number {
   switch (saleType) {
     case 'tier_decant':
-    case 'unit_decant': return +(sizes.find(s => s.id === +sizeId)?.value ?? 0);
+    case 'unit_decant': {
+      // Handle custom sizes (negative IDs)
+      if (sizeId.startsWith('-custom-')) {
+        const customValue = sizeId.replace('-custom-', '');
+        return +customValue || 0;
+      }
+      return +(sizes.find(s => s.id === +sizeId)?.value ?? 0);
+    }
     case 'full_bottle': return product.original_perfume_detail ? +product.original_perfume_detail.bottle_volume : 0;
     case 'unit_based':  return +manualQty || 0;
     default: return 0;
@@ -169,9 +181,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
       if (!qty || !price) return;
       
+      // Handle size label for custom sizes
+      let sizeLabel = '';
+      if (selSize.startsWith('-custom-')) {
+        const customValue = selSize.replace('-custom-', '');
+        sizeLabel = `${customValue} مل (مخصص)`;
+      } else {
+        const size = sizes.find(s => s.id === +selSize);
+        sizeLabel = size?.label ?? '';
+      }
+      
       const newItem = {
         product_id: selectedProduct.id, product_name: selectedProduct.name,
-        sale_type: effectiveST, size_id: selSize, size_label: '',
+        sale_type: effectiveST, size_id: selSize, size_label: sizeLabel,
         quantity: String(qty), unit_price: price,
         line_total: resolveLineTotal(effectiveST, price, qty),
       };
@@ -211,7 +233,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       const qty = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
       const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
       if (!qty || !price) return;
-      const size = sizes.find(s => s.id === +selSize);
+      // Handle size label for custom sizes
+      let sizeLabel = '';
+      if (selSize.startsWith('-custom-')) {
+        const customValue = selSize.replace('-custom-', '');
+        sizeLabel = `${customValue} مل (مخصص)`;
+      } else {
+        const size = sizes.find(s => s.id === +selSize);
+        sizeLabel = size?.label ?? '';
+      }
       
       // Get the count (how many times to add this item)
       const count = parseInt(selQty) || 1;
@@ -220,7 +250,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       for (let i = 0; i < count; i++) {
         const newItem = {
           product_id: selectedProduct.id, product_name: selectedProduct.name,
-          sale_type: effectiveST, size_id: selSize, size_label: size?.label ?? '',
+          sale_type: effectiveST, size_id: selSize, size_label: sizeLabel,
           quantity: String(qty), unit_price: price,
           line_total: resolveLineTotal(effectiveST, price, qty),
         };
@@ -507,63 +537,85 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               <Package className="w-4 h-4 text-primary" />
               <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج</span>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <div className="flex-1 min-w-[180px]">
-                <ModernSelect label="" placeholder="اختر المنتج..."
-                  options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
-                  defaultValue=""
-                  onSelect={val => {
-                    const p = products.find(p => p.name === val);
-                    setSelProduct(p ? String(p.id) : '');
-                    setSelSaleType(''); setSelSize(''); setSelQty('');
-                  }}
-                />
+            <div className="flex flex-col gap-3">
+              {/* First row: Product, Quantity, Price, Total Price */}
+              <div className="flex flex-wrap gap-3">
+                <div className="flex-1 min-w-[180px]">
+                  <ModernSelect label="" placeholder="اختر المنتج..."
+                    options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
+                    defaultValue=""
+                    onSelect={val => {
+                      const p = products.find(p => p.name === val);
+                      setSelProduct(p ? String(p.id) : '');
+                      setSelSaleType(''); setSelSize(''); setSelQty('');
+                    }}
+                  />
+                </div>
+                {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
+                  <div className="w-44">
+                    <ModernSelect label="" placeholder="نوع البيع" options={saleTypeOptions()} defaultValue=""
+                      onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
+                    />
+                  </div>
+                )}
+                {/* Add quantity input for all product types */}
+                {selectedProduct && (isTier || selSaleType) && (
+                  <button
+                    onClick={() => {
+                      setNumberPadTitle(needsQty ? "الكمية" : "العدد");
+                      setNumberPadInitialValue(selQty || '1');
+                      setNumberPadCallback(() => (value: string) => setSelQty(value));
+                      setShowNumberPad(true);
+                    }}
+                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24 text-left cursor-pointer hover:border-primary/40 transition-all"
+                  >
+                    {selQty || '1'}
+                  </button>
+                )}
+                {/* preview chips */}
+                {previewTotal !== null && previewQty !== null && previewQty > 0 && (
+                  <>
+                    <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+                      <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر</span>
+                      <span className="font-black text-primary text-sm mr-1">{previewPrice} د</span>
+                    </div>
+                    <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+                      <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
+                      <span className="font-black text-primary text-sm mr-1">{previewTotal.toFixed(2)} د</span>
+                    </div>
+                  </>
+                )}
               </div>
-              {selectedProduct && !isTier && saleTypeOptions().length > 0 && (
-                <div className="w-44">
-                  <ModernSelect label="" placeholder="نوع البيع" options={saleTypeOptions()} defaultValue=""
-                    onSelect={val => { setSelSaleType(saleTypeMap[val] ?? ''); setSelSize(''); setSelQty(''); }}
-                  />
-                </div>
-              )}
+              
+              {/* Second row: Sizes and Add button */}
               {needsSize && (
-                <div className="w-36">
-                  <ModernSelect label="" placeholder="الحجم" options={sizes.map(s => ({ label: s.label, meta: s.value }))} defaultValue=""
-                    onSelect={val => setSelSize(String(sizes.find(s => s.label === val)?.id ?? ''))}
-                  />
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <SizeSelect
+                      sizes={sizes}
+                      selectedSizeId={selSize}
+                      onSizeSelect={setSelSize}
+                      placeholder="الحجم"
+                      product={selectedProduct}
+                      isVip={isVip}
+                    />
+                  </div>
+                  <button onClick={addToCart} disabled={!canAdd}
+                    className="spatial-button flex items-center gap-2 px-6 h-14 text-sm disabled:opacity-40 shrink-0">
+                    <Plus className="w-4 h-4" /> إضافة
+                  </button>
                 </div>
               )}
-              {/* Add quantity input for all product types */}
-              {selectedProduct && (isTier || selSaleType) && (
-                <button
-                  onClick={() => {
-                    setNumberPadTitle(needsQty ? "الكمية" : "العدد");
-                    setNumberPadInitialValue(selQty || '1');
-                    setNumberPadCallback(() => (value: string) => setSelQty(value));
-                    setShowNumberPad(true);
-                  }}
-                  className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24 text-left cursor-pointer hover:border-primary/40 transition-all"
-                >
-                  {selQty || '1'}
-                </button>
+              
+              {/* Add button for products that don't need sizes */}
+              {!needsSize && selectedProduct && (isTier || selSaleType) && (
+                <div className="flex justify-end">
+                  <button onClick={addToCart} disabled={!canAdd}
+                    className="spatial-button flex items-center gap-2 px-6 h-14 text-sm disabled:opacity-40 shrink-0">
+                    <Plus className="w-4 h-4" /> إضافة
+                  </button>
+                </div>
               )}
-              {/* preview chips */}
-              {previewTotal !== null && previewQty !== null && previewQty > 0 && (
-                <>
-                  <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر</span>
-                    <span className="font-black text-primary text-sm mr-1">{previewPrice} د</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
-                    <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
-                    <span className="font-black text-primary text-sm mr-1">{previewTotal.toFixed(2)} د</span>
-                  </div>
-                </>
-              )}
-              <button onClick={addToCart} disabled={!canAdd}
-                className="spatial-button flex items-center gap-2 px-6 h-14 text-sm disabled:opacity-40 shrink-0">
-                <Plus className="w-4 h-4" /> إضافة
-              </button>
             </div>
           </div>
 
@@ -769,13 +821,26 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         
                         {/* Size */}
                         <div className="flex items-center justify-center">
-                          {groupedItem.size_label ? (
-                            <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-full shadow-sm">
-                              {groupedItem.size_label}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-slate-400 dark:text-slate-500 font-medium">—</span>
-                          )}
+                          {(() => {
+                            if (groupedItem.size_id.startsWith('-custom-')) {
+                              const customValue = groupedItem.size_id.replace('-custom-', '');
+                              return (
+                                <span className="text-xs font-black text-white bg-purple-500 px-2.5 py-1 rounded-full shadow-sm">
+                                  {customValue} مل
+                                </span>
+                              );
+                            } else if (groupedItem.size_label) {
+                              return (
+                                <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-full shadow-sm">
+                                  {groupedItem.size_label}
+                                </span>
+                              );
+                            } else {
+                              return (
+                                <span className="text-sm text-slate-400 dark:text-slate-500 font-medium">—</span>
+                              );
+                            }
+                          })()}
                         </div>
                         
                         {/* Unit price */}
