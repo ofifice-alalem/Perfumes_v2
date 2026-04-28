@@ -106,15 +106,15 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, placeholder = 
             <button
               key={size.id}
               onClick={() => onSizeSelect(String(size.id))}
-              className={`px-3 h-14 rounded-[16px] border-2 transition-all font-bold text-sm whitespace-nowrap min-w-[80px] ${
+              className={`px-4 h-16 rounded-[20px] border-2 transition-all font-bold text-sm whitespace-nowrap min-w-[100px] ${
                 selectedSizeId === String(size.id)
                   ? 'border-primary bg-primary text-white'
                   : 'border-black/10 dark:border-white/10 text-slate-700 dark:text-white/70 hover:border-primary/40 bg-white dark:bg-slate-800'
-              }`}
+              } active:scale-[0.95] hover:scale-[1.02]`}
             >
               <div className="text-center">
-                <div className="font-black text-xs">{size.label}</div>
-                <div className="text-xs opacity-70">{price.toFixed(2)} د</div>
+                <div className="font-black text-base">{size.label}</div>
+                <div className="text-sm opacity-70">{price.toFixed(2)} د</div>
               </div>
             </button>
           );
@@ -124,14 +124,14 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, placeholder = 
         {isCustomSize && customSizeValue && (
           <button
             onClick={() => onSizeSelect('')}
-            className="px-3 h-14 rounded-[16px] border-2 border-primary bg-primary text-white transition-all font-bold text-sm whitespace-nowrap min-w-[80px] relative group"
+            className="px-4 h-16 rounded-[20px] border-2 border-primary bg-primary text-white transition-all font-bold text-sm whitespace-nowrap min-w-[100px] relative group active:scale-[0.95] hover:scale-[1.02]"
           >
             <div className="text-center">
-              <div className="font-black text-xs">مخصص</div>
-              <div className="text-xs opacity-90">{customSizeValue} مل</div>
+              <div className="font-black text-base">مخصص</div>
+              <div className="text-sm opacity-90">{customSizeValue} مل</div>
             </div>
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <X className="w-3 h-3 text-white" />
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <X className="w-3.5 h-3.5 text-white" />
             </div>
           </button>
         )}

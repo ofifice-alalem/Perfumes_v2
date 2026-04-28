@@ -646,8 +646,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     />
                   </div>
                   <button onClick={addToCart} disabled={!canAdd}
-                    className="spatial-button flex items-center gap-2 px-6 h-14 text-sm disabled:opacity-40 shrink-0">
-                    <Plus className="w-4 h-4" /> إضافة
+                    className="spatial-button flex items-center gap-3 px-8 h-16 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                    <Plus className="w-6 h-6" /> إضافة
                   </button>
                 </div>
               )}
@@ -656,8 +656,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               {!needsSize && selectedProduct && (isTier || selSaleType) && (
                 <div className="flex justify-end">
                   <button onClick={addToCart} disabled={!canAdd}
-                    className="spatial-button flex items-center gap-2 px-6 h-14 text-sm disabled:opacity-40 shrink-0">
-                    <Plus className="w-4 h-4" /> إضافة
+                    className="spatial-button flex items-center gap-3 px-8 h-16 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                    <Plus className="w-6 h-6" /> إضافة
                   </button>
                 </div>
               )}
@@ -848,7 +848,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                               });
                               setShowNumberPad(true);
                             }}
-                            className="w-12 h-8 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg font-bold text-sm border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-all cursor-pointer"
+                            className="w-20 h-16 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl font-black text-lg border-2 border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-all cursor-pointer active:scale-[0.95]"
                           >
                             {displayCount}
                           </button>
@@ -936,9 +936,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 return newCart;
                               });
                             }}
-                            className="w-8 h-8 rounded-[10px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2"
+                            className="w-16 h-16 rounded-[12px] bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-500 flex items-center justify-center transition-all ml-2 active:scale-[0.95]"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-6 h-6" />
                           </button>
                         </div>
                       </div>

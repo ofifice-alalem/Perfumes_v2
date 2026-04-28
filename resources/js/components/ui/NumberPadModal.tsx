@@ -99,27 +99,27 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-[24px] border border-black/10 dark:border-white/10 shadow-2xl w-80 max-w-[90vw] overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-[24px] border border-black/10 dark:border-white/10 shadow-2xl w-[500px] max-w-[95vw] max-h-[95vh] overflow-hidden">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/5">
-          <h3 className="font-black text-slate-800 dark:text-white text-lg">{title}</h3>
+        <div className="flex items-center justify-between px-8 py-6 border-b border-black/5 dark:border-white/5">
+          <h3 className="font-black text-slate-800 dark:text-white text-2xl">{title}</h3>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 dark:text-white/40 transition-all"
+            className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 dark:text-white/40 transition-all active:scale-[0.95]"
           >
-            <X className="w-4 h-4" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Display */}
-        <div className="px-6 py-4">
-          <div className="w-full h-16 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 flex items-center justify-center">
-            <span className="font-black text-2xl text-slate-800 dark:text-white">
+        <div className="px-8 py-6">
+          <div className="w-full h-24 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 flex items-center justify-center">
+            <span className="font-black text-4xl text-slate-800 dark:text-white">
               {hasStartedTyping ? (value || '0') : ''}
             </span>
             {!hasStartedTyping && (
-              <span className="font-bold text-lg text-slate-400 dark:text-white/30">
+              <span className="font-bold text-2xl text-slate-400 dark:text-white/30">
                 ابدأ الكتابة...
               </span>
             )}
@@ -127,8 +127,8 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
         </div>
 
         {/* Keyboard shortcuts hint */}
-        <div className="px-6 pb-2">
-          <div className="text-xs text-slate-400 dark:text-white/30 text-center">
+        <div className="px-8 pb-4">
+          <div className="text-sm text-slate-400 dark:text-white/30 text-center">
             {!hasStartedTyping && initialValue ? (
               <span>القيمة الحالية: <strong>{initialValue}</strong> • ابدأ الكتابة للتغيير أو اضغط تأكيد للاحتفاظ</span>
             ) : (
@@ -138,13 +138,13 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
         </div>
 
         {/* Number Pad */}
-        <div className="px-6 pb-6">
-          <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="px-8 pb-8">
+          <div className="grid grid-cols-3 gap-6 mb-6">
             {numbers.slice(0, 9).map((num) => (
               <button
                 key={num}
                 onClick={() => handleNumberClick(num)}
-                className="h-14 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-xl transition-all active:scale-95"
+                className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-2xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto"
               >
                 {num}
               </button>
@@ -152,20 +152,18 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
           </div>
           
           {/* Bottom row: Clear, 0, Delete */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-3 gap-6 mb-6">
             <button
               onClick={handleClear}
               disabled={!hasStartedTyping}
-              className="h-14 rounded-[16px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-20 h-20 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-lg transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span className="hidden sm:inline">مسح الكل</span>
-              <span className="sm:hidden">C</span>
+              <RotateCcw className="w-6 h-6" />
             </button>
             
             <button
               onClick={() => handleNumberClick('0')}
-              className="h-14 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-xl transition-all active:scale-95"
+              className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-2xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto"
             >
               0
             </button>
@@ -173,19 +171,22 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
             <button
               onClick={handleDelete}
               disabled={!hasStartedTyping || !value}
-              className="h-14 rounded-[16px] bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-600 dark:text-orange-400 font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-20 h-20 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-600 dark:text-orange-400 font-bold text-lg transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
             >
-              <Delete className="w-4 h-4" />
-              <span className="hidden sm:inline">مسح</span>
+              <Delete className="w-6 h-6" />
             </button>
           </div>
 
           {/* Confirm Button */}
           <button
             onClick={handleConfirm}
-            className="w-full h-14 rounded-[16px] bg-primary hover:bg-primary/90 text-white font-black text-lg transition-all active:scale-95"
+            className="w-full h-20 rounded-[24px] bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-black text-xl transition-all active:scale-[0.98] shadow-lg hover:shadow-xl border-2 border-primary/20 hover:border-primary/40"
           >
-            تأكيد (Enter)
+            <div className="flex items-center justify-center gap-3">
+              <span>✓</span>
+              <span>تأكيد</span>
+              <span className="text-sm opacity-75">(Enter)</span>
+            </div>
           </button>
         </div>
       </div>
