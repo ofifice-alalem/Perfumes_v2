@@ -564,7 +564,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 <Settings className="w-3 h-3" /> تخصيص
               </button>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-6">
               {QUICK_PRODUCTS.map(qp => (
                 <button key={qp.id}
                   className={`flex flex-col items-center justify-center gap-2 py-5 px-3 rounded-[20px] border transition-all duration-150 hover:scale-[1.03] active:scale-[0.97] ${qp.color}`}>
@@ -572,6 +572,31 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   <span className="text-xs font-black text-center leading-tight">{qp.name}</span>
                 </button>
               ))}
+            </div>
+            
+            {/* Notes and Hold Invoice Section */}
+            <div className="space-y-3">
+              {/* Notes and Hold Invoice in same row */}
+              <div>
+                <label className="block text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2">ملاحظات و إدارة الفاتورة</label>
+                <div className="flex gap-3">
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="ملاحظات الفاتورة... (اختياري)"
+                    rows={3}
+                    className="flex-1 spatial-input rounded-[14px] px-4 py-3 text-sm font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-white/20"
+                  />
+                  {cart.length > 0 && (
+                    <button onClick={holdCurrentInvoice}
+                      className="w-32 flex flex-col items-center justify-center gap-1 h-[84px] rounded-[16px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs transition-all shrink-0">
+                      <Pause className="w-4 h-4" />
+                      <span>تعليق</span>
+                      <span>الفاتورة</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -884,27 +909,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               ))}
             </div>
 
-            {/* Notes */}
-            <div className="px-5 py-3 border-b border-black/5 dark:border-white/5">
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="ملاحظات الفاتورة... (اختياري)"
-                rows={2}
-                className="w-full spatial-input rounded-[14px] px-4 py-3 text-sm font-bold resize-none placeholder:text-slate-400 dark:placeholder:text-white/20"
-              />
-            </div>
-
             {/* Submit */}
             <div className="px-5 py-4 flex flex-col gap-2">
-              {/* Hold button - only show if there are items */}
-              {cart.length > 0 && (
-                <button onClick={holdCurrentInvoice}
-                  className="w-full flex items-center justify-center gap-2 h-12 rounded-[16px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-sm transition-all">
-                  <Pause className="w-4 h-4" /> تعليق الفاتورة
-                </button>
-              )}
-              
               <button onClick={submit}
                 disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
                 className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-base font-black disabled:opacity-40">
