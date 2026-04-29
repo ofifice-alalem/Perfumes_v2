@@ -46,15 +46,15 @@ interface HoldInvoice {
 }
 
 const QUICK_PRODUCTS = [
-  { id: 'q1', name: 'مبخرة صغيرة', emoji: '🪔', color: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-700 dark:text-amber-300' },
-  { id: 'q2', name: 'بخور عود',    emoji: '🌿', color: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-700 dark:text-emerald-300' },
-  { id: 'q3', name: 'وشق فاخر',   emoji: '✨', color: 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 text-purple-700 dark:text-purple-300' },
-  { id: 'q4', name: 'مبخرة كبيرة', emoji: '🏺', color: 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20 text-rose-700 dark:text-rose-300' },
-  { id: 'q5', name: 'بخور هندي',   emoji: '🌸', color: 'bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/20 text-pink-700 dark:text-pink-300' },
-  { id: 'q6', name: 'عود طبيعي',   emoji: '🪵', color: 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20 text-orange-700 dark:text-orange-300' },
-  { id: 'q7', name: 'بخور مسك',    emoji: '💨', color: 'bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/20 text-sky-700 dark:text-sky-300' },
-  { id: 'q8', name: 'وشق ورد',     emoji: '🌹', color: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-700 dark:text-red-300' },
-  { id: 'q9', name: 'مبخرة فضية',  emoji: '🥈', color: 'bg-slate-500/10 hover:bg-slate-500/20 border-slate-500/20 text-slate-700 dark:text-slate-300' },
+  { id: 'q1', name: 'مبخرة صغيرة', color: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20 text-amber-700 dark:text-amber-300' },
+  { id: 'q2', name: 'بخور عود', color: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20 text-emerald-700 dark:text-emerald-300' },
+  { id: 'q3', name: 'وشق فاخر', color: 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20 text-purple-700 dark:text-purple-300' },
+  { id: 'q4', name: 'مبخرة كبيرة', color: 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20 text-rose-700 dark:text-rose-300' },
+  { id: 'q5', name: 'بخور هندي', color: 'bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/20 text-pink-700 dark:text-pink-300' },
+  { id: 'q6', name: 'عود طبيعي', color: 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20 text-orange-700 dark:text-orange-300' },
+  { id: 'q7', name: 'بخور مسك', color: 'bg-sky-500/10 hover:bg-sky-500/20 border-sky-500/20 text-sky-700 dark:text-sky-300' },
+  { id: 'q8', name: 'وشق ورد', color: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-700 dark:text-red-300' },
+  { id: 'q9', name: 'مبخرة فضية', color: 'bg-slate-500/10 hover:bg-slate-500/20 border-slate-500/20 text-slate-700 dark:text-slate-300' },
 ];
 
 const saleTypeLabels: Record<string, string> = {
@@ -558,10 +558,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 />
               </div>
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-3 shrink-0">
               {(['regular', 'vip'] as const).map(type => (
                 <button key={type} onClick={() => setCustomerType(type)}
-                  className={`px-4 h-10 rounded-[14px] border-2 transition-all font-bold text-xs ${
+                  className={`px-6 h-14 rounded-[16px] border-2 transition-all font-bold text-base ${
                     customerType === type
                       ? 'border-primary bg-primary text-white'
                       : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'
@@ -588,7 +588,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     onSelect={val => {
                       const p = products.find(p => p.name === val);
                       setSelProduct(p ? String(p.id) : '');
-                      setSelSaleType(''); setSelSize(''); setSelQty('');
+                      setSelSaleType(''); setSelSize(''); setSelQty('1');
                     }}
                   />
                 </div>
@@ -666,7 +666,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
           {/* Quick products */}
           <div className="flex-1 overflow-y-auto px-5 py-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
                 <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">منتجات سريعة</span>
@@ -675,12 +675,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 <Settings className="w-3 h-3" /> تخصيص
               </button>
             </div>
+            
             <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 mb-6">
               {QUICK_PRODUCTS.map(qp => (
                 <button key={qp.id}
-                  className={`flex flex-col items-center justify-center gap-2 py-5 px-3 rounded-[20px] border transition-all duration-150 hover:scale-[1.03] active:scale-[0.97] ${qp.color}`}>
-                  <span className="text-3xl">{qp.emoji}</span>
-                  <span className="text-xs font-black text-center leading-tight">{qp.name}</span>
+                  className={`flex items-center justify-center py-6 px-4 rounded-[18px] border-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97] hover:shadow-md ${qp.color} font-bold text-sm leading-tight min-h-[70px]`}>
+                  <span className="text-center">{qp.name}</span>
                 </button>
               ))}
             </div>
@@ -741,9 +741,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 <span className="text-xs">أضف منتجاً من اليسار</span>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-2">
                 {/* Table header */}
-                <div className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-3 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                <div className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
                   <span className="text-center">عدد</span>
                   <span>المنتج</span>
                   <span className="text-center">حجم</span>
@@ -780,7 +780,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       : groupedItem.count;
                     
                     return (
-                      <div key={idx} className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-4 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
+                      <div key={idx} className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
                         {/* Count/Quantity with editable button */}
                         <div className="flex items-center justify-center">
                           <button
@@ -857,7 +857,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         
                         {/* Product name + type */}
                         <div className="min-w-0 flex flex-col justify-center">
-                          <div className="font-bold text-slate-800 dark:text-white text-sm truncate mb-1">
+                          <div className="font-bold text-slate-800 dark:text-white text-sm truncate">
                             {groupedItem.product_name}
                           </div>
                           <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -1097,7 +1097,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         onSelect={(saleType) => {
           setSelSaleType(saleType);
           setSelSize('');
-          setSelQty('');
+          setSelQty('1');
         }}
         options={saleTypeOptions()}
         title="اختر نوع البيع"
