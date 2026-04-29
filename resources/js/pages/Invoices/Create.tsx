@@ -24,6 +24,7 @@ interface PaymentMethod { id: number; name: string; }
 interface Props {
   customers: Customer[]; products: Product[]; sizes: Size[];
   paymentMethods: PaymentMethod[]; flash?: { success?: string; error?: string };
+  invoice?: InvoiceSuccess;
 }
 interface CartItem {
   product_id: number; product_name: string; sale_type: string;
@@ -43,6 +44,30 @@ interface HoldInvoice {
   payments: PaymentEntry[];
   timestamp: number;
   total: number;
+}
+
+// Invoice Success Modal Interface
+interface InvoiceSuccess {
+  id: number;
+  invoice_number: string;
+  customer_name: string;
+  customer_type: string;
+  seller_name: string;
+  total_amount: number;
+  notes: string;
+  created_at: string;
+  items: {
+    product_name: string;
+    sale_type: string;
+    size_label: string;
+    quantity: string;
+    unit_price: number;
+    line_total: number;
+  }[];
+  payments: {
+    method_name: string;
+    amount: number;
+  }[];
 }
 
 const QUICK_PRODUCTS = [
@@ -99,7 +124,7 @@ function resolveLineTotal(saleType: string, price: number, quantity: number): nu
   return (saleType === 'full_bottle' || saleType === 'tier_decant') ? price : price * quantity;
 }
 
-export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash }: Props) {
+export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, invoice }: Props) {
   const [customerId,   setCustomerId]   = useState('');
   const [customerType, setCustomerType] = useState<'regular'|'vip'>('regular');
   const [notes,        setNotes]        = useState('');
@@ -119,6 +144,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   // Hold invoices state
   const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
   const [showHoldList, setShowHoldList] = useState(false);
+  
+  // Invoice success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [invoiceSuccess, setInvoiceSuccess] = useState<InvoiceSuccess | null>(null);
   
   // Number pad modal state
   const [showNumberPad, setShowNumberPad] = useState(false);
@@ -140,6 +169,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       }
     }
   }, []);
+  
+  // Show success modal if invoice data is provided
+  useEffect(() => {
+    console.log('Invoice data received:', invoice); // Debug log
+    if (invoice) {
+      setInvoiceSuccess(invoice);
+      setShowSuccessModal(true);
+      // Clear the form after showing modal
+      setTimeout(() => {
+        clearCurrentInvoice();
+      }, 100);
+    }
+  }, [invoice]);
 
   // Save hold invoices to localStorage whenever it changes
   useEffect(() => {
@@ -402,7 +444,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     router.post('/invoices/with-items', {
       customer_id: customerId || null, customer_type: customerType,
       notes, items: cart, payments,
-    }, { onFinish: () => setProcessing(false) });
+    }, { 
+      onFinish: () => setProcessing(false) 
+    });
   }
 
   // Hold invoice functions
@@ -470,6 +514,160 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
   return (
     <AppShell pageTitle="نقطة البيع">
+      {/* Invoice Success Modal */}
+      {showSuccessModal && invoiceSuccess && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-[24px] max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 dark:text-white">تم إنشاء الفاتورة بنجاح</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">رقم الفاتورة: {invoiceSuccess.invoice_number}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSuccessModal(false)}
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Invoice Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">العميل</label>
+                  <p className="font-bold text-gray-900 dark:text-white">{invoiceSuccess.customer_name}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{invoiceSuccess.customer_type === 'vip' ? '⭐ VIP' : 'عادي'}</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">البائع</label>
+                  <p className="font-bold text-gray-900 dark:text-white">{invoiceSuccess.seller_name}</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">التاريخ</label>
+                  <p className="font-bold text-gray-900 dark:text-white">{new Date(invoiceSuccess.created_at).toLocaleDateString('ar')}</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">الإجمالي</label>
+                  <p className="font-black text-xl text-green-600 dark:text-green-400">{(invoiceSuccess.total_amount || 0).toFixed(2)} د</p>
+                </div>
+              </div>
+              
+              {/* Items */}
+              <div>
+                <h3 className="font-black text-gray-900 dark:text-white mb-3">عناصر الفاتورة</h3>
+                <div className="space-y-2">
+                  {(() => {
+                    // Group similar items like in the cart
+                    const groupedItems = invoiceSuccess.items.reduce((acc, item, originalIdx) => {
+                      const key = `${item.product_name}-${item.size_label}-${item.sale_type}`;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          ...item,
+                          count: 1,
+                          totalQuantity: +item.quantity,
+                          totalAmount: item.line_total,
+                          originalIndices: [originalIdx]
+                        };
+                      } else {
+                        acc[key].count += 1;
+                        acc[key].totalQuantity += +item.quantity;
+                        acc[key].totalAmount += item.line_total;
+                        acc[key].originalIndices.push(originalIdx);
+                      }
+                      return acc;
+                    }, {} as Record<string, any>);
+                    
+                    return Object.values(groupedItems).map((groupedItem: any, idx) => {
+                      // For unit_based items, show total quantity instead of count
+                      const displayCount = groupedItem.sale_type === 'unit_based' 
+                        ? groupedItem.totalQuantity 
+                        : groupedItem.count;
+                      
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                              <span className="font-black text-primary text-sm">{displayCount}</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-900 dark:text-white">{groupedItem.product_name}</p>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                <span>{saleTypeLabels[groupedItem.sale_type]}</span>
+                                {groupedItem.size_label && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{groupedItem.size_label}</span>
+                                  </>
+                                )}
+                                {groupedItem.sale_type === 'unit_based' && (
+                                  <>
+                                    <span>•</span>
+                                    <span>الكمية: {groupedItem.totalQuantity}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-gray-900 dark:text-white">{(groupedItem.totalAmount || 0).toFixed(2)} د</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{groupedItem.unit_price || 0} د / وحدة</p>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+              
+              {/* Payments */}
+              <div>
+                <h3 className="font-black text-gray-900 dark:text-white mb-3">طرق الدفع</h3>
+                <div className="space-y-2">
+                  {invoiceSuccess.payments.map((payment, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-green-600 dark:text-green-400" />
+                        <span className="font-bold text-gray-900 dark:text-white">{payment.method_name}</span>
+                      </div>
+                      <span className="font-bold text-green-600 dark:text-green-400">{(payment.amount || 0).toFixed(2)} د</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Notes */}
+              {invoiceSuccess.notes && (
+                <div>
+                  <h3 className="font-black text-gray-900 dark:text-white mb-3">ملاحظات</h3>
+                  <p className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-gray-900 dark:text-white">{invoiceSuccess.notes}</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+              <button onClick={() => setShowSuccessModal(false)}
+                className="flex-1 spatial-button h-12 text-sm font-bold">
+                فاتورة جديدة
+              </button>
+              <button onClick={() => {
+                // Print functionality can be added here
+                window.print();
+              }}
+                className="px-6 h-12 rounded-[16px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold text-sm transition-all">
+                طباعة
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* POS: full-height, no outer scroll */}
       <div className="flex flex-col lg:flex-row gap-0 -m-4 lg:-m-10 h-[calc(100vh-80px)] lg:h-[calc(100dvh-120px)] overflow-hidden">
 

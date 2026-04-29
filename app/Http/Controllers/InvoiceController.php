@@ -25,11 +25,14 @@ class InvoiceController extends Controller
 
     public function create(): Response
     {
+        $invoiceData = session('invoiceData');
+        
         return Inertia::render('Invoices/Create', [
             'customers'      => Customer::where('is_active', true)->orderBy('name')->get(),
             'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])->orderBy('name')->get(),
             'sizes'          => Size::where('unit', 'ml')->orderBy('value')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
+            'invoice'        => $invoiceData,
         ]);
     }
 
@@ -62,8 +65,40 @@ class InvoiceController extends Controller
             $this->invoices->addPayment($invoice->id, $payment);
         }
 
-        return redirect()->route('invoices.show', $invoice->id)
-            ->with('success', 'تم إنشاء الفاتورة بنجاح');
+        // Get the complete invoice with all relations for the modal
+        $completeInvoice = $this->invoices->findWithRelations($invoice->id);
+        
+        // Format the invoice data for the frontend modal
+        $invoiceData = [
+            'id' => $completeInvoice->id,
+            'invoice_number' => $completeInvoice->invoice_number ?? 'INV-' . $completeInvoice->id,
+            'customer_name' => $completeInvoice->customer ? $completeInvoice->customer->name : 'زبون نقدي',
+            'customer_type' => $completeInvoice->customer_type,
+            'seller_name' => $completeInvoice->user->name ?? 'غير محدد',
+            'total_amount' => (float) ($completeInvoice->total_amount ?? $completeInvoice->items->sum('line_total')),
+            'notes' => $completeInvoice->notes,
+            'created_at' => $completeInvoice->created_at->toISOString(),
+            'items' => $completeInvoice->items->map(function ($item) {
+                return [
+                    'product_name' => $item->product->name,
+                    'sale_type' => $item->sale_type,
+                    'size_label' => $item->size ? $item->size->label : '',
+                    'quantity' => (string) $item->quantity,
+                    'unit_price' => (float) $item->unit_price,
+                    'line_total' => (float) $item->line_total,
+                ];
+            }),
+            'payments' => $completeInvoice->payments->map(function ($payment) {
+                return [
+                    'method_name' => $payment->paymentMethod->name,
+                    'amount' => (float) $payment->amount,
+                ];
+            }),
+        ];
+
+        return redirect()->route('invoices.create')
+            ->with('success', 'تم إنشاء الفاتورة بنجاح')
+            ->with('invoiceData', $invoiceData);
     }
 
     public function store(Request $request)
