@@ -10,6 +10,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\PurchaseController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
@@ -28,3 +30,8 @@ Route::resource('invoices', InvoiceController::class)->except(['edit']);
 Route::post('invoices/{id}/items', [InvoiceController::class, 'addItem'])->name('invoices.items.add');
 Route::delete('invoices/{id}/items/{itemId}', [InvoiceController::class, 'removeItem'])->name('invoices.items.remove');
 Route::post('invoices/{id}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments.add');
+Route::resource('suppliers', SupplierController::class)->except(['create', 'edit', 'show']);
+Route::resource('purchases', PurchaseController::class)->except(['edit']);
+Route::post('purchases/{id}/items', [PurchaseController::class, 'addItem'])->name('purchases.items.add');
+Route::delete('purchases/{id}/items/{itemId}', [PurchaseController::class, 'removeItem'])->name('purchases.items.remove');
+Route::post('purchases/{id}/payments', [PurchaseController::class, 'addPayment'])->name('purchases.payments.add');

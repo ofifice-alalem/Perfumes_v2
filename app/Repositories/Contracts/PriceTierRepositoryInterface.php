@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-interface PriceTierRepositoryInterface extends RepositoryInterface
+interface PriceTierRepositoryInterface extends BaseRepositoryInterface
 {
     public function allWithPrices();
     public function hasProducts(int $id): bool;

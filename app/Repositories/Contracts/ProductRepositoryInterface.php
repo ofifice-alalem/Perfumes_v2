@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-interface ProductRepositoryInterface extends RepositoryInterface
+interface ProductRepositoryInterface extends BaseRepositoryInterface
 {
     public function allWithRelations();
     public function findWithRelations(int $id);

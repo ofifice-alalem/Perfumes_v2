@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-interface CustomerRepositoryInterface extends RepositoryInterface
+interface CustomerRepositoryInterface extends BaseRepositoryInterface
 {
     public function allOrdered();
     public function allActive();

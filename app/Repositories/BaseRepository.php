@@ -3,9 +3,9 @@
 namespace App\Repositories;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Repositories\Contracts\RepositoryInterface;
+use App\Repositories\Contracts\BaseRepositoryInterface;
 
-abstract class BaseRepository implements RepositoryInterface
+abstract class BaseRepository implements BaseRepositoryInterface
 {
     public function __construct(protected Model $model) {}
 
@@ -15,6 +15,11 @@ abstract class BaseRepository implements RepositoryInterface
     }
 
     public function find(int $id)
+    {
+        return $this->model->find($id);
+    }
+
+    public function findOrFail(int $id)
     {
         return $this->model->findOrFail($id);
     }

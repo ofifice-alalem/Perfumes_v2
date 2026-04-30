@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-interface PaymentMethodRepositoryInterface extends RepositoryInterface
+interface PaymentMethodRepositoryInterface extends BaseRepositoryInterface
 {
     public function allOrdered();
     public function allActive();
