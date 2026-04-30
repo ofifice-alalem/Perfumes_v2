@@ -63,7 +63,7 @@ export default function PurchasesShow({ purchase, products, paymentMethods, flas
   const itemForm = useForm({
     product_id: '',
     quantity: '',
-    unit_cost: '',
+    total_cost: '', // تغيير من unit_cost إلى total_cost
   });
 
   const paymentForm = useForm({
@@ -203,18 +203,28 @@ export default function PurchasesShow({ purchase, products, paymentMethods, flas
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-700 dark:text-white/75">سعر الوحدة</label>
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75">السعر الكلي</label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
-                      value={itemForm.data.unit_cost}
-                      onChange={e => itemForm.setData('unit_cost', e.target.value)}
+                      value={itemForm.data.total_cost}
+                      onChange={e => itemForm.setData('total_cost', e.target.value)}
                       placeholder="0"
                       className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
                     />
                   </div>
                 </div>
+                
+                {/* عرض سعر الوحدة المحسوب */}
+                {itemForm.data.quantity && itemForm.data.total_cost && (
+                  <div className="flex items-center gap-1 px-4 py-3 rounded-[14px] bg-blue-500/5 border border-blue-500/20">
+                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">سعر الوحدة المحسوب:</span>
+                    <span className="font-black text-blue-600 dark:text-blue-400 text-sm">
+                      {(+itemForm.data.total_cost / +itemForm.data.quantity).toFixed(3)} د
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <button onClick={addItem} disabled={itemForm.processing}
                     className="spatial-button flex items-center gap-2 px-4 h-10 text-sm">

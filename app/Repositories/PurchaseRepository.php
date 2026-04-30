@@ -56,12 +56,14 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
             $product = Product::findOrFail($data['product_id']);
 
             // إنشاء سطر المشتريات
+            $lineTotal = $data['line_total'] ?? ($data['quantity'] * $data['unit_cost']);
+            
             $item = PurchaseItem::create([
                 'purchase_id' => $purchaseId,
                 'product_id' => $data['product_id'],
                 'quantity' => $data['quantity'],
                 'unit_cost' => $data['unit_cost'],
-                'line_total' => $data['quantity'] * $data['unit_cost'],
+                'line_total' => $lineTotal,
             ]);
 
             // تحديث المخزون
@@ -72,8 +74,8 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
             // تحديث بيانات المورد
             $supplier = $purchase->supplier;
-            $supplier->increment('total_purchases', $data['line_total']);
-            $supplier->increment('total_debt', $data['line_total']);
+            $supplier->increment('total_purchases', $lineTotal);
+            $supplier->increment('total_debt', $lineTotal);
 
             return $item;
         });

@@ -86,10 +86,14 @@ class PurchaseController extends Controller
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
-            'unit_cost' => 'required|numeric|min:0',
+            'total_cost' => 'required|numeric|min:0',
         ]);
 
         try {
+            // حساب سعر الوحدة من السعر الكلي
+            $data['unit_cost'] = $data['total_cost'] / $data['quantity'];
+            $data['line_total'] = $data['total_cost'];
+            
             $this->purchases->addItem($id, $data);
             return back()->with('success', 'تم إضافة المنتج');
         } catch (\Exception $e) {
