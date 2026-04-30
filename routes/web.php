@@ -32,6 +32,7 @@ Route::delete('invoices/{id}/items/{itemId}', [InvoiceController::class, 'remove
 Route::post('invoices/{id}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments.add');
 
 Route::resource('suppliers', SupplierController::class)->except(['create', 'edit', 'show']);
+Route::post('purchases/store-with-items', [PurchaseController::class, 'storeWithItems'])->name('purchases.storeWithItems');
 Route::resource('purchases', PurchaseController::class)->except(['edit']);
 Route::post('purchases/{id}/items', [PurchaseController::class, 'addItem'])->name('purchases.items.add');
 Route::delete('purchases/{id}/items/{itemId}', [PurchaseController::class, 'removeItem'])->name('purchases.items.remove');
