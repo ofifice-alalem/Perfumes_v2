@@ -99,6 +99,21 @@ class PurchaseController extends Controller
         }
     }
 
+    public function updateItem(Request $request, int $id, int $itemId)
+    {
+        $data = $request->validate([
+            'quantity'  => 'required|numeric|min:0.01',
+            'unit_cost' => 'required|numeric|min:0',
+        ]);
+
+        try {
+            $this->purchases->updateItem($id, $itemId, $data);
+            return back()->with('success', 'تم تحديث المنتج');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function removeItem(int $id, int $itemId)
     {
         try {

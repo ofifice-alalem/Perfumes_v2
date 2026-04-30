@@ -69,6 +69,32 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
         });
     }
 
+    public function updateItem(int $purchaseId, int $itemId, array $data): void
+    {
+        DB::transaction(function () use ($purchaseId, $itemId, $data) {
+            $item = PurchaseItem::where('purchase_id', $purchaseId)->findOrFail($itemId);
+
+            $oldQty  = (float) $item->quantity;
+            $newQty  = (float) $data['quantity'];
+            $diff    = $newQty - $oldQty;
+
+            // تحديث المخزون بالفرق
+            if ($diff !== 0.0) {
+                Product::findOrFail($item->product_id)->increment('stock', $diff);
+            }
+
+            $item->update([
+                'quantity'   => $newQty,
+                'unit_cost'  => $data['unit_cost'],
+                'line_total' => $newQty * (float) $data['unit_cost'],
+            ]);
+
+            $purchase = $this->model->findOrFail($purchaseId);
+            $purchase->recalculate();
+            $this->updateSupplierDebt($purchase->fresh());
+        });
+    }
+
     public function removeItem(int $purchaseId, int $itemId): void
     {
         DB::transaction(function () use ($purchaseId, $itemId) {

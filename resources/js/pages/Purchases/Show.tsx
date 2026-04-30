@@ -3,7 +3,7 @@ import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, Trash2, Check, X, CreditCard, Package } from 'lucide-react';
+import { Plus, Trash2, Check, X, CreditCard, Package, Pencil } from 'lucide-react';
 
 interface Category  { id: number; name: string; unit: string; }
 interface Product   { id: number; name: string; stock: string; category: Category; }
@@ -44,8 +44,26 @@ function AddItemForm({ purchaseId, products, onClose }: {
   purchaseId: number; products: Product[]; onClose: () => void;
 }) {
   const form = useForm({ product_id: '', quantity: '', unit_cost: '' });
+  const [totalPrice, setTotalPrice] = useState('');
 
   const selectedProduct = products.find(p => p.id === +form.data.product_id);
+  const unitCostPreview = form.data.quantity && totalPrice && +form.data.quantity > 0
+    ? (+totalPrice / +form.data.quantity)
+    : null;
+
+  function handleTotalChange(val: string) {
+    setTotalPrice(val);
+    if (form.data.quantity && +form.data.quantity > 0 && val) {
+      form.setData('unit_cost', (+val / +form.data.quantity).toFixed(4));
+    }
+  }
+
+  function handleQtyChange(val: string) {
+    form.setData('quantity', val);
+    if (totalPrice && +val > 0) {
+      form.setData('unit_cost', (+totalPrice / +val).toFixed(4));
+    }
+  }
 
   function submit() {
     form.post(`/purchases/${purchaseId}/items`, { onSuccess: onClose });
@@ -69,25 +87,22 @@ function AddItemForm({ purchaseId, products, onClose }: {
               الكمية ({selectedProduct.category.unit})
             </label>
             <input type="number" min="0.01" step="0.01" value={form.data.quantity}
-              onChange={e => form.setData('quantity', e.target.value)}
+              onChange={e => handleQtyChange(e.target.value)}
               placeholder="0" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-            {form.errors.quantity && <p className="text-xs text-red-500 font-bold">{form.errors.quantity}</p>}
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر الوحدة (د)</label>
-            <input type="number" min="0" step="0.01" value={form.data.unit_cost}
-              onChange={e => form.setData('unit_cost', e.target.value)}
+            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السعر الإجمالي (د)</label>
+            <input type="number" min="0" step="0.01" value={totalPrice}
+              onChange={e => handleTotalChange(e.target.value)}
               placeholder="0.00" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-            {form.errors.unit_cost && <p className="text-xs text-red-500 font-bold">{form.errors.unit_cost}</p>}
           </div>
         </div>
       )}
 
-      {/* معاينة الإجمالي */}
-      {form.data.quantity && form.data.unit_cost && (
+      {unitCostPreview !== null && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-[14px] bg-primary/5 border border-primary/20">
-          <span className="text-xs font-bold text-slate-500 dark:text-white/50">الإجمالي:</span>
-          <span className="font-black text-primary">{(+form.data.quantity * +form.data.unit_cost).toFixed(2)} د</span>
+          <span className="text-xs font-bold text-slate-500 dark:text-white/50">سعر الوحدة:</span>
+          <span className="font-black text-primary">{unitCostPreview.toFixed(3)} د</span>
         </div>
       )}
 
@@ -102,6 +117,59 @@ function AddItemForm({ purchaseId, products, onClose }: {
         </button>
       </div>
     </div>
+  );
+}
+
+// ── Edit Item Row ─────────────────────────────────────────────────────────────
+function EditItemRow({ item, purchaseId, onClose }: {
+  item: PurchaseItem; purchaseId: number; onClose: () => void;
+}) {
+  const [qty,        setQty]        = useState(item.quantity);
+  const [totalPrice, setTotalPrice] = useState(item.line_total);
+  const [processing, setProcessing] = useState(false);
+
+  const unitCost = +qty > 0 ? (+totalPrice / +qty) : 0;
+
+  function save() {
+    setProcessing(true);
+    router.patch(`/purchases/${purchaseId}/items/${item.id}`, {
+      quantity:  qty,
+      unit_cost: unitCost.toFixed(4),
+    }, { onFinish: () => { setProcessing(false); onClose(); } });
+  }
+
+  return (
+    <>
+      {/* الكمية */}
+      <td className="px-4 py-2">
+        <input type="number" min="0.01" step="0.01" value={qty}
+          onChange={e => setQty(e.target.value)}
+          className="spatial-input h-10 rounded-[12px] px-3 text-[14px] font-bold w-28" />
+      </td>
+      {/* السعر الإجمالي */}
+      <td className="px-4 py-2">
+        <input type="number" min="0" step="0.01" value={totalPrice}
+          onChange={e => setTotalPrice(e.target.value)}
+          className="spatial-input h-10 rounded-[12px] px-3 text-[14px] font-bold w-28" />
+      </td>
+      {/* سعر الوحدة */}
+      <td className="px-4 py-2 text-center">
+        <span className="text-xs font-bold text-primary">{unitCost.toFixed(3)}</span>
+      </td>
+      {/* إجراءات */}
+      <td className="px-4 py-2">
+        <div className="flex items-center gap-1">
+          <button onClick={save} disabled={processing}
+            className="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-50">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onClose}
+            className="w-8 h-8 rounded-[8px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 flex items-center justify-center transition-all">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </td>
+    </>
   );
 }
 
@@ -145,30 +213,27 @@ function AddPaymentForm({ purchaseId, dueAmount, paymentMethods, onClose }: {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PurchaseShow({ purchase, products, paymentMethods, flash }: Props) {
-  const [showAddItem, setShowAddItem]       = useState(false);
+  const [showAddItem,   setShowAddItem]   = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
-  const [deleteItemId, setDeleteItemId]     = useState<number | null>(null);
+  const [editItemId,    setEditItemId]    = useState<number | null>(null);
+  const [deleteItemId,  setDeleteItemId]  = useState<number | null>(null);
 
   function removeItem(itemId: number) {
     router.delete(`/purchases/${purchase.id}/items/${itemId}`, { onSuccess: () => setDeleteItemId(null) });
   }
-
-  const isPaid = purchase.payment_status === 'paid';
 
   return (
     <AppShell pageTitle="تفاصيل فاتورة الشراء">
       <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link href="/purchases" className="text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-sm">← المشتريات</Link>
-            <span className="text-slate-300 dark:text-white/20">/</span>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white">فاتورة شراء #{purchase.id}</h1>
-            <span className={`text-xs font-black px-3 py-1 rounded-[8px] ${statusConfig[purchase.payment_status].cls}`}>
-              {statusConfig[purchase.payment_status].label}
-            </span>
-          </div>
+        <div className="flex items-center gap-3">
+          <Link href="/purchases" className="text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-sm">← المشتريات</Link>
+          <span className="text-slate-300 dark:text-white/20">/</span>
+          <h1 className="text-2xl font-black text-slate-800 dark:text-white">فاتورة شراء #{purchase.id}</h1>
+          <span className={`text-xs font-black px-3 py-1 rounded-[8px] ${statusConfig[purchase.payment_status].cls}`}>
+            {statusConfig[purchase.payment_status].label}
+          </span>
         </div>
 
         {/* Flash */}
@@ -199,14 +264,16 @@ export default function PurchaseShow({ purchase, products, paymentMethods, flash
               )}
             </SpatialCard>
 
-            {/* Items */}
-            <SpatialCard title={`المنتجات المشتراة (${purchase.items.length})`} icon={<Package className="w-4 h-4" />}
-              action={!isPaid && (
+            {/* Items Table */}
+            <SpatialCard
+              title={`المنتجات المشتراة (${purchase.items.length})`}
+              icon={<Package className="w-4 h-4" />}
+              action={
                 <button onClick={() => setShowAddItem(true)}
                   className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm">
                   <Plus className="w-4 h-4" /> إضافة
                 </button>
-              )}
+              }
             >
               {showAddItem && (
                 <div className="mb-5 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
@@ -220,32 +287,65 @@ export default function PurchaseShow({ purchase, products, paymentMethods, flash
                   <span className="font-bold text-sm">لا توجد منتجات بعد</span>
                 </div>
               ) : (
-                <div className="flex flex-col gap-2">
-                  {purchase.items.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-800 dark:text-white text-sm">{item.product.name}</span>
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-[6px]">
-                            {item.product.category.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">الكمية: {item.quantity}</span>
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">سعر الوحدة: {item.unit_cost} د</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-black text-slate-800 dark:text-white text-sm">{item.line_total} د</span>
-                        {!isPaid && (
-                          <button onClick={() => setDeleteItemId(item.id)}
-                            className="w-8 h-8 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-black/5 dark:border-white/5">
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-400 dark:text-white/40">المنتج</th>
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-400 dark:text-white/40">الكمية</th>
+                        <th className="px-4 py-2 text-right text-xs font-bold text-slate-400 dark:text-white/40">السعر الإجمالي</th>
+                        <th className="px-4 py-2 text-center text-xs font-bold text-slate-400 dark:text-white/40">سعر الوحدة</th>
+                        <th className="px-4 py-2 text-center text-xs font-bold text-slate-400 dark:text-white/40">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchase.items.map(item => (
+                        <tr key={item.id} className="border-b border-black/3 dark:border-white/3 hover:bg-black/2 dark:hover:bg-white/2 transition-colors">
+                          {editItemId === item.id ? (
+                            <>
+                              <td className="px-4 py-2">
+                                <div>
+                                  <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
+                                  <span className="block text-xs text-slate-400 dark:text-white/40">{item.product.category.name}</span>
+                                </div>
+                              </td>
+                              <EditItemRow item={item} purchaseId={purchase.id} onClose={() => setEditItemId(null)} />
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-2">
+                                <div>
+                                  <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
+                                  <span className="block text-xs text-slate-400 dark:text-white/40">{item.product.category.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-2 font-bold text-slate-700 dark:text-slate-300">
+                                {item.quantity}{item.product.category.unit}
+                              </td>
+                              <td className="px-4 py-2 font-black text-slate-800 dark:text-white">
+                                {item.line_total} د
+                              </td>
+                              <td className="px-4 py-2 text-center text-xs font-bold text-slate-400 dark:text-white/40">
+                                {item.unit_cost}
+                              </td>
+                              <td className="px-4 py-2">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => setEditItemId(item.id)}
+                                    className="w-8 h-8 rounded-[8px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white text-slate-500 dark:text-white/50 flex items-center justify-center transition-all">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => setDeleteItemId(item.id)}
+                                    className="w-8 h-8 rounded-[8px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </SpatialCard>
@@ -258,9 +358,9 @@ export default function PurchaseShow({ purchase, products, paymentMethods, flash
             <SpatialCard title="ملخص الفاتورة">
               <div className="flex flex-col gap-3">
                 {[
-                  { label: 'الإجمالي', value: purchase.total,       cls: 'text-slate-800 dark:text-white' },
-                  { label: 'المدفوع',  value: purchase.paid_amount,  cls: 'text-emerald-600 dark:text-emerald-400' },
-                  { label: 'المتبقي',  value: purchase.due_amount,   cls: +purchase.due_amount > 0 ? 'text-red-500' : 'text-slate-400 dark:text-white/30' },
+                  { label: 'الإجمالي', value: purchase.total,      cls: 'text-slate-800 dark:text-white' },
+                  { label: 'المدفوع',  value: purchase.paid_amount, cls: 'text-emerald-600 dark:text-emerald-400' },
+                  { label: 'المتبقي',  value: purchase.due_amount,  cls: +purchase.due_amount > 0 ? 'text-red-500' : 'text-slate-400 dark:text-white/30' },
                 ].map(({ label, value, cls }) => (
                   <div key={label} className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5 last:border-0">
                     <span className="text-sm font-bold text-slate-500 dark:text-white/50">{label}</span>
@@ -272,7 +372,7 @@ export default function PurchaseShow({ purchase, products, paymentMethods, flash
 
             {/* Payments */}
             <SpatialCard title="الدفعات للمورد" icon={<CreditCard className="w-4 h-4" />}
-              action={!isPaid && +purchase.due_amount > 0 && (
+              action={+purchase.due_amount > 0 && (
                 <button onClick={() => setShowAddPayment(true)}
                   className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm">
                   <Plus className="w-4 h-4" /> دفعة
