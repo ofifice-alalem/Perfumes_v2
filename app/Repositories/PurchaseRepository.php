@@ -18,14 +18,14 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
     public function allWithRelations()
     {
-        return $this->model->with(['supplier', 'items.product', 'payments.paymentMethod'])
+        return $this->model->with(['supplier', 'items.product.category', 'payments.paymentMethod'])
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
     public function findWithRelations(int $id)
     {
-        return $this->model->with(['supplier', 'items.product', 'payments.paymentMethod'])
+        return $this->model->with(['supplier', 'items.product.category', 'payments.paymentMethod'])
             ->findOrFail($id);
     }
 
@@ -40,6 +40,10 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
                 'due_amount' => 0,
                 'payment_status' => 'unpaid',
             ]);
+
+            // تحديث إجمالي المشتريات للمورد
+            $supplier = $purchase->supplier;
+            $supplier->increment('total_purchases', 0); // سيتم تحديثه لاحقاً
 
             return $purchase;
         });
@@ -65,6 +69,11 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
             // إعادة حساب إجماليات الفاتورة
             $purchase->recalculate();
+
+            // تحديث بيانات المورد
+            $supplier = $purchase->supplier;
+            $supplier->increment('total_purchases', $data['line_total']);
+            $supplier->increment('total_debt', $data['line_total']);
 
             return $item;
         });

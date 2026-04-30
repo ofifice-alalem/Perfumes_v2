@@ -30,6 +30,35 @@ class PurchaseController extends Controller
         ]);
     }
 
+    public function storeWithItems(Request $request)
+    {
+        $data = $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'notes' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit_cost' => 'required|numeric|min:0',
+            'items.*.line_total' => 'required|numeric|min:0',
+            'payments' => 'nullable|array',
+            'payments.*.payment_method_id' => 'required|exists:payment_methods,id',
+            'payments.*.amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $purchase = $this->purchases->createPurchase($data);
+
+        foreach ($data['items'] as $item) {
+            $this->purchases->addItem($purchase->id, $item);
+        }
+
+        foreach ($data['payments'] ?? [] as $payment) {
+            $this->purchases->addPayment($purchase->id, $payment);
+        }
+
+        return redirect()->route('purchases.index')
+            ->with('success', 'تم إنشاء فاتورة الشراء بنجاح');
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([

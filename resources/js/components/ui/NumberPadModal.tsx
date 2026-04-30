@@ -26,7 +26,7 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent default behavior for handled keys
-      if (/^[0-9]$/.test(e.key) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) {
+      if (/^[0-9.]$/.test(e.key) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) {
         e.preventDefault();
       }
 
@@ -42,6 +42,10 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
         case '8':
         case '9':
           handleNumberClick(e.key);
+          break;
+        case '.':
+        case ',':
+          handleDecimalClick();
           break;
         case 'Backspace':
         case 'Delete':
@@ -76,6 +80,16 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   const handleNumberClick = (num: string) => {
     setValue(prev => prev + num);
+    setHasStartedTyping(true);
+  };
+
+  const handleDecimalClick = () => {
+    setValue(prev => {
+      // Don't add decimal if already exists
+      if (prev.includes('.')) return prev;
+      // Add 0 before decimal if empty or starts with decimal
+      return prev === '' ? '0.' : prev + '.';
+    });
     setHasStartedTyping(true);
   };
 
@@ -132,7 +146,7 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
             {!hasStartedTyping && initialValue ? (
               <span>القيمة الحالية: <strong>{initialValue}</strong> • ابدأ الكتابة للتغيير أو اضغط تأكيد للاحتفاظ</span>
             ) : (
-              <span>استخدم لوحة المفاتيح: الأرقام • Backspace للمسح • Enter للتأكيد • C لمسح الكل</span>
+              <span>استخدم لوحة المفاتيح: الأرقام • . للفاصلة العشرية • Backspace للمسح • Enter للتأكيد • C لمسح الكل</span>
             )}
           </div>
         </div>
@@ -152,28 +166,36 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
           </div>
           
           {/* Bottom row: Clear, 0, Delete */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-6">
             <button
               onClick={handleClear}
               disabled={!hasStartedTyping}
-              className="w-20 h-20 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-lg transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
+              className="w-16 h-16 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
             >
-              <RotateCcw className="w-6 h-6" />
+              <RotateCcw className="w-5 h-5" />
             </button>
             
             <button
               onClick={() => handleNumberClick('0')}
-              className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-2xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto"
+              className="w-16 h-16 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto"
             >
               0
             </button>
             
             <button
+              onClick={handleDecimalClick}
+              disabled={value.includes('.')}
+              className="w-16 h-16 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-600 dark:text-blue-400 font-black text-xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              .
+            </button>
+            
+            <button
               onClick={handleDelete}
               disabled={!hasStartedTyping || !value}
-              className="w-20 h-20 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-600 dark:text-orange-400 font-bold text-lg transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
+              className="w-16 h-16 rounded-full bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-600 dark:text-orange-400 font-bold text-sm transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed mx-auto"
             >
-              <Delete className="w-6 h-6" />
+              <Delete className="w-5 h-5" />
             </button>
           </div>
 

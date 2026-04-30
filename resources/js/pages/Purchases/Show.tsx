@@ -20,7 +20,7 @@ interface SupplierPayment {
   id: number;
   amount: string;
   notes: string | null;
-  paymentMethod: PaymentMethod;
+  payment_method: PaymentMethod; // تغيير من paymentMethod إلى payment_method
   created_at: string;
 }
 interface Purchase {
@@ -378,7 +378,7 @@ export default function PurchasesShow({ purchase, products, paymentMethods, flas
                     <div className="flex items-center gap-2">
                       <CreditCard className="w-4 h-4 text-emerald-500" />
                       <div className="flex flex-col">
-                        <span className="font-bold text-slate-700 dark:text-white/70 text-sm">{payment.paymentMethod.name}</span>
+                        <span className="font-bold text-slate-700 dark:text-white/70 text-sm">{payment.payment_method?.name || 'غير محدد'}</span>
                         {payment.notes && (
                           <span className="text-xs text-slate-500 dark:text-white/50">{payment.notes}</span>
                         )}
