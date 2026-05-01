@@ -19,6 +19,7 @@ interface WasteLog {
 
 interface Props {
   log: WasteLog;
+  products: Product[];
   flash?: { success?: string; error?: string };
 }
 
@@ -34,9 +35,72 @@ const reasonColors: Record<string, string> = {
   other:   'bg-black/5 text-slate-600 dark:text-white/60 border-black/10 dark:border-white/10',
 };
 
-export default function WasteShow({ log, flash }: Props) {
+// ── Add Item Form ─────────────────────────────────────────────────────────────
+function AddItemForm({ logId, products, onClose }: {
+  logId: number; products: Product[]; onClose: () => void;
+}) {
+  const form = useForm({ product_id: '', quantity: '', reason: 'other' });
+  const selectedProduct = products.find(p => p.id === +form.data.product_id);
+
+  function submit() {
+    form.post(`/waste/${logId}/items`, { onSuccess: onClose });
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ModernSelect label="المنتج"
+        options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}` }))}
+        defaultValue=""
+        onSelect={val => {
+          const p = products.find(p => p.name === val);
+          form.setData(prev => ({ ...prev, product_id: p ? String(p.id) : '' }));
+        }}
+      />
+      {selectedProduct && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">
+              الكمية ({selectedProduct.category.unit})
+            </label>
+            <input type="number" min="0.01" step="0.01" value={form.data.quantity}
+              onChange={e => form.setData('quantity', e.target.value)}
+              placeholder="0" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+            {form.errors.quantity && <p className="text-xs text-red-500 font-bold">{form.errors.quantity}</p>}
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السبب</label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(reasonLabels).map(([key, label]) => (
+                <button key={key} type="button" onClick={() => form.setData('reason', key)}
+                  className={`px-3 h-10 rounded-[12px] font-bold text-sm border-2 transition-all ${
+                    form.data.reason === key ? 'bg-primary border-primary text-white' : `${reasonColors[key]} border`
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <button onClick={submit} disabled={form.processing || !form.data.product_id || !form.data.quantity}
+          className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
+          <Check className="w-4 h-4" /> إضافة
+        </button>
+        <button onClick={onClose}
+          className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+          <X className="w-4 h-4" /> إلغاء
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function WasteShow({ log, products, flash }: Props) {
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [editItemId,   setEditItemId]   = useState<number | null>(null);
+  const [showAddItem,  setShowAddItem]  = useState(false);
   const [editQty,      setEditQty]      = useState('');
   const [editReason,   setEditReason]   = useState('');
   const [processing,   setProcessing]   = useState(false);
@@ -100,7 +164,19 @@ export default function WasteShow({ log, flash }: Props) {
             </SpatialCard>
 
             {/* Items Table */}
-            <SpatialCard title="المنتجات التالفة" icon={<AlertTriangle className="w-4 h-4 text-red-500" />}>
+            <SpatialCard title={`المنتجات التالفة`} icon={<AlertTriangle className="w-4 h-4 text-red-500" />}
+              action={
+                <button onClick={() => setShowAddItem(true)}
+                  className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm">
+                  <Plus className="w-4 h-4" /> إضافة
+                </button>
+              }
+            >
+              {showAddItem && (
+                <div className="mb-5 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                  <AddItemForm logId={log.id} products={products} onClose={() => setShowAddItem(false)} />
+                </div>
+              )}
               {log.items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-slate-400 dark:text-white/30 gap-2">
                   <span className="text-3xl">📦</span>

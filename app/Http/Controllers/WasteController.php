@@ -52,7 +52,8 @@ class WasteController extends Controller
     public function show(int $id): Response
     {
         return Inertia::render('Waste/Show', [
-            'log' => $this->waste->findWithRelations($id),
+            'log'      => $this->waste->findWithRelations($id),
+            'products' => Product::with('category')->orderBy('name')->get(),
         ]);
     }
 
