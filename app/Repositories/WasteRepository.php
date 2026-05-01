@@ -60,6 +60,31 @@ class WasteRepository extends BaseRepository implements WasteRepositoryInterface
         });
     }
 
+    public function updateItem(int $logId, int $itemId, array $data): void
+    {
+        DB::transaction(function () use ($logId, $itemId, $data) {
+            $item    = WasteItem::where('waste_log_id', $logId)->findOrFail($itemId);
+            $oldQty  = (float) $item->quantity;
+            $newQty  = (float) $data['quantity'];
+            $diff    = $newQty - $oldQty;
+
+            $product = Product::findOrFail($item->product_id);
+
+            if ($diff > 0 && $product->stock < $diff) {
+                throw new \Exception("المخزون غير كافٍ. المتاح: {$product->stock}");
+            }
+
+            if ($diff !== 0.0) {
+                $product->decrement('stock', $diff);
+            }
+
+            $item->update([
+                'quantity' => $newQty,
+                'reason'   => $data['reason'],
+            ]);
+        });
+    }
+
     public function removeItem(int $logId, int $itemId): void
     {
         DB::transaction(function () use ($logId, $itemId) {

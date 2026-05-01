@@ -8,5 +8,6 @@ interface WasteRepositoryInterface extends RepositoryInterface
     public function findWithRelations(int $id);
     public function createLog(array $data);
     public function addItem(int $logId, array $itemData): void;
+    public function updateItem(int $logId, int $itemId, array $data): void;
     public function removeItem(int $logId, int $itemId): void;
 }

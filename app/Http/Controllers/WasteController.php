@@ -73,6 +73,21 @@ class WasteController extends Controller
         }
     }
 
+    public function updateItem(int $id, int $itemId)
+    {
+        $data = request()->validate([
+            'quantity' => 'required|numeric|min:0.01',
+            'reason'   => 'required|in:broken,spilled,expired,lost,other',
+        ]);
+
+        try {
+            $this->waste->updateItem($id, $itemId, $data);
+            return back()->with('success', 'تم تحديث السطر');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function removeItem(int $id, int $itemId)
     {
         try {

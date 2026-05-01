@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Link, router } from '@inertiajs/react';
+import { Link, router, useForm } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Trash2, Package, AlertTriangle } from 'lucide-react';
+import { Trash2, Package, AlertTriangle, Pencil, Check, X, Plus } from 'lucide-react';
 
 interface Category  { id: number; name: string; unit: string; }
 interface Product   { id: number; name: string; category: Category; }
@@ -36,9 +36,27 @@ const reasonColors: Record<string, string> = {
 
 export default function WasteShow({ log, flash }: Props) {
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [editItemId,   setEditItemId]   = useState<number | null>(null);
+  const [editQty,      setEditQty]      = useState('');
+  const [editReason,   setEditReason]   = useState('');
+  const [processing,   setProcessing]   = useState(false);
 
   function removeItem(itemId: number) {
     router.delete(`/waste/${log.id}/items/${itemId}`, { onSuccess: () => setDeleteItemId(null) });
+  }
+
+  function startEdit(item: WasteItem) {
+    setEditItemId(item.id);
+    setEditQty(item.quantity);
+    setEditReason(item.reason);
+  }
+
+  function saveEdit(itemId: number) {
+    setProcessing(true);
+    router.patch(`/waste/${log.id}/items/${itemId}`, {
+      quantity: editQty,
+      reason:   editReason,
+    }, { onFinish: () => { setProcessing(false); setEditItemId(null); } });
   }
 
   return (
@@ -103,27 +121,72 @@ export default function WasteShow({ log, flash }: Props) {
                     <tbody>
                       {log.items.map(item => (
                         <tr key={item.id} className="border-b border-black/3 dark:border-white/3 hover:bg-black/2 dark:hover:bg-white/2 transition-colors">
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
-                            <span className="block text-xs text-slate-400 dark:text-white/40">{item.product.category.name}</span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
-                            {item.quantity}{item.product.category.unit}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`text-xs font-bold px-2 py-1 rounded-[8px] border ${reasonColors[item.reason]}`}>
-                              {reasonLabels[item.reason]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-slate-400 dark:text-white/40 font-bold">
-                            {item.notes ?? '—'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <button onClick={() => setDeleteItemId(item.id)}
-                              className="w-8 h-8 rounded-[8px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all mx-auto">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
+                          {editItemId === item.id ? (
+                            <>
+                              <td className="px-4 py-3">
+                                <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
+                                <span className="block text-xs text-slate-400 dark:text-white/40">{item.product.category.name}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <input type="number" min="0.01" step="0.01" value={editQty}
+                                  onChange={e => setEditQty(e.target.value)}
+                                  className="spatial-input h-10 rounded-[12px] px-3 text-[14px] font-bold w-24" />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-1">
+                                  {Object.entries(reasonLabels).map(([key, label]) => (
+                                    <button key={key} onClick={() => setEditReason(key)}
+                                      className={`px-2 py-1 rounded-[8px] font-bold text-xs border transition-all ${
+                                        editReason === key ? 'bg-primary border-primary text-white' : `${reasonColors[key]} border`
+                                      }`}>
+                                      {label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-400 dark:text-white/40 font-bold">{item.notes ?? '—'}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => saveEdit(item.id)} disabled={processing}
+                                    className="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all disabled:opacity-50">
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => setEditItemId(null)}
+                                    className="w-8 h-8 rounded-[8px] bg-black/5 dark:bg-white/5 text-slate-500 hover:bg-black/10 flex items-center justify-center transition-all">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-3">
+                                <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
+                                <span className="block text-xs text-slate-400 dark:text-white/40">{item.product.category.name}</span>
+                              </td>
+                              <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">
+                                {item.quantity}{item.product.category.unit}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-[8px] border ${reasonColors[item.reason]}`}>
+                                  {reasonLabels[item.reason]}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-400 dark:text-white/40 font-bold">{item.notes ?? '—'}</td>
+                              <td className="px-4 py-3 text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  <button onClick={() => startEdit(item)}
+                                    className="w-8 h-8 rounded-[8px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white text-slate-500 dark:text-white/50 flex items-center justify-center transition-all">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => setDeleteItemId(item.id)}
+                                    className="w-8 h-8 rounded-[8px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))}
                     </tbody>

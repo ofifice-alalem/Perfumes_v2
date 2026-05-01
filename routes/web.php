@@ -42,4 +42,5 @@ use App\Http\Controllers\WasteController;
 Route::post('waste/store-with-items', [WasteController::class, 'storeWithItems'])->name('waste.storeWithItems');
 Route::resource('waste', WasteController::class)->except(['edit']);
 Route::post('waste/{id}/items', [WasteController::class, 'addItem'])->name('waste.items.add');
+Route::patch('waste/{id}/items/{itemId}', [WasteController::class, 'updateItem'])->name('waste.items.update');
 Route::delete('waste/{id}/items/{itemId}', [WasteController::class, 'removeItem'])->name('waste.items.remove');
