@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, ChevronLeft, Truck } from 'lucide-react';
 
 interface Supplier      { id: number; name: string; phone: string; }
@@ -13,6 +14,7 @@ interface Props {
   suppliers: Supplier[];
   products: Product[];
   paymentMethods: PaymentMethod[];
+  defaultSupplierId: number;
   flash?: { success?: string; error?: string };
 }
 
@@ -32,8 +34,8 @@ interface PaymentEntry {
   amount: string;
 }
 
-export default function PurchaseCreate({ suppliers, products, paymentMethods, flash }: Props) {
-  const [supplierId,  setSupplierId]  = useState('');
+export default function PurchaseCreate({ suppliers, products, paymentMethods, defaultSupplierId, flash }: Props) {
+  const [supplierId, setSupplierId] = useState(String(defaultSupplierId));
   const [notes,       setNotes]       = useState('');
   const [cart,        setCart]        = useState<CartItem[]>([]);
   const [payments,    setPayments]    = useState<PaymentEntry[]>([]);
@@ -43,6 +45,20 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
   const [selProduct,    setSelProduct]    = useState('');
   const [selQty,        setSelQty]        = useState('');
   const [selTotalPrice, setSelTotalPrice] = useState('');
+  const [productKey,    setProductKey]    = useState(0); // لإعادة تهيئة ModernSelect
+
+  // NumberPad state
+  const [showNumberPad,      setShowNumberPad]      = useState(false);
+  const [numberPadTitle,     setNumberPadTitle]     = useState('');
+  const [numberPadInitial,   setNumberPadInitial]   = useState('');
+  const [numberPadCallback,  setNumberPadCallback]  = useState<((v: string) => void) | null>(null);
+
+  function openNumberPad(title: string, initial: string, cb: (v: string) => void) {
+    setNumberPadTitle(title);
+    setNumberPadInitial(initial);
+    setNumberPadCallback(() => cb);
+    setShowNumberPad(true);
+  }
 
   // Add payment form state
   const [selMethod,   setSelMethod]   = useState('');
@@ -83,6 +99,7 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
     }
 
     setSelProduct(''); setSelQty(''); setSelTotalPrice('');
+    setProductKey(k => k + 1); // إعادة تهيئة ModernSelect لإغلاق القائمة
   }
 
   function removeFromCart(idx: number) {
@@ -123,7 +140,8 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
     : 'اختر المورد';
 
   return (
-    <AppShell pageTitle="فاتورة شراء جديدة">
+    <>
+      <AppShell pageTitle="فاتورة شراء جديدة">
       <div className="flex flex-col lg:flex-row gap-0 -m-4 lg:-m-10 h-[calc(100vh-80px)] lg:h-[calc(100dvh-120px)] overflow-hidden">
 
         {/* ══════════════════════════════════════════════
@@ -149,12 +167,16 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
               <Truck className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <ModernSelect label="" placeholder="اختر المورد..."
-                options={suppliers.map(s => ({ label: s.name, meta: s.phone }))}
-                defaultValue=""
+              <ModernSelect label="" placeholder="مورد نقدي"
+                options={[
+                  { label: 'مورد نقدي', badge: 'نقدي' },
+                  ...suppliers.map(s => ({ label: s.name, meta: s.phone })),
+                ]}
+                defaultValue="مورد نقدي"
                 onSelect={val => {
+                  if (val === 'مورد نقدي') { setSupplierId('1'); return; }
                   const s = suppliers.find(s => s.name === val);
-                  setSupplierId(s ? String(s.id) : '');
+                  setSupplierId(s ? String(s.id) : '1');
                 }}
               />
             </div>
@@ -166,58 +188,59 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
               <Package className="w-4 h-4 text-primary" />
               <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج</span>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {/* المنتج */}
-              <div className="flex-1 min-w-[200px]">
-                <ModernSelect label="" placeholder="اختر المنتج..."
-                  options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}` }))}
-                  defaultValue=""
-                  onSelect={val => {
-                    const p = products.find(p => p.name === val);
-                    setSelProduct(p ? String(p.id) : '');
-                    setSelQty(''); setSelCost('');
-                  }}
-                />
-              </div>
-
-              {selectedProduct && (
-                <>
-                  {/* الكمية */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">
-                      الكمية ({selectedProduct.category.unit})
-                    </label>
-                    <input type="number" min="0.01" step="0.01" value={selQty}
-                      onChange={e => setSelQty(e.target.value)}
-                      placeholder="0"
-                      className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
-                  </div>
-
-                  {/* السعر الإجمالي */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">السعر الإجمالي (د)</label>
-                    <input type="number" min="0" step="0.01" value={selTotalPrice}
-                      onChange={e => setSelTotalPrice(e.target.value)}
-                      placeholder="0.00"
-                      className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-32" />
-                  </div>
-
-                  {/* معاينة سعر الوحدة */}
-                  {unitCostPreview !== null && (
-                    <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20 self-end">
-                      <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر الوحدة</span>
-                      <span className="font-black text-primary text-sm mr-1">{unitCostPreview.toFixed(3)} د</span>
-                    </div>
-                  )}
-
-                  {/* زر الإضافة */}
-                  <button onClick={addToCart} disabled={!canAdd}
-                    className="spatial-button flex items-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 self-end active:scale-[0.95] hover:scale-[1.02]">
-                    <Plus className="w-6 h-6" /> إضافة
-                  </button>
-                </>
-              )}
+            {/* صف 1: اسم المنتج */}
+            <div className="w-full">
+              <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
+                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}` }))}
+                defaultValue=""
+                onSelect={val => {
+                  const p = products.find(p => p.name === val);
+                  setSelProduct(p ? String(p.id) : '');
+                  setSelQty(''); setSelTotalPrice('');
+                }}
+              />
             </div>
+
+            {/* صف 2: الكمية + السعر + معاينة + زر */}
+            {selectedProduct && (
+              <div className="flex flex-wrap items-end gap-3 w-full pt-6">
+                {/* الكمية */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">
+                    الكمية ({selectedProduct.category.unit})
+                  </label>
+                  <button onClick={() => openNumberPad(`الكمية (${selectedProduct.category.unit})`, selQty, setSelQty)}
+                    className="spatial-input h-16 rounded-[20px] px-5 text-[18px] font-black w-36 text-center cursor-pointer hover:border-primary/40 transition-all">
+                    {selQty || '0'}
+                  </button>
+                </div>
+
+                {/* السعر الإجمالي */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">السعر الإجمالي (د)</label>
+                  <button onClick={() => openNumberPad('السعر الإجمالي', selTotalPrice, setSelTotalPrice)}
+                    className="spatial-input h-16 rounded-[20px] px-5 text-[18px] font-black w-40 text-center cursor-pointer hover:border-primary/40 transition-all">
+                    {selTotalPrice || '0.00'}
+                  </button>
+                </div>
+
+                {/* معاينة سعر الوحدة */}
+                {unitCostPreview !== null && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر الوحدة</label>
+                    <div className="flex items-center h-16 px-5 rounded-[20px] bg-primary/5 border border-primary/20">
+                      <span className="font-black text-primary text-[18px]">{unitCostPreview.toFixed(3)} د</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* زر الإضافة */}
+                <button onClick={addToCart} disabled={!canAdd}
+                  className="spatial-button flex items-center gap-2 px-8 h-16 text-base font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                  <Plus className="w-5 h-5" /> إضافة
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -372,5 +395,14 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, fl
         </div>
       </div>
     </AppShell>
+
+      <NumberPadModal
+        isOpen={showNumberPad}
+        onClose={() => setShowNumberPad(false)}
+        onConfirm={v => { numberPadCallback?.(v); }}
+        initialValue={numberPadInitial}
+        title={numberPadTitle}
+      />
+    </>
   );
 }

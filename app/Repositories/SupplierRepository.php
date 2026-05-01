@@ -19,7 +19,10 @@ class SupplierRepository extends BaseRepository implements SupplierRepositoryInt
 
     public function allActive()
     {
-        return $this->model->where('is_active', true)->orderBy('name')->get();
+        return $this->model->where('is_active', true)
+            ->where('id', '!=', 1)
+            ->orderBy('name')
+            ->get();
     }
 
     public function hasPurchases(int $id): bool

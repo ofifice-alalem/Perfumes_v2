@@ -27,7 +27,8 @@ class PurchaseController extends Controller
     public function create(): Response
     {
         return Inertia::render('Purchases/Create', [
-            'suppliers'      => $this->suppliers->allActive(),
+            'suppliers'      => $this->suppliers->allActive(), // يخفي المورد النقدي (id=1) من القائمة
+            'defaultSupplierId' => 1,
             'products'       => Product::with('category')->orderBy('name')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
         ]);

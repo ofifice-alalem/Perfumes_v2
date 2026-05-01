@@ -4,11 +4,12 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Category;
-use App\Models\Size;
+use App\Models\PaymentMethod;
 use App\Models\PriceTier;
+use App\Models\Size;
 use App\Models\TierPrice;
 use App\Models\Customer;
-use App\Models\PaymentMethod;
+use App\Models\Supplier;
 
 class InitialDataSeeder extends Seeder
 {
@@ -88,5 +89,11 @@ class InitialDataSeeder extends Seeder
         foreach ($methods as $method) {
             PaymentMethod::firstOrCreate(['name' => $method], ['is_active' => true]);
         }
+
+        // 7. مورد نقدي (أول سجل إلزامي)
+        Supplier::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'مورد نقدي', 'phone' => '0000000000', 'is_active' => true]
+        );
     }
 }
