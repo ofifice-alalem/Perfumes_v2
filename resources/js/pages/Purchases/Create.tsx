@@ -278,15 +278,16 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
             </div>
 
             {/* Payment */}
-            <div className="flex flex-col gap-3">
-              {cart.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {/* أزرار وسائل الدفع */}
+            {cart.length > 0 && (
+              <div className="flex gap-3">
+
+                {/* يسار — تسجيل دفعة جديدة */}
+                <div className="flex flex-col gap-2 w-1/2">
                   <div className="flex flex-wrap gap-2">
                     {paymentMethods.map(m => (
                       <button key={m.id}
                         onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                        className={`flex-1 min-w-[80px] h-12 rounded-[14px] font-bold text-sm transition-all border-2 ${
+                        className={`flex-1 min-w-[70px] h-16 rounded-[16px] font-bold text-base transition-all border-2 ${
                           selMethod === String(m.id)
                             ? 'bg-primary border-primary text-white'
                             : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
@@ -295,40 +296,41 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
                       </button>
                     ))}
                   </div>
-                  {/* حقل المبلغ + زر إضافة */}
-                  {selMethod && (
-                    <div className="flex gap-2">
-                      <input type="number" min="0.01" step="0.01" max={remaining} value={selAmount}
-                        onChange={e => setSelAmount(Math.min(+e.target.value, remaining).toString() || e.target.value)}
-                        placeholder={remaining.toFixed(2)}
-                        className="spatial-input flex-1 h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                      <button onClick={addPayment} disabled={!selAmount}
-                        className="spatial-button flex items-center justify-center w-14 h-14 text-sm disabled:opacity-40 shrink-0">
-                        <Plus className="w-5 h-5" />
-                      </button>
-                    </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openNumberPad('المبلغ', selAmount || remaining.toFixed(2), setSelAmount)}
+                      className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                      {selAmount || remaining.toFixed(2)}
+                    </button>
+                    <button onClick={addPayment} disabled={!selMethod || !selAmount}
+                      className="spatial-button flex items-center justify-center w-20 h-16 disabled:opacity-40 shrink-0">
+                      <Plus className="w-7 h-7" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* يمين — كاردات الدفعات */}
+                <div className="flex flex-col gap-2 w-1/2">
+                  {payments.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد دفعات</div>
+                  ) : (
+                    payments.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                        <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{p.method_name}</span>
+                          <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount} دينار</span>
+                        </div>
+                        <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
+                          className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    ))
                   )}
                 </div>
-              )}
-
-              {payments.length > 0 && (
-                <div className="flex flex-wrap gap-3">
-                  {payments.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-4 px-5 h-20 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 min-w-[180px]">
-                      <CreditCard className="w-6 h-6 text-emerald-500 shrink-0" />
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{p.method_name}</span>
-                        <span className="font-black text-slate-800 dark:text-white text-xl">{p.amount} د</span>
-                      </div>
-                      <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                        className="w-12 h-12 rounded-[14px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shrink-0">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Submit — ثابت في الأسفل */}
