@@ -22,12 +22,13 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Index', [
             'invoices'   => $this->invoices->filter($request->only(
-                'status', 'customer_id', 'category_id', 'seller_id', 'date_from', 'date_to', 'price_min', 'price_max', 'page'
+                'status', 'customer_id', 'category_id', 'seller_id', 'date_from', 'date_to', 'price_min', 'price_max', 'product_ids', 'page'
             )),
             'categories' => Category::where('is_operational', false)->orderBy('name')->get(['id', 'name']),
             'sellers'    => User::orderBy('name')->get(['id', 'name']),
             'customers'  => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
-            'filters'    => $request->only('status', 'customer_id', 'category_id', 'seller_id', 'date_from', 'date_to', 'price_min', 'price_max'),
+            'products'   => Product::whereHas('category', fn($q) => $q->where('is_operational', false))->orderBy('name')->get(['id', 'name']),
+            'filters'    => $request->only('status', 'customer_id', 'category_id', 'seller_id', 'date_from', 'date_to', 'price_min', 'price_max', 'product_ids'),
         ]);
     }
 

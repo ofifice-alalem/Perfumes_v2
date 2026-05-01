@@ -55,6 +55,9 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
         if (!empty($params['category_id']))
             $q->whereHas('items.product.category', fn($c) => $c->where('categories.id', $params['category_id']));
 
+        if (!empty($params['product_ids']) && is_array($params['product_ids']))
+            $q->whereHas('items', fn($i) => $i->whereIn('product_id', $params['product_ids']));
+
         return $q->paginate(30)->withQueryString();
     }
 

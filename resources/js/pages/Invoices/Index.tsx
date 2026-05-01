@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { DateInput } from '@/components/ui/DateInput';
+import { MultiSelect } from '@/components/ui/MultiSelect';
 import { Plus, Eye, Trash2, SlidersHorizontal, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Invoice {
@@ -38,6 +39,7 @@ interface Filters {
   date_to?: string;
   price_min?: string;
   price_max?: string;
+  product_ids?: string[];
 }
 
 interface Props {
@@ -45,6 +47,7 @@ interface Props {
   categories: { id: number; name: string }[];
   sellers: { id: number; name: string }[];
   customers: { id: number; name: string }[];
+  products: { id: number; name: string }[];
   filters: Filters;
   flash?: { success?: string; error?: string };
 }
@@ -62,7 +65,7 @@ const statusToTab: Record<string, string> = { paid: 'مدفوعة', partial: 'ج
 const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
 const lb = 'text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest';
 
-export default function InvoicesIndex({ invoices, categories, sellers, customers, filters, flash }: Props) {
+export default function InvoicesIndex({ invoices, categories, sellers, customers, products, filters, flash }: Props) {
   const [deleteId, setDeleteId]     = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -72,15 +75,22 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
   const [dateFrom,   setDateFrom]   = useState(filters.date_from   ?? '');
   const [dateTo,     setDateTo]     = useState(filters.date_to     ?? '');
   const [priceMin,   setPriceMin]   = useState(filters.price_min   ?? '');
-  const [priceMax,   setPriceMax]   = useState(filters.price_max   ?? '');
+  const [priceMax,    setPriceMax]   = useState(filters.price_max   ?? '');
+  const [productIds,  setProductIds] = useState<string[]>(filters.product_ids ?? []);
 
   const activeTab = filters.status ? (statusToTab[filters.status] ?? 'الكل') : 'الكل';
 
   function applyFilters() {
-    const params: Record<string, string> = {};
-    const f = { customer_id: customerId, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax };
-    if (filters.status) params.status = filters.status;
-    Object.entries(f).forEach(([k, v]) => { if (v) params[k] = v; });
+    const params: Record<string, any> = {};
+    if (filters.status)  params.status      = filters.status;
+    if (customerId)      params.customer_id  = customerId;
+    if (categoryId)      params.category_id  = categoryId;
+    if (sellerId)        params.seller_id    = sellerId;
+    if (dateFrom)        params.date_from    = dateFrom;
+    if (dateTo)          params.date_to      = dateTo;
+    if (priceMin)        params.price_min    = priceMin;
+    if (priceMax)        params.price_max    = priceMax;
+    if (productIds.length > 0) params['product_ids[]'] = productIds;
     router.get('/invoices', params, { preserveState: true, replace: true });
   }
 
@@ -95,7 +105,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
 
   function resetFilters() {
     setCustomerId(''); setCategoryId(''); setSellerId('');
-    setDateFrom(''); setDateTo(''); setPriceMin(''); setPriceMax('');
+    setDateFrom(''); setDateTo(''); setPriceMin(''); setPriceMax(''); setProductIds([]);
     router.get('/invoices', {}, { preserveState: true, replace: true });
   }
 
@@ -130,6 +140,13 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
         defaultValue={sellerId}
         options={[{ label: 'الكل', value: '' }, ...sellers.map(s => ({ label: s.name, value: String(s.id) }))]}
         onSelect={v => setSellerId(v)}
+      />
+      <MultiSelect
+        label="المنتج"
+        placeholder="الكل"
+        options={products.map(p => ({ label: p.name, value: String(p.id) }))}
+        selected={productIds}
+        onChange={setProductIds}
       />
       <DateInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
       <DateInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
