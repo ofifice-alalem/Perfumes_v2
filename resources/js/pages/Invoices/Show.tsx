@@ -213,6 +213,20 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
 
   const isPaid = invoice.payment_status === 'paid';
 
+  const groupedItems = Object.values(
+    invoice.items.reduce((acc, item) => {
+      const key = `${item.product.id}-${item.sale_type}-${item.size?.id ?? 'none'}-${item.unit_price}`;
+      if (acc[key]) {
+        acc[key].count += 1;
+        acc[key].totalLine += +item.line_total;
+        acc[key].ids.push(item.id);
+      } else {
+        acc[key] = { item, count: 1, totalLine: +item.line_total, ids: [item.id] };
+      }
+      return acc;
+    }, {} as Record<string, { item: InvoiceItem; count: number; totalLine: number; ids: number[] }>)
+  );
+
   return (
     <AppShell pageTitle="تفاصيل الفاتورة">
       <div className="flex flex-col gap-6 pb-32 lg:pb-0">
@@ -280,29 +294,81 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {invoice.items.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-slate-800 dark:text-white text-sm">{item.product.name}</span>
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-[6px]">
-                            {saleTypeLabels[item.sale_type]}
-                          </span>
-                          {item.size && <span className="text-xs font-bold text-primary">{item.size.label}</span>}
+                  {/* Header — desktop only */}
+                  <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_44px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-black/3 dark:bg-white/3 rounded-[12px]">
+                    <span className="text-center">عدد</span>
+                    <span>المنتج</span>
+                    <span className="text-center">حجم</span>
+                    <span className="text-center">سعر الوحدة</span>
+                    <span className="text-center">الإجمالي</span>
+                    <span></span>
+                  </div>
+                  {groupedItems.map(({ item, count, totalLine, ids }) => (
+                    <div key={ids.join('-')}>
+                      {/* Desktop row */}
+                      <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_44px] gap-3 px-4 py-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
+                        <div className="flex items-center justify-center">
+                          <span className="w-10 h-10 rounded-[10px] bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-sm">{count}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1">
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">الكمية: {item.quantity}</span>
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">سعر الوحدة: {item.unit_price}</span>
+                        <div className="min-w-0 flex flex-col justify-center">
+                          <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product.name}</span>
+                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">{saleTypeLabels[item.sale_type]}</span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          {item.size
+                            ? <span className="text-xs font-black text-white bg-primary px-2.5 py-1 rounded-full">{item.size.label}</span>
+                            : <span className="text-sm text-slate-400 dark:text-white/30">—</span>}
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{item.unit_price}</span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <span className="font-black text-slate-800 dark:text-white text-sm">{totalLine.toFixed(2)} د</span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          {!isPaid && (
+                            <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                              className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-black text-slate-800 dark:text-white text-sm">{item.line_total} د</span>
-                        {!isPaid && (
-                          <button onClick={() => setDeleteItemId(item.id)}
-                            className="w-8 h-8 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+
+                      {/* Mobile card */}
+                      <div className="sm:hidden p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        {/* Row 1: name + size */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="font-bold text-slate-800 dark:text-white text-sm flex-1 truncate">{item.product.name}</span>
+                          {item.size && <span className="text-xs font-black text-white bg-primary px-2 py-0.5 rounded-full shrink-0">{item.size.label}</span>}
+                        </div>
+                        {/* Row 2: count + unit price + total */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex flex-col items-center flex-1">
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">عدد</span>
+                            <span className="font-black text-slate-800 dark:text-white text-sm">{count}</span>
+                          </div>
+                          <div className="w-px h-8 bg-black/10 dark:bg-white/10" />
+                          <div className="flex flex-col items-center flex-1">
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">سعر الوحدة</span>
+                            <span className="font-black text-slate-800 dark:text-white text-sm">{item.unit_price} د</span>
+                          </div>
+                          <div className="w-px h-8 bg-black/10 dark:bg-white/10" />
+                          <div className="flex flex-col items-center flex-1">
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">السعر الكلي</span>
+                            <span className="font-black text-primary text-sm">{totalLine.toFixed(2)} د</span>
+                          </div>
+                        </div>
+                        {/* Row 3: type + delete */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-500 dark:text-white/50 bg-black/5 dark:bg-white/8 px-2.5 py-1 rounded-[8px]">{saleTypeLabels[item.sale_type]}</span>
+                          {!isPaid && (
+                            <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                              className="w-10 h-10 rounded-[10px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
