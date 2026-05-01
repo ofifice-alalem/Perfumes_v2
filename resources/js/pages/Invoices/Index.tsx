@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Plus, Eye, Trash2, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { DateInput } from '@/components/ui/DateInput';
 
 interface Invoice {
   id: number;
@@ -93,14 +94,8 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
           {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </div>
-      <div className="flex flex-col gap-2">
-        <label className={lb}>التاريخ من</label>
-        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className={sc} />
-      </div>
-      <div className="flex flex-col gap-2">
-        <label className={lb}>التاريخ إلى</label>
-        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className={sc} />
-      </div>
+      <DateInput label="من تاريخ" value={filterDateFrom} onChange={setFilterDateFrom} />
+      <DateInput label="إلى تاريخ" value={filterDateTo} onChange={setFilterDateTo} />
       <div className="flex flex-col gap-2">
         <label className={lb}>السعر من</label>
         <input type="number" min="0" value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)}
