@@ -240,9 +240,9 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
                     <span className="sm:hidden text-[13px] font-black text-primary">#{inv.id}</span>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 flex flex-col sm:flex-row sm:items-center min-w-0 px-4 py-3 gap-2 sm:gap-5">
-                    <div className="hidden sm:flex flex-col gap-1 flex-1 min-w-0">
+                  {/* Info — Desktop only */}
+                  <div className="hidden sm:flex flex-1 flex-row items-center min-w-0 px-4 py-3 gap-5">
+                    <div className="flex flex-col gap-1 flex-1 min-w-0">
                       <div className="flex items-center gap-3">
                         <span className="text-[15px] font-black text-primary">#{inv.id}</span>
                         <span className="text-[12px] font-bold text-slate-500 dark:text-white/60 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-[8px]">
@@ -256,17 +256,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
                         {inv.customer?.name ?? 'زبون نقدي'} — {inv.user.name}
                       </span>
                     </div>
-
-                    {/* Mobile */}
-                    <span className="sm:hidden text-[12px] font-bold text-slate-500 dark:text-white/60 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-[8px] self-start">
-                      {new Date(inv.created_at).toLocaleDateString('ar')}
-                    </span>
-                    <span className="sm:hidden text-[15px] font-black text-slate-800 dark:text-white truncate">
-                      {inv.customer?.name ?? 'زبون نقدي'}
-                    </span>
-
-                    {/* Meta + Actions */}
-                    <div className="flex items-center justify-between sm:justify-end gap-4 mt-1 sm:mt-0 shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       <div className="flex flex-col items-end">
                         <span className="font-black text-slate-800 dark:text-white text-sm">{inv.total} د</span>
                         {+inv.due_amount > 0 && (
@@ -274,6 +264,39 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
                         )}
                       </div>
                       <div className="flex items-center gap-3">
+                        <Link href={`/invoices/${inv.id}`}
+                          className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
+                          <Eye className="w-4 h-4" /> تفاصيل
+                        </Link>
+                        <button onClick={() => setDeleteId(inv.id)}
+                          className="w-10 h-10 rounded-[12px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile */}
+                  <div className="sm:hidden flex flex-col gap-2 px-4 pt-3 pb-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[15px] font-black text-slate-800 dark:text-white">
+                        {inv.customer?.name ?? 'زبون نقدي'}
+                      </span>
+                      <span className="text-[12px] font-bold text-slate-500 dark:text-white/60 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-[8px]">
+                        {new Date(inv.created_at).toLocaleDateString('ar')}
+                      </span>
+                    </div>
+                    <span className="text-[13px] font-bold text-slate-400 dark:text-white/40">
+                      البائع: {inv.user.name}
+                    </span>
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex flex-col">
+                        <span className="font-black text-slate-800 dark:text-white text-sm">{inv.total} د</span>
+                        {+inv.due_amount > 0 && (
+                          <span className="text-xs font-bold text-red-500">متبقي: {inv.due_amount}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Link href={`/invoices/${inv.id}`}
                           className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
                           <Eye className="w-4 h-4" /> تفاصيل
