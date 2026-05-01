@@ -40,6 +40,7 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
   const [cart,        setCart]        = useState<CartItem[]>([]);
   const [payments,    setPayments]    = useState<PaymentEntry[]>([]);
   const [processing,  setProcessing]  = useState(false);
+  const [paymentManuallySet, setPaymentManuallySet] = useState(false);
 
   // Add product form state
   const [selProduct,    setSelProduct]    = useState('');
@@ -89,13 +90,15 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
     const newCart = [...cart, newItem];
     setCart(newCart);
 
-    // تحديث الدفعة التلقائية
+    // تحديث الدفعة التلقائية فقط إذا لم يتدخل المستخدم
     const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-    if (payments.length === 0 && paymentMethods.length > 0) {
-      const def = paymentMethods[0];
-      setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
-    } else if (payments.length === 1) {
-      setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+    if (!paymentManuallySet) {
+      if (payments.length === 0 && paymentMethods.length > 0) {
+        const def = paymentMethods[0];
+        setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
+      } else if (payments.length === 1) {
+        setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+      }
     }
 
     setSelProduct(''); setSelQty(''); setSelTotalPrice('');
@@ -114,9 +117,23 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
 
   function addPayment() {
     if (!selMethod || !selAmount || +selAmount <= 0) return;
+    if (+selAmount > remaining) return;
     const method = paymentMethods.find(m => m.id === +selMethod);
     if (!method) return;
-    setPayments(prev => [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }]);
+
+    setPayments(prev => {
+      const existing = prev.findIndex(p => p.payment_method_id === selMethod);
+      if (existing !== -1) {
+        // نفس الوسيلة — نجمع المبلغ
+        return prev.map((p, i) => i === existing
+          ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
+          : p
+        );
+      }
+      return [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }];
+    });
+
+    setPaymentManuallySet(true);
     setSelMethod(''); setSelAmount('');
   }
 
@@ -342,8 +359,8 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
                       onSelect={val => setSelMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
                     />
                   </div>
-                  <input type="number" min="0.01" step="0.01" value={selAmount}
-                    onChange={e => setSelAmount(e.target.value)}
+                  <input type="number" min="0.01" step="0.01" max={remaining} value={selAmount}
+                    onChange={e => setSelAmount(Math.min(+e.target.value, remaining).toString() || e.target.value)}
                     placeholder={remaining.toFixed(2)}
                     className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
                   <button onClick={addPayment} disabled={!selMethod || !selAmount}
@@ -361,7 +378,7 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{p.amount} د</span>
-                    <button onClick={() => setPayments(prev => prev.filter((_, i) => i !== idx))}
+                    <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
                       className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -384,7 +401,7 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
                   <X className="w-4 h-4" /> إلغاء
                 </Link>
                 {cart.length > 0 && (
-                  <button onClick={() => { setCart([]); setPayments([]); }}
+                  <button onClick={() => { setCart([]); setPayments([]); setPaymentManuallySet(false); }}
                     className="flex-1 flex items-center justify-center gap-2 h-10 rounded-[16px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 font-bold text-sm transition-all">
                     <Trash2 className="w-4 h-4" /> مسح
                   </button>
