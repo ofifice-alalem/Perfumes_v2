@@ -25,6 +25,39 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             ->get();
     }
 
+    public function filter(array $params)
+    {
+        $q = $this->model
+            ->with(['user', 'customer', 'items.product.category', 'payments.paymentMethod'])
+            ->orderByDesc('created_at');
+
+        if (!empty($params['status']))
+            $q->where('payment_status', $params['status']);
+
+        if (!empty($params['customer']))
+            $q->whereHas('customer', fn($c) => $c->where('name', 'like', '%' . $params['customer'] . '%'));
+
+        if (!empty($params['seller_id']))
+            $q->where('user_id', $params['seller_id']);
+
+        if (!empty($params['date_from']))
+            $q->whereDate('created_at', '>=', $params['date_from']);
+
+        if (!empty($params['date_to']))
+            $q->whereDate('created_at', '<=', $params['date_to']);
+
+        if (!empty($params['price_min']))
+            $q->where('total', '>=', $params['price_min']);
+
+        if (!empty($params['price_max']))
+            $q->where('total', '<=', $params['price_max']);
+
+        if (!empty($params['category_id']))
+            $q->whereHas('items.product.category', fn($c) => $c->where('categories.id', $params['category_id']));
+
+        return $q->paginate(30)->withQueryString();
+    }
+
     public function findWithRelations(int $id)
     {
         return $this->model

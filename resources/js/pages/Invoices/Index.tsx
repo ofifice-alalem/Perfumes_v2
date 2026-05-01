@@ -3,8 +3,8 @@ import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, Eye, Trash2, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
+import { Plus, Eye, Trash2, SlidersHorizontal, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Invoice {
   id: number;
@@ -17,57 +17,91 @@ interface Invoice {
   created_at: string;
   user: { id: number; name: string };
   customer: { id: number; name: string } | null;
-  items: { id: number; product: { category: { id: number } | null } | null }[];
+  items: { id: number }[];
+}
+
+interface Paginator {
+  data: Invoice[];
+  current_page: number;
+  last_page: number;
+  total: number;
+  per_page: number;
+  links: { url: string | null; label: string; active: boolean }[];
+}
+
+interface Filters {
+  status?: string;
+  customer?: string;
+  category_id?: string;
+  seller_id?: string;
+  date_from?: string;
+  date_to?: string;
+  price_min?: string;
+  price_max?: string;
 }
 
 interface Props {
-  invoices: Invoice[];
+  invoices: Paginator;
   categories: { id: number; name: string }[];
   sellers: { id: number; name: string }[];
+  filters: Filters;
   flash?: { success?: string; error?: string };
 }
 
 const statusConfig = {
-  paid:    { label: 'مدفوعة',       bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
-  partial: { label: 'جزئي',         bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
-  unpaid:  { label: 'غير مدفوعة',   bg: 'bg-red-500/10 text-red-500 border border-red-500/20' },
+  paid:    { label: 'مدفوعة',     bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
+  partial: { label: 'جزئي',       bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
+  unpaid:  { label: 'غير مدفوعة', bg: 'bg-red-500/10 text-red-500 border border-red-500/20' },
 };
 
 const tabs = ['الكل', 'مدفوعة', 'جزئي', 'غير مدفوعة'];
-const tabMap: Record<string, string> = { 'مدفوعة': 'paid', 'جزئي': 'partial', 'غير مدفوعة': 'unpaid' };
+const tabToStatus: Record<string, string> = { 'مدفوعة': 'paid', 'جزئي': 'partial', 'غير مدفوعة': 'unpaid' };
+const statusToTab: Record<string, string> = { paid: 'مدفوعة', partial: 'جزئي', unpaid: 'غير مدفوعة' };
 
-export default function InvoicesIndex({ invoices, categories, sellers, flash }: Props) {
-  const [activeTab, setActiveTab]   = useState('الكل');
+export default function InvoicesIndex({ invoices, categories, sellers, filters, flash }: Props) {
   const [deleteId, setDeleteId]     = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterCustomer, setFilterCustomer] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [filterSeller, setFilterSeller]     = useState('');
-  const [filterDateFrom, setFilterDateFrom] = useState('');
-  const [filterDateTo, setFilterDateTo]     = useState('');
-  const [filterPriceMin, setFilterPriceMin] = useState('');
-  const [filterPriceMax, setFilterPriceMax] = useState('');
 
-  const filtered = invoices.filter(inv => {
-    if (activeTab !== 'الكل' && inv.payment_status !== tabMap[activeTab]) return false;
-    if (filterCustomer && !inv.customer?.name.toLowerCase().includes(filterCustomer.toLowerCase())) return false;
-    if (filterCategory && !inv.items.some(i => i.product?.category?.id === +filterCategory)) return false;
-    if (filterSeller && inv.user.id !== +filterSeller) return false;
-    if (filterDateFrom && inv.created_at.slice(0, 10) < filterDateFrom) return false;
-    if (filterDateTo && inv.created_at.slice(0, 10) > filterDateTo) return false;
-    if (filterPriceMin && +inv.total < +filterPriceMin) return false;
-    if (filterPriceMax && +inv.total > +filterPriceMax) return false;
-    return true;
-  });
+  // local state mirrors current filters (for the form)
+  const [customer,   setCustomer]   = useState(filters.customer   ?? '');
+  const [categoryId, setCategoryId] = useState(filters.category_id ?? '');
+  const [sellerId,   setSellerId]   = useState(filters.seller_id   ?? '');
+  const [dateFrom,   setDateFrom]   = useState(filters.date_from   ?? '');
+  const [dateTo,     setDateTo]     = useState(filters.date_to     ?? '');
+  const [priceMin,   setPriceMin]   = useState(filters.price_min   ?? '');
+  const [priceMax,   setPriceMax]   = useState(filters.price_max   ?? '');
 
-  function deleteInvoice(id: number) {
-    router.delete(`/invoices/${id}`, { onSuccess: () => setDeleteId(null) });
+  const activeTab = filters.status ? (statusToTab[filters.status] ?? 'الكل') : 'الكل';
+
+  function applyFilters(overrides: Partial<Filters> = {}) {
+    const params: Record<string, string> = {};
+    const f = { customer, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax, ...overrides };
+    Object.entries(f).forEach(([k, v]) => { if (v) params[k] = v; });
+    router.get('/invoices', params, { preserveState: true, replace: true });
+  }
+
+  function handleTabChange(tab: string) {
+    const status = tabToStatus[tab] ?? '';
+    const params: Record<string, string> = {};
+    if (status) params.status = status;
+    const f = { customer, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax };
+    Object.entries(f).forEach(([k, v]) => { if (v) params[k] = v; });
+    router.get('/invoices', params, { preserveState: true, replace: true });
   }
 
   function resetFilters() {
-    setFilterCustomer(''); setFilterCategory(''); setFilterSeller('');
-    setFilterDateFrom(''); setFilterDateTo('');
-    setFilterPriceMin(''); setFilterPriceMax('');
+    setCustomer(''); setCategoryId(''); setSellerId('');
+    setDateFrom(''); setDateTo(''); setPriceMin(''); setPriceMax('');
+    router.get('/invoices', {}, { preserveState: true, replace: true });
+  }
+
+  function goToPage(url: string | null) {
+    if (!url) return;
+    router.visit(url, { preserveState: true });
+  }
+
+  function deleteInvoice(id: number) {
+    router.delete(`/invoices/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
   const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
@@ -77,35 +111,41 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <label className={lb}>اسم العميل</label>
-        <input value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}
+        <input value={customer} onChange={e => setCustomer(e.target.value)}
           placeholder="بحث..." className={sc} />
       </div>
       <ModernSelect
         label="التصنيف"
         placeholder="الكل"
-        defaultValue={filterCategory}
+        defaultValue={categoryId}
         options={[{ label: 'الكل', value: '' }, ...categories.map(c => ({ label: c.name, value: String(c.id) }))]}
-        onSelect={v => setFilterCategory(v)}
+        onSelect={v => setCategoryId(v)}
       />
       <ModernSelect
         label="البائع"
         placeholder="الكل"
-        defaultValue={filterSeller}
+        defaultValue={sellerId}
         options={[{ label: 'الكل', value: '' }, ...sellers.map(s => ({ label: s.name, value: String(s.id) }))]}
-        onSelect={v => setFilterSeller(v)}
+        onSelect={v => setSellerId(v)}
       />
-      <DateInput label="من تاريخ" value={filterDateFrom} onChange={setFilterDateFrom} />
-      <DateInput label="إلى تاريخ" value={filterDateTo} onChange={setFilterDateTo} />
-      <div className="flex flex-col gap-2">
-        <label className={lb}>السعر من</label>
-        <input type="number" min="0" value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)}
-          placeholder="0" className={sc} />
+      <DateInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+      <DateInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
+      <div className="flex gap-3">
+        <div className="flex flex-col gap-2 flex-1">
+          <label className={lb}>السعر من</label>
+          <input type="number" min="0" value={priceMin} onChange={e => setPriceMin(e.target.value)}
+            placeholder="0" className={sc} />
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          <label className={lb}>السعر إلى</label>
+          <input type="number" min="0" value={priceMax} onChange={e => setPriceMax(e.target.value)}
+            placeholder="∞" className={sc} />
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <label className={lb}>السعر إلى</label>
-        <input type="number" min="0" value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)}
-          placeholder="∞" className={sc} />
-      </div>
+      <button onClick={() => applyFilters()}
+        className="w-full h-11 rounded-[14px] spatial-button flex items-center justify-center gap-2 font-bold text-sm">
+        <Search className="w-4 h-4" /> فلترة
+      </button>
       <button onClick={resetFilters}
         className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
         إعادة تعيين
@@ -121,7 +161,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-white">الفواتير</h1>
-            <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">{invoices.length} فاتورة</p>
+            <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">{invoices.total} فاتورة</p>
           </div>
           <Link href="/invoices/create" className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
             <Plus className="w-4 h-4" /> فاتورة جديدة
@@ -153,7 +193,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
             {/* Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
               {tabs.map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
+                <button key={tab} onClick={() => handleTabChange(tab)}
                   className={`px-4 h-9 rounded-[12px] font-bold text-[13px] transition-all border shrink-0 ${
                     activeTab === tab
                       ? 'bg-primary border-primary text-white'
@@ -165,13 +205,13 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
             </div>
 
             {/* List */}
-            {filtered.length === 0 ? (
+            {invoices.data.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-3">
                 <span className="text-4xl">🧾</span>
                 <span className="font-bold">لا توجد فواتير</span>
               </div>
             ) : (
-              filtered.map(inv => (
+              invoices.data.map(inv => (
                 <div key={inv.id} className="spatial-card overflow-hidden flex flex-col sm:flex-row sm:items-stretch">
 
                   {/* Status Strip */}
@@ -213,13 +253,13 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
                           <span className="text-xs font-bold text-red-500">متبقي: {inv.due_amount}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <Link href={`/invoices/${inv.id}`}
-                          className="flex items-center gap-1.5 px-3 h-9 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
-                          <Eye className="w-3.5 h-3.5" /> تفاصيل
+                          className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
+                          <Eye className="w-4 h-4" /> تفاصيل
                         </Link>
                         <button onClick={() => setDeleteId(inv.id)}
-                          className="w-9 h-9 rounded-[12px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
+                          className="w-10 h-10 rounded-[12px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -228,10 +268,45 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
                 </div>
               ))
             )}
+
+            {/* Pagination */}
+            {invoices.last_page > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-xs font-bold text-slate-400 dark:text-white/40">
+                  صفحة {invoices.current_page} من {invoices.last_page}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => goToPage(invoices.links[0].url)}
+                    disabled={invoices.current_page === 1}
+                    className="w-9 h-9 rounded-[12px] spatial-input flex items-center justify-center text-slate-600 dark:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors">
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {invoices.links.slice(1, -1).map((link, i) => (
+                    <button key={i}
+                      onClick={() => goToPage(link.url)}
+                      disabled={!link.url}
+                      className={`w-9 h-9 rounded-[12px] font-bold text-[13px] transition-all border ${
+                        link.active
+                          ? 'bg-primary border-primary text-white'
+                          : 'spatial-input border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 hover:text-primary hover:border-primary/30'
+                      }`}
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
+                  ))}
+                  <button
+                    onClick={() => goToPage(invoices.links[invoices.links.length - 1].url)}
+                    disabled={invoices.current_page === invoices.last_page}
+                    className="w-9 h-9 rounded-[12px] spatial-input flex items-center justify-center text-slate-600 dark:text-white/60 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-colors">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop Filter */}
-          <div className="hidden lg:block w-[280px] shrink-0">
+          <div className="hidden lg:block w-[360px] shrink-0">
             <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
               <FilterPanel />
             </SpatialCard>
