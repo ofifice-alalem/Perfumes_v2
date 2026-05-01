@@ -139,6 +139,7 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
 
   function submit() {
     if (!supplierId || cart.length === 0) return;
+    if (supplierId === '1' && remaining > 0.01) return; // مورد نقدي — يجب الدفع الكامل
     setProcessing(true);
     router.post('/purchases/store-with-items', {
       supplier_id: supplierId,
@@ -277,66 +278,89 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
             </div>
 
             {/* Payment */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {cart.length > 0 && (
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <ModernSelect label="" options={paymentMethods.map(m => ({ label: m.name }))}
-                      defaultValue="" placeholder="وسيلة الدفع"
-                      onSelect={val => setSelMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-                    />
+                <div className="flex flex-col gap-2">
+                  {/* أزرار وسائل الدفع */}
+                  <div className="flex flex-wrap gap-2">
+                    {paymentMethods.map(m => (
+                      <button key={m.id}
+                        onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
+                        className={`flex-1 min-w-[80px] h-12 rounded-[14px] font-bold text-sm transition-all border-2 ${
+                          selMethod === String(m.id)
+                            ? 'bg-primary border-primary text-white'
+                            : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
+                        }`}>
+                        {m.name}
+                      </button>
+                    ))}
                   </div>
-                  <input type="number" min="0.01" step="0.01" max={remaining} value={selAmount}
-                    onChange={e => setSelAmount(Math.min(+e.target.value, remaining).toString() || e.target.value)}
-                    placeholder={remaining.toFixed(2)}
-                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28" />
-                  <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                    className="spatial-button flex items-center justify-center w-14 h-14 text-sm disabled:opacity-40 shrink-0">
-                    <Plus className="w-5 h-5" />
-                  </button>
+                  {/* حقل المبلغ + زر إضافة */}
+                  {selMethod && (
+                    <div className="flex gap-2">
+                      <input type="number" min="0.01" step="0.01" max={remaining} value={selAmount}
+                        onChange={e => setSelAmount(Math.min(+e.target.value, remaining).toString() || e.target.value)}
+                        placeholder={remaining.toFixed(2)}
+                        className="spatial-input flex-1 h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                      <button onClick={addPayment} disabled={!selAmount}
+                        className="spatial-button flex items-center justify-center w-14 h-14 text-sm disabled:opacity-40 shrink-0">
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
               {payments.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {payments.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-3 px-4 h-14 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 min-w-[140px]">
-                      <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm leading-tight">{p.method_name}</span>
-                        <span className="font-black text-slate-800 dark:text-white text-base leading-tight">{p.amount} د</span>
+                    <div key={idx} className="flex items-center gap-4 px-5 h-20 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 min-w-[180px]">
+                      <CreditCard className="w-6 h-6 text-emerald-500 shrink-0" />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm">{p.method_name}</span>
+                        <span className="font-black text-slate-800 dark:text-white text-xl">{p.amount} د</span>
                       </div>
                       <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                        className="w-8 h-8 rounded-[10px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shrink-0 mr-auto">
-                        <Trash2 className="w-4 h-4" />
+                        className="w-12 h-12 rounded-[14px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shrink-0">
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Submit */}
-            <div className="flex flex-col gap-2">
-              <button onClick={submit}
-                disabled={processing || !supplierId || cart.length === 0}
-                className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-base font-black disabled:opacity-40">
-                <Check className="w-5 h-5" />
-                {cart.length > 0 ? `تأكيد الشراء — ${total.toFixed(2)} د` : 'تأكيد الشراء'}
-              </button>
-              <div className="flex gap-2">
-                <Link href="/purchases"
-                  className="flex-1 flex items-center justify-center gap-2 h-10 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/8 dark:hover:bg-white/8 text-slate-500 dark:text-white/40 font-bold text-sm transition-all">
-                  <X className="w-4 h-4" /> إلغاء
-                </Link>
-                {cart.length > 0 && (
-                  <button onClick={() => { setCart([]); setPayments([]); setPaymentManuallySet(false); }}
-                    className="flex-1 flex items-center justify-center gap-2 h-10 rounded-[16px] bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 font-bold text-sm transition-all">
-                    <Trash2 className="w-4 h-4" /> مسح
-                  </button>
-                )}
+          {/* Submit — ثابت في الأسفل */}
+          <div className="px-5 py-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2" style={{ transform: 'translateY(-35px)' }}>
+            {supplierId === '1' && remaining > 0.01 && (
+              <div className="px-4 py-2 rounded-[12px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs">
+                ⚠️ مورد نقدي — يجب الدفع الكامل قبل التأكيد
               </div>
+            )}
+            <div className="flex gap-2">
+            {/* الإلغاء + المسح — يسار */}
+            <div className="flex flex-col gap-2 w-1/4">
+              <Link href="/purchases"
+                className="h-[70px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
+                <X className="w-4 h-4" /> إلغاء
+              </Link>
+              {cart.length > 0 && (
+                <button onClick={() => { setCart([]); setPayments([]); setPaymentManuallySet(false); }}
+                  className="h-[70px] flex items-center justify-center gap-2 rounded-[16px] bg-red-500/15 dark:bg-red-500/25 hover:bg-red-500/30 dark:hover:bg-red-500/40 border border-red-500/30 dark:border-red-500/40 text-red-500 dark:text-red-400 font-bold text-sm transition-all">
+                  <Trash2 className="w-4 h-4" /> مسح
+                </button>
+              )}
             </div>
+            {/* تأكيد — يمين */}
+            <button onClick={submit}
+              disabled={processing || !supplierId || cart.length === 0 || (supplierId === '1' && remaining > 0.01)}
+              className="spatial-button flex-1 flex items-center justify-center gap-2 text-lg font-black disabled:opacity-40"
+              style={{ height: cart.length > 0 ? '148px' : '70px' }}>
+              <Check className="w-6 h-6" />
+              {cart.length > 0 ? `تأكيد الشراء — ${total.toFixed(2)} د` : 'تأكيد الشراء'}
+            </button>
+          </div>
           </div>
         </div>
 
