@@ -14,13 +14,15 @@ interface Invoice {
   payment_status: 'unpaid' | 'partial' | 'paid';
   notes: string | null;
   created_at: string;
-  user: { name: string };
+  user: { id: number; name: string };
   customer: { id: number; name: string } | null;
-  items: { id: number }[];
+  items: { id: number; product: { category: { id: number } | null } | null }[];
 }
 
 interface Props {
   invoices: Invoice[];
+  categories: { id: number; name: string }[];
+  sellers: { id: number; name: string }[];
   flash?: { success?: string; error?: string };
 }
 
@@ -33,15 +35,27 @@ const statusConfig = {
 const tabs = ['الكل', 'مدفوعة', 'جزئي', 'غير مدفوعة'];
 const tabMap: Record<string, string> = { 'مدفوعة': 'paid', 'جزئي': 'partial', 'غير مدفوعة': 'unpaid' };
 
-export default function InvoicesIndex({ invoices, flash }: Props) {
+export default function InvoicesIndex({ invoices, categories, sellers, flash }: Props) {
   const [activeTab, setActiveTab]   = useState('الكل');
   const [deleteId, setDeleteId]     = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterCustomer, setFilterCustomer] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterSeller, setFilterSeller]     = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo, setFilterDateTo]     = useState('');
+  const [filterPriceMin, setFilterPriceMin] = useState('');
+  const [filterPriceMax, setFilterPriceMax] = useState('');
 
   const filtered = invoices.filter(inv => {
     if (activeTab !== 'الكل' && inv.payment_status !== tabMap[activeTab]) return false;
     if (filterCustomer && !inv.customer?.name.toLowerCase().includes(filterCustomer.toLowerCase())) return false;
+    if (filterCategory && !inv.items.some(i => i.product?.category?.id === +filterCategory)) return false;
+    if (filterSeller && inv.user.id !== +filterSeller) return false;
+    if (filterDateFrom && inv.created_at.slice(0, 10) < filterDateFrom) return false;
+    if (filterDateTo && inv.created_at.slice(0, 10) > filterDateTo) return false;
+    if (filterPriceMin && +inv.total < +filterPriceMin) return false;
+    if (filterPriceMax && +inv.total > +filterPriceMax) return false;
     return true;
   });
 
@@ -49,14 +63,55 @@ export default function InvoicesIndex({ invoices, flash }: Props) {
     router.delete(`/invoices/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
+  function resetFilters() {
+    setFilterCustomer(''); setFilterCategory(''); setFilterSeller('');
+    setFilterDateFrom(''); setFilterDateTo('');
+    setFilterPriceMin(''); setFilterPriceMax('');
+  }
+
+  const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
+  const lb = 'text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest';
+
   const FilterPanel = () => (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم العميل</label>
+        <label className={lb}>اسم العميل</label>
         <input value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}
-          placeholder="بحث..." className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+          placeholder="بحث..." className={sc} />
       </div>
-      <button onClick={() => setFilterCustomer('')}
+      <div className="flex flex-col gap-2">
+        <label className={lb}>التصنيف</label>
+        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={sc}>
+          <option value="">الكل</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-col gap-2">
+        <label className={lb}>البائع</label>
+        <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className={sc}>
+          <option value="">الكل</option>
+          {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+      <div className="flex flex-col gap-2">
+        <label className={lb}>التاريخ من</label>
+        <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className={sc} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <label className={lb}>التاريخ إلى</label>
+        <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className={sc} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <label className={lb}>السعر من</label>
+        <input type="number" min="0" value={filterPriceMin} onChange={e => setFilterPriceMin(e.target.value)}
+          placeholder="0" className={sc} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <label className={lb}>السعر إلى</label>
+        <input type="number" min="0" value={filterPriceMax} onChange={e => setFilterPriceMax(e.target.value)}
+          placeholder="∞" className={sc} />
+      </div>
+      <button onClick={resetFilters}
         className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
         إعادة تعيين
       </button>

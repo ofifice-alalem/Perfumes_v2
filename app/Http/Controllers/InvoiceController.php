@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Size;
+use App\Models\User;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +21,9 @@ class InvoiceController extends Controller
     public function index(): Response
     {
         return Inertia::render('Invoices/Index', [
-            'invoices' => $this->invoices->allWithRelations(),
+            'invoices'   => $this->invoices->allWithRelations(),
+            'categories' => Category::where('is_operational', false)->orderBy('name')->get(['id', 'name']),
+            'sellers'    => User::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

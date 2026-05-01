@@ -20,7 +20,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
     public function allWithRelations()
     {
         return $this->model
-            ->with(['user', 'customer', 'items.product', 'items.size', 'payments.paymentMethod'])
+            ->with(['user', 'customer', 'items.product.category', 'items.size', 'payments.paymentMethod'])
             ->orderByDesc('created_at')
             ->get();
     }
