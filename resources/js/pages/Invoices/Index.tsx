@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Plus, Eye, Trash2, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
@@ -80,20 +80,20 @@ export default function InvoicesIndex({ invoices, categories, sellers, flash }: 
         <input value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}
           placeholder="بحث..." className={sc} />
       </div>
-      <div className="flex flex-col gap-2">
-        <label className={lb}>التصنيف</label>
-        <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={sc}>
-          <option value="">الكل</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-      <div className="flex flex-col gap-2">
-        <label className={lb}>البائع</label>
-        <select value={filterSeller} onChange={e => setFilterSeller(e.target.value)} className={sc}>
-          <option value="">الكل</option>
-          {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-      </div>
+      <ModernSelect
+        label="التصنيف"
+        placeholder="الكل"
+        defaultValue={filterCategory}
+        options={[{ label: 'الكل', value: '' }, ...categories.map(c => ({ label: c.name, value: String(c.id) }))]}
+        onSelect={v => setFilterCategory(v)}
+      />
+      <ModernSelect
+        label="البائع"
+        placeholder="الكل"
+        defaultValue={filterSeller}
+        options={[{ label: 'الكل', value: '' }, ...sellers.map(s => ({ label: s.name, value: String(s.id) }))]}
+        onSelect={v => setFilterSeller(v)}
+      />
       <DateInput label="من تاريخ" value={filterDateFrom} onChange={setFilterDateFrom} />
       <DateInput label="إلى تاريخ" value={filterDateTo} onChange={setFilterDateTo} />
       <div className="flex flex-col gap-2">
