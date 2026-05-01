@@ -188,11 +188,13 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
             placeholder="مثال: Lacoste White" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
           {form.errors.name && <p className="text-xs text-red-500 font-bold">{form.errors.name}</p>}
         </div>
-        <div className="flex flex-col gap-2 w-full sm:w-40">
-          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حد المخزون</label>
-          <input type="number" value={form.data.min_stock} onChange={e => form.setData('min_stock', e.target.value)}
-            placeholder="0" min="0" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-        </div>
+        {!isOperational && (
+          <div className="flex flex-col gap-2 w-full sm:w-40">
+            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حد المخزون</label>
+            <input type="number" value={form.data.min_stock} onChange={e => form.setData('min_stock', e.target.value)}
+              placeholder="0" min="0" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+          </div>
+        )}
       </div>
 
       {/* الأسعار — unit_priced فقط وليس تشغيلي */}

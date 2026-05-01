@@ -34,11 +34,13 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
         return $this->model->create($productData);
     }
 
-    public function createUnitPriced(array $productData, array $priceData, ?float $bottleVolume): Product
+    public function createUnitPriced(array $productData, ?array $priceData, ?float $bottleVolume): Product
     {
         $product = $this->model->create($productData);
 
-        ProductPrice::create(array_merge(['product_id' => $product->id], $priceData));
+        if ($priceData !== null) {
+            ProductPrice::create(array_merge(['product_id' => $product->id], $priceData));
+        }
 
         if ($bottleVolume !== null) {
             OriginalPerfumeDetail::create([

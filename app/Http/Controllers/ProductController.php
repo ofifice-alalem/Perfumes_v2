@@ -41,9 +41,12 @@ class ProductController extends Controller
         if ($base['selling_type'] === 'tier_based') {
             $this->products->createTierBased($base);
         } else {
+            // المواد التشغيلية لا تحتاج أسعار
+            $isOperational = $category->is_operational;
+
             $prices = $request->validate([
-                'price_per_unit_regular' => 'required|numeric|min:0',
-                'price_per_unit_vip'     => 'required|numeric|min:0',
+                'price_per_unit_regular' => $isOperational ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+                'price_per_unit_vip'     => $isOperational ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
                 'full_bottle_regular'    => 'nullable|numeric|min:0',
                 'full_bottle_vip'        => 'nullable|numeric|min:0',
                 'bottle_volume'          => 'nullable|numeric|min:0',
@@ -51,7 +54,7 @@ class ProductController extends Controller
 
             $this->products->createUnitPriced(
                 $base,
-                [
+                $isOperational ? null : [
                     'price_per_unit_regular' => $prices['price_per_unit_regular'],
                     'price_per_unit_vip'     => $prices['price_per_unit_vip'],
                     'full_bottle_regular'    => $prices['full_bottle_regular'] ?? null,
@@ -78,21 +81,26 @@ class ProductController extends Controller
         $bottleVolume = null;
 
         if ($base['selling_type'] === 'unit_priced') {
-            $prices = $request->validate([
-                'price_per_unit_regular' => 'required|numeric|min:0',
-                'price_per_unit_vip'     => 'required|numeric|min:0',
-                'full_bottle_regular'    => 'nullable|numeric|min:0',
-                'full_bottle_vip'        => 'nullable|numeric|min:0',
-                'bottle_volume'          => 'nullable|numeric|min:0',
-            ]);
+            $category     = Category::findOrFail($base['category_id']);
+            $isOperational = $category->is_operational;
 
-            $priceData = [
-                'price_per_unit_regular' => $prices['price_per_unit_regular'],
-                'price_per_unit_vip'     => $prices['price_per_unit_vip'],
-                'full_bottle_regular'    => $prices['full_bottle_regular'] ?? null,
-                'full_bottle_vip'        => $prices['full_bottle_vip'] ?? null,
-            ];
-            $bottleVolume = isset($prices['bottle_volume']) && $prices['bottle_volume'] ? (float) $prices['bottle_volume'] : null;
+            if (!$isOperational) {
+                $prices = $request->validate([
+                    'price_per_unit_regular' => 'required|numeric|min:0',
+                    'price_per_unit_vip'     => 'required|numeric|min:0',
+                    'full_bottle_regular'    => 'nullable|numeric|min:0',
+                    'full_bottle_vip'        => 'nullable|numeric|min:0',
+                    'bottle_volume'          => 'nullable|numeric|min:0',
+                ]);
+
+                $priceData = [
+                    'price_per_unit_regular' => $prices['price_per_unit_regular'],
+                    'price_per_unit_vip'     => $prices['price_per_unit_vip'],
+                    'full_bottle_regular'    => $prices['full_bottle_regular'] ?? null,
+                    'full_bottle_vip'        => $prices['full_bottle_vip'] ?? null,
+                ];
+                $bottleVolume = isset($prices['bottle_volume']) && $prices['bottle_volume'] ? (float) $prices['bottle_volume'] : null;
+            }
         }
 
         $this->products->updateProduct($id, $base, $priceData, $bottleVolume);
