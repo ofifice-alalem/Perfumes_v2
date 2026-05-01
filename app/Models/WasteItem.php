@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class WasteItem extends Model
+{
+    public $timestamps = false;
+
+    protected $fillable = ['waste_log_id', 'product_id', 'quantity', 'reason', 'notes'];
+
+    protected $casts = [
+        'quantity'   => 'decimal:2',
+        'created_at' => 'datetime',
+    ];
+
+    public function wasteLog(): BelongsTo
+    {
+        return $this->belongsTo(WasteLog::class);
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+}

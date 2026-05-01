@@ -14,6 +14,7 @@ const navItems = [
   { icon: <LayoutDashboard className="w-5 h-5" />, label: 'الرئيسية',       href: '/' },
   { icon: <ShoppingCart className="w-5 h-5" />,    label: 'الفواتير',        href: '/invoices' },
   { icon: <Truck className="w-5 h-5" />,           label: 'المشتريات',       href: '/purchases' },
+  { icon: <Package className="w-5 h-5" />,         label: 'التالف',           href: '/waste' },
   { icon: <Package className="w-5 h-5" />,         label: 'المنتجات',        href: '/products' },
   { icon: <Layers className="w-5 h-5" />,          label: 'التصنيفات',       href: '/categories' },
   { icon: <Tags className="w-5 h-5" />,            label: 'التيرات والأسعار', href: '/price-tiers' },

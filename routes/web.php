@@ -37,4 +37,9 @@ Route::resource('purchases', PurchaseController::class)->except(['edit']);
 Route::post('purchases/{id}/items', [PurchaseController::class, 'addItem'])->name('purchases.items.add');
 Route::patch('purchases/{id}/items/{itemId}', [PurchaseController::class, 'updateItem'])->name('purchases.items.update');
 Route::delete('purchases/{id}/items/{itemId}', [PurchaseController::class, 'removeItem'])->name('purchases.items.remove');
-Route::post('purchases/{id}/payments', [PurchaseController::class, 'addPayment'])->name('purchases.payments.add');
+use App\Http\Controllers\WasteController;
+
+Route::post('waste/store-with-items', [WasteController::class, 'storeWithItems'])->name('waste.storeWithItems');
+Route::resource('waste', WasteController::class)->except(['edit']);
+Route::post('waste/{id}/items', [WasteController::class, 'addItem'])->name('waste.items.add');
+Route::delete('waste/{id}/items/{itemId}', [WasteController::class, 'removeItem'])->name('waste.items.remove');
