@@ -9,6 +9,8 @@ interface Category {
   id: number;
   name: string;
   unit: 'ml' | 'pcs' | 'g';
+  is_operational: boolean;
+  products_count: number;
 }
 
 interface Props {
@@ -34,12 +36,12 @@ export default function CategoriesIndex({ categories, flash }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteId, setDeleteId]     = useState<number | null>(null);
 
-  const createForm = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g' });
-  const editForm   = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g' });
+  const createForm = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g', is_operational: false });
+  const editForm   = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g', is_operational: false });
 
   function startEdit(cat: Category) {
     setEditingId(cat.id);
-    editForm.setData({ name: cat.name, unit: cat.unit });
+    editForm.setData({ name: cat.name, unit: cat.unit, is_operational: cat.is_operational });
   }
 
   function submitCreate() {
@@ -117,6 +119,20 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                 />
               </div>
 
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div onClick={() => createForm.setData('is_operational', !createForm.data.is_operational)}
+                    className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer ${
+                      createForm.data.is_operational ? 'bg-amber-500' : 'bg-black/10 dark:bg-white/10'
+                    }`}>
+                    <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${
+                      createForm.data.is_operational ? 'right-0.5' : 'left-0.5'
+                    }`} />
+                  </div>
+                  <span className="text-xs font-bold text-slate-600 dark:text-white/60">تشغيلي</span>
+                </label>
+              </div>
+
               <div className="flex items-end gap-2">
                 <button onClick={submitCreate} disabled={createForm.processing}
                   className="spatial-button flex items-center gap-2 px-5 h-12 text-sm"
@@ -168,6 +184,17 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                             }}
                           />
                         </div>
+                        <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                          <div onClick={() => editForm.setData('is_operational', !editForm.data.is_operational)}
+                            className={`w-11 h-6 rounded-full transition-all duration-200 relative cursor-pointer ${
+                              editForm.data.is_operational ? 'bg-amber-500' : 'bg-black/10 dark:bg-white/10'
+                            }`}>
+                            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all duration-200 ${
+                              editForm.data.is_operational ? 'right-0.5' : 'left-0.5'
+                            }`} />
+                          </div>
+                          <span className="text-xs font-bold text-slate-600 dark:text-white/60">تشغيلي</span>
+                        </label>
                         <button onClick={() => submitEdit(cat.id)}
                           className="w-11 h-11 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shrink-0"
                         >
@@ -188,8 +215,16 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                           <span className="font-black text-xs">{cat.unit}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-slate-800 dark:text-white truncate">{cat.name}</span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] mt-1 self-start ${unitColors[cat.unit]}`}>{unitLabels[cat.unit]}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 dark:text-white truncate">{cat.name}</span>
+                            {cat.is_operational && (
+                              <span className="text-xs font-black px-2 py-0.5 rounded-[6px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">تشغيلي</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] self-start ${unitColors[cat.unit]}`}>{unitLabels[cat.unit]}</span>
+                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">{cat.products_count} منتج</span>
+                          </div>
                         </div>
                       </div>
 

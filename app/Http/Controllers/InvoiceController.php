@@ -29,7 +29,9 @@ class InvoiceController extends Controller
         
         return Inertia::render('Invoices/Create', [
             'customers'      => Customer::where('is_active', true)->orderBy('name')->get(),
-            'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])->orderBy('name')->get(),
+            'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
+                                    ->whereHas('category', fn($q) => $q->where('is_operational', false))
+                                    ->orderBy('name')->get(),
             'sizes'          => Size::where('unit', 'ml')->orderBy('value')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
             'invoice'        => $invoiceData,
@@ -121,7 +123,9 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Show', [
             'invoice'        => $this->invoices->findWithRelations($id),
-            'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])->orderBy('name')->get(),
+            'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
+                                    ->whereHas('category', fn($q) => $q->where('is_operational', false))
+                                    ->orderBy('name')->get(),
             'sizes'          => Size::where('unit', 'ml')->orderBy('value')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
         ]);

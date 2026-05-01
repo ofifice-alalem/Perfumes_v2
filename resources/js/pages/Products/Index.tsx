@@ -6,7 +6,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Package, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
-interface Category { id: number; name: string; unit: string; }
+interface Category { id: number; name: string; unit: string; is_operational: boolean; }
 interface Tier      { id: number; name: string; description: string | null; }
 interface ProductPrice { price_per_unit_regular: string; price_per_unit_vip: string; full_bottle_regular: string | null; full_bottle_vip: string | null; }
 interface OriginalDetail { bottle_volume: string; }
@@ -116,9 +116,10 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
   const tierOptions = tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name, meta: t.description ?? '' }));
 
   const selectedCat = categories.find(c => c.id === +form.data.category_id);
-  const isML        = selectedCat?.unit === 'ml';
-  const isOriginal  = form.data.selling_type === 'unit_priced' && isML;
-  const isBottle    = isOriginal; // حجم العبوة فقط للعطور الأصلية
+  const isML           = selectedCat?.unit === 'ml';
+  const isOperational  = selectedCat?.is_operational ?? false;
+  const isOriginal     = form.data.selling_type === 'unit_priced' && isML && !isOperational;
+  const isBottle       = isOriginal;
 
   // عند تغيير التصنيف — نعيد ضبط selling_type
   function handleCategoryChange(val: string) {
@@ -194,8 +195,8 @@ function ProductForm({ form, categories, tiers, onSubmit, onCancel }: {
         </div>
       </div>
 
-      {/* الأسعار — unit_priced فقط */}
-      {form.data.selling_type === 'unit_priced' && selectedCat && (
+      {/* الأسعار — unit_priced فقط وليس تشغيلي */}
+      {form.data.selling_type === 'unit_priced' && selectedCat && !isOperational && (
         <div className="flex flex-col gap-4 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
           <p className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الأسعار</p>
           <div className="grid grid-cols-2 gap-4">

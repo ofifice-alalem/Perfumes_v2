@@ -14,7 +14,7 @@ class CategoryRepository extends BaseRepository implements CategoryRepositoryInt
 
     public function allOrdered()
     {
-        return $this->model->orderBy('name')->get();
+        return $this->model->withCount('products')->orderBy('name')->get();
     }
 
     public function hasProducts(int $id): bool
