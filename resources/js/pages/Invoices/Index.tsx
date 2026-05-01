@@ -31,7 +31,7 @@ interface Paginator {
 
 interface Filters {
   status?: string;
-  customer?: string;
+  customer_id?: string;
   category_id?: string;
   seller_id?: string;
   date_from?: string;
@@ -44,6 +44,7 @@ interface Props {
   invoices: Paginator;
   categories: { id: number; name: string }[];
   sellers: { id: number; name: string }[];
+  customers: { id: number; name: string }[];
   filters: Filters;
   flash?: { success?: string; error?: string };
 }
@@ -58,12 +59,14 @@ const tabs = ['الكل', 'مدفوعة', 'جزئي', 'غير مدفوعة'];
 const tabToStatus: Record<string, string> = { 'مدفوعة': 'paid', 'جزئي': 'partial', 'غير مدفوعة': 'unpaid' };
 const statusToTab: Record<string, string> = { paid: 'مدفوعة', partial: 'جزئي', unpaid: 'غير مدفوعة' };
 
-export default function InvoicesIndex({ invoices, categories, sellers, filters, flash }: Props) {
+const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
+const lb = 'text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest';
+
+export default function InvoicesIndex({ invoices, categories, sellers, customers, filters, flash }: Props) {
   const [deleteId, setDeleteId]     = useState<number | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // local state mirrors current filters (for the form)
-  const [customer,   setCustomer]   = useState(filters.customer   ?? '');
+  const [customerId, setCustomerId] = useState(filters.customer_id  ?? '');
   const [categoryId, setCategoryId] = useState(filters.category_id ?? '');
   const [sellerId,   setSellerId]   = useState(filters.seller_id   ?? '');
   const [dateFrom,   setDateFrom]   = useState(filters.date_from   ?? '');
@@ -73,9 +76,10 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
 
   const activeTab = filters.status ? (statusToTab[filters.status] ?? 'الكل') : 'الكل';
 
-  function applyFilters(overrides: Partial<Filters> = {}) {
+  function applyFilters() {
     const params: Record<string, string> = {};
-    const f = { customer, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax, ...overrides };
+    const f = { customer_id: customerId, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax };
+    if (filters.status) params.status = filters.status;
     Object.entries(f).forEach(([k, v]) => { if (v) params[k] = v; });
     router.get('/invoices', params, { preserveState: true, replace: true });
   }
@@ -84,13 +88,13 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
     const status = tabToStatus[tab] ?? '';
     const params: Record<string, string> = {};
     if (status) params.status = status;
-    const f = { customer, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax };
+    const f = { customer_id: customerId, category_id: categoryId, seller_id: sellerId, date_from: dateFrom, date_to: dateTo, price_min: priceMin, price_max: priceMax };
     Object.entries(f).forEach(([k, v]) => { if (v) params[k] = v; });
     router.get('/invoices', params, { preserveState: true, replace: true });
   }
 
   function resetFilters() {
-    setCustomer(''); setCategoryId(''); setSellerId('');
+    setCustomerId(''); setCategoryId(''); setSellerId('');
     setDateFrom(''); setDateTo(''); setPriceMin(''); setPriceMax('');
     router.get('/invoices', {}, { preserveState: true, replace: true });
   }
@@ -104,16 +108,15 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
     router.delete(`/invoices/${id}`, { onSuccess: () => setDeleteId(null) });
   }
 
-  const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
-  const lb = 'text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest';
-
-  const FilterPanel = () => (
+  const filterContent = (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <label className={lb}>اسم العميل</label>
-        <input value={customer} onChange={e => setCustomer(e.target.value)}
-          placeholder="بحث..." className={sc} />
-      </div>
+      <ModernSelect
+        label="اسم العميل"
+        placeholder="الكل"
+        defaultValue={customerId}
+        options={[{ label: 'الكل', value: '' }, ...customers.map(c => ({ label: c.name, value: String(c.id) }))]}
+        onSelect={v => setCustomerId(v)}
+      />
       <ModernSelect
         label="التصنيف"
         placeholder="الكل"
@@ -142,7 +145,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
             placeholder="∞" className={sc} />
         </div>
       </div>
-      <button onClick={() => applyFilters()}
+      <button onClick={applyFilters}
         className="w-full h-11 rounded-[14px] spatial-button flex items-center justify-center gap-2 font-bold text-sm">
         <Search className="w-4 h-4" /> فلترة
       </button>
@@ -181,7 +184,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
           </button>
           {filterOpen && (
             <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
-              <FilterPanel />
+              {filterContent}
             </div>
           )}
         </div>
@@ -308,7 +311,7 @@ export default function InvoicesIndex({ invoices, categories, sellers, filters, 
           {/* Desktop Filter */}
           <div className="hidden lg:block w-[360px] shrink-0">
             <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-              <FilterPanel />
+              {filterContent}
             </SpatialCard>
           </div>
         </div>

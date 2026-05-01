@@ -34,8 +34,8 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
         if (!empty($params['status']))
             $q->where('payment_status', $params['status']);
 
-        if (!empty($params['customer']))
-            $q->whereHas('customer', fn($c) => $c->where('name', 'like', '%' . $params['customer'] . '%'));
+        if (!empty($params['customer_id']))
+            $q->where('customer_id', $params['customer_id']);
 
         if (!empty($params['seller_id']))
             $q->where('user_id', $params['seller_id']);
