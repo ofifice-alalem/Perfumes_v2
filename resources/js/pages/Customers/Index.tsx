@@ -6,6 +6,7 @@ import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Plus, Pencil, Trash2, X, Check, Users, AlertCircle, CreditCard, ArrowLeftRight } from 'lucide-react';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 
 interface Customer {
   id: number; name: string; phone: string | null;
@@ -87,6 +88,8 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
   const [paymentForm, setPaymentForm] = useState({ payment_method_id: '', amount: '', notes: '' });
   const [settlementForm, setSettlementForm] = useState({ payment_method_id: '', amount: '', notes: '' });
   const [processing, setProcessing] = useState(false);
+  const [showPaymentPad, setShowPaymentPad] = useState(false);
+  const [showSettlementPad, setShowSettlementPad] = useState(false);
 
   const createForm = useForm({ ...emptyForm });
   const editForm   = useForm({ ...emptyForm });
@@ -231,22 +234,38 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                         <td className="py-4 px-4">
                           <div className="flex items-center justify-center gap-2">
                             <button onClick={() => startEdit(customer)}
-                              className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-xs">
-                              <Pencil className="w-3 h-3" /> تعديل
+                              className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
+                                bg-primary/10 text-primary border border-primary/20
+                                hover:bg-primary hover:text-white hover:border-primary hover:shadow-lg hover:shadow-primary/25
+                                dark:bg-primary/20 dark:text-primary dark:border-primary/30
+                                dark:hover:bg-primary dark:hover:text-white dark:hover:border-primary dark:hover:shadow-primary/30">
+                              <Pencil className="w-4 h-4" /> تعديل
                             </button>
                             <button onClick={() => setPaymentCustomer(customer)}
-                              className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-200 font-bold text-xs">
-                              <CreditCard className="w-3 h-3" /> دفعة
+                              className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
+                                bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                                hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/25
+                                dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                                dark:hover:bg-emerald-500 dark:hover:text-white dark:hover:border-emerald-500 dark:hover:shadow-emerald-500/30">
+                              <CreditCard className="w-4 h-4" /> دفعة
                             </button>
                             {+customer.total_debt > 0 && (
                               <button onClick={() => setSettlementCustomer(customer)}
-                                className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white transition-all duration-200 font-bold text-xs">
-                                <ArrowLeftRight className="w-3 h-3" /> تسوية
+                                className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
+                                  bg-amber-500/10 text-amber-600 border border-amber-500/20
+                                  hover:bg-amber-500 hover:text-white hover:border-amber-500 hover:shadow-lg hover:shadow-amber-500/25
+                                  dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30
+                                  dark:hover:bg-amber-500 dark:hover:text-white dark:hover:border-amber-500 dark:hover:shadow-amber-500/30">
+                                <ArrowLeftRight className="w-4 h-4" /> تسوية
                               </button>
                             )}
                             <button onClick={() => setDeleteId(customer.id)}
-                              className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-xs">
-                              <Trash2 className="w-3 h-3" /> حذف
+                              className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
+                                bg-red-500/10 text-red-500 border border-red-500/20
+                                hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-500/25
+                                dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30
+                                dark:hover:bg-red-500 dark:hover:text-white dark:hover:border-red-500 dark:hover:shadow-red-500/30">
+                              <Trash2 className="w-4 h-4" /> حذف
                             </button>
                           </div>
                         </td>
@@ -411,16 +430,11 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                    <input type="number" min="0.01" step="0.01"
-                      max={+paymentCustomer.total_debt > 0 ? paymentCustomer.total_debt : undefined}
-                      value={paymentForm.amount}
-                      onChange={e => {
-                        const max = +paymentCustomer.total_debt;
-                        const val = +e.target.value;
-                        setPaymentForm(f => ({ ...f, amount: (max > 0 && val > max) ? paymentCustomer.total_debt : e.target.value }));
-                      }}
-                      placeholder={paymentCustomer.total_debt}
-                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                    <button
+                      onClick={() => setShowPaymentPad(true)}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                      {paymentForm.amount || <span className="text-slate-400 dark:text-white/30">{paymentCustomer.total_debt || '0.00'}</span>}
+                    </button>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظات</label>
@@ -475,9 +489,11 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ المُرجَع</label>
-                    <input type="number" min="0.01" step="0.01" value={settlementForm.amount}
-                      onChange={e => setSettlementForm(f => ({ ...f, amount: e.target.value }))}
-                      placeholder="0.00" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                    <button
+                      onClick={() => setShowSettlementPad(true)}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                      {settlementForm.amount || <span className="text-slate-400 dark:text-white/30">0.00</span>}
+                    </button>
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السبب / ملاحظات</label>
@@ -500,6 +516,27 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
           </div>,
           document.body
         )}
+
+        <NumberPadModal
+          isOpen={showPaymentPad}
+          onClose={() => setShowPaymentPad(false)}
+          title="مبلغ الدفعة"
+          initialValue={paymentForm.amount || (paymentCustomer?.total_debt ?? '')}
+          onConfirm={val => {
+            if (!paymentCustomer) return;
+            const max = +paymentCustomer.total_debt;
+            const clamped = max > 0 && +val > max ? paymentCustomer.total_debt : val;
+            setPaymentForm(f => ({ ...f, amount: clamped }));
+          }}
+        />
+
+        <NumberPadModal
+          isOpen={showSettlementPad}
+          onClose={() => setShowSettlementPad(false)}
+          title="مبلغ التسوية"
+          initialValue={settlementForm.amount}
+          onConfirm={val => setSettlementForm(f => ({ ...f, amount: val }))}
+        />
 
         {editingCustomer && createPortal(
           <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
