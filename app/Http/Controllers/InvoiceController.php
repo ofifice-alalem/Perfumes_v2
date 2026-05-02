@@ -149,8 +149,17 @@ class InvoiceController extends Controller
     {
         $invoice = $this->invoices->findWithRelations($id);
 
+        $customerDebt = null;
+        if ($invoice->customer && $invoice->customer->id !== 1) {
+            $customerDebt = [
+                'total_debt'      => $invoice->customer->total_debt,
+                'total_purchases' => $invoice->customer->total_purchases,
+            ];
+        }
+
         return Inertia::render('Invoices/Show', [
             'invoice'        => $invoice,
+            'customerDebt'   => $customerDebt,
             'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
                                     ->whereHas('category', fn($q) => $q->where('is_operational', false))
                                     ->orderBy('name')->get(),

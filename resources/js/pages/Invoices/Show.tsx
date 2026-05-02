@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, Trash2, Check, X, CreditCard, Package, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, X, CreditCard, Package, Pencil, AlertCircle } from 'lucide-react';
 
 interface Size       { id: number; label: string; value: string; }
 interface Category   { id: number; name: string; unit: string; }
@@ -41,6 +41,7 @@ interface PaymentMethod { id: number; name: string; }
 
 interface Props {
   invoice: Invoice;
+  customerDebt: { total_debt: string; total_purchases: string } | null;
   products: Product[];
   sizes: Size[];
   paymentMethods: PaymentMethod[];
@@ -281,11 +282,16 @@ function AddPaymentForm({ invoiceId, dueAmount, paymentMethods, onClose }: {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export default function InvoiceShow({ invoice, products, sizes, paymentMethods, flash }: Props) {
+export default function InvoiceShow({ invoice, customerDebt, products, sizes, paymentMethods, flash }: Props) {
   const [showAddItem, setShowAddItem]       = useState(false);
   const [deleteItemId, setDeleteItemId]     = useState<number | null>(null);
   const [editingGroup, setEditingGroup]     = useState<{ itemId: number; count: number } | null>(null);
   const [showEditPad, setShowEditPad]       = useState(false);
+  const [showDebtPayment, setShowDebtPayment] = useState(false);
+  const [debtMethod, setDebtMethod]           = useState('');
+  const [debtAmount, setDebtAmount]           = useState('');
+  const [debtProcessing, setDebtProcessing]   = useState(false);
+  const [showDebtPad, setShowDebtPad]         = useState(false);
 
   function removeItem(itemId: number) {
     router.delete(`/invoices/${invoice.id}/items/${itemId}`, { onSuccess: () => setDeleteItemId(null) });
@@ -294,6 +300,20 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
   function updateCount(itemId: number, newCount: number) {
     router.patch(`/invoices/${invoice.id}/items/${itemId}/count`, { count: newCount }, {
       onSuccess: () => setEditingGroup(null),
+    });
+  }
+
+  function submitDebtPayment() {
+    if (!debtMethod || !debtAmount || !invoice.customer) return;
+    setDebtProcessing(true);
+    router.post('/payments', {
+      customer_id:       invoice.customer.id,
+      payment_method_id: debtMethod,
+      amount:            debtAmount,
+      notes:             `سداد دين — من فاتورة #${invoice.id}`,
+    }, {
+      onSuccess: () => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); },
+      onFinish:  () => setDebtProcessing(false),
     });
   }
 
@@ -514,6 +534,61 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
                 </div>
               )}
             </SpatialCard>
+
+            {/* Customer Debt */}
+            {customerDebt && invoice.customer && +customerDebt.total_debt > 0 && (
+              <SpatialCard title="الوضع المالي للعميل" icon={<AlertCircle className="w-4 h-4" />}>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">إجمالي المشتريات</span>
+                    <span className="font-black text-slate-800 dark:text-white">{customerDebt.total_purchases} د</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">الدين الكلي</span>
+                    <span className="font-black text-red-500 text-lg">{customerDebt.total_debt} د</span>
+                  </div>
+
+                  {!showDebtPayment ? (
+                    <button onClick={() => { setShowDebtPayment(true); setDebtAmount(customerDebt.total_debt); }}
+                      className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                        bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                        hover:bg-emerald-500 hover:text-white hover:border-emerald-500
+                        dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                        dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
+                      <CreditCard className="w-4 h-4" /> تسجيل دفعة
+                    </button>
+                  ) : (
+                    <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                      <ModernSelect
+                        label="وسيلة الدفع"
+                        placeholder="اختر..."
+                        options={paymentMethods.map(m => ({ label: m.name }))}
+                        defaultValue=""
+                        onSelect={val => setDebtMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                      />
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                        <button onClick={() => setShowDebtPad(true)}
+                          className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                          {debtAmount || <span className="text-slate-400 dark:text-white/30">{customerDebt.total_debt}</span>}
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={submitDebtPayment}
+                          disabled={debtProcessing || !debtMethod || !debtAmount}
+                          className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                          <Check className="w-4 h-4" /> تأكيد
+                        </button>
+                        <button onClick={() => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); }}
+                          className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </SpatialCard>
+            )}
           </div>
         </div>
 
@@ -522,6 +597,15 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
           onConfirm={v => editingGroup && updateCount(editingGroup.itemId, +v)}
           initialValue={String(editingGroup?.count ?? 1)}
           title="تعديل العدد" />
+
+        <NumberPadModal isOpen={showDebtPad}
+          onClose={() => setShowDebtPad(false)}
+          onConfirm={v => {
+            const max = customerDebt ? +customerDebt.total_debt : 0;
+            setDebtAmount(max > 0 && +v > max ? String(max) : v);
+          }}
+          initialValue={debtAmount}
+          title="مبلغ الدفعة" />
 
         <ConfirmModal isOpen={deleteItemId !== null} title="حذف المنتج" message="هل أنت متأكد؟ سيُعاد المخزون تلقائياً."
           onConfirm={() => deleteItemId && removeItem(deleteItemId)} onCancel={() => setDeleteItemId(null)} />
