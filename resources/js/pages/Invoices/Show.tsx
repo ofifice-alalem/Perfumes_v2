@@ -318,6 +318,7 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
       payment_method_id: debtMethod,
       amount:            debtAmount,
       notes:             `سداد دين — من فاتورة #${invoice.id}`,
+      redirect_invoice:  invoice.id,
     }, {
       onSuccess: () => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); },
       onFinish:  () => setDebtProcessing(false),
