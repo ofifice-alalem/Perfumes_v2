@@ -1,0 +1,74 @@
+import { Link } from '@inertiajs/react';
+import { AppShell } from '@/components/layout/AppShell';
+import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { ArrowLeftRight } from 'lucide-react';
+
+interface Settlement {
+  id: number; amount: string; notes: string | null; created_at: string;
+  customer: { id: number; name: string; total_debt: string } | null;
+  invoice: { id: number; total: string } | null;
+  payment_method: { name: string };
+}
+interface Props { settlement: Settlement; }
+
+export default function SettlementShow({ settlement }: Props) {
+  return (
+    <AppShell pageTitle="تفاصيل التسوية">
+      <div className="flex flex-col gap-6 max-w-2xl">
+
+        <div className="flex items-center gap-3">
+          <Link href="/settlements" className="text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-sm">← التسويات</Link>
+          <span className="text-slate-300 dark:text-white/20">/</span>
+          <h1 className="text-2xl font-black text-slate-800 dark:text-white">تسوية #{settlement.id}</h1>
+        </div>
+
+        <SpatialCard title="معلومات التسوية" icon={<ArrowLeftRight className="w-4 h-4" />}>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: 'المبلغ المُرجَع', value: `${settlement.amount} د`, cls: 'text-amber-600 dark:text-amber-400 font-black text-lg' },
+              { label: 'وسيلة الرد',     value: settlement.payment_method.name, cls: '' },
+              { label: 'التاريخ',        value: new Date(settlement.created_at).toLocaleDateString('ar'), cls: '' },
+              { label: 'ملاحظات',        value: settlement.notes ?? '—', cls: '' },
+            ].map(({ label, value, cls }) => (
+              <div key={label} className="flex flex-col gap-1 p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
+                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                <span className={`font-bold text-slate-800 dark:text-white text-sm ${cls}`}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </SpatialCard>
+
+        {settlement.customer && (
+          <SpatialCard title="العميل">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1 p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
+                <span className="text-xs font-bold text-slate-400 dark:text-white/40">الاسم</span>
+                <span className="font-bold text-slate-800 dark:text-white text-sm">{settlement.customer.name}</span>
+              </div>
+              <div className="flex flex-col gap-1 p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
+                <span className="text-xs font-bold text-slate-400 dark:text-white/40">الدين بعد التسوية</span>
+                <span className={`font-black text-sm ${+settlement.customer.total_debt > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                  {+settlement.customer.total_debt > 0 ? `${settlement.customer.total_debt} د` : 'مسدد'}
+                </span>
+              </div>
+            </div>
+          </SpatialCard>
+        )}
+
+        {settlement.invoice && (
+          <SpatialCard title="الفاتورة المرتبطة">
+            <div className="flex items-center justify-between p-3 rounded-[14px] bg-black/3 dark:bg-white/3">
+              <div>
+                <span className="font-bold text-slate-800 dark:text-white text-sm">فاتورة #{settlement.invoice.id}</span>
+                <p className="text-xs font-bold text-slate-400 dark:text-white/40 mt-0.5">إجمالي: {settlement.invoice.total} د</p>
+              </div>
+              <Link href={`/invoices/${settlement.invoice.id}`} className="spatial-button px-4 h-9 text-sm">
+                عرض الفاتورة
+              </Link>
+            </div>
+          </SpatialCard>
+        )}
+      </div>
+    </AppShell>
+  );
+}

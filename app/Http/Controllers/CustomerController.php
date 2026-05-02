@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Repositories\Contracts\CustomerRepositoryInterface;
+use App\Models\PaymentMethod;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -14,7 +15,8 @@ class CustomerController extends Controller
     public function index(): Response
     {
         return Inertia::render('Customers/Index', [
-            'customers' => $this->customers->allOrdered(),
+            'customers'      => $this->customers->allOrdered(),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

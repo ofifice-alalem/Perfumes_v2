@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
+
     protected $fillable = [
         'name', 'phone', 'email', 'address',
         'total_purchases', 'total_debt', 'is_active',
@@ -21,6 +22,16 @@ class Customer extends Model
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(Settlement::class);
     }
 
     public function isCashCustomer(): bool

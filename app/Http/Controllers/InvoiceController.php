@@ -37,7 +37,7 @@ class InvoiceController extends Controller
         $invoiceData = session('invoiceData');
         
         return Inertia::render('Invoices/Create', [
-            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(),
+            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
                                     ->whereHas('category', fn($q) => $q->where('is_operational', false))
                                     ->orderBy('name')->get(),
@@ -75,6 +75,9 @@ class InvoiceController extends Controller
         foreach ($data['payments'] ?? [] as $payment) {
             $this->invoices->addPayment($invoice->id, $payment);
         }
+
+        // تحديث دين العميل بعد إنشاء الفاتورة
+        $this->invoices->updateCustomerDebt($invoice->customer_id);
 
         // Get the complete invoice with all relations for the modal
         $completeInvoice = $this->invoices->findWithRelations($invoice->id);
@@ -205,6 +208,7 @@ class InvoiceController extends Controller
     public function destroy(int $id)
     {
         $invoice = $this->invoices->find($id);
+        $customerId = $invoice->customer_id;
 
         // إعادة المخزون لكل سطر
         foreach ($invoice->items as $item) {
@@ -212,6 +216,8 @@ class InvoiceController extends Controller
         }
 
         $invoice->delete();
+
+        $this->invoices->updateCustomerDebt($customerId);
 
         return redirect()->route('invoices.index')->with('success', 'تم حذف الفاتورة');
     }

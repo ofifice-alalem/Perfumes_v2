@@ -5,9 +5,9 @@ import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock } from 'lucide-react';
+import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, Zap, Settings, User, ChevronLeft, Pause, Play, Clock, AlertCircle } from 'lucide-react';
 
-interface Customer      { id: number; name: string; }
+interface Customer      { id: number; name: string; total_debt?: string; }
 interface Size          { id: number; label: string; value: string; }
 interface Category      { id: number; name: string; unit: string; }
 interface ProductPrice  { price_per_unit_regular: string; price_per_unit_vip: string; full_bottle_regular: string | null; full_bottle_vip: string | null; }
@@ -742,32 +742,61 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
           )}
 
           {/* Customer bar */}
-          <div className="flex items-center gap-3 px-5 py-3 border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
-            <div className="flex items-center gap-2 flex-1">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <User className="w-4 h-4 text-primary" />
+          <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
+            <div className="flex items-center gap-3 px-5 py-3">
+              <div className="flex items-center gap-2 flex-1">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <ModernSelect label="" options={customerOptions} defaultValue="زبون نقدي" placeholder="اختر العميل"
+                    onSelect={val => {
+                      const c = customers.find(c => c.name === val);
+                      setCustomerId(c && c.id !== 1 ? String(c.id) : '');
+                    }}
+                  />
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <ModernSelect label="" options={customerOptions} defaultValue="زبون نقدي" placeholder="اختر العميل"
-                  onSelect={val => {
-                    const c = customers.find(c => c.name === val);
-                    setCustomerId(c && c.id !== 1 ? String(c.id) : '');
-                  }}
-                />
+              <div className="flex gap-3 shrink-0">
+                {(['regular', 'vip'] as const).map(type => (
+                  <button key={type} onClick={() => setCustomerType(type)}
+                    className={`px-6 h-14 rounded-[16px] border-2 transition-all font-bold text-base ${
+                      customerType === type
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'
+                    }`}>
+                    {type === 'regular' ? 'عادي' : '⭐ VIP'}
+                  </button>
+                ))}
               </div>
             </div>
-            <div className="flex gap-3 shrink-0">
-              {(['regular', 'vip'] as const).map(type => (
-                <button key={type} onClick={() => setCustomerType(type)}
-                  className={`px-6 h-14 rounded-[16px] border-2 transition-all font-bold text-base ${
-                    customerType === type
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'
-                  }`}>
-                  {type === 'regular' ? 'عادي' : '⭐ VIP'}
-                </button>
-              ))}
-            </div>
+            {/* Debt warning for registered customer */}
+            {customerId && (() => {
+              const selectedCustomer = customers.find(c => c.id === +customerId);
+              const debt = +(selectedCustomer?.total_debt ?? 0);
+              if (debt <= 0) return null;
+              return (
+                <div className="mx-5 mb-3 px-4 py-3 rounded-[14px] bg-red-500/10 border border-red-500/20 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                    <span className="text-sm font-bold text-red-600 dark:text-red-400">الدين السابق: {debt.toFixed(2)} د</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const method = paymentMethods[0];
+                      if (!method) return;
+                      setPayments(prev => [...prev, {
+                        payment_method_id: String(method.id),
+                        method_name: method.name,
+                        amount: debt.toFixed(2),
+                      }]);
+                    }}
+                    className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0">
+                    <CreditCard className="w-3.5 h-3.5" /> سداد الدين
+                  </button>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Add product form */}

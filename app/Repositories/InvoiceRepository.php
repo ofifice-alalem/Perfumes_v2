@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
+use App\Models\Settlement;
 use App\Models\Product;
 use App\Models\Customer;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
@@ -197,6 +198,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             }
 
             Payment::create([
+                'customer_id'       => $invoice->customer_id,
                 'invoice_id'        => $invoiceId,
                 'payment_method_id' => $paymentData['payment_method_id'],
                 'amount'            => $paymentData['amount'],
@@ -204,7 +206,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             ]);
 
             $this->recalculateInvoice($invoice->fresh());
-            $this->updateCustomerDebt($invoice->fresh());
+            $this->updateCustomerDebt($invoice->customer_id);
         });
     }
 
@@ -266,24 +268,20 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
         ]);
     }
 
-    private function updateCustomerDebt(Invoice $invoice): void
+    public function updateCustomerDebt(?int $customerId): void
     {
-        if ($invoice->customer_id === 1) return;
+        if (!$customerId || $customerId === 1) return;
 
-        $customer = Customer::find($invoice->customer_id);
+        $customer = Customer::find($customerId);
         if (!$customer) return;
 
-        // إعادة حساب الدين من كل الفواتير
-        $totalDebt = $this->model
-            ->where('customer_id', $invoice->customer_id)
-            ->sum('due_amount');
-
-        $totalPurchases = $this->model
-            ->where('customer_id', $invoice->customer_id)
-            ->sum('total');
+        $totalPurchases = $this->model->where('customer_id', $customerId)->sum('total');
+        $totalPaid      = Payment::where('customer_id', $customerId)->sum('amount');
+        $totalSettled   = Settlement::where('customer_id', $customerId)->sum('amount');
+        $totalDebt      = $totalPurchases - $totalPaid + $totalSettled;
 
         $customer->update([
-            'total_debt'      => $totalDebt,
+            'total_debt'      => max(0, $totalDebt),
             'total_purchases' => $totalPurchases,
         ]);
     }

@@ -2,7 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, UserCog,
-  PanelRightClose, PanelRightOpen,
+  PanelRightClose, PanelRightOpen, CreditCard, ArrowLeftRight,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -13,6 +13,8 @@ interface AppSidebarProps {
 const navItems = [
   { icon: <LayoutDashboard className="w-5 h-5" />, label: 'الرئيسية',       href: '/' },
   { icon: <ShoppingCart className="w-5 h-5" />,    label: 'الفواتير',        href: '/invoices' },
+  { icon: <CreditCard className="w-5 h-5" />,      label: 'المدفوعات',        href: '/payments' },
+  { icon: <ArrowLeftRight className="w-5 h-5" />,  label: 'التسويات',         href: '/settlements' },
   { icon: <Truck className="w-5 h-5" />,           label: 'المشتريات',       href: '/purchases' },
   { icon: <Package className="w-5 h-5" />,         label: 'التالف',           href: '/waste' },
   { icon: <Package className="w-5 h-5" />,         label: 'المنتجات',        href: '/products' },

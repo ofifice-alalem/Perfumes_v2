@@ -12,6 +12,8 @@ use App\Http\Controllers\PaymentMethodController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\SettlementController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
@@ -45,3 +47,13 @@ Route::resource('waste', WasteController::class)->except(['edit']);
 Route::post('waste/{id}/items', [WasteController::class, 'addItem'])->name('waste.items.add');
 Route::patch('waste/{id}/items/{itemId}', [WasteController::class, 'updateItem'])->name('waste.items.update');
 Route::delete('waste/{id}/items/{itemId}', [WasteController::class, 'removeItem'])->name('waste.items.remove');
+
+Route::get('payments', [PaymentController::class, 'index'])->name('payments.index');
+Route::get('payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
+Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
+Route::delete('payments/{id}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+
+Route::get('settlements', [SettlementController::class, 'index'])->name('settlements.index');
+Route::get('settlements/{id}', [SettlementController::class, 'show'])->name('settlements.show');
+Route::post('settlements', [SettlementController::class, 'store'])->name('settlements.store');
+Route::delete('settlements/{id}', [SettlementController::class, 'destroy'])->name('settlements.destroy');

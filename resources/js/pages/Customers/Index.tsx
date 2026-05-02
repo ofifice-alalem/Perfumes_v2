@@ -4,16 +4,18 @@ import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, Pencil, Trash2, X, Check, Users, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Users, AlertCircle, CreditCard, ArrowLeftRight } from 'lucide-react';
 
 interface Customer {
   id: number; name: string; phone: string | null;
   email: string | null; address: string | null;
   total_purchases: string; total_debt: string; is_active: boolean;
 }
+interface PaymentMethod { id: number; name: string; }
 
 interface Props {
   customers: Customer[];
+  paymentMethods: PaymentMethod[];
   flash?: { success?: string; error?: string };
 }
 
@@ -75,10 +77,15 @@ function CustomerForm({ form, isEdit, onSubmit, onCancel }: {
   );
 }
 
-export default function CustomersIndex({ customers, flash }: Props) {
+export default function CustomersIndex({ customers, paymentMethods, flash }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [paymentCustomer, setPaymentCustomer] = useState<Customer | null>(null);
+  const [settlementCustomer, setSettlementCustomer] = useState<Customer | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ payment_method_id: '', amount: '', notes: '' });
+  const [settlementForm, setSettlementForm] = useState({ payment_method_id: '', amount: '', notes: '' });
+  const [processing, setProcessing] = useState(false);
 
   const createForm = useForm({ ...emptyForm });
   const editForm   = useForm({ ...emptyForm });
@@ -101,6 +108,30 @@ export default function CustomersIndex({ customers, flash }: Props) {
 
   function deleteCustomer(id: number) {
     router.delete(`/customers/${id}`, { onSuccess: () => setDeleteId(null) });
+  }
+
+  function submitPayment() {
+    if (!paymentCustomer || !paymentForm.payment_method_id || !paymentForm.amount) return;
+    setProcessing(true);
+    router.post('/payments', {
+      customer_id: paymentCustomer.id,
+      ...paymentForm,
+    }, {
+      onSuccess: () => { setPaymentCustomer(null); setPaymentForm({ payment_method_id: '', amount: '', notes: '' }); },
+      onFinish: () => setProcessing(false),
+    });
+  }
+
+  function submitSettlement() {
+    if (!settlementCustomer || !settlementForm.payment_method_id || !settlementForm.amount) return;
+    setProcessing(true);
+    router.post('/settlements', {
+      customer_id: settlementCustomer.id,
+      ...settlementForm,
+    }, {
+      onSuccess: () => { setSettlementCustomer(null); setSettlementForm({ payment_method_id: '', amount: '', notes: '' }); },
+      onFinish: () => setProcessing(false),
+    });
   }
 
   return (
@@ -200,6 +231,16 @@ export default function CustomersIndex({ customers, flash }: Props) {
                               className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-xs">
                               <Pencil className="w-3 h-3" /> تعديل
                             </button>
+                            <button onClick={() => setPaymentCustomer(customer)}
+                              className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-200 font-bold text-xs">
+                              <CreditCard className="w-3 h-3" /> دفعة
+                            </button>
+                            {+customer.total_debt > 0 && (
+                              <button onClick={() => setSettlementCustomer(customer)}
+                                className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white transition-all duration-200 font-bold text-xs">
+                                <ArrowLeftRight className="w-3 h-3" /> تسوية
+                              </button>
+                            )}
                             <button onClick={() => setDeleteId(customer.id)}
                               className="flex items-center gap-1.5 px-3 h-8 rounded-lg border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-xs">
                               <Trash2 className="w-3 h-3" /> حذف
@@ -334,6 +375,117 @@ export default function CustomersIndex({ customers, flash }: Props) {
         </SpatialCard>
 
         <ConfirmModal isOpen={deleteId !== null} onConfirm={() => deleteId && deleteCustomer(deleteId)} onCancel={() => setDeleteId(null)} />
+
+        {/* Payment Modal */}
+        {paymentCustomer && createPortal(
+          <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md" onClick={() => setPaymentCustomer(null)} />
+            <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl">
+              <div className="absolute inset-0 rounded-[30px] dark:hidden pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(220,230,245,0.97) 100%)' }} />
+              <div className="absolute inset-0 rounded-[30px] hidden dark:block pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(25,35,80,0.98) 0%, rgba(10,14,35,0.97) 100%)' }} />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white">دفعة جديدة — {paymentCustomer.name}</h3>
+                  <button onClick={() => setPaymentCustomer(null)} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:bg-black/10 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                {+paymentCustomer.total_debt > 0 && (
+                  <div className="mb-4 px-4 py-3 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">
+                    الدين الحالي: {paymentCustomer.total_debt} د
+                  </div>
+                )}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
+                    <select value={paymentForm.payment_method_id} onChange={e => setPaymentForm(f => ({ ...f, payment_method_id: e.target.value }))}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
+                      <option value="">اختر وسيلة الدفع...</option>
+                      {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                    <input type="number" min="0.01" step="0.01" value={paymentForm.amount}
+                      onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder={paymentCustomer.total_debt}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظات</label>
+                    <input value={paymentForm.notes} onChange={e => setPaymentForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="اختياري" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={submitPayment} disabled={processing || !paymentForm.payment_method_id || !paymentForm.amount}
+                      className="spatial-button flex items-center gap-2 px-6 h-11 text-sm disabled:opacity-50">
+                      <Check className="w-4 h-4" /> تسجيل الدفعة
+                    </button>
+                    <button onClick={() => setPaymentCustomer(null)}
+                      className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                      <X className="w-4 h-4" /> إلغاء
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Settlement Modal */}
+        {settlementCustomer && createPortal(
+          <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-md" onClick={() => setSettlementCustomer(null)} />
+            <div className="relative w-full max-w-md animate-in fade-in zoom-in-95 duration-200 rounded-[30px] border border-black/10 dark:border-white/[0.12] shadow-2xl">
+              <div className="absolute inset-0 rounded-[30px] dark:hidden pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(220,230,245,0.97) 100%)' }} />
+              <div className="absolute inset-0 rounded-[30px] hidden dark:block pointer-events-none" style={{ background: 'linear-gradient(145deg, rgba(25,35,80,0.98) 0%, rgba(10,14,35,0.97) 100%)' }} />
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-black text-slate-800 dark:text-white">تسوية — {settlementCustomer.name}</h3>
+                  <button onClick={() => setSettlementCustomer(null)} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 hover:bg-black/10 transition-all">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="mb-4 px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-sm">
+                  ⚠️ التسوية تعني رد مبلغ للعميل — ستزيد الدين الكلي
+                </div>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الرد</label>
+                    <select value={settlementForm.payment_method_id} onChange={e => setSettlementForm(f => ({ ...f, payment_method_id: e.target.value }))}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
+                      <option value="">اختر وسيلة الدفع...</option>
+                      {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ المُرجَع</label>
+                    <input type="number" min="0.01" step="0.01" value={settlementForm.amount}
+                      onChange={e => setSettlementForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="0.00" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السبب / ملاحظات</label>
+                    <input value={settlementForm.notes} onChange={e => setSettlementForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="سبب التسوية..." className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={submitSettlement} disabled={processing || !settlementForm.payment_method_id || !settlementForm.amount}
+                      className="spatial-button flex items-center gap-2 px-6 h-11 text-sm disabled:opacity-50">
+                      <Check className="w-4 h-4" /> تسجيل التسوية
+                    </button>
+                    <button onClick={() => setSettlementCustomer(null)}
+                      className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                      <X className="w-4 h-4" /> إلغاء
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
         {editingCustomer && createPortal(
           <div className="fixed inset-0 z-[998] flex items-center justify-center p-4">
