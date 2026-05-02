@@ -179,7 +179,7 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                       <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">العميل</th>
                       <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">الهاتف</th>
                       <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إجمالي المشتريات</th>
-                      <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">الدين</th>
+                      <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">دائن / مدين</th>
                       <th className="text-right py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">الحالة</th>
                       <th className="text-center py-3 px-4 text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجراءات</th>
                     </tr>
@@ -216,10 +216,14 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                           {+customer.total_debt > 0 ? (
                             <span className="inline-flex items-center gap-1 text-sm font-black text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-1 rounded-full">
                               <AlertCircle className="w-3.5 h-3.5" />
-                              {customer.total_debt} د
+                              مدين {customer.total_debt} د
+                            </span>
+                          ) : +customer.total_debt < 0 ? (
+                            <span className="inline-flex items-center gap-1 text-sm font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                              دائن {Math.abs(+customer.total_debt)} د
                             </span>
                           ) : (
-                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">مسدد</span>
+                            <span className="text-sm font-bold text-slate-400 dark:text-white/30">مسدد</span>
                           )}
                         </td>
                         <td className="py-4 px-4">
@@ -247,9 +251,9 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                                 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/25
                                 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
                                 dark:hover:bg-emerald-500 dark:hover:text-white dark:hover:border-emerald-500 dark:hover:shadow-emerald-500/30">
-                              <CreditCard className="w-4 h-4" /> دفعة
+                              <CreditCard className="w-4 h-4" /> {+customer.total_debt < 0 ? 'استرداد' : 'دفعة'}
                             </button>
-                            {+customer.total_debt > 0 && (
+                            {+customer.total_debt < 0 && (
                               <button onClick={() => setSettlementCustomer(customer)}
                                 className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
                                   bg-amber-500/10 text-amber-600 border border-amber-500/20
@@ -338,19 +342,28 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                           <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${
                             +customer.total_debt > 0 
                               ? 'text-red-600 dark:text-red-400'
+                              : +customer.total_debt < 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
                               : 'text-emerald-600 dark:text-emerald-400'
                           }`}>
-                            {+customer.total_debt > 0 ? 'الدين المستحق' : 'الحالة المالية'}
+                            {+customer.total_debt > 0 ? 'مدين' : +customer.total_debt < 0 ? 'دائن' : 'الحالة المالية'}
                           </div>
                           <div className={`font-black text-xl ${
                             +customer.total_debt > 0 
                               ? 'text-red-700 dark:text-red-300'
+                              : +customer.total_debt < 0
+                              ? 'text-emerald-700 dark:text-emerald-300'
                               : 'text-emerald-700 dark:text-emerald-300'
                           }`}>
                             {+customer.total_debt > 0 ? (
                               <>
                                 {customer.total_debt}
                                 <span className="text-sm font-bold text-red-500 dark:text-red-400 mr-1">د.ك</span>
+                              </>
+                            ) : +customer.total_debt < 0 ? (
+                              <>
+                                {Math.abs(+customer.total_debt)}
+                                <span className="text-sm font-bold text-emerald-500 dark:text-emerald-400 mr-1">د.ك</span>
                               </>
                             ) : (
                               'مسدد بالكامل'
@@ -412,9 +425,15 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                {+paymentCustomer.total_debt > 0 && (
-                  <div className="mb-4 px-4 py-3 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">
-                    الدين الحالي: {paymentCustomer.total_debt} د
+                {+paymentCustomer.total_debt !== 0 && (
+                  <div className={`mb-4 px-4 py-3 rounded-[14px] font-bold text-sm ${
+                    +paymentCustomer.total_debt > 0
+                      ? 'bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400'
+                      : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                  }`}>
+                    {+paymentCustomer.total_debt > 0
+                      ? `العميل مدين: ${paymentCustomer.total_debt} د`
+                      : `المتجر دائن: ${Math.abs(+paymentCustomer.total_debt)} د`}
                   </div>
                 )}
                 <div className="flex flex-col gap-4">
