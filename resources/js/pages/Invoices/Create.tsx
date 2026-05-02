@@ -252,11 +252,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       resolveLineTotal(effectiveST, previewPrice, previewQty) * previewCount
     ) : null;
 
-  const total     = cart.reduce((s, i) => s + i.line_total, 0);
-  const debtAmount = debtPayment ? (+debtPayment.amount || 0) : 0;
-  const grandTotal = total + debtAmount;
-  const totalPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0) + debtAmount;
-  const remaining = grandTotal - totalPaid;
+  const total      = cart.reduce((s, i) => s + i.line_total, 0);
+  const debtAmount  = debtPayment ? (+debtPayment.amount || 0) : 0;
+  const originalDebt = customerId ? +(customers.find(c => c.id === +customerId)?.total_debt ?? 0) : 0;
+  const grandTotal  = debtPayment ? total + originalDebt : total;
+  const totalPaid   = payments.reduce((s, p) => s + (+p.amount || 0), 0) + debtAmount;
+  const remaining   = grandTotal - totalPaid;
   const canAdd    = selectedProduct && (isTier ? (!needsSize || selSize) : selSaleType) && (!needsSize || selSize) && (!needsQty || selQty);
 
   function addToCart() {
@@ -502,6 +503,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     setCart([]);
     setPayments([]);
     setDebtPayment(null);
+    setEditingDebt(false);
     setSelProduct('');
     setSelSaleType('');
     setSelSize('');
@@ -1203,7 +1205,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-red-500">سداد الدين</span>
-                    <span className="text-sm font-bold text-red-500">{debtPayment.amount} د</span>
+                    <span className="text-sm font-bold text-red-500">
+                      {debtAmount < originalDebt
+                        ? `${debtPayment!.amount} د من ${originalDebt.toFixed(2)} د`
+                        : `${debtPayment!.amount} د`}
+                    </span>
                   </div>
                 </>
               ) : (
@@ -1262,18 +1268,59 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               
               {/* Debt payment entry */}
               {debtPayment && (
-                <div className="mb-1.5 flex items-center justify-between px-3 py-2 rounded-[10px] bg-red-500/5 border border-red-500/15">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                    <span className="font-bold text-slate-700 dark:text-white/70 text-sm">سداد الدين — {debtPayment.method_name}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-black text-red-500 text-sm">{debtPayment.amount} د</span>
-                    <button onClick={() => setDebtPayment(null)}
-                      className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                <div className="mb-1.5">
+                  {editingDebt ? (
+                    <div className="flex gap-2 p-3 rounded-[10px] bg-red-500/5 border border-red-500/20">
+                      <div className="flex-1">
+                        <ModernSelect
+                          label=""
+                          options={paymentMethods.map(m => ({ label: m.name }))}
+                          defaultValue={debtPayment.method_name}
+                          placeholder="وسيلة الدفع"
+                          onSelect={val => {
+                            const m = paymentMethods.find(m => m.name === val);
+                            if (m) setDebtPayment(prev => prev ? { ...prev, payment_method_id: String(m.id), method_name: m.name } : prev);
+                          }}
+                        />
+                      </div>
+                      <button
+                        onClick={() => {
+                          setNumberPadTitle('سداد الدين');
+                          setNumberPadInitialValue(debtPayment.amount);
+                          setNumberPadCallback(() => (value: string) => {
+                            setDebtPayment(prev => prev ? { ...prev, amount: value } : prev);
+                          });
+                          setShowNumberPad(true);
+                        }}
+                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28 text-left cursor-pointer hover:border-red-400 transition-all"
+                      >
+                        {debtPayment.amount}
+                      </button>
+                      <button onClick={() => setEditingDebt(false)}
+                        className="spatial-button flex items-center justify-center w-12 h-14 text-sm">
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => { setDebtPayment(null); setEditingDebt(false); }}
+                        className="w-12 h-14 rounded-[16px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between px-3 py-2 rounded-[10px] bg-red-500/5 border border-red-500/15 hover:bg-red-500/10 transition-all cursor-pointer"
+                         onClick={() => setEditingDebt(true)}>
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                        <span className="font-bold text-slate-700 dark:text-white/70 text-sm">سداد الدين — {debtPayment.method_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-red-500 text-sm">{debtPayment.amount} د</span>
+                        <button onClick={(e) => { e.stopPropagation(); setDebtPayment(null); setEditingDebt(false); }}
+                          className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
