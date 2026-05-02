@@ -121,6 +121,56 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
         });
     }
 
+    public function updateItemCount(int $invoiceId, int $itemId, int $newCount): void
+    {
+        DB::transaction(function () use ($invoiceId, $itemId, $newCount) {
+            // جلب العنصر المرجعي
+            $refItem = InvoiceItem::where('invoice_id', $invoiceId)->findOrFail($itemId);
+
+            // جلب كل السطور المتشابهة (نفس المنتج + نوع البيع + الحجم + السعر)
+            $siblings = InvoiceItem::where('invoice_id', $invoiceId)
+                ->where('product_id', $refItem->product_id)
+                ->where('sale_type',  $refItem->sale_type)
+                ->where('size_id',    $refItem->size_id)
+                ->where('unit_price', $refItem->unit_price)
+                ->get();
+
+            $currentCount = $siblings->count();
+            $product = Product::findOrFail($refItem->product_id);
+
+            if ($newCount > $currentCount) {
+                // إضافة سطور جديدة
+                $toAdd = $newCount - $currentCount;
+                if ($product->stock < $refItem->quantity * $toAdd) {
+                    throw new \Exception("المخزون غير كافٍ. المتاح: {$product->stock}");
+                }
+                for ($i = 0; $i < $toAdd; $i++) {
+                    InvoiceItem::create([
+                        'invoice_id' => $invoiceId,
+                        'product_id' => $refItem->product_id,
+                        'size_id'    => $refItem->size_id,
+                        'sale_type'  => $refItem->sale_type,
+                        'quantity'   => $refItem->quantity,
+                        'unit_price' => $refItem->unit_price,
+                        'line_total' => $refItem->line_total,
+                    ]);
+                    $product->decrement('stock', $refItem->quantity);
+                }
+            } elseif ($newCount < $currentCount) {
+                // حذف السطور الزائدة
+                $toRemove = $currentCount - $newCount;
+                $toDelete = $siblings->sortByDesc('id')->take($toRemove);
+                foreach ($toDelete as $row) {
+                    $product->increment('stock', $row->quantity);
+                    $row->delete();
+                }
+            }
+
+            $invoice = $this->model->findOrFail($invoiceId);
+            $this->recalculateInvoice($invoice);
+        });
+    }
+
     public function removeItem(int $invoiceId, int $itemId): void
     {
         DB::transaction(function () use ($invoiceId, $itemId) {

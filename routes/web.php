@@ -28,6 +28,7 @@ Route::resource('payment-methods', PaymentMethodController::class)->except(['cre
 Route::post('invoices/with-items', [InvoiceController::class, 'storeWithItems'])->name('invoices.storeWithItems');
 Route::resource('invoices', InvoiceController::class)->except(['edit']);
 Route::post('invoices/{id}/items', [InvoiceController::class, 'addItem'])->name('invoices.items.add');
+Route::patch('invoices/{id}/items/{itemId}/count', [InvoiceController::class, 'updateItemCount'])->name('invoices.items.updateCount');
 Route::delete('invoices/{id}/items/{itemId}', [InvoiceController::class, 'removeItem'])->name('invoices.items.remove');
 Route::post('invoices/{id}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments.add');
 

@@ -130,8 +130,10 @@ class InvoiceController extends Controller
 
     public function show(int $id): Response
     {
+        $invoice = $this->invoices->findWithRelations($id);
+
         return Inertia::render('Invoices/Show', [
-            'invoice'        => $this->invoices->findWithRelations($id),
+            'invoice'        => $invoice,
             'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
                                     ->whereHas('category', fn($q) => $q->where('is_operational', false))
                                     ->orderBy('name')->get(),
@@ -147,11 +149,28 @@ class InvoiceController extends Controller
             'sale_type'  => 'required|in:tier_decant,unit_decant,full_bottle,unit_based',
             'size_id'    => 'nullable|exists:sizes,id',
             'quantity'   => 'nullable|numeric|min:0.01',
+            'count'      => 'nullable|integer|min:1',
         ]);
 
+        $count = $data['count'] ?? 1;
+
         try {
-            $this->invoices->addItem($id, $data);
+            for ($i = 0; $i < $count; $i++) {
+                $this->invoices->addItem($id, $data);
+            }
             return back()->with('success', 'تم إضافة المنتج');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function updateItemCount(Request $request, int $id, int $itemId)
+    {
+        $data = $request->validate(['count' => 'required|integer|min:1']);
+
+        try {
+            $this->invoices->updateItemCount($id, $itemId, $data['count']);
+            return back()->with('success', 'تم تعديل العدد');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }

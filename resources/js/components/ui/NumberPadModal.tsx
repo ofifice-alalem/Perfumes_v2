@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Delete, RotateCcw } from 'lucide-react';
 
 interface NumberPadModalProps {
@@ -97,8 +98,8 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-800 rounded-[24px] border border-black/10 dark:border-white/10 shadow-2xl w-[500px] max-w-[95vw] max-h-[95vh] overflow-hidden">
         
         {/* Header */}
@@ -190,6 +191,7 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

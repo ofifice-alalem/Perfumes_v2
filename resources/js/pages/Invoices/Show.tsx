@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, Trash2, Check, X, CreditCard, Package } from 'lucide-react';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { SizeSelect } from '@/components/ui/SizeSelect';
+import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
+import { Plus, Trash2, Check, X, CreditCard, Package, Pencil } from 'lucide-react';
 
 interface Size       { id: number; label: string; value: string; }
 interface Category   { id: number; name: string; unit: string; }
@@ -57,107 +60,183 @@ const statusConfig = {
   unpaid:  { label: 'غير مدفوعة', cls: 'bg-red-500/10 text-red-500 border border-red-500/20' },
 };
 
+// ── helpers (same as Create) ─────────────────────────────────────────────────
+function resolvePrice(product: Product, saleType: string, sizeId: string, isVip: boolean): number {
+  const pp = product.product_price;
+  switch (saleType) {
+    case 'tier_decant': {
+      if (sizeId.startsWith('-custom-')) return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
+      const tp = product.price_tier?.tier_prices?.find((t: any) => t.size_id === +sizeId);
+      return tp ? +(isVip ? tp.price_vip : tp.price_regular) : 0;
+    }
+    case 'unit_decant': return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
+    case 'full_bottle': return pp ? +(isVip ? (pp.full_bottle_vip ?? 0) : (pp.full_bottle_regular ?? 0)) : 0;
+    case 'unit_based':  return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
+    default: return 0;
+  }
+}
+function resolveQuantity(product: Product, saleType: string, sizeId: string, manualQty: string, sizes: Size[]): number {
+  switch (saleType) {
+    case 'tier_decant':
+    case 'unit_decant': {
+      if (sizeId.startsWith('-custom-')) return +sizeId.replace('-custom-', '') || 0;
+      return +(sizes.find(s => s.id === +sizeId)?.value ?? 0);
+    }
+    case 'full_bottle': return product.original_perfume_detail ? +product.original_perfume_detail.bottle_volume : 0;
+    case 'unit_based':  return +manualQty || 0;
+    default: return 0;
+  }
+}
+function resolveLineTotal(saleType: string, price: number, quantity: number): number {
+  return (saleType === 'full_bottle' || saleType === 'tier_decant') ? price : price * quantity;
+}
+
 // ── Add Item Form ─────────────────────────────────────────────────────────────
 function AddItemForm({ invoice, products, sizes, onClose }: {
   invoice: Invoice; products: Product[]; sizes: Size[];
   onClose: () => void;
 }) {
-  const form = useForm({ product_id: '', sale_type: '', size_id: '', quantity: '' });
   const isVip = invoice.customer_type === 'vip';
+  const [selProduct,  setSelProduct]  = useState('');
+  const [selSaleType, setSelSaleType] = useState('');
+  const [selSize,     setSelSize]     = useState('');
+  const [selQty,      setSelQty]      = useState('1');
+  const [processing,  setProcessing]  = useState(false);
+  const [showNumberPad,    setShowNumberPad]    = useState(false);
+  const [showSaleTypeModal, setShowSaleTypeModal] = useState(false);
 
-  const selectedProduct = products.find(p => p.id === +form.data.product_id);
-  const isTier    = selectedProduct?.selling_type === 'tier_based';
-  const isML      = selectedProduct?.category.unit === 'ml';
-  const isOriginal = isML && !isTier;
+  const selectedProduct = products.find(p => p.id === +selProduct);
+  const isTier     = selectedProduct?.selling_type === 'tier_based';
+  const isOriginal = selectedProduct?.category.unit === 'ml' && !isTier;
+  const needsSize  = isTier || selSaleType === 'unit_decant';
+  const needsQty   = selSaleType === 'unit_based';
+  const effectiveST = isTier ? 'tier_decant' : selSaleType;
 
   const saleTypeOptions = () => {
-    if (!selectedProduct) return [];
-    if (isTier) return [{ label: 'زيتي - تقسيم', badge: 'tier_decant' }];
+    if (!selectedProduct || isTier) return [];
     if (isOriginal) return [
-      { label: 'أصلي - تقسيم', badge: 'unit_decant' },
-      { label: 'عبوة كاملة',   badge: 'full_bottle' },
+      { label: 'أصلي - تقسيم', badge: 'unit_decant', description: 'بيع بالمليلتر حسب الحجم المطلوب', icon: '📊' },
+      { label: 'عبوة كاملة',   badge: 'full_bottle', description: 'بيع العبوة بالكامل بحجمها الأصلي', icon: '🎁' },
     ];
-    return [{ label: 'بالوحدة', badge: 'unit_based' }];
+    return [{ label: 'بالوحدة', badge: 'unit_based', description: 'بيع بالقطعة أو بالجرام', icon: '⚖️' }];
   };
 
-  const needsSize = form.data.sale_type === 'tier_decant' || form.data.sale_type === 'unit_decant';
-  const needsQty  = form.data.sale_type === 'unit_based';
-
-  // حساب السعر المتوقع
-  const previewPrice = () => {
-    if (!selectedProduct || !form.data.sale_type) return null;
-    const pp = selectedProduct.product_price;
-    switch (form.data.sale_type) {
-      case 'full_bottle': return isVip ? pp?.full_bottle_vip : pp?.full_bottle_regular;
-      case 'unit_based':
-      case 'unit_decant': return isVip ? pp?.price_per_unit_vip : pp?.price_per_unit_regular;
-      default: return null;
+  useEffect(() => {
+    if (selectedProduct && !isTier && !selSaleType) {
+      const opts = saleTypeOptions();
+      if (opts.length === 1) setSelSaleType(opts[0].badge);
+      else if (isOriginal) setSelSaleType('unit_decant');
+      else setShowSaleTypeModal(true);
     }
-  };
+  }, [selectedProduct]);
+
+  const previewPrice = selectedProduct && (isTier ? selSize : selSaleType)
+    ? resolvePrice(selectedProduct, effectiveST, selSize, isVip) : null;
+  const previewQty = selectedProduct && (isTier ? selSize : selSaleType)
+    ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
+  const previewCount = effectiveST === 'unit_based' ? 1 : (parseInt(selQty) || 1);
+  const previewTotal = previewPrice !== null && previewQty !== null && previewQty > 0
+    ? resolveLineTotal(effectiveST, previewPrice, previewQty) * (effectiveST === 'unit_based' ? 1 : previewCount)
+    : null;
+
+  const canAdd = selectedProduct && (isTier ? (!needsSize || selSize) : selSaleType) && (!needsSize || selSize) && (!needsQty || selQty);
 
   function submit() {
-    form.post(`/invoices/${invoice.id}/items`, { onSuccess: onClose });
+    if (!selectedProduct || (!isTier && !selSaleType)) return;
+    setProcessing(true);
+    const qty   = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
+    const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
+    const count = effectiveST === 'unit_based' ? 1 : (parseInt(selQty) || 1);
+    const sizeObj = sizes.find(s => s.id === +selSize);
+    const sizeLabel = selSize.startsWith('-custom-') ? `${selSize.replace('-custom-', '')} مل (مخصص)` : (sizeObj?.label ?? '');
+
+    const items = effectiveST === 'unit_based'
+      ? [{ product_id: selectedProduct.id, sale_type: effectiveST, size_id: selSize || null, quantity: qty, unit_price: price, line_total: resolveLineTotal(effectiveST, price, qty) }]
+      : Array.from({ length: count }, () => ({ product_id: selectedProduct.id, sale_type: effectiveST, size_id: selSize || null, quantity: qty, unit_price: price, line_total: resolveLineTotal(effectiveST, price, qty) }));
+
+    router.post(`/invoices/${invoice.id}/items`, { ...items[0], count: effectiveST === 'unit_based' ? 1 : count }, {
+      onSuccess: () => { onClose(); },
+      onFinish: () => setProcessing(false),
+    });
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* المنتج */}
-      <ModernSelect label="المنتج"
-        options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
-        defaultValue=""
-        onSelect={val => {
-          const p = products.find(p => p.name === val);
-          form.setData(prev => ({ ...prev, product_id: p ? String(p.id) : '', sale_type: '', size_id: '', quantity: '' }));
-        }}
-      />
-
-      {/* نوع البيع */}
-      {selectedProduct && (
-        <ModernSelect label="نوع البيع" options={saleTypeOptions()}
-          defaultValue=""
-          onSelect={val => {
-            const map: Record<string, string> = { 'زيتي - تقسيم': 'tier_decant', 'أصلي - تقسيم': 'unit_decant', 'عبوة كاملة': 'full_bottle', 'بالوحدة': 'unit_based' };
-            form.setData(prev => ({ ...prev, sale_type: map[val] ?? '', size_id: '', quantity: '' }));
-          }}
-        />
-      )}
-
-      {/* الحجم */}
-      {needsSize && (
-        <ModernSelect label="الحجم" options={sizes.map(s => ({ label: s.label, meta: s.value }))}
-          defaultValue=""
-          onSelect={val => form.setData('size_id', String(sizes.find(s => s.label === val)?.id ?? ''))}
-        />
-      )}
-
-      {/* الكمية */}
-      {needsQty && (
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الكمية</label>
-          <input type="number" min="0.01" step="0.01" value={form.data.quantity}
-            onChange={e => form.setData('quantity', e.target.value)}
-            placeholder="أدخل الكمية" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+    <div className="flex flex-col gap-3">
+      {/* Product */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex-1 min-w-[180px]">
+          <ModernSelect label="" placeholder="اختر المنتج..."
+            options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
+            defaultValue=""
+            onSelect={val => {
+              const p = products.find(p => p.name === val);
+              setSelProduct(p ? String(p.id) : '');
+              setSelSaleType(''); setSelSize(''); setSelQty('1');
+            }}
+          />
         </div>
-      )}
-
-      {/* معاينة السعر */}
-      {previewPrice() && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-[14px] bg-primary/5 border border-primary/20">
-          <span className="text-xs font-bold text-slate-500 dark:text-white/50">سعر الوحدة:</span>
-          <span className="font-black text-primary">{previewPrice()} د</span>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        <button onClick={submit} disabled={form.processing || !form.data.product_id || !form.data.sale_type}
-          className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
-          <Check className="w-4 h-4" /> إضافة
-        </button>
-        <button onClick={onClose}
-          className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-          <X className="w-4 h-4" /> إلغاء
-        </button>
+        {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
+          <button onClick={() => setShowSaleTypeModal(true)}
+            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-44 flex items-center justify-between cursor-pointer hover:border-primary/40 transition-all">
+            <span>{saleTypeOptions().find(o => o.badge === selSaleType)?.label || 'نوع البيع'}</span>
+            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        )}
+        {selectedProduct && (isTier || selSaleType) && (
+          <button
+            onClick={() => { setShowNumberPad(true); }}
+            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-24 text-left cursor-pointer hover:border-primary/40 transition-all">
+            {selQty || '1'}
+          </button>
+        )}
+        {previewTotal !== null && previewQty !== null && previewQty > 0 && (
+          <>
+            <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر</span>
+              <span className="font-black text-primary text-sm mr-1">{previewPrice} د</span>
+            </div>
+            <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
+              <span className="font-black text-primary text-sm mr-1">{previewTotal.toFixed(2)} د</span>
+            </div>
+          </>
+        )}
       </div>
+
+      {needsSize && (
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <SizeSelect sizes={sizes} selectedSizeId={selSize} onSizeSelect={setSelSize}
+              placeholder="الحجم" product={selectedProduct} isVip={isVip} />
+          </div>
+          <button onClick={submit} disabled={!canAdd || processing}
+            className="spatial-button flex items-center gap-2 px-6 h-14 text-sm font-black disabled:opacity-40 shrink-0">
+            <Plus className="w-5 h-5" /> إضافة
+          </button>
+        </div>
+      )}
+
+      {!needsSize && selectedProduct && (isTier || selSaleType) && (
+        <div className="flex justify-between items-center">
+          <button onClick={submit} disabled={!canAdd || processing}
+            className="spatial-button flex items-center gap-2 px-6 h-14 text-sm font-black disabled:opacity-40">
+            <Plus className="w-5 h-5" /> إضافة
+          </button>
+          <button onClick={onClose}
+            className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+            <X className="w-4 h-4" /> إلغاء
+          </button>
+        </div>
+      )}
+
+      <SaleTypeModal isOpen={showSaleTypeModal} onClose={() => setShowSaleTypeModal(false)}
+        onSelect={v => { setSelSaleType(v); setSelSize(''); setSelQty('1'); }}
+        options={saleTypeOptions()} title="اختر نوع البيع" />
+
+      <NumberPadModal isOpen={showNumberPad} onClose={() => setShowNumberPad(false)}
+        onConfirm={v => setSelQty(v)} initialValue={selQty} title={needsQty ? 'الكمية' : 'العدد'} />
     </div>
   );
 }
@@ -206,9 +285,17 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
   const [showAddItem, setShowAddItem]       = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [deleteItemId, setDeleteItemId]     = useState<number | null>(null);
+  const [editingGroup, setEditingGroup]     = useState<{ itemId: number; count: number } | null>(null);
+  const [showEditPad, setShowEditPad]       = useState(false);
 
   function removeItem(itemId: number) {
     router.delete(`/invoices/${invoice.id}/items/${itemId}`, { onSuccess: () => setDeleteItemId(null) });
+  }
+
+  function updateCount(itemId: number, newCount: number) {
+    router.patch(`/invoices/${invoice.id}/items/${itemId}/count`, { count: newCount }, {
+      onSuccess: () => setEditingGroup(null),
+    });
   }
 
   const isPaid = invoice.payment_status === 'paid';
@@ -295,7 +382,7 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
               ) : (
                 <div className="flex flex-col gap-2">
                   {/* Header — desktop only */}
-                  <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_44px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-black/3 dark:bg-white/3 rounded-[12px]">
+                  <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_88px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-black/3 dark:bg-white/3 rounded-[12px]">
                     <span className="text-center">عدد</span>
                     <span>المنتج</span>
                     <span className="text-center">حجم</span>
@@ -306,7 +393,7 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
                   {groupedItems.map(({ item, count, totalLine, ids }) => (
                     <div key={ids.join('-')}>
                       {/* Desktop row */}
-                      <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_44px] gap-3 px-4 py-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
+                      <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_88px] gap-3 px-4 py-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
                         <div className="flex items-center justify-center">
                           <span className="w-10 h-10 rounded-[10px] bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-sm">{count}</span>
                         </div>
@@ -325,12 +412,18 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
                         <div className="flex items-center justify-center">
                           <span className="font-black text-slate-800 dark:text-white text-sm">{totalLine.toFixed(2)} د</span>
                         </div>
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center justify-center gap-2">
                           {!isPaid && (
-                            <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
-                              className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button onClick={() => { setEditingGroup({ itemId: ids[0], count }); setShowEditPad(true); }}
+                                className="w-9 h-9 rounded-[10px] bg-primary/10 text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-all">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                                className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </div>
@@ -359,14 +452,20 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
                             <span className="font-black text-primary text-sm">{totalLine.toFixed(2)} د</span>
                           </div>
                         </div>
-                        {/* Row 3: type + delete */}
+                        {/* Row 3: type + edit + delete */}
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-500 dark:text-white/50 bg-black/5 dark:bg-white/8 px-2.5 py-1 rounded-[8px]">{saleTypeLabels[item.sale_type]}</span>
                           {!isPaid && (
-                            <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
-                              className="w-10 h-10 rounded-[10px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => { setEditingGroup({ itemId: ids[0], count }); setShowEditPad(true); }}
+                                className="w-10 h-10 rounded-[10px] bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 flex items-center justify-center transition-all">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                                className="w-10 h-10 rounded-[10px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -432,6 +531,12 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
             </SpatialCard>
           </div>
         </div>
+
+        <NumberPadModal isOpen={showEditPad}
+          onClose={() => { setShowEditPad(false); setEditingGroup(null); }}
+          onConfirm={v => editingGroup && updateCount(editingGroup.itemId, +v)}
+          initialValue={String(editingGroup?.count ?? 1)}
+          title="تعديل العدد" />
 
         <ConfirmModal isOpen={deleteItemId !== null} title="حذف المنتج" message="هل أنت متأكد؟ سيُعاد المخزون تلقائياً."
           onConfirm={() => deleteItemId && removeItem(deleteItemId)} onCancel={() => setDeleteItemId(null)} />
