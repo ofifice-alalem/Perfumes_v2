@@ -55,9 +55,9 @@ const saleTypeLabels: Record<string, string> = {
 };
 
 const statusConfig = {
-  paid:    { label: 'مدفوعة',     cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
-  partial: { label: 'جزئي',       cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
-  unpaid:  { label: 'غير مدفوعة', cls: 'bg-red-500/10 text-red-500 border border-red-500/20' },
+  paid:    { label: 'دفع مباشر كامل',  cls: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
+  partial: { label: 'دفع مباشر جزئي',  cls: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
+  unpaid:  { label: 'بدون دفع مباشر',  cls: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20' },
 };
 
 // ── helpers (same as Create) ─────────────────────────────────────────────────
@@ -283,7 +283,6 @@ function AddPaymentForm({ invoiceId, dueAmount, paymentMethods, onClose }: {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function InvoiceShow({ invoice, products, sizes, paymentMethods, flash }: Props) {
   const [showAddItem, setShowAddItem]       = useState(false);
-  const [showAddPayment, setShowAddPayment] = useState(false);
   const [deleteItemId, setDeleteItemId]     = useState<number | null>(null);
   const [editingGroup, setEditingGroup]     = useState<{ itemId: number; count: number } | null>(null);
   const [showEditPad, setShowEditPad]       = useState(false);
@@ -496,23 +495,9 @@ export default function InvoiceShow({ invoice, products, sizes, paymentMethods, 
             </SpatialCard>
 
             {/* Payments */}
-            <SpatialCard title="الدفعات" icon={<CreditCard className="w-4 h-4" />}
-              action={!isPaid && +invoice.due_amount > 0 && (
-                <button onClick={() => setShowAddPayment(true)}
-                  className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm">
-                  <Plus className="w-4 h-4" /> دفعة
-                </button>
-              )}
-            >
-              {showAddPayment && (
-                <div className="mb-4 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                  <AddPaymentForm invoiceId={invoice.id} dueAmount={invoice.due_amount}
-                    paymentMethods={paymentMethods} onClose={() => setShowAddPayment(false)} />
-                </div>
-              )}
-
+            <SpatialCard title="الدفعات المباشرة" icon={<CreditCard className="w-4 h-4" />}>
               {invoice.payments.length === 0 ? (
-                <p className="text-sm font-bold text-slate-400 dark:text-white/30 text-center py-4">لا توجد دفعات</p>
+                <p className="text-sm font-bold text-slate-400 dark:text-white/30 text-center py-4">لا توجد دفعات مباشرة</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {invoice.payments.map(payment => (

@@ -53,14 +53,14 @@ interface Props {
 }
 
 const statusConfig = {
-  paid:    { label: 'مدفوعة',     bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
-  partial: { label: 'جزئي',       bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
-  unpaid:  { label: 'غير مدفوعة', bg: 'bg-red-500/10 text-red-500 border border-red-500/20' },
+  paid:    { label: 'دفع مباشر كامل',  bg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' },
+  partial: { label: 'دفع مباشر جزئي',  bg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20' },
+  unpaid:  { label: 'بدون دفع مباشر',  bg: 'bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20' },
 };
 
-const tabs = ['الكل', 'مدفوعة', 'جزئي', 'غير مدفوعة'];
-const tabToStatus: Record<string, string> = { 'مدفوعة': 'paid', 'جزئي': 'partial', 'غير مدفوعة': 'unpaid' };
-const statusToTab: Record<string, string> = { paid: 'مدفوعة', partial: 'جزئي', unpaid: 'غير مدفوعة' };
+const tabs = ['الكل', 'دفع مباشر كامل', 'دفع مباشر جزئي', 'بدون دفع مباشر'];
+const tabToStatus: Record<string, string> = { 'دفع مباشر كامل': 'paid', 'دفع مباشر جزئي': 'partial', 'بدون دفع مباشر': 'unpaid' };
+const statusToTab: Record<string, string> = { paid: 'دفع مباشر كامل', partial: 'دفع مباشر جزئي', unpaid: 'بدون دفع مباشر' };
 
 const sc = 'spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full';
 const lb = 'text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest';
