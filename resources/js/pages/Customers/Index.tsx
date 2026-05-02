@@ -245,14 +245,16 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                                 dark:hover:bg-primary dark:hover:text-white dark:hover:border-primary dark:hover:shadow-primary/30">
                               <Pencil className="w-4 h-4" /> تعديل
                             </button>
-                            <button onClick={() => setPaymentCustomer(customer)}
-                              className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
-                                bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
-                                hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/25
-                                dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
-                                dark:hover:bg-emerald-500 dark:hover:text-white dark:hover:border-emerald-500 dark:hover:shadow-emerald-500/30">
-                              <CreditCard className="w-4 h-4" /> {+customer.total_debt < 0 ? 'استرداد' : 'دفعة'}
-                            </button>
+                            {+customer.total_debt > 0 && (
+                              <button onClick={() => setPaymentCustomer(customer)}
+                                className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
+                                  bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                                  hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/25
+                                  dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                                  dark:hover:bg-emerald-500 dark:hover:text-white dark:hover:border-emerald-500 dark:hover:shadow-emerald-500/30">
+                                <CreditCard className="w-4 h-4" /> دفعة
+                              </button>
+                            )}
                             {+customer.total_debt < 0 && (
                               <button onClick={() => setSettlementCustomer(customer)}
                                 className="flex items-center gap-2 px-5 h-12 rounded-[20px] font-black text-sm transition-all duration-200
@@ -493,7 +495,7 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                   </button>
                 </div>
                 <div className="mb-4 px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-sm">
-                  ⚠️ التسوية تعني رد مبلغ للعميل — ستزيد الدين الكلي
+                  المتجر دائن للعميل: {Math.abs(+settlementCustomer.total_debt)} د
                 </div>
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
@@ -554,7 +556,10 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
           onClose={() => setShowSettlementPad(false)}
           title="مبلغ التسوية"
           initialValue={settlementForm.amount}
-          onConfirm={val => setSettlementForm(f => ({ ...f, amount: val }))}
+          onConfirm={val => {
+            const max = settlementCustomer ? Math.abs(+settlementCustomer.total_debt) : 0;
+            setSettlementForm(f => ({ ...f, amount: max > 0 && +val > max ? String(max) : val }));
+          }}
         />
 
         {editingCustomer && createPortal(
