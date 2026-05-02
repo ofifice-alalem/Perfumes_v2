@@ -6,7 +6,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, Trash2, Check, X, CreditCard, Package, Pencil, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Check, X, CreditCard, Package, Pencil, AlertCircle, ArrowLeftRight } from 'lucide-react';
 
 interface Size       { id: number; label: string; value: string; }
 interface Category   { id: number; name: string; unit: string; }
@@ -325,6 +325,21 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
     });
   }
 
+  function submitSettlement() {
+    if (!debtMethod || !debtAmount || !invoice.customer) return;
+    setDebtProcessing(true);
+    router.post('/settlements', {
+      customer_id:       invoice.customer.id,
+      payment_method_id: debtMethod,
+      amount:            debtAmount,
+      notes:             `تسوية — من فاتورة #${invoice.id}`,
+      redirect_invoice:  invoice.id,
+    }, {
+      onSuccess: () => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); },
+      onFinish:  () => setDebtProcessing(false),
+    });
+  }
+
   const isPaid = false; // التعديل مسموح دائماً — الدفع المباشر لا يُغلق الفاتورة
 
   const groupedItems = Object.values(
@@ -537,8 +552,8 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
               )}
             </SpatialCard>
 
-            {/* Customer Debt */}
-            {customerDebt && invoice.customer && +customerDebt.total_debt > 0 && (
+            {/* Customer Financial Status */}
+            {customerDebt && invoice.customer && (
               <SpatialCard title="الوضع المالي للعميل" icon={<AlertCircle className="w-4 h-4" />}>
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
@@ -546,47 +561,94 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
                     <span className="font-black text-slate-800 dark:text-white">{customerDebt.total_purchases} د</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">الدين الكلي</span>
-                    <span className="font-black text-red-500 text-lg">{customerDebt.total_debt} د</span>
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">
+                      {+customerDebt.total_debt > 0 ? 'مدين' : +customerDebt.total_debt < 0 ? 'دائن' : 'مسدد'}
+                    </span>
+                    <span className={`font-black text-lg ${
+                      +customerDebt.total_debt > 0 ? 'text-red-500'
+                      : +customerDebt.total_debt < 0 ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-400 dark:text-white/30'
+                    }`}>
+                      {+customerDebt.total_debt === 0 ? 'مسدد' : `${Math.abs(+customerDebt.total_debt)} د`}
+                    </span>
                   </div>
 
-                  {!showDebtPayment ? (
-                    <button onClick={() => { setShowDebtPayment(true); setDebtAmount(customerDebt.total_debt); }}
-                      className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
-                        bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
-                        hover:bg-emerald-500 hover:text-white hover:border-emerald-500
-                        dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
-                        dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
-                      <CreditCard className="w-4 h-4" /> تسجيل دفعة
-                    </button>
-                  ) : (
-                    <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                      <ModernSelect
-                        label="وسيلة الدفع"
-                        placeholder="اختر..."
-                        options={paymentMethods.map(m => ({ label: m.name }))}
-                        defaultValue=""
-                        onSelect={val => setDebtMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-                      />
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                        <button onClick={() => setShowDebtPad(true)}
-                          className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
-                          {debtAmount || <span className="text-slate-400 dark:text-white/30">{customerDebt.total_debt}</span>}
-                        </button>
+                  {/* مدين → دفعة */}
+                  {+customerDebt.total_debt > 0 && (
+                    !showDebtPayment ? (
+                      <button onClick={() => { setShowDebtPayment(true); setDebtAmount(String(+customerDebt.total_debt)); }}
+                        className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                          bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                          hover:bg-emerald-500 hover:text-white hover:border-emerald-500
+                          dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                          dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
+                        <CreditCard className="w-4 h-4" /> تسجيل دفعة
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        <ModernSelect label="وسيلة الدفع" placeholder="اختر..."
+                          options={paymentMethods.map(m => ({ label: m.name }))}
+                          defaultValue=""
+                          onSelect={val => setDebtMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                          <button onClick={() => setShowDebtPad(true)}
+                            className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                            {debtAmount || <span className="text-slate-400 dark:text-white/30">{customerDebt.total_debt}</span>}
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={submitDebtPayment} disabled={debtProcessing || !debtMethod || !debtAmount}
+                            className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                            <Check className="w-4 h-4" /> تأكيد
+                          </button>
+                          <button onClick={() => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); }}
+                            className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={submitDebtPayment}
-                          disabled={debtProcessing || !debtMethod || !debtAmount}
-                          className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
-                          <Check className="w-4 h-4" /> تأكيد
-                        </button>
-                        <button onClick={() => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); }}
-                          className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                          <X className="w-4 h-4" />
-                        </button>
+                    )
+                  )}
+
+                  {/* دائن → تسوية */}
+                  {+customerDebt.total_debt < 0 && (
+                    !showDebtPayment ? (
+                      <button onClick={() => { setShowDebtPayment(true); setDebtAmount(String(Math.abs(+customerDebt.total_debt))); }}
+                        className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                          bg-amber-500/10 text-amber-600 border border-amber-500/20
+                          hover:bg-amber-500 hover:text-white hover:border-amber-500
+                          dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30
+                          dark:hover:bg-amber-500 dark:hover:text-white transition-all">
+                        <ArrowLeftRight className="w-4 h-4" /> إنشاء تسوية
+                      </button>
+                    ) : (
+                      <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        <ModernSelect label="وسيلة الرد" placeholder="اختر..."
+                          options={paymentMethods.map(m => ({ label: m.name }))}
+                          defaultValue=""
+                          onSelect={val => setDebtMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                        />
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                          <button onClick={() => setShowDebtPad(true)}
+                            className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                            {debtAmount || <span className="text-slate-400 dark:text-white/30">{Math.abs(+customerDebt.total_debt)}</span>}
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={submitSettlement} disabled={debtProcessing || !debtMethod || !debtAmount}
+                            className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+                            <Check className="w-4 h-4" /> تأكيد
+                          </button>
+                          <button onClick={() => { setShowDebtPayment(false); setDebtMethod(''); setDebtAmount(''); }}
+                            className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )
                   )}
                 </div>
               </SpatialCard>
@@ -603,7 +665,11 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
         <NumberPadModal isOpen={showDebtPad}
           onClose={() => setShowDebtPad(false)}
           onConfirm={v => {
-            const max = customerDebt ? +customerDebt.total_debt : 0;
+            const max = customerDebt
+              ? +customerDebt.total_debt > 0
+                ? +customerDebt.total_debt
+                : Math.abs(+customerDebt.total_debt)
+              : 0;
             setDebtAmount(max > 0 && +v > max ? String(max) : v);
           }}
           initialValue={debtAmount}

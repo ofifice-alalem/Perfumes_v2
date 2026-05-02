@@ -96,7 +96,7 @@ class PaymentRepository extends BaseRepository implements PaymentRepositoryInter
         $totalDebt      = $totalPurchases - $totalPaid + $totalSettled;
 
         $customer->update([
-            'total_debt'      => max(0, $totalDebt),
+            'total_debt'      => $totalDebt,
             'total_purchases' => $totalPurchases,
         ]);
     }

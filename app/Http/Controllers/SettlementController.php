@@ -40,9 +40,15 @@ class SettlementController extends Controller
             'payment_method_id' => 'required|exists:payment_methods,id',
             'amount'            => 'required|numeric|min:0.01',
             'notes'             => 'nullable|string',
+            'redirect_invoice'  => 'nullable|integer',
         ]);
 
         $this->settlements->createSettlement($data);
+
+        if (!empty($data['redirect_invoice'])) {
+            return redirect()->route('invoices.show', $data['redirect_invoice'])
+                ->with('success', 'تم إنشاء التسوية بنجاح');
+        }
 
         return back()->with('success', 'تم إنشاء التسوية بنجاح');
     }

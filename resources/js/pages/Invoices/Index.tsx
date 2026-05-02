@@ -259,8 +259,8 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="flex flex-col items-end">
                         <span className="font-black text-slate-800 dark:text-white text-sm">{inv.total} د</span>
-                        {+inv.due_amount > 0 && (
-                          <span className="text-xs font-bold text-red-500">متبقي: {inv.due_amount}</span>
+                        {inv.payment_status === 'partial' && (
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">دفع مباشر: {inv.paid_amount} د</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
@@ -292,8 +292,8 @@ export default function InvoicesIndex({ invoices, categories, sellers, customers
                     <div className="flex items-center justify-between mt-1">
                       <div className="flex flex-col">
                         <span className="font-black text-slate-800 dark:text-white text-sm">{inv.total} د</span>
-                        {+inv.due_amount > 0 && (
-                          <span className="text-xs font-bold text-red-500">متبقي: {inv.due_amount}</span>
+                        {inv.payment_status === 'partial' && (
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">دفع مباشر: {inv.paid_amount} د</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
