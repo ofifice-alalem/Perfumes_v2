@@ -1,4 +1,4 @@
-# Step 9 — فصل الدفع عن الفاتورة (نظام الإيصالات)
+# Step 9 — فصل الدفع عن الفاتورة
 
 ## الفكرة الجوهرية
 
@@ -11,7 +11,7 @@
 ## معادلة الدين الكلي
 
 ```
-دين العميل = مجموع الفواتير - مجموع الإيصالات + مجموع التسويات
+دين العميل = مجموع الفواتير - مجموع المدفوعات + مجموع التسويات
 ```
 
 > إذا كانت النتيجة سالبة → المتجر مدين للعميل
@@ -23,19 +23,19 @@
 ### الزبون النقدي
 - عند إنشاء الفاتورة يجب الدفع الكامل فوراً
 - لا يُسمح بأي متبقي
-- الإيصال يُنشأ تلقائياً مع الفاتورة
+- الدفع يُنشأ تلقائياً مع الفاتورة
 
 ### الزبون المسجّل
-- الدين الكلي = مجموع كل فواتيره - مجموع كل إيصالاته + مجموع كل تسوياته
-- لا يوجد ربط إجباري بين إيصال وفاتورة معينة
-- يمكن سداد الدين من أي واجهة (صفحة الفاتورة، صفحة العميل، صفحة الإيصالات)
+- الدين الكلي = مجموع كل فواتيره - مجموع كل مدفوعاته + مجموع كل تسوياته
+- لا يوجد ربط إجباري بين دفعة وفاتورة معينة
+- يمكن سداد الدين من أي واجهة (صفحة الفاتورة، صفحة العميل، صفحة المدفوعات)
 - عند تعديل فاتورة → الدين يُعاد حسابه تلقائياً
 
 ---
 
 ## التغييرات في قاعدة البيانات
 
-### جدول `payments` (يتحول إلى `receipts`)
+### جدول `payments` (تعديل فقط)
 
 ```
 الحالي:
@@ -46,9 +46,9 @@
 - notes
 - created_at
 
-الجديد:
+بعد التعديل:
 - id
-- customer_id (required, FK) ← التغيير الأساسي
+- customer_id (required, FK) ← التغيير الوحيد
 - invoice_id (nullable, FK)  ← للمرجعية فقط، لا يُستخدم في الحساب
 - payment_method_id
 - amount
@@ -72,26 +72,24 @@
 ```
 يبقى كما هو:
 - total_purchases (يُحسب من مجموع الفواتير)
-- total_debt     (يُحسب من الفواتير - الإيصالات + التسويات)
+- total_debt     (يُحسب من الفواتير - المدفوعات + التسويات)
 ```
 
 ### جدول `invoices`
 ```
-يُحذف منه:
-- paid_amount   ← يُحسب ديناميكياً من receipts
+يبقى كـ cached values تُحدَّث عند كل دفعة جديدة:
+- paid_amount   ← يُحسب من payments التي تحمل invoice_id هذه
 - due_amount    ← يُحسب ديناميكياً
 - payment_status ← يُحسب ديناميكياً
-
-أو يبقى كـ cached values تُحدَّث عند كل إيصال جديد
 ```
 
-> **ملاحظة:** الأفضل إبقاؤها كـ cached values لتجنب N+1 queries
+> **ملاحظة:** إبقاؤها كـ cached values لتجنب N+1 queries
 
 ---
 
 ## النماذج (Models)
 
-### Receipt (جديد — بدل Payment)
+### Payment (تعديل)
 ```php
 - id
 - customer_id
@@ -126,34 +124,34 @@ Relations:
 ### Customer (تعديل)
 ```php
 // علاقات جديدة
-public function receipts(): HasMany
+public function payments(): HasMany
 public function settlements(): HasMany
 
 // حساب الدين
 public function getTotalDebtAttribute():
-  = sum(invoices.total) - sum(receipts.amount) + sum(settlements.amount)
+  = sum(invoices.total) - sum(payments.amount) + sum(settlements.amount)
 ```
 
 ### Invoice (تعديل)
 ```php
-// العلاقة تتغير
-public function receipts(): HasMany  // بدل payments()
+// العلاقة تبقى كما هي
+public function payments(): HasMany
   → where invoice_id = this->id
 
 // recalculate() تتغير
-// paid_amount يُحسب من receipts التي تحمل invoice_id هذه
+// paid_amount يُحسب من payments التي تحمل invoice_id هذه
 ```
 
 ---
 
 ## الـ Repositories
 
-### ReceiptRepository (جديد)
+### PaymentRepository (تعديل)
 ```
 - allWithRelations()
 - filter(array $params)
 - findWithRelations(int $id)
-- createReceipt(array $data): Receipt
+- createPayment(array $data): Payment
 - getCustomerBalance(int $customerId): decimal
 ```
 
@@ -168,27 +166,27 @@ public function receipts(): HasMany  // بدل payments()
 ### CustomerRepository (تعديل)
 ```
 - getTotalDebt(int $customerId): decimal
-  = sum(invoices) - sum(receipts) + sum(settlements)
+  = sum(invoices) - sum(payments) + sum(settlements)
 - getTotalPaid(int $customerId): decimal
 - recalculateBalance(int $customerId): void
 ```
 
 ### InvoiceRepository (تعديل)
 ```
-- addPayment() → يُحذف
-- recalculateInvoice() → يحسب من receipts بـ invoice_id
+- addPayment() → يبقى لكن يربط بالعميل بدل الفاتورة
+- recalculateInvoice() → يحسب من payments بـ invoice_id
 ```
 
 ---
 
 ## الـ Controllers
 
-### ReceiptController (جديد)
+### PaymentController (تعديل للدعم المستقل)
 ```
-GET    /receipts          → index (قائمة الإيصالات مع فلترة)
-GET    /receipts/{id}     → show (تفاصيل إيصال)
-POST   /receipts          → store (إنشاء إيصال جديد)
-DELETE /receipts/{id}     → destroy
+GET    /payments          → index (قائمة المدفوعات مع فلترة)
+GET    /payments/{id}     → show (تفاصيل دفعة)
+POST   /payments          → store (إنشاء دفعة جديدة)
+DELETE /payments/{id}     → destroy
 ```
 
 ### SettlementController (جديد)
@@ -201,16 +199,16 @@ DELETE /settlements/{id}     → destroy
 
 ### InvoiceController (تعديل)
 ```
-- حذف addPayment()
-- destroy() → يتحقق من receipts المرتبطة بالفاتورة
+- addPayment() → يبقى لكن يربط بالعميل بدل الفاتورة
+- destroy() → يتحقق من payments المرتبطة بالفاتورة
   إذا وجد مبلغ مدفوع → يعرض تنبيه ويطلب تأكيداً قبل الحذف
   بعد الحذف → يعرض خيار إنشاء تسوية بقيمة المبلغ المدفوع
-- إضافة منطق إنشاء Receipt تلقائي عند storeWithItems()
+- منطق إنشاء Payment تلقائي عند storeWithItems()
 ```
 
 ### CustomerController (تعديل)
 ```
-- show() يُضيف total_debt و receipts و settlements للـ props
+- show() يُضيف total_debt و payments و settlements للـ props
 ```
 
 ---
@@ -219,24 +217,25 @@ DELETE /settlements/{id}     → destroy
 
 ### صفحات جديدة
 
-#### `/receipts` — قائمة الإيصالات
+#### `/payments` — قائمة المدفوعات
 ```
 - نفس تصميم صفحة الفواتير
 - فلاتر: العميل، وسيلة الدفع، التاريخ من/إلى، المبلغ من/إلى
 - pagination
-- كل إيصال يعرض: رقمه، العميل، المبلغ، وسيلة الدفع، التاريخ، الفاتورة المرتبطة (إن وجدت)
+- كل دفعة تعرض: رقمها، العميل، المبلغ، وسيلة الدفع، التاريخ، الفاتورة المرتبطة (إن وجدت)
+- زر "دفعة جديدة"
 ```
 
-#### `/receipts/{id}` — تفاصيل إيصال
+#### `/payments/{id}` — تفاصيل دفعة
 ```
-- معلومات الإيصال
+- معلومات الدفعة
 - العميل + دينه الكلي
 - الفاتورة المرتبطة (إن وجدت) مع رابط لها
 ```
 
 #### `/settlements` — قائمة التسويات
 ```
-- نفس تصميم صفحة الإيصالات
+- نفس تصميم صفحة المدفوعات
 - فلاتر: العميل، وسيلة الدفع، التاريخ من/إلى، المبلغ من/إلى
 - pagination
 - كل تسوية تعرض: رقمها، العميل، المبلغ، وسيلة الدفع، التاريخ، الفاتورة المرتبطة (إن وجدت)
@@ -259,26 +258,25 @@ DELETE /settlements/{id}     → destroy
 ┌─────────────────────────────────────┐
 │ الوضع المالي للعميل                 │
 │ الدين السابق: 150.00 د              │
-│ [زر: إنشاء إيصال للدين ←]           │
+│ [زر: إنشاء دفعة للدين ←]            │
 └─────────────────────────────────────┘
 
-- زر "إنشاء إيصال للدين" يفتح نموذج إيصال جديد بقيمة الدين (قابل للتعديل)
-- الإيصال يُنشأ مستقلاً (بدون invoice_id)
+- زر "إنشاء دفعة للدين" يفتح نموذج دفعة جديدة بقيمة الدين (قابل للتعديل)
+- الدفعة تُنشأ مستقلاً (بدون invoice_id)
 - بعد الحفظ يُحدَّث الدين المعروض تلقائياً
 - إذا كان الدين = 0 لا يظهر هذا القسم
 ```
 
 #### صفحة تفاصيل الفاتورة `/invoices/{id}`
 ```
-- قسم "الدفعات" يصبح "الإيصالات المرتبطة"
-- يعرض الإيصالات التي تحمل invoice_id = هذه الفاتورة
-- يبقى زر "إضافة إيصال" يُنشئ إيصالاً مرتبطاً بهذه الفاتورة
+- قسم "الدفعات" يبقى باسمه لكن يعرض payments التي تحمل invoice_id هذه
+- يبقى زر "إضافة دفعة" يُنشئ دفعة مرتبطة بهذه الفاتورة
 - عند الحذف إذا كان paid_amount > 0 يظهر modal تنبيه:
 
   ┌──────────────────────────────────────────┐
   │ ⚠️ تنبيه                                 │
   │ هذه الفاتورة تحتوي على مبلغ مدفوع       │
-  │ (40.00 د). هل تريد إنشاء تسوية؟       │
+  │ (40.00 د). هل تريد إنشاء تسوية؟         │
   │ [نعم، أنشئ تسوية] [لا، احذف فقط]        │
   └──────────────────────────────────────────┘
 ```
@@ -287,12 +285,12 @@ DELETE /settlements/{id}     → destroy
 ```
 - بطاقة "الوضع المالي":
   - إجمالي المشتريات
-  - إجمالي الإيصالات
+  - إجمالي المدفوعات
   - إجمالي التسويات
-  - الدين الكلي = المشتريات - الإيصالات + التسويات
-- زر "إيصال جديد" → نموذج دفع مستقل
+  - الدين الكلي = المشتريات - المدفوعات + التسويات
+- زر "دفعة جديدة" → نموذج دفع مستقل
 - زر "تسوية جديدة" → نموذج تسوية مستقلة
-- تاريخ الإيصالات والتسويات كاملاً
+- تاريخ المدفوعات والتسويات كاملاً
 ```
 
 ---
@@ -306,25 +304,25 @@ DELETE /settlements/{id}     → destroy
 3. إضافة دفع كامل (إجباري)
 4. عند الحفظ:
    - إنشاء Invoice
-   - إنشاء Receipt بـ customer_id = 1 (نقدي) و invoice_id = invoice.id
+   - إنشاء Payment بـ customer_id = 1 (نقدي) و invoice_id = invoice.id
    - التحقق: amount >= invoice.total (وإلا رفض)
 ```
 
 ### إنشاء فاتورة لزبون مسجّل
 ```
 1. اختيار العميل → يظهر دينه السابق
-2. (اختياري) سداد الدين القديم → إنشاء Receipt مستقل
+2. (اختياري) سداد الدين القديم → إنشاء Payment مستقل
 3. إضافة منتجات للفاتورة الجديدة
 4. (اختياري) إضافة دفع للفاتورة الجديدة
 5. عند الحفظ:
    - إنشاء Invoice
-   - إنشاء Receipt بـ invoice_id = invoice.id (إن وجد دفع)
+   - إنشاء Payment بـ invoice_id = invoice.id (إن وجد دفع)
    - تحديث total_debt للعميل
 ```
 
-### سداد دين من صفحة الإيصالات
+### سداد دين من صفحة المدفوعات
 ```
-1. POST /receipts
+1. POST /payments
    { customer_id, payment_method_id, amount, notes }
    invoice_id = null
 2. تحديث total_debt للعميل تلقائياً
@@ -356,17 +354,17 @@ DELETE /settlements/{id}     → destroy
 ## ترتيب التنفيذ المقترح
 
 ```
-1.  Migration: تعديل جدول payments → receipts
+1.  Migration: إضافة customer_id لجدول payments
 2.  Migration: إنشاء جدول settlements
-3.  Models: Receipt + Settlement + تعديل Customer + Invoice
-4.  ReceiptRepository + Interface
-5.  SettlementRepository + Interface
-6.  ReceiptController + Routes
-7.  SettlementController + Routes
-8.  Frontend: /receipts (Index + Show)
+3.  Models: تعديل Payment + إنشاء Settlement + تعديل Customer + Invoice
+4.  PaymentRepository (تعديل) + Interface
+5.  SettlementRepository (جديد) + Interface
+6.  PaymentController (تعديل) + Routes
+7.  SettlementController (جديد) + Routes
+8.  Frontend: /payments (Index + Show)
 9.  Frontend: /settlements (Index + Show)
-10. Frontend: تعديل Create.tsx (قسم الدين السابق + إيصال للدين)
-11. Frontend: تعديل Show.tsx (إيصالات + تنبيه الحذف + تسوية)
+10. Frontend: تعديل Create.tsx (قسم الدين السابق + دفعة للدين)
+11. Frontend: تعديل Show.tsx (دفعات + تنبيه الحذف + تسوية)
 12. Frontend: تعديل Customers (بطاقة الوضع المالي)
 ```
 
@@ -374,9 +372,9 @@ DELETE /settlements/{id}     → destroy
 
 ## ملاحظات مهمة
 
-- `invoice.payment_status` يبقى كـ cached value يُحسب من receipts التي تحمل `invoice_id`
-- الإيصالات المستقلة (بدون invoice_id) تُخفّض الدين الكلي للعميل فقط
+- `invoice.payment_status` يبقى كـ cached value يُحسب من payments التي تحمل `invoice_id`
+- المدفوعات المستقلة (بدون invoice_id) تُخفّض الدين الكلي للعميل فقط
 - التسويات المستقلة (بدون invoice_id) تزيد الدين الكلي للعميل (المتجر مدين)
 - الدين السالب يظهر بلون مختلف في الواجهة (المتجر مدين للعميل)
-- عند حذف فاتورة → إيصالاتها تبقى كما هي (سجل مالي للعميل لا يُمس)
-- الزبون النقدي (id=1) لا يظهر في صفحة الإيصالات/التسويات المستقلة
+- عند حذف فاتورة → مدفوعاتها تبقى كما هي (سجل مالي للعميل لا يُمس)
+- الزبون النقدي (id=1) لا يظهر في صفحة المدفوعات/التسويات المستقلة
