@@ -130,6 +130,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [notes,        setNotes]        = useState('');
   const [cart,         setCart]         = useState<CartItem[]>([]);
   const [payments,     setPayments]     = useState<PaymentEntry[]>([]);
+  const [debtPayment,  setDebtPayment]  = useState<PaymentEntry | null>(null); // دفعة سداد الدين المستقلة
   const [processing,   setProcessing]   = useState(false);
   const [selProduct,   setSelProduct]   = useState('');
   const [selSaleType,  setSelSaleType]  = useState('');
@@ -251,8 +252,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     ) : null;
 
   const total     = cart.reduce((s, i) => s + i.line_total, 0);
-  const totalPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0);
-  const remaining = total - totalPaid;
+  const debtAmount = debtPayment ? (+debtPayment.amount || 0) : 0;
+  const grandTotal = total + debtAmount;
+  const totalPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0) + debtAmount;
+  const remaining = grandTotal - totalPaid;
   const canAdd    = selectedProduct && (isTier ? (!needsSize || selSize) : selSaleType) && (!needsSize || selSize) && (!needsQty || selQty);
 
   function addToCart() {
@@ -378,8 +381,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   function addPayment() {
     if (!selMethod || !selAmount || +selAmount <= 0) return;
     
-    // Check if total payments would exceed invoice total
-    const currentPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0);
+    const currentPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0)
+                      + (debtPayment ? (+debtPayment.amount || 0) : 0);
     if (currentPaid + (+selAmount) > total) {
       alert(`المبلغ يتجاوز إجمالي الفاتورة. المتاح: ${(total - currentPaid).toFixed(2)} د`);
       return;
@@ -443,7 +446,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     setProcessing(true);
     router.post('/invoices/with-items', {
       customer_id: customerId || null, customer_type: customerType,
-      notes, items: cart, payments,
+      notes, items: cart,
+      payments,
+      debt_payment: debtPayment || null,
     }, { 
       onFinish: () => setProcessing(false) 
     });
@@ -495,6 +500,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     setNotes('');
     setCart([]);
     setPayments([]);
+    setDebtPayment(null);
     setSelProduct('');
     setSelSaleType('');
     setSelSize('');
@@ -785,11 +791,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     onClick={() => {
                       const method = paymentMethods[0];
                       if (!method) return;
-                      setPayments(prev => [...prev, {
+                      setDebtPayment({
                         payment_method_id: String(method.id),
                         method_name: method.name,
                         amount: debt.toFixed(2),
-                      }]);
+                      });
                     }}
                     className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0">
                     <CreditCard className="w-3.5 h-3.5" /> سداد الدين
@@ -1184,16 +1190,37 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
             {/* Totals */}
             <div className="px-5 py-4 flex flex-col gap-2 border-b border-black/5 dark:border-white/5">
-              {[
-                { label: 'الإجمالي', value: total.toFixed(2),     cls: 'text-slate-800 dark:text-white text-lg font-black' },
-                { label: 'المدفوع',  value: totalPaid.toFixed(2), cls: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-                { label: 'المتبقي',  value: remaining.toFixed(2), cls: remaining > 0 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold' },
-              ].map(({ label, value, cls }) => (
-                <div key={label} className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-500 dark:text-white/40">{label}</span>
-                  <span className={cls}>{value} د</span>
+              {debtPayment ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">الإجمالي الكلي</span>
+                    <span className="text-slate-800 dark:text-white text-lg font-black">{grandTotal.toFixed(2)} د</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-400 dark:text-white/30">الفاتورة الحالية</span>
+                    <span className="text-sm font-bold text-slate-600 dark:text-white/60">{total.toFixed(2)} د</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-red-500">سداد الدين</span>
+                    <span className="text-sm font-bold text-red-500">{debtPayment.amount} د</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-500 dark:text-white/40">الإجمالي</span>
+                  <span className="text-slate-800 dark:text-white text-lg font-black">{total.toFixed(2)} د</span>
                 </div>
-              ))}
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-500 dark:text-white/40">المدفوع</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{totalPaid.toFixed(2)} د</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-500 dark:text-white/40">المتبقي</span>
+                <span className={remaining > 0.01 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold'}>
+                  {remaining.toFixed(2)} د
+                </span>
+              </div>
             </div>
 
             {/* Payment */}
@@ -1232,6 +1259,23 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 </div>
               )}
               
+              {/* Debt payment entry */}
+              {debtPayment && (
+                <div className="mb-1.5 flex items-center justify-between px-3 py-2 rounded-[10px] bg-red-500/5 border border-red-500/15">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                    <span className="font-bold text-slate-700 dark:text-white/70 text-sm">سداد الدين — {debtPayment.method_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-red-500 text-sm">{debtPayment.amount} د</span>
+                    <button onClick={() => setDebtPayment(null)}
+                      className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {payments.map((p, idx) => (
                 <div key={idx} className="mb-1.5">
                   {editingPayment === idx ? (
@@ -1297,7 +1341,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
                 className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-base font-black disabled:opacity-40">
                 <Check className="w-5 h-5" />
-                {cart.length > 0 ? `إتمام البيع — ${total.toFixed(2)} د` : 'إتمام البيع'}
+                {cart.length > 0 ? `إتمام البيع — ${grandTotal.toFixed(2)} د` : 'إتمام البيع'}
               </button>
               
               <div className="flex gap-2">

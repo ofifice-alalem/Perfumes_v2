@@ -63,6 +63,9 @@ class InvoiceController extends Controller
             'payments'                     => 'nullable|array',
             'payments.*.payment_method_id' => 'required|exists:payment_methods,id',
             'payments.*.amount'            => 'required|numeric|min:0.01',
+            'debt_payment'                          => 'nullable|array',
+            'debt_payment.payment_method_id'        => 'required_with:debt_payment|exists:payment_methods,id',
+            'debt_payment.amount'                   => 'required_with:debt_payment|numeric|min:0.01',
         ]);
 
         $data['user_id'] = Auth::id() ?? 1;
@@ -74,6 +77,17 @@ class InvoiceController extends Controller
 
         foreach ($data['payments'] ?? [] as $payment) {
             $this->invoices->addPayment($invoice->id, $payment);
+        }
+
+        // دفعة سداد الدين المستقلة (بدون invoice_id)
+        if (!empty($data['debt_payment']) && $invoice->customer_id && $invoice->customer_id !== 1) {
+            \App\Models\Payment::create([
+                'customer_id'       => $invoice->customer_id,
+                'invoice_id'        => null,
+                'payment_method_id' => $data['debt_payment']['payment_method_id'],
+                'amount'            => $data['debt_payment']['amount'],
+                'notes'             => 'سداد دين سابق',
+            ]);
         }
 
         // تحديث دين العميل بعد إنشاء الفاتورة
