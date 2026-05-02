@@ -215,10 +215,9 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, fil
               payments.data.map(payment => (
                 <div key={payment.id} className="spatial-card overflow-hidden flex flex-col sm:flex-row sm:items-stretch">
 
-                  {/* Color strip */}
-                  <div className="flex sm:flex-col sm:w-28 shrink-0 items-center sm:justify-center justify-between px-4 py-3 sm:px-3 sm:py-0 border-b sm:border-b-0 sm:border-l border-black/5 dark:border-white/5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  {/* Color strip - desktop only */}
+                  <div className="hidden sm:flex sm:flex-col sm:w-28 shrink-0 items-center sm:justify-center sm:px-3 sm:py-0 border-l border-black/5 dark:border-white/5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <span className="text-[13px] font-black">{payment.amount} د</span>
-                    <span className="sm:hidden text-[13px] font-black text-primary">#{payment.id}</span>
                   </div>
 
                   {/* Desktop */}
@@ -262,32 +261,25 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, fil
                   {/* Mobile */}
                   <div className="sm:hidden p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center font-black text-emerald-600 dark:text-emerald-400 shrink-0">
-                          {payment.customer?.name?.charAt(0) ?? '—'}
-                        </div>
-                        <div>
-                          <div className="font-black text-slate-800 dark:text-white text-sm">{payment.customer?.name ?? 'زبون نقدي'}</div>
-                          <div className="text-xs font-bold text-slate-400 dark:text-white/40">{payment.payment_method.name}</div>
-                        </div>
+                      <span className="text-xs font-bold text-slate-400 dark:text-white/40">{new Date(payment.created_at).toLocaleDateString('ar')}</span>
+                      <span className="text-xs font-black text-primary">#{payment.id}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-black text-slate-800 dark:text-white text-sm">{payment.customer?.name ?? 'زبون نقدي'}</div>
+                        <div className="text-xs font-bold text-slate-400 dark:text-white/40">{payment.payment_method.name}</div>
                       </div>
                       <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">{payment.amount} د</span>
                     </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
-                      <span className="text-xs font-bold text-slate-400 dark:text-white/40">
-                        {new Date(payment.created_at).toLocaleDateString('ar')}
-                        {payment.invoice && <span className="mr-2 text-primary/70"> • فاتورة #{payment.invoice.id}</span>}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Link href={`/payments/${payment.id}`}
-                          className="flex items-center gap-1.5 px-3 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 font-bold text-xs transition-all">
-                          تفاصيل
-                        </Link>
-                        <button onClick={() => setDeleteId(payment.id)}
-                          className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2 pt-2 border-t border-black/5 dark:border-white/5">
+                      <Link href={`/payments/${payment.id}`}
+                        className="flex-1 flex items-center justify-center h-9 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 font-bold text-xs transition-all">
+                        تفاصيل
+                      </Link>
+                      <button onClick={() => setDeleteId(payment.id)}
+                        className="flex-1 flex items-center justify-center h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 font-bold text-xs transition-all">
+                        حذف
+                      </button>
                     </div>
                   </div>
                 </div>
