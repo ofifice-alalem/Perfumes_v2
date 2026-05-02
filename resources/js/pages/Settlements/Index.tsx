@@ -5,8 +5,9 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, ArrowLeftRight, SlidersHorizontal, ChevronDown, ChevronLeft, ChevronRight, Check, X } from 'lucide-react';
+import { DateInput } from '@/components/ui/DateInput';
 
-interface Customer      { id: number; name: string; }
+interface Customer      { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
 interface Settlement {
   id: number; amount: string; notes: string | null; created_at: string;
@@ -34,8 +35,12 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
   const [paymentMethodId, setPaymentMethodId] = useState(filters.payment_method_id ?? '');
   const [dateFrom,        setDateFrom]        = useState(filters.date_from         ?? '');
   const [dateTo,          setDateTo]          = useState(filters.date_to           ?? '');
+  const [amountMin,       setAmountMin]       = useState(filters.amount_min        ?? '');
+  const [amountMax,       setAmountMax]       = useState(filters.amount_max        ?? '');
 
   const [form, setForm] = useState({ customer_id: '', payment_method_id: '', amount: '', notes: '' });
+  const selectedCustomer = customers.find(c => String(c.id) === form.customer_id);
+  const isDebtor = selectedCustomer ? +selectedCustomer.total_debt > 0 : false;
 
   function applyFilters() {
     const p: Record<string, string> = {};
@@ -43,11 +48,14 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
     if (paymentMethodId) p.payment_method_id = paymentMethodId;
     if (dateFrom)        p.date_from         = dateFrom;
     if (dateTo)          p.date_to           = dateTo;
+    if (amountMin)       p.amount_min        = amountMin;
+    if (amountMax)       p.amount_max        = amountMax;
     router.get('/settlements', p, { preserveState: true, replace: true });
   }
 
   function resetFilters() {
     setCustomerId(''); setPaymentMethodId(''); setDateFrom(''); setDateTo('');
+    setAmountMin(''); setAmountMax('');
     router.get('/settlements', {}, { preserveState: true, replace: true });
   }
 
@@ -77,15 +85,19 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
         options={[{ label: 'الكل', value: '' }, ...paymentMethods.map(m => ({ label: m.name, value: String(m.id) }))]}
         onSelect={v => setPaymentMethodId(v)}
       />
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">من تاريخ</label>
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-          className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">إلى تاريخ</label>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-          className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+      <DateInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+      <DateInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
+      <div className="flex gap-3">
+        <div className="flex flex-col gap-2 flex-1">
+          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ من</label>
+          <input type="number" min="0" value={amountMin} onChange={e => setAmountMin(e.target.value)}
+            placeholder="0" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+        </div>
+        <div className="flex flex-col gap-2 flex-1">
+          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ إلى</label>
+          <input type="number" min="0" value={amountMax} onChange={e => setAmountMax(e.target.value)}
+            placeholder="∞" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+        </div>
       </div>
       <button onClick={applyFilters}
         className="w-full h-11 rounded-[14px] spatial-button flex items-center justify-center gap-2 font-bold text-sm">
@@ -120,35 +132,50 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
         {/* Create Form */}
         {showCreate && (
           <SpatialCard title="تسوية جديدة" icon={<Plus className="w-4 h-4" />}>
-            <div className="mb-4 px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold">
-              ⚠️ التسوية تعني أن المتجر يُعيد مبلغاً للعميل
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <ModernSelect label="العميل" placeholder="اختر العميل..."
                 defaultValue=""
-                options={customers.map(c => ({ label: c.name, value: String(c.id) }))}
-                onSelect={v => setForm(f => ({ ...f, customer_id: v }))}
+                options={customers.filter(c => +c.total_debt < 0).map(c => ({ label: c.name, value: String(c.id) }))}
+                onSelect={v => setForm(f => ({ ...f, customer_id: v, amount: '' }))}
               />
               <ModernSelect label="وسيلة الرد" placeholder="اختر وسيلة الدفع..."
                 defaultValue=""
                 options={paymentMethods.map(m => ({ label: m.name, value: String(m.id) }))}
                 onSelect={v => setForm(f => ({ ...f, payment_method_id: v }))}
               />
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ المُرجَع</label>
-                <button onClick={() => setShowPad(true)}
-                  className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
-                  {form.amount || <span className="text-slate-400 dark:text-white/30">0.00</span>}
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السبب / ملاحظات</label>
-                <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                  placeholder="سبب التسوية..." className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-              </div>
             </div>
+
+            {selectedCustomer && (
+              isDebtor ? (
+                <div className="mt-4 px-4 py-3 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">
+                  العميل مدين بـ {selectedCustomer.total_debt} د — لا يمكن إنشاء تسوية، استخدم الدفعات
+                </div>
+              ) : (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {+selectedCustomer.total_debt < 0 && (
+                    <div className="sm:col-span-2 px-4 py-3 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
+                      المتجر دائن لهذا العميل بـ {Math.abs(+selectedCustomer.total_debt)} د
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ المُرجَع</label>
+                    <button onClick={() => setShowPad(true)}
+                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+                      {form.amount || <span className="text-slate-400 dark:text-white/30">0.00</span>}
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السبب / ملاحظات</label>
+                    <input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                      placeholder="سبب التسوية..." className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                  </div>
+                </div>
+              )
+            )}
+
             <div className="flex items-center gap-2 mt-4">
-              <button onClick={submitCreate} disabled={processing || !form.customer_id || !form.payment_method_id || !form.amount}
+              <button onClick={submitCreate}
+                disabled={processing || !form.customer_id || !form.payment_method_id || !form.amount || isDebtor}
                 className="spatial-button flex items-center gap-2 px-6 h-11 text-sm disabled:opacity-50">
                 <Check className="w-4 h-4" /> حفظ
               </button>
@@ -305,7 +332,10 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
 
         <NumberPadModal isOpen={showPad} onClose={() => setShowPad(false)} title="المبلغ"
           initialValue={form.amount}
-          onConfirm={v => setForm(f => ({ ...f, amount: v }))} />
+          onConfirm={v => {
+            const max = selectedCustomer ? Math.abs(+selectedCustomer.total_debt) : 0;
+            setForm(f => ({ ...f, amount: max > 0 && +v > max ? String(max) : v }));
+          }} />
       </div>
     </AppShell>
   );

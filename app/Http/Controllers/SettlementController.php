@@ -19,7 +19,7 @@ class SettlementController extends Controller
             'settlements'    => $this->settlements->filter($request->only(
                 'customer_id', 'payment_method_id', 'date_from', 'date_to', 'amount_min', 'amount_max', 'page'
             )),
-            'customers'      => Customer::where('is_active', true)->where('id', '!=', 1)->orderBy('name')->get(['id', 'name']),
+            'customers'      => Customer::where('is_active', true)->where('id', '!=', 1)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'filters'        => $request->only('customer_id', 'payment_method_id', 'date_from', 'date_to', 'amount_min', 'amount_max'),
         ]);
