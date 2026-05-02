@@ -119,6 +119,7 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
             // تحديث إجمالي الفاتورة
             $this->recalculateInvoice($invoice);
+            $this->updateCustomerDebt($invoice->customer_id);
         });
     }
 
@@ -169,6 +170,21 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
             $invoice = $this->model->findOrFail($invoiceId);
             $this->recalculateInvoice($invoice);
+            $this->updateCustomerDebt($invoice->customer_id);
+        });
+    }
+
+    public function removeItemsBulk(int $invoiceId, array $itemIds): void
+    {
+        DB::transaction(function () use ($invoiceId, $itemIds) {
+            foreach ($itemIds as $itemId) {
+                $item = InvoiceItem::where('invoice_id', $invoiceId)->findOrFail($itemId);
+                Product::findOrFail($item->product_id)->increment('stock', $item->quantity);
+                $item->delete();
+            }
+            $invoice = $this->model->findOrFail($invoiceId);
+            $this->recalculateInvoice($invoice);
+            $this->updateCustomerDebt($invoice->customer_id);
         });
     }
 
@@ -177,13 +193,12 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
         DB::transaction(function () use ($invoiceId, $itemId) {
             $item = InvoiceItem::where('invoice_id', $invoiceId)->findOrFail($itemId);
 
-            // إعادة المخزون
             Product::findOrFail($item->product_id)->increment('stock', $item->quantity);
-
             $item->delete();
 
             $invoice = $this->model->findOrFail($invoiceId);
             $this->recalculateInvoice($invoice);
+            $this->updateCustomerDebt($invoice->customer_id);
         });
     }
 

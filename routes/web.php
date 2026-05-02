@@ -32,6 +32,7 @@ Route::resource('invoices', InvoiceController::class)->except(['edit']);
 Route::post('invoices/{id}/items', [InvoiceController::class, 'addItem'])->name('invoices.items.add');
 Route::patch('invoices/{id}/items/{itemId}/count', [InvoiceController::class, 'updateItemCount'])->name('invoices.items.updateCount');
 Route::delete('invoices/{id}/items/{itemId}', [InvoiceController::class, 'removeItem'])->name('invoices.items.remove');
+Route::delete('invoices/{id}/items', [InvoiceController::class, 'removeItems'])->name('invoices.items.removeMany');
 Route::post('invoices/{id}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments.add');
 
 Route::resource('suppliers', SupplierController::class)->except(['create', 'edit', 'show']);

@@ -212,6 +212,17 @@ class InvoiceController extends Controller
         }
     }
 
+    public function removeItems(Request $request, int $id)
+    {
+        $data = $request->validate(['ids' => 'required|array|min:1', 'ids.*' => 'integer']);
+        try {
+            $this->invoices->removeItemsBulk($id, $data['ids']);
+            return back()->with('success', 'تم حذف المنتج');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function addPayment(Request $request, int $id)
     {
         $data = $request->validate([

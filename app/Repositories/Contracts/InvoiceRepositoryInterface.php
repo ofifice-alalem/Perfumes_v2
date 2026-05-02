@@ -11,6 +11,7 @@ interface InvoiceRepositoryInterface extends RepositoryInterface
     public function addItem(int $invoiceId, array $itemData): void;
     public function updateItemCount(int $invoiceId, int $itemId, int $newCount): void;
     public function removeItem(int $invoiceId, int $itemId): void;
+    public function removeItemsBulk(int $invoiceId, array $itemIds): void;
     public function addPayment(int $invoiceId, array $paymentData): void;
     public function updateCustomerDebt(?int $customerId): void;
 }

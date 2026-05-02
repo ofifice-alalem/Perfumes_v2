@@ -297,6 +297,13 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
     router.delete(`/invoices/${invoice.id}/items/${itemId}`, { onSuccess: () => setDeleteItemId(null) });
   }
 
+  function removeGroup(ids: number[]) {
+    router.delete(`/invoices/${invoice.id}/items`, {
+      data: { ids },
+      onSuccess: () => setDeleteItemId(null),
+    });
+  }
+
   function updateCount(itemId: number, newCount: number) {
     router.patch(`/invoices/${invoice.id}/items/${itemId}/count`, { count: newCount }, {
       onSuccess: () => setEditingGroup(null),
@@ -317,7 +324,7 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
     });
   }
 
-  const isPaid = invoice.payment_status === 'paid';
+  const isPaid = false; // التعديل مسموح دائماً — الدفع المباشر لا يُغلق الفاتورة
 
   const groupedItems = Object.values(
     invoice.items.reduce((acc, item) => {
@@ -432,19 +439,15 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
                           <span className="font-black text-slate-800 dark:text-white text-sm">{totalLine.toFixed(2)} د</span>
                         </div>
                         <div className="flex items-center justify-center gap-2">
-                          {!isPaid && (
-                            <>
                               <button onClick={() => { setEditingGroup({ itemId: ids[0], count }); setShowEditPad(true); }}
                                 className="w-9 h-9 rounded-[10px] bg-primary/10 text-primary hover:bg-primary hover:text-white flex items-center justify-center transition-all">
                                 <Pencil className="w-3.5 h-3.5" />
                               </button>
-                              <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                              <button onClick={() => setDeleteItemId(ids[0])}
                                 className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
                                 <Trash2 className="w-4 h-4" />
                               </button>
-                            </>
-                          )}
-                        </div>
+                            </div>
                       </div>
 
                       {/* Mobile card */}
@@ -474,18 +477,16 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
                         {/* Row 3: type + edit + delete */}
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-500 dark:text-white/50 bg-black/5 dark:bg-white/8 px-2.5 py-1 rounded-[8px]">{saleTypeLabels[item.sale_type]}</span>
-                          {!isPaid && (
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2">
                               <button onClick={() => { setEditingGroup({ itemId: ids[0], count }); setShowEditPad(true); }}
                                 className="w-10 h-10 rounded-[10px] bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/20 flex items-center justify-center transition-all">
                                 <Pencil className="w-4 h-4" />
                               </button>
-                              <button onClick={() => setDeleteItemId(ids[ids.length - 1])}
+                              <button onClick={() => setDeleteItemId(ids[0])}
                                 className="w-10 h-10 rounded-[10px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -608,7 +609,12 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
           title="مبلغ الدفعة" />
 
         <ConfirmModal isOpen={deleteItemId !== null} title="حذف المنتج" message="هل أنت متأكد؟ سيُعاد المخزون تلقائياً."
-          onConfirm={() => deleteItemId && removeItem(deleteItemId)} onCancel={() => setDeleteItemId(null)} />
+          onConfirm={() => {
+            if (!deleteItemId) return;
+            const group = groupedItems.find(g => g.ids.includes(deleteItemId));
+            if (group) removeGroup(group.ids);
+          }}
+          onCancel={() => setDeleteItemId(null)} />
 
       </div>
     </AppShell>
