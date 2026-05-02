@@ -5,6 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { Plus, Pencil, Trash2, X, Check, Users, AlertCircle, CreditCard, ArrowLeftRight } from 'lucide-react';
+import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Customer {
   id: number; name: string; phone: string | null;
@@ -112,6 +113,8 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
 
   function submitPayment() {
     if (!paymentCustomer || !paymentForm.payment_method_id || !paymentForm.amount) return;
+    const debt = +paymentCustomer.total_debt;
+    if (debt > 0 && +paymentForm.amount > debt) return;
     setProcessing(true);
     router.post('/payments', {
       customer_id: paymentCustomer.id,
@@ -398,16 +401,24 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
-                    <select value={paymentForm.payment_method_id} onChange={e => setPaymentForm(f => ({ ...f, payment_method_id: e.target.value }))}
-                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
-                      <option value="">اختر وسيلة الدفع...</option>
-                      {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
+                    <ModernSelect
+                      label=""
+                      placeholder="اختر وسيلة الدفع..."
+                      options={paymentMethods.map(m => ({ label: m.name }))}
+                      defaultValue={paymentMethods.find(m => String(m.id) === paymentForm.payment_method_id)?.name ?? ''}
+                      onSelect={val => setPaymentForm(f => ({ ...f, payment_method_id: String(paymentMethods.find(m => m.name === val)?.id ?? '') }))}
+                    />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                    <input type="number" min="0.01" step="0.01" value={paymentForm.amount}
-                      onChange={e => setPaymentForm(f => ({ ...f, amount: e.target.value }))}
+                    <input type="number" min="0.01" step="0.01"
+                      max={+paymentCustomer.total_debt > 0 ? paymentCustomer.total_debt : undefined}
+                      value={paymentForm.amount}
+                      onChange={e => {
+                        const max = +paymentCustomer.total_debt;
+                        const val = +e.target.value;
+                        setPaymentForm(f => ({ ...f, amount: (max > 0 && val > max) ? paymentCustomer.total_debt : e.target.value }));
+                      }}
                       placeholder={paymentCustomer.total_debt}
                       className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
                   </div>
@@ -417,7 +428,8 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                       placeholder="اختياري" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={submitPayment} disabled={processing || !paymentForm.payment_method_id || !paymentForm.amount}
+                    <button onClick={submitPayment}
+                      disabled={processing || !paymentForm.payment_method_id || !paymentForm.amount || (+paymentCustomer.total_debt > 0 && +paymentForm.amount > +paymentCustomer.total_debt)}
                       className="spatial-button flex items-center gap-2 px-6 h-11 text-sm disabled:opacity-50">
                       <Check className="w-4 h-4" /> تسجيل الدفعة
                     </button>
@@ -453,11 +465,13 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الرد</label>
-                    <select value={settlementForm.payment_method_id} onChange={e => setSettlementForm(f => ({ ...f, payment_method_id: e.target.value }))}
-                      className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
-                      <option value="">اختر وسيلة الدفع...</option>
-                      {paymentMethods.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
+                    <ModernSelect
+                      label=""
+                      placeholder="اختر وسيلة الدفع..."
+                      options={paymentMethods.map(m => ({ label: m.name }))}
+                      defaultValue={paymentMethods.find(m => String(m.id) === settlementForm.payment_method_id)?.name ?? ''}
+                      onSelect={val => setSettlementForm(f => ({ ...f, payment_method_id: String(paymentMethods.find(m => m.name === val)?.id ?? '') }))}
+                    />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ المُرجَع</label>
