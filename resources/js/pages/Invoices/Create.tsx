@@ -130,7 +130,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [notes,        setNotes]        = useState('');
   const [cart,         setCart]         = useState<CartItem[]>([]);
   const [payments,     setPayments]     = useState<PaymentEntry[]>([]);
-  const [debtPayment,  setDebtPayment]  = useState<PaymentEntry | null>(null); // دفعة سداد الدين المستقلة
+  const [debtPayment,  setDebtPayment]  = useState<PaymentEntry | null>(null);
+  const [editingDebt,  setEditingDebt]  = useState(false);
   const [processing,   setProcessing]   = useState(false);
   const [selProduct,   setSelProduct]   = useState('');
   const [selSaleType,  setSelSaleType]  = useState('');
