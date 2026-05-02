@@ -260,24 +260,31 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, fil
                   </div>
 
                   {/* Mobile */}
-                  <div className="sm:hidden flex flex-col gap-2 px-4 pt-3 pb-3">
+                  <div className="sm:hidden p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-[15px] font-black text-slate-800 dark:text-white">
-                        {payment.customer?.name ?? 'زبون نقدي'}
-                      </span>
-                      <span className="text-[12px] font-bold text-slate-500 dark:text-white/60 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-[8px]">
-                        {new Date(payment.created_at).toLocaleDateString('ar')}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center font-black text-emerald-600 dark:text-emerald-400 shrink-0">
+                          {payment.customer?.name?.charAt(0) ?? '—'}
+                        </div>
+                        <div>
+                          <div className="font-black text-slate-800 dark:text-white text-sm">{payment.customer?.name ?? 'زبون نقدي'}</div>
+                          <div className="text-xs font-bold text-slate-400 dark:text-white/40">{payment.payment_method.name}</div>
+                        </div>
+                      </div>
+                      <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">{payment.amount} د</span>
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-sm font-bold text-slate-500 dark:text-white/50">{payment.payment_method.name}</span>
+                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+                      <span className="text-xs font-bold text-slate-400 dark:text-white/40">
+                        {new Date(payment.created_at).toLocaleDateString('ar')}
+                        {payment.invoice && <span className="mr-2 text-primary/70"> • فاتورة #{payment.invoice.id}</span>}
+                      </span>
                       <div className="flex items-center gap-2">
                         <Link href={`/payments/${payment.id}`}
-                          className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
+                          className="flex items-center gap-1.5 px-3 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 font-bold text-xs transition-all">
                           تفاصيل
                         </Link>
                         <button onClick={() => setDeleteId(payment.id)}
-                          className="w-10 h-10 rounded-[12px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/30 flex items-center justify-center transition-all">
+                          className="w-9 h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
