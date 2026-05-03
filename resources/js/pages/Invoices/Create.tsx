@@ -272,10 +272,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     ? +selectedProduct.stock - getCartConsumed(selectedProduct.id)
     : 0;
 
-  // الحد الأقصى للعدد (كم مرة يمكن إضافة هذا المنتج)
+  // الحد الأقصى للعدد (كم مرة يمكن إضافة هذا المنتج) — فقط بعد اكتمال الاختيار
   const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
     ? (() => {
         if (effectiveST === 'unit_based') return availableStock;
+        if (needsSize && !selSize) return undefined; // لم يُختر حجم بعد
         const qty = resolveQuantity(selectedProduct, effectiveST, selSize, '1', sizes);
         return qty > 0 ? Math.floor(availableStock / qty) : 0;
       })()

@@ -140,7 +140,22 @@ function AddItemForm({ invoice, products, sizes, onClose }: {
     ? resolveLineTotal(effectiveST, previewPrice, previewQty) * (effectiveST === 'unit_based' ? 1 : previewCount)
     : null;
 
-  const canAdd = selectedProduct && (isTier ? (!needsSize || selSize) : selSaleType) && (!needsSize || selSize) && (!needsQty || selQty);
+  const availableStock = selectedProduct ? +selectedProduct.stock : 0;
+
+  const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
+    ? (() => {
+        if (effectiveST === 'unit_based') return availableStock;
+        if (needsSize && !selSize) return undefined;
+        const qty = resolveQuantity(selectedProduct, effectiveST, selSize, '1', sizes);
+        return qty > 0 ? Math.floor(availableStock / qty) : 0;
+      })()
+    : undefined;
+
+  const canAdd = selectedProduct
+    && (isTier ? (!needsSize || selSize) : selSaleType)
+    && (!needsSize || selSize)
+    && (!needsQty || selQty)
+    && (maxCount === undefined || maxCount > 0);
 
   function submit() {
     if (!selectedProduct || (!isTier && !selSaleType)) return;
@@ -207,13 +222,13 @@ function AddItemForm({ invoice, products, sizes, onClose }: {
       </div>
 
       {needsSize && (
-        <div className="flex items-end gap-3">
-          <div className="flex-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="w-full">
             <SizeSelect sizes={sizes} selectedSizeId={selSize} onSizeSelect={setSelSize}
               placeholder="الحجم" product={selectedProduct} isVip={isVip} />
           </div>
           <button onClick={submit} disabled={!canAdd || processing}
-            className="spatial-button flex items-center gap-2 px-6 h-14 text-sm font-black disabled:opacity-40 shrink-0">
+            className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-6 h-14 text-sm font-black disabled:opacity-40 shrink-0">
             <Plus className="w-5 h-5" /> إضافة
           </button>
         </div>
@@ -232,12 +247,21 @@ function AddItemForm({ invoice, products, sizes, onClose }: {
         </div>
       )}
 
+      {/* Stock warning */}
+      {selectedProduct && maxCount !== undefined && maxCount === 0 && (
+        <div className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+          <span className="text-sm font-bold text-red-600 dark:text-red-400">المخزون غير كافٍ — المتاح: {availableStock} {selectedProduct.category.unit}</span>
+        </div>
+      )}
+
       <SaleTypeModal isOpen={showSaleTypeModal} onClose={() => setShowSaleTypeModal(false)}
         onSelect={v => { setSelSaleType(v); setSelSize(''); setSelQty('1'); }}
         options={saleTypeOptions()} title="اختر نوع البيع" />
 
       <NumberPadModal isOpen={showNumberPad} onClose={() => setShowNumberPad(false)}
-        onConfirm={v => setSelQty(v)} initialValue={selQty} title={needsQty ? 'الكمية' : 'العدد'} />
+        onConfirm={v => setSelQty(v)} initialValue={selQty} title={needsQty ? 'الكمية' : 'العدد'}
+        maxValue={maxCount} />
     </div>
   );
 }
@@ -660,7 +684,17 @@ export default function InvoiceShow({ invoice, customerDebt, products, sizes, pa
           onClose={() => { setShowEditPad(false); setEditingGroup(null); }}
           onConfirm={v => editingGroup && updateCount(editingGroup.itemId, +v)}
           initialValue={String(editingGroup?.count ?? 1)}
-          title="تعديل العدد" />
+          title="تعديل العدد"
+          maxValue={(() => {
+            if (!editingGroup) return undefined;
+            const group = groupedItems.find(g => g.ids.includes(editingGroup.itemId));
+            if (!group) return undefined;
+            const product = group.item.product;
+            const itemQty = +group.item.quantity;
+            const stockLeft = +product.stock + (itemQty * editingGroup.count);
+            return itemQty > 0 ? Math.floor(stockLeft / itemQty) : undefined;
+          })()}
+        />
 
         <NumberPadModal isOpen={showDebtPad}
           onClose={() => setShowDebtPad(false)}
