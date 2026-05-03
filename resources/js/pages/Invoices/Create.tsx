@@ -936,8 +936,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               
               {/* Second row: Sizes and Add button */}
               {needsSize && (
-                <div className="flex items-end gap-3">
-                  <div className="flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="w-full">
                     <SizeSelect
                       sizes={sizes}
                       selectedSizeId={selSize}
@@ -948,7 +948,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     />
                   </div>
                   <button onClick={addToCart} disabled={!canAdd}
-                    className="spatial-button flex items-center gap-3 px-8 h-16 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                    className="spatial-button w-full sm:w-auto flex items-center justify-center gap-3 px-8 h-14 sm:h-16 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
                     <Plus className="w-6 h-6" /> إضافة
                   </button>
                 </div>
