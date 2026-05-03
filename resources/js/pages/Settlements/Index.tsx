@@ -259,25 +259,36 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                   </div>
 
                   {/* Mobile */}
-                  <div className="sm:hidden p-4 flex flex-col gap-3">
+                  <div className="sm:hidden p-5 flex flex-col gap-4">
+                    {/* Row 1: date + id */}
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-400 dark:text-white/40">{new Date(settlement.created_at).toLocaleDateString('ar')}</span>
-                      <span className="text-xs font-black text-primary">#{settlement.id}</span>
+                      <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-1 rounded-[8px]">#{settlement.id}</span>
                     </div>
+                    {/* Row 2: name + amount */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-black text-slate-800 dark:text-white text-sm">{settlement.customer?.name ?? '—'}</div>
-                        <div className="text-xs font-bold text-slate-400 dark:text-white/40">{settlement.payment_method.name}</div>
+                        <div className="font-black text-slate-800 dark:text-white text-base">{settlement.customer?.name ?? '—'}</div>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <span className="text-sm">
+                            {settlement.payment_method.name === 'نقدي' ? '💵' : settlement.payment_method.name === 'بطاقة' ? '💳' : '💸'}
+                          </span>
+                          <span className="text-xs font-black text-slate-500 dark:text-white/60 bg-black/5 dark:bg-white/8 px-2 py-0.5 rounded-[6px]">{settlement.payment_method.name}</span>
+                        </div>
                       </div>
-                      <span className="font-black text-amber-600 dark:text-amber-400 text-lg">{settlement.amount} د</span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{settlement.amount}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">دينار</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-2 border-t border-black/5 dark:border-white/5">
+                    {/* Row 3: actions */}
+                    <div className="flex items-center gap-3 pt-3 border-t border-black/5 dark:border-white/5">
                       <Link href={`/settlements/${settlement.id}`}
-                        className="flex-1 flex items-center justify-center h-9 rounded-[10px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 font-bold text-xs transition-all">
+                        className="flex-1 flex items-center justify-center h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 text-slate-600 dark:text-white/60 font-black text-sm transition-all">
                         تفاصيل
                       </Link>
                       <button onClick={() => setDeleteId(settlement.id)}
-                        className="flex-1 flex items-center justify-center h-9 rounded-[10px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 font-bold text-xs transition-all">
+                        className="flex-1 flex items-center justify-center h-11 rounded-[16px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 font-black text-sm transition-all">
                         حذف
                       </button>
                     </div>
