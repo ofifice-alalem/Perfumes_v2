@@ -23,8 +23,10 @@ const groups = [
   {
     label: 'المشتريات',
     items: [
-      { icon: <Truck className="w-[18px] h-[18px]" />,   label: 'المشتريات', href: '/purchases' },
-      { icon: <Truck className="w-[18px] h-[18px]" />,   label: 'الموردون',  href: '/suppliers' },
+      { icon: <Truck className="w-[18px] h-[18px]" />,          label: 'المشتريات',          href: '/purchases' },
+      { icon: <Truck className="w-[18px] h-[18px]" />,          label: 'الموردون',           href: '/suppliers' },
+      { icon: <CreditCard className="w-[18px] h-[18px]" />,     label: 'مدفوعات الموردين',   href: '/supplier-payments' },
+      { icon: <ArrowLeftRight className="w-[18px] h-[18px]" />, label: 'تسويات الموردين',    href: '/supplier-settlements' },
     ],
   },
   {

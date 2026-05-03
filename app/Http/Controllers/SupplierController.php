@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentMethod;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -14,7 +15,8 @@ class SupplierController extends Controller
     public function index(): Response
     {
         return Inertia::render('Suppliers/Index', [
-            'suppliers' => $this->suppliers->allOrdered(),
+            'suppliers'      => $this->suppliers->allOrdered(),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

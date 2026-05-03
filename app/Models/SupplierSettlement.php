@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class SupplierPayment extends Model
+class SupplierSettlement extends Model
 {
     public $timestamps = false;
 

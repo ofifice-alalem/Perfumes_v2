@@ -30,6 +30,10 @@ use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\PaymentRepository;
 use App\Repositories\Contracts\SettlementRepositoryInterface;
 use App\Repositories\SettlementRepository;
+use App\Repositories\Contracts\SupplierPaymentRepositoryInterface;
+use App\Repositories\SupplierPaymentRepository;
+use App\Repositories\Contracts\SupplierSettlementRepositoryInterface;
+use App\Repositories\SupplierSettlementRepository;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -48,5 +52,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(WasteRepositoryInterface::class, WasteRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         $this->app->bind(SettlementRepositoryInterface::class, SettlementRepository::class);
+        $this->app->bind(SupplierPaymentRepositoryInterface::class, SupplierPaymentRepository::class);
+        $this->app->bind(SupplierSettlementRepositoryInterface::class, SupplierSettlementRepository::class);
     }
 }
