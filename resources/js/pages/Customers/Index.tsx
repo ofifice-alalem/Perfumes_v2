@@ -172,10 +172,10 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
               </div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className={`spatial-card overflow-hidden sm:!border-black/5 dark:sm:!border-white/5 ${
-                  +c.total_debt > 0 ? '!border-red-500/40 dark:!border-red-500/30' : 
-                  +c.total_debt < 0 ? '!border-amber-500/40 dark:!border-amber-500/30' : 
-                  '!border-emerald-500/40 dark:!border-emerald-500/30'
+                <div key={c.id} className={`spatial-card overflow-hidden border-[3px] sm:border sm:!border-black/5 dark:sm:!border-white/[0.12] ${
+                  +c.total_debt > 0 ? '!border-red-500/70 dark:!border-red-500/60' : 
+                  +c.total_debt < 0 ? '!border-amber-500/70 dark:!border-amber-500/60' : 
+                  '!border-emerald-500/70 dark:!border-emerald-500/60'
                 }`}>
 
                   {editId === c.id ? (
@@ -214,17 +214,10 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                           
                           {/* Profile Header */}
                           <div className="flex flex-col items-center text-center mt-2">
-                            <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center text-[24px] font-black mb-3 shadow-sm ${
-                              +c.total_debt > 0 ? 'bg-red-50 text-red-500 dark:bg-red-500/10' : 
-                              +c.total_debt < 0 ? 'bg-amber-50 text-amber-500 dark:bg-amber-500/10' : 
-                              'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'
-                            }`}>
-                              {c.name.charAt(0)}
-                            </div>
                             <h3 className="text-[19px] font-black text-slate-800 dark:text-white leading-tight">{c.name}</h3>
-                            <div className="flex items-center justify-center gap-2 mt-2.5">
+                            <div className="flex items-center justify-center gap-2 mt-3">
                               {!c.is_active && <span className="text-[10px] font-bold text-slate-400 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-[6px]">غير نشط</span>}
-                              <span className={`text-[11px] font-bold px-3 py-1 rounded-[8px] flex items-center gap-1 ${
+                              <span className={`text-[14px] font-black px-5 py-2 rounded-[12px] ${
                                 +c.total_debt > 0 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                                 : +c.total_debt < 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
                                 : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
