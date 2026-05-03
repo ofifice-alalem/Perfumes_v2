@@ -179,9 +179,13 @@ export default function SuppliersIndex({ suppliers, paymentMethods, flash }: Pro
                 <div key={s.id} className="spatial-card overflow-hidden flex flex-col sm:flex-row sm:items-stretch">
 
                   {/* Debt Strip */}
-                  <div className={`flex sm:flex-col sm:w-28 shrink-0 items-center sm:justify-center justify-between px-4 py-3 sm:px-3 sm:py-0 border-b sm:border-b-0 sm:border-l border-black/5 dark:border-white/5 ${+s.total_debt > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'}`}>
-                    <span className="text-[12px] font-bold">{+s.total_debt > 0 ? 'دين' : 'مسدد'}</span>
-                    <span className="text-[14px] font-black">{s.total_debt} د</span>
+                  <div className={`flex sm:flex-col sm:w-28 shrink-0 items-center sm:justify-center justify-between px-4 py-3 sm:px-3 sm:py-0 border-b sm:border-b-0 sm:border-l border-black/5 dark:border-white/5 ${
+                    +s.total_debt > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' 
+                    : +s.total_debt < 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                  }`}>
+                    <span className="text-[12px] font-bold">{+s.total_debt > 0 ? 'دين' : +s.total_debt < 0 ? 'دائن' : 'مسدد'}</span>
+                    <span className="text-[14px] font-black">{+s.total_debt < 0 ? Math.abs(+s.total_debt).toFixed(2) : s.total_debt} د</span>
                   </div>
 
                   {/* Info */}
