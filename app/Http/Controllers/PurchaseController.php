@@ -144,6 +144,18 @@ class PurchaseController extends Controller
     public function destroy(int $id)
     {
         $purchase = $this->purchases->find($id);
+        $supplierId = $purchase->supplier_id;
+        $purchaseId = $purchase->id;
+
+        // تحديث المدفوعات المرتبطة بالفاتورة
+        $payments = \App\Models\SupplierPayment::where('purchase_id', $purchaseId)->get();
+        foreach ($payments as $payment) {
+            $oldNotes = $payment->notes ? $payment->notes . ' | ' : '';
+            $payment->update([
+                'purchase_id' => null,
+                'notes' => $oldNotes . "تم سداد هذا المبلغ من فاتورة محذوفة برقم #{$purchaseId}",
+            ]);
+        }
 
         // إعادة خصم المخزون لكل سطر
         foreach ($purchase->items as $item) {
@@ -151,6 +163,20 @@ class PurchaseController extends Controller
         }
 
         $purchase->delete();
+
+        // إعادة حساب دين المورد
+        $supplier = \App\Models\Supplier::find($supplierId);
+        if ($supplier) {
+            $totalPurchases = \App\Models\Purchase::where('supplier_id', $supplierId)->sum('total');
+            $totalPaid = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->sum('amount');
+            $totalSettled = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->sum('amount');
+            $totalDebt = $totalPurchases - $totalPaid + $totalSettled;
+
+            $supplier->update([
+                'total_purchases' => $totalPurchases,
+                'total_debt' => $totalDebt,
+            ]);
+        }
 
         return redirect()->route('purchases.index')->with('success', 'تم حذف فاتورة الشراء');
     }

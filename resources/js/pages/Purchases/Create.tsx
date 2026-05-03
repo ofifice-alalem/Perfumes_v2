@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
@@ -41,6 +41,14 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
   const [payments,    setPayments]    = useState<PaymentEntry[]>([]);
   const [processing,  setProcessing]  = useState(false);
   const [paymentManuallySet, setPaymentManuallySet] = useState(false);
+
+  // مسح البيانات عند تحميل الصفحة
+  useEffect(() => {
+    setCart([]);
+    setPayments([]);
+    setNotes('');
+    setPaymentManuallySet(false);
+  }, []);
 
   // Add product form state
   const [selProduct,    setSelProduct]    = useState('');
@@ -150,7 +158,16 @@ export default function PurchaseCreate({ suppliers, products, paymentMethods, de
         unit_cost:  i.unit_cost,
       })),
       payments,
-    }, { onFinish: () => setProcessing(false) });
+    }, {
+      onSuccess: () => {
+        // مسح البيانات بعد النجاح
+        setCart([]);
+        setPayments([]);
+        setNotes('');
+        setPaymentManuallySet(false);
+      },
+      onFinish: () => setProcessing(false)
+    });
   }
 
   const selectedSupplierName = supplierId

@@ -121,6 +121,7 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
             }
 
             SupplierPayment::create([
+                'supplier_id'       => $purchase->supplier_id,
                 'purchase_id'       => $purchaseId,
                 'payment_method_id' => $paymentData['payment_method_id'],
                 'amount'            => $paymentData['amount'],
@@ -138,13 +139,13 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
     {
         $supplier = Supplier::findOrFail($purchase->supplier_id);
 
-        $totalDebt = $this->model
-            ->where('supplier_id', $purchase->supplier_id)
-            ->sum('due_amount');
-
         $totalPurchases = $this->model
             ->where('supplier_id', $purchase->supplier_id)
             ->sum('total');
+
+        $totalPaid = SupplierPayment::where('supplier_id', $purchase->supplier_id)->sum('amount');
+        $totalSettled = \App\Models\SupplierSettlement::where('supplier_id', $purchase->supplier_id)->sum('amount');
+        $totalDebt = $totalPurchases - $totalPaid + $totalSettled;
 
         $supplier->update([
             'total_debt'      => $totalDebt,

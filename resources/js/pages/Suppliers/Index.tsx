@@ -184,7 +184,7 @@ export default function SuppliersIndex({ suppliers, paymentMethods, flash }: Pro
                     : +s.total_debt < 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                     : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                   }`}>
-                    <span className="text-[12px] font-bold">{+s.total_debt > 0 ? 'دين' : +s.total_debt < 0 ? 'دائن' : 'مسدد'}</span>
+                    <span className="text-[12px] font-bold">{+s.total_debt > 0 ? 'مستحق' : +s.total_debt < 0 ? 'رصيد' : 'مسدد'}</span>
                     <span className="text-[14px] font-black">{+s.total_debt < 0 ? Math.abs(+s.total_debt).toFixed(2) : s.total_debt} د</span>
                   </div>
 
