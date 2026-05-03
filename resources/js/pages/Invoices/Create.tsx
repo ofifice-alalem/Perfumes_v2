@@ -125,6 +125,7 @@ function resolveLineTotal(saleType: string, price: number, quantity: number): nu
 }
 
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, invoice }: Props) {
+  const [mobileTab, setMobileTab] = useState<'add'|'cart'|'pay'>('add');
   const [customerId,   setCustomerId]   = useState('');
   const [customerType, setCustomerType] = useState<'regular'|'vip'>('regular');
   const [notes,        setNotes]        = useState('');
@@ -677,18 +678,55 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         </div>
       )}
       
+      {/* Mobile tab switcher */}
+      <div className="lg:hidden flex -mx-4 -mt-4 mb-0 border-b border-black/5 dark:border-white/5 shrink-0">
+        <button
+          onClick={() => setMobileTab('add')}
+          className={`flex-1 py-3 text-sm font-black transition-all ${
+            mobileTab === 'add'
+              ? 'text-primary border-b-2 border-primary bg-primary/5'
+              : 'text-slate-400 dark:text-white/40'
+          }`}>
+          <Package className="w-4 h-4 inline ml-1" /> إضافة
+        </button>
+        <button
+          onClick={() => setMobileTab('cart')}
+          className={`flex-1 py-3 text-sm font-black transition-all relative ${
+            mobileTab === 'cart'
+              ? 'text-primary border-b-2 border-primary bg-primary/5'
+              : 'text-slate-400 dark:text-white/40'
+          }`}>
+          <ShoppingCart className="w-4 h-4 inline ml-1" /> الفاتورة
+          {cart.length > 0 && (
+            <span className="absolute top-2 right-6 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">{cart.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setMobileTab('pay')}
+          className={`flex-1 py-3 text-sm font-black transition-all relative ${
+            mobileTab === 'pay'
+              ? 'text-primary border-b-2 border-primary bg-primary/5'
+              : 'text-slate-400 dark:text-white/40'
+          }`}>
+          <CreditCard className="w-4 h-4 inline ml-1" /> الدفع
+          {remaining > 0.01 && cart.length > 0 && (
+            <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-red-500"></span>
+          )}
+        </button>
+      </div>
+
       {/* POS: full-height, no outer scroll */}
-      <div className="flex flex-col lg:flex-row gap-0 -m-4 lg:-m-10 h-[calc(100vh-80px)] lg:h-[calc(100dvh-120px)] overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-0 -mx-4 lg:-m-10 h-[calc(100dvh-130px)] lg:h-[calc(100dvh-120px)] overflow-hidden">
 
         {/* ══════════════════════════════════════════════
             LEFT PANEL — إدخال المنتج + منتجات سريعة
         ══════════════════════════════════════════════ */}
-        <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">
+        <div className={`flex-1 flex-col overflow-hidden border-r border-black/5 dark:border-white/5 ${mobileTab === 'add' ? 'flex' : 'hidden'} lg:flex`}>
 
           {/* Top bar */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
             <div className="flex items-center gap-3">
-              <Link href="/invoices" className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-sm">
+              <Link href="/invoices" className="hidden sm:flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-sm">
                 <ChevronLeft className="w-4 h-4" /> الفواتير
               </Link>
               <span className="text-slate-300 dark:text-white/10">/</span>
@@ -752,8 +790,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
           {/* Customer bar */}
           <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
-            <div className="flex items-center gap-3 px-5 py-3">
-              <div className="flex items-center gap-2 flex-1">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+              <div className="flex items-center gap-2 flex-1 min-w-[160px]">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <User className="w-4 h-4 text-primary" />
                 </div>
@@ -766,10 +804,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   />
                 </div>
               </div>
-              <div className="flex gap-3 shrink-0">
+              <div className="flex gap-2 shrink-0">
                 {(['regular', 'vip'] as const).map(type => (
                   <button key={type} onClick={() => setCustomerType(type)}
-                    className={`px-6 h-14 rounded-[16px] border-2 transition-all font-bold text-base ${
+                    className={`px-4 h-11 rounded-[14px] border-2 transition-all font-bold text-sm ${
                       customerType === type
                         ? 'border-primary bg-primary text-white'
                         : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'
@@ -954,7 +992,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         {/* ══════════════════════════════════════════════
             RIGHT PANEL — الفاتورة
         ══════════════════════════════════════════════ */}
-        <div className="w-full lg:w-[650px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+        <div className={`w-full lg:w-[650px] flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0 ${mobileTab === 'cart' || mobileTab === 'pay' ? 'flex' : 'hidden'} lg:flex`}>
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -969,7 +1007,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
           </div>
 
           {/* Cart items */}
-          <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className={`flex-1 overflow-y-auto px-4 py-3 ${mobileTab === 'pay' ? 'hidden lg:block' : ''}`}>
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300 dark:text-white/20">
                 <ShoppingCart className="w-12 h-12" />
@@ -978,14 +1016,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {/* Table header */}
-                <div className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                {/* Table header - hidden on mobile */}
+                <div className="hidden sm:grid grid-cols-[60px_2fr_70px_80px_90px_60px] gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
                   <span className="text-center">عدد</span>
                   <span>المنتج</span>
                   <span className="text-center">حجم</span>
-                  <span className="text-center">سعر الوحدة</span>
+                  <span className="text-center">سعر</span>
                   <span className="text-center">الإجمالي</span>
-                  <span className="text-center">إجراءات</span>
+                  <span className="text-center">حذف</span>
                 </div>
                 
                 {(() => {
@@ -1016,7 +1054,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                       : groupedItem.count;
                     
                     return (
-                      <div key={idx} className="grid grid-cols-[70px_2fr_80px_90px_100px_80px] gap-3 px-4 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm hover:shadow-md group">
+                      <div key={idx} className="grid grid-cols-[40px_1fr_auto] sm:grid-cols-[60px_2fr_70px_80px_90px_60px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 dark:hover:border-primary/40 transition-all shadow-sm group">
                         {/* Count/Quantity with editable button */}
                         <div className="flex items-center justify-center">
                           <button
@@ -1085,7 +1123,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                               });
                               setShowNumberPad(true);
                             }}
-                            className="w-20 h-16 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl font-black text-lg border-2 border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-all cursor-pointer active:scale-[0.95]"
+                            className="w-10 h-10 sm:w-16 sm:h-14 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-xl font-black text-base border-2 border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-all cursor-pointer active:scale-[0.95]"
                           >
                             {displayCount}
                           </button>
@@ -1096,13 +1134,22 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                           <div className="font-bold text-slate-800 dark:text-white text-sm truncate">
                             {groupedItem.product_name}
                           </div>
-                          <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {saleTypeLabels[groupedItem.sale_type]}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{saleTypeLabels[groupedItem.sale_type]}</span>
+                            {/* Size inline on mobile */}
+                            <span className="sm:hidden">
+                              {groupedItem.size_id.startsWith('-custom-')
+                                ? <span className="text-xs font-black text-purple-600"> • {groupedItem.size_id.replace('-custom-', '')} مل</span>
+                                : groupedItem.size_label
+                                  ? <span className="text-xs font-black text-primary"> • {groupedItem.size_label}</span>
+                                  : null}
+                            </span>
+                            <span className="sm:hidden font-black text-slate-700 dark:text-white text-xs"> • {groupedItem.totalAmount.toFixed(2)} د</span>
                           </div>
                         </div>
                         
-                        {/* Size */}
-                        <div className="flex items-center justify-center">
+                        {/* Size - hidden on mobile */}
+                        <div className="hidden sm:flex items-center justify-center">
                           {(() => {
                             if (groupedItem.size_id.startsWith('-custom-')) {
                               const customValue = groupedItem.size_id.replace('-custom-', '');
@@ -1134,15 +1181,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                           })()}
                         </div>
                         
-                        {/* Unit price */}
-                        <div className="flex items-center justify-center">
+                        {/* Unit price - hidden on mobile */}
+                        <div className="hidden sm:flex items-center justify-center">
                           <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
                             {groupedItem.unit_price}
                           </span>
                         </div>
                         
-                        {/* Total + delete */}
-                        <div className="flex items-center justify-center">
+                        {/* Total - hidden on mobile */}
+                        <div className="hidden sm:flex items-center justify-center">
                           <span className="font-black text-slate-800 dark:text-white text-base">
                             {groupedItem.totalAmount.toFixed(2)}
                           </span>
@@ -1153,31 +1200,22 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
-                              // Remove all instances of this grouped item
                               setCart(prev => {
                                 const newCart = prev.filter((_, i) => !groupedItem.originalIndices.includes(i));
                                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                
-                                // Update payment if only one payment exists
                                 if (payments.length === 1 && newTotal > 0) {
                                   setTimeout(() => {
-                                    setPayments(prevPayments => [
-                                      {
-                                        ...prevPayments[0],
-                                        amount: newTotal.toFixed(2)
-                                      }
-                                    ]);
+                                    setPayments(prevPayments => [{ ...prevPayments[0], amount: newTotal.toFixed(2) }]);
                                   }, 0);
                                 } else if (newTotal === 0) {
                                   setTimeout(() => setPayments([]), 0);
                                 }
-                                
                                 return newCart;
                               });
                             }}
-                            className="w-12 h-12 rounded-[12px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-[0.95] shadow-lg hover:shadow-xl"
+                            className="w-9 h-9 sm:w-12 sm:h-12 rounded-[10px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-[0.95] shadow-md"
                           >
-                            <Trash2 className="w-5 h-5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
@@ -1190,6 +1228,28 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
           {/* Totals + Payment + Submit */}
           <div className="shrink-0 border-t border-black/5 dark:border-white/5">
+
+            {/* Mini totals summary — shown in cart tab on mobile only */}
+            <div className={`lg:hidden px-4 py-3 flex items-center justify-between border-b border-black/5 dark:border-white/5 ${mobileTab === 'cart' ? 'flex' : 'hidden'}`}>
+              <div className="flex items-center gap-4">
+                <div>
+                  <span className="text-xs font-bold text-slate-400 dark:text-white/30 block">الإجمالي</span>
+                  <span className="font-black text-slate-800 dark:text-white text-base">{grandTotal.toFixed(2)} د</span>
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-slate-400 dark:text-white/30 block">المتبقي</span>
+                  <span className={`font-black text-base ${remaining > 0.01 ? 'text-red-500' : 'text-emerald-500'}`}>{remaining.toFixed(2)} د</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setMobileTab('pay')}
+                className="spatial-button flex items-center gap-2 px-5 h-10 text-sm font-black">
+                <CreditCard className="w-4 h-4" /> الدفع
+              </button>
+            </div>
+
+            {/* Payment + Submit — hidden in cart tab on mobile */}
+            <div className={`${mobileTab === 'cart' ? 'hidden lg:block' : ''}`}>
 
             {/* Totals */}
             <div className="px-5 py-4 flex flex-col gap-2 border-b border-black/5 dark:border-white/5">
@@ -1405,6 +1465,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 )}
               </div>
             </div>
+            </div> {/* end payment+submit wrapper */}
           </div>
         </div>
       </div>
