@@ -11,6 +11,20 @@ interface Payment {
 }
 interface Props { payment: Payment; }
 
+function NotesWithLinks({ notes }: { notes: string }) {
+  const parts = notes.split(/(#\d+)/);
+  return (
+    <span className="font-black text-slate-800 dark:text-white text-sm text-left">
+      {parts.map((part, i) => {
+        const match = part.match(/^#(\d+)$/);
+        return match
+          ? <Link key={i} href={`/invoices/${match[1]}`} className="text-primary underline hover:opacity-75 transition-opacity">{part}</Link>
+          : <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
+}
+
 export default function PaymentShow({ payment }: Props) {
   const debt = payment.customer ? +payment.customer.total_debt : 0;
 
@@ -50,15 +64,18 @@ export default function PaymentShow({ payment }: Props) {
                 {[
                   { icon: <CreditCard className="w-4 h-4" />,     label: 'وسيلة الدفع', value: payment.payment_method.name },
                   { icon: <Calendar className="w-4 h-4" />,       label: 'التاريخ',     value: new Date(payment.created_at).toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' }) },
-                  { icon: <MessageSquare className="w-4 h-4" />,  label: 'ملاحظات',     value: payment.notes ?? '—' },
-                ].map(({ icon, label, value }, i, arr) => (
+                  { icon: <MessageSquare className="w-4 h-4" />,  label: 'ملاحظات',     value: payment.notes ?? '—', isNotes: true },
+                ].map(({ icon, label, value, isNotes }, i, arr) => (
                   <div key={label} className={`flex items-center gap-4 py-4 ${i < arr.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
                     <div className="w-10 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 shrink-0">
                       {icon}
                     </div>
                     <div className="flex-1 flex items-center justify-between">
                       <span className="text-sm font-bold text-slate-500 dark:text-white/50">{label}</span>
-                      <span className="font-black text-slate-800 dark:text-white text-sm">{value}</span>
+                      {isNotes
+                        ? <NotesWithLinks notes={value as string} />
+                        : <span className="font-black text-slate-800 dark:text-white text-sm">{value}</span>
+                      }
                     </div>
                   </div>
                 ))}

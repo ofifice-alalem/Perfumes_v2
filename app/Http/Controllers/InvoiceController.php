@@ -93,7 +93,7 @@ class InvoiceController extends Controller
             $this->invoices->addPayment($invoice->id, $payment);
         }
 
-        // دفعة سداد الدين المستقلة (بدون invoice_id)
+        // دفعة سداد الدين — مستقلة عن الفاتورة (invoice_id = null)
         if (!empty($data['debt_payment']) && $invoice->customer_id && $invoice->customer_id !== 1) {
             \App\Models\Payment::create([
                 'customer_id'       => $invoice->customer_id,
@@ -171,9 +171,20 @@ class InvoiceController extends Controller
             ];
         }
 
+        // دفعات سداد الدين المستقلة لهذا العميل (invoice_id = null)
+        $debtPayments = [];
+        if ($invoice->customer && $invoice->customer->id !== 1) {
+            $debtPayments = \App\Models\Payment::with('paymentMethod')
+                ->where('customer_id', $invoice->customer->id)
+                ->whereNull('invoice_id')
+                ->orderByDesc('id')
+                ->get(['id', 'amount', 'notes', 'payment_method_id', 'created_at']);
+        }
+
         return Inertia::render('Invoices/Show', [
             'invoice'        => $invoice,
             'customerDebt'   => $customerDebt,
+            'debtPayments'   => $debtPayments,
             'products'       => Product::with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices'])
                                     ->whereHas('category', fn($q) => $q->where('is_operational', false))
                                     ->orderBy('name')->get(),
