@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
-import { Plus, Pencil, Trash2, X, Check, CreditCard, ArrowLeftRight, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, CreditCard, ArrowLeftRight, SlidersHorizontal, ChevronDown, Phone } from 'lucide-react';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 
@@ -172,20 +172,12 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
               </div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="spatial-card overflow-hidden flex flex-col sm:flex-row sm:items-stretch">
+                <div key={c.id} className="spatial-card overflow-hidden">
 
-                  {/* Debt Strip */}
-                  <div className={`flex sm:flex-col sm:w-28 shrink-0 items-center sm:justify-center justify-between px-4 py-3 sm:px-3 sm:py-0 border-b sm:border-b-0 sm:border-l border-black/5 dark:border-white/5 ${
-                    +c.total_debt > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20' : +c.total_debt < 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  }`}>
-                    <span className="text-[12px] font-bold">{+c.total_debt > 0 ? 'مدين' : +c.total_debt < 0 ? 'دائن' : 'مسدد'}</span>
-                    <span className="text-[14px] font-black">{+c.total_debt < 0 ? Math.abs(+c.total_debt).toFixed(2) : c.total_debt} د</span>
-                  </div>
-
-                  {/* Edit inline or Info */}
                   {editId === c.id ? (
-                    <div className="flex-1 p-4 flex flex-col gap-3">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    /* ── Edit Mode (both) ── */
+                    <div className="p-5 flex flex-col gap-3">
+                      <div className="grid grid-cols-2 gap-3">
                         {[
                           { key: 'name',    label: 'الاسم' },
                           { key: 'phone',   label: 'الهاتف' },
@@ -195,61 +187,128 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                           <div key={key} className="flex flex-col gap-1">
                             <label className="text-xs font-bold text-slate-500 dark:text-white/40">{label}</label>
                             <input value={(editForm.data as any)[key]} onChange={e => editForm.setData(key as any, e.target.value)}
-                              className="spatial-input h-10 rounded-[12px] px-3 text-[14px] font-bold" />
+                              className="spatial-input h-11 rounded-[12px] px-3 text-[14px] font-bold" />
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button onClick={submitEdit} disabled={editForm.processing}
-                          className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm disabled:opacity-50">
-                          <Check className="w-3.5 h-3.5" /> حفظ
+                          className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
+                          <Check className="w-4 h-4" /> حفظ
                         </button>
                         <button onClick={() => setEditId(null)}
-                          className="flex items-center gap-1.5 px-3 h-9 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                          <X className="w-3.5 h-3.5" /> إلغاء
+                          className="flex items-center gap-2 px-4 h-11 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                          <X className="w-4 h-4" /> إلغاء
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col sm:flex-row sm:items-center min-w-0 px-4 py-3 gap-2 sm:gap-5">
-                      <div className="flex flex-col gap-1 flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[15px] font-black text-slate-800 dark:text-white">{c.name}</span>
-                          {!c.is_active && <span className="text-xs font-bold text-slate-400 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-[6px]">غير نشط</span>}
+                    <>
+                      {/* ── Mobile View ── */}
+                      <div className="flex flex-col sm:hidden">
+                        <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[17px] font-black text-slate-800 dark:text-white leading-tight">{c.name}</span>
+                              {!c.is_active && <span className="text-[11px] font-bold text-slate-400 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">غير نشط</span>}
+                            </div>
+                            {c.phone && <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 text-[13px] font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-primary transition-colors">
+                              <Phone className="w-3.5 h-3.5" />{c.phone}{c.email ? ` · ${c.email}` : ''}
+                            </a>}
+                          </div>
+                          <div className={`shrink-0 flex flex-col items-center justify-center px-4 py-2 rounded-[16px] border ${
+                            +c.total_debt > 0 ? 'bg-red-500/10 border-red-500/20 text-red-500'
+                            : +c.total_debt < 0 ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                          }`}>
+                            <span className="text-[11px] font-bold">{+c.total_debt > 0 ? 'مدين' : +c.total_debt < 0 ? 'دائن' : 'مسدد'}</span>
+                            <span className="text-[15px] font-black leading-tight">
+                              {+c.total_debt !== 0 ? `${Math.abs(+c.total_debt).toFixed(2)} د` : '✓'}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-[13px] font-bold text-slate-500 dark:text-white/50">
-                          {c.phone}{c.email ? ` · ${c.email}` : ''}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <div className="flex flex-col items-end">
-                          <span className="text-xs font-bold text-slate-400 dark:text-white/40">إجمالي المشتريات</span>
-                          <span className="font-black text-slate-800 dark:text-white text-sm">{c.total_purchases} د</span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <button onClick={() => startEdit(c)}
-                            className="w-14 h-14 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 flex items-center justify-center transition-all">
-                            <Pencil className="w-5 h-5" />
-                          </button>
-                          {+c.total_debt > 0 && (
-                            <button onClick={() => setPaymentCustomer(c)}
-                              className="w-14 h-14 rounded-[16px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 flex items-center justify-center transition-all">
-                              <CreditCard className="w-5 h-5" />
+                        <div className="mx-5 border-t border-black/5 dark:border-white/5" />
+                        <div className="flex items-center justify-between px-5 py-4 gap-4">
+                          <div className="flex flex-col">
+                            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider">إجمالي المشتريات</span>
+                            <span className="text-[15px] font-black text-slate-800 dark:text-white">{c.total_purchases} د</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => startEdit(c)}
+                              className="w-11 h-11 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 flex items-center justify-center transition-all">
+                              <Pencil className="w-4 h-4" />
                             </button>
-                          )}
-                          {+c.total_debt < 0 && (
-                            <button onClick={() => setSettlementCustomer(c)}
-                              className="w-14 h-14 rounded-[16px] bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white border border-amber-500/20 flex items-center justify-center transition-all">
-                              <ArrowLeftRight className="w-5 h-5" />
+                            {+c.total_debt > 0 && (
+                              <button onClick={() => setPaymentCustomer(c)}
+                                className="w-11 h-11 rounded-[14px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 flex items-center justify-center transition-all">
+                                <CreditCard className="w-4 h-4" />
+                              </button>
+                            )}
+                            {+c.total_debt < 0 && (
+                              <button onClick={() => setSettlementCustomer(c)}
+                                className="w-11 h-11 rounded-[14px] bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white border border-amber-500/20 flex items-center justify-center transition-all">
+                                <ArrowLeftRight className="w-4 h-4" />
+                              </button>
+                            )}
+                            <button onClick={() => setDeleteId(c.id)}
+                              className="w-11 h-11 rounded-[14px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
+                              <Trash2 className="w-4 h-4" />
                             </button>
-                          )}
-                          <button onClick={() => setDeleteId(c.id)}
-                            className="w-14 h-14 rounded-[16px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+
+                      {/* ── Desktop View (horizontal like Suppliers) ── */}
+                      <div className="hidden sm:flex sm:items-stretch">
+                        <div className={`flex flex-col sm:w-28 shrink-0 items-center justify-center px-3 border-l border-black/5 dark:border-white/5 ${
+                          +c.total_debt > 0 ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                          : +c.total_debt < 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                        }`}>
+                          <span className="text-[12px] font-bold">{+c.total_debt > 0 ? 'مدين' : +c.total_debt < 0 ? 'دائن' : 'مسدد'}</span>
+                          <span className="text-[14px] font-black">{+c.total_debt < 0 ? Math.abs(+c.total_debt).toFixed(2) : c.total_debt} د</span>
+                        </div>
+                        <div className="flex-1 flex sm:items-center min-w-0 px-4 py-3 gap-5">
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[15px] font-black text-slate-800 dark:text-white">{c.name}</span>
+                              {!c.is_active && <span className="text-xs font-bold text-slate-400 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-[6px]">غير نشط</span>}
+                            </div>
+                            <a href={`tel:${c.phone}`} className="flex items-center gap-1.5 text-[13px] font-bold text-slate-500 dark:text-white/50 hover:text-primary dark:hover:text-primary transition-colors">
+                              <Phone className="w-3.5 h-3.5" />{c.phone}{c.email ? ` · ${c.email}` : ''}
+                            </a>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <div className="flex flex-col items-end">
+                              <span className="text-xs font-bold text-slate-400 dark:text-white/40">إجمالي المشتريات</span>
+                              <span className="font-black text-slate-800 dark:text-white text-sm">{c.total_purchases} د</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <button onClick={() => startEdit(c)}
+                                className="w-14 h-14 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 flex items-center justify-center transition-all">
+                                <Pencil className="w-5 h-5" />
+                              </button>
+                              {+c.total_debt > 0 && (
+                                <button onClick={() => setPaymentCustomer(c)}
+                                  className="w-14 h-14 rounded-[16px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 flex items-center justify-center transition-all">
+                                  <CreditCard className="w-5 h-5" />
+                                </button>
+                              )}
+                              {+c.total_debt < 0 && (
+                                <button onClick={() => setSettlementCustomer(c)}
+                                  className="w-14 h-14 rounded-[16px] bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white border border-amber-500/20 flex items-center justify-center transition-all">
+                                  <ArrowLeftRight className="w-5 h-5" />
+                                </button>
+                              )}
+                              <button onClick={() => setDeleteId(c.id)}
+                                className="w-14 h-14 rounded-[16px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
               ))
