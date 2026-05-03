@@ -172,7 +172,11 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
               </div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="spatial-card overflow-hidden">
+                <div key={c.id} className={`spatial-card overflow-hidden sm:!border-black/5 dark:sm:!border-white/5 ${
+                  +c.total_debt > 0 ? '!border-red-500/40 dark:!border-red-500/30' : 
+                  +c.total_debt < 0 ? '!border-amber-500/40 dark:!border-amber-500/30' : 
+                  '!border-emerald-500/40 dark:!border-emerald-500/30'
+                }`}>
 
                   {editId === c.id ? (
                     /* ── Edit Mode (both) ── */
@@ -205,70 +209,92 @@ export default function CustomersIndex({ customers, paymentMethods, flash }: Pro
                   ) : (
                     <>
                       {/* ── Mobile View ── */}
-                      <div className="flex flex-col sm:hidden">
-
-                        {/* Name centered */}
-                        <div className="flex flex-col items-center pt-6 pb-4 px-5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[18px] font-black text-slate-800 dark:text-white">{c.name}</span>
-                            {!c.is_active && <span className="text-[10px] font-bold text-slate-400 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded-full">غير نشط</span>}
-                          </div>
-                        </div>
-
-                        {/* Stats row */}
-                        <div className="flex mx-4 mb-4 rounded-[18px] overflow-hidden border border-black/5 dark:border-white/5">
-                          <div className="flex-1 flex flex-col items-center justify-center py-3 border-l border-black/5 dark:border-white/5">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-wider mb-1">المشتريات</span>
-                            <span className="text-[15px] font-black text-slate-800 dark:text-white">{c.total_purchases} د</span>
-                          </div>
-                          <div className={`flex-1 flex flex-col items-center justify-center py-3 ${
-                            +c.total_debt > 0 ? 'text-red-500'
-                            : +c.total_debt < 0 ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                          }`}>
-                            <span className="text-[10px] font-bold uppercase tracking-wider mb-1 opacity-70">
-                              {+c.total_debt > 0 ? 'مدين' : +c.total_debt < 0 ? 'دائن' : 'الحالة'}
-                            </span>
-                            <span className="text-[15px] font-black">
-                              {+c.total_debt !== 0 ? `${Math.abs(+c.total_debt).toFixed(2)} د` : 'مسدد ✓'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center justify-center gap-3 px-5 pb-4">
-                          <button onClick={() => startEdit(c)}
-                            className="w-12 h-12 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 flex items-center justify-center transition-all">
-                            <Pencil className="w-5 h-5" />
-                          </button>
-                          {+c.total_debt > 0 && (
-                            <button onClick={() => setPaymentCustomer(c)}
-                              className="w-12 h-12 rounded-[14px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-500/20 flex items-center justify-center transition-all">
-                              <CreditCard className="w-5 h-5" />
-                            </button>
-                          )}
-                          {+c.total_debt < 0 && (
-                            <button onClick={() => setSettlementCustomer(c)}
-                              className="w-12 h-12 rounded-[14px] bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white border border-amber-500/20 flex items-center justify-center transition-all">
-                              <ArrowLeftRight className="w-5 h-5" />
-                            </button>
-                          )}
-                          <button onClick={() => setDeleteId(c.id)}
-                            className="w-12 h-12 rounded-[14px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 flex items-center justify-center transition-all">
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-
-                        {/* Call strip */}
-                        {c.phone && (
-                          <a href={`tel:${c.phone}`}
-                            className="flex items-center justify-center gap-3 py-4 border-t border-black/5 dark:border-white/5 hover:bg-primary/5 dark:hover:bg-primary/10 transition-all group">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 group-hover:bg-primary group-hover:text-white text-primary flex items-center justify-center transition-all">
-                              <Phone className="w-4 h-4" />
+                      <div className="flex flex-col sm:hidden p-1">
+                        <div className="flex flex-col gap-5 p-4 relative overflow-hidden">
+                          
+                          {/* Profile Header */}
+                          <div className="flex flex-col items-center text-center mt-2">
+                            <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center text-[24px] font-black mb-3 shadow-sm ${
+                              +c.total_debt > 0 ? 'bg-red-50 text-red-500 dark:bg-red-500/10' : 
+                              +c.total_debt < 0 ? 'bg-amber-50 text-amber-500 dark:bg-amber-500/10' : 
+                              'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10'
+                            }`}>
+                              {c.name.charAt(0)}
                             </div>
-                            <span className="text-[15px] font-black text-primary tracking-wide">{c.phone}</span>
-                          </a>
-                        )}
+                            <h3 className="text-[19px] font-black text-slate-800 dark:text-white leading-tight">{c.name}</h3>
+                            <div className="flex items-center justify-center gap-2 mt-2.5">
+                              {!c.is_active && <span className="text-[10px] font-bold text-slate-400 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-[6px]">غير نشط</span>}
+                              <span className={`text-[11px] font-bold px-3 py-1 rounded-[8px] flex items-center gap-1 ${
+                                +c.total_debt > 0 ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                : +c.total_debt < 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400'
+                                : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                              }`}>
+                                {+c.total_debt > 0 ? 'مدين' : +c.total_debt < 0 ? 'دائن' : 'مسدد'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions (Phone) */}
+                          {c.phone && (
+                            <a href={`tel:${c.phone}`} 
+                              className="w-full h-12 flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-[16px] transition-all font-black text-[16px] group shadow-sm">
+                              <Phone className="w-5 h-5 group-hover:scale-110 transition-transform" /> 
+                              <span dir="ltr">{c.phone}</span>
+                            </a>
+                          )}
+                          
+                          {/* Details Card */}
+                          <div className="bg-black/[0.03] dark:bg-white/5 rounded-[20px] p-4 flex flex-col gap-3 border border-black/5 dark:border-white/5">
+                            {c.email && (
+                              <>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[12px] font-bold text-slate-500 dark:text-white/50">البريد</span>
+                                  <span className="text-[13px] font-bold text-slate-700 dark:text-white/80">{c.email}</span>
+                                </div>
+                                <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+                              </>
+                            )}
+                            <div className="flex justify-between items-center">
+                              <span className="text-[12px] font-bold text-slate-500 dark:text-white/50">إجمالي المشتريات</span>
+                              <span className="text-[15px] font-black text-slate-800 dark:text-white">{c.total_purchases} د</span>
+                            </div>
+                            <div className="w-full h-px bg-black/5 dark:bg-white/5" />
+                            <div className="flex justify-between items-center">
+                              <span className="text-[12px] font-bold text-slate-500 dark:text-white/50">الرصيد المتبقي</span>
+                              <span className={`text-[16px] font-black ${
+                                +c.total_debt > 0 ? 'text-red-600 dark:text-red-400'
+                                : +c.total_debt < 0 ? 'text-amber-600 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                              }`}>
+                                {+c.total_debt !== 0 ? `${Math.abs(+c.total_debt).toFixed(2)} د` : '0.00 د'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center gap-2 pt-1">
+                            <button onClick={() => startEdit(c)}
+                              className="h-12 flex-1 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white text-slate-600 dark:text-white/60 flex items-center justify-center gap-2 transition-all font-bold text-[13px]">
+                              <Pencil className="w-4 h-4" /> تعديل
+                            </button>
+                            {+c.total_debt > 0 && (
+                              <button onClick={() => setPaymentCustomer(c)}
+                                className="h-12 flex-[1.5] rounded-[16px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center gap-2 transition-all font-bold text-[13px]">
+                                <CreditCard className="w-4 h-4" /> دفعة
+                              </button>
+                            )}
+                            {+c.total_debt < 0 && (
+                              <button onClick={() => setSettlementCustomer(c)}
+                                className="h-12 flex-[1.5] rounded-[16px] bg-amber-500/10 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center gap-2 transition-all font-bold text-[13px]">
+                                <ArrowLeftRight className="w-4 h-4" /> تسوية
+                              </button>
+                            )}
+                            <button onClick={() => setDeleteId(c.id)}
+                              className="h-12 w-12 shrink-0 rounded-[16px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
                       {/* ── Desktop View (horizontal like Suppliers) ── */}
