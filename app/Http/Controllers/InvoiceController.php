@@ -100,7 +100,7 @@ class InvoiceController extends Controller
                 'invoice_id'        => null,
                 'payment_method_id' => $data['debt_payment']['payment_method_id'],
                 'amount'            => $data['debt_payment']['amount'],
-                'notes'             => 'سداد دين سابق',
+                'notes'             => "تم سداد جزء من الدين مع الفاتورة {$invoice->id}",
             ]);
         }
 
