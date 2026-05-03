@@ -83,26 +83,6 @@ export default function PaymentShow({ payment }: Props) {
               </div>
             </SpatialCard>
 
-            {/* الفاتورة المرتبطة */}
-            {payment.invoice && (
-              <SpatialCard title="الفاتورة المرتبطة" icon={<FileText className="w-4 h-4" />}>
-                <div className="flex items-center justify-between p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-[14px] bg-primary/10 flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-black text-slate-800 dark:text-white">فاتورة #{payment.invoice.id}</span>
-                      <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">إجمالي: {payment.invoice.total} د</p>
-                    </div>
-                  </div>
-                  <Link href={`/invoices/${payment.invoice.id}`}
-                    className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
-                    عرض
-                  </Link>
-                </div>
-              </SpatialCard>
-            )}
           </div>
 
           {/* Right — العميل */}
@@ -157,6 +137,27 @@ export default function PaymentShow({ payment }: Props) {
                   </Link>
                 </div>
               </SpatialCard>
+
+              {/* الفاتورة المرتبطة تحت العميل */}
+              {payment.invoice && (
+                <SpatialCard title="الفاتورة المرتبطة" icon={<FileText className="w-4 h-4" />}>
+                  <div className="flex items-center justify-between p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-[14px] bg-primary/10 flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <span className="font-black text-slate-800 dark:text-white">فاتورة #{payment.invoice.id}</span>
+                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">إجمالي: {payment.invoice.total} د</p>
+                      </div>
+                    </div>
+                    <Link href={`/invoices/${payment.invoice.id}`}
+                      className="flex items-center gap-2 px-4 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-primary hover:text-white border border-black/10 dark:border-white/10 hover:border-primary text-slate-600 dark:text-white/60 font-bold text-[13px] transition-all">
+                      عرض
+                    </Link>
+                  </div>
+                </SpatialCard>
+              )}
             </div>
           )}
         </div>
