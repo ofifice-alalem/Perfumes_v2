@@ -12,13 +12,14 @@ interface Payment {
 interface Props { payment: Payment; }
 
 function NotesWithLinks({ notes }: { notes: string }) {
-  const parts = notes.split(/(#\d+)/);
+  const parts = notes.split(/(\b\d+\b)/);
   return (
     <span className="font-black text-slate-800 dark:text-white text-sm text-left">
       {parts.map((part, i) => {
-        const match = part.match(/^#(\d+)$/);
-        return match
-          ? <Link key={i} href={`/invoices/${match[1]}`} className="text-primary underline hover:opacity-75 transition-opacity">{part}</Link>
+        const isNum = /^\d+$/.test(part);
+        const prev = parts[i - 1] ?? '';
+        return isNum && prev.includes('الفاتورة')
+          ? <Link key={i} href={`/invoices/${part}`} className="text-primary underline hover:opacity-75 transition-opacity">{part}</Link>
           : <span key={i}>{part}</span>;
       })}
     </span>
