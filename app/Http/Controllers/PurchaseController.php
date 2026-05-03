@@ -77,10 +77,26 @@ class PurchaseController extends Controller
 
     public function show(int $id): Response
     {
+        $purchase = $this->purchases->findWithRelations($id);
+        $supplier = $purchase->supplier;
+
+        // حساب الوضع المالي للمورد
+        $supplierFinancialSummary = [
+            'total_purchases' => $supplier->purchases()->sum('total'),
+            'total_payments' => $supplier->supplierPayments()->sum('amount'),
+            'total_settlements' => $supplier->supplierSettlements()->sum('amount'),
+            'total_debt' => 0,
+        ];
+        $supplierFinancialSummary['total_debt'] = 
+            $supplierFinancialSummary['total_purchases'] - 
+            $supplierFinancialSummary['total_payments'] + 
+            $supplierFinancialSummary['total_settlements'];
+
         return Inertia::render('Purchases/Show', [
-            'purchase'       => $this->purchases->findWithRelations($id),
+            'purchase'       => $purchase,
             'products'       => Product::with('category')->orderBy('name')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
+            'supplierFinancialSummary' => $supplierFinancialSummary,
         ]);
     }
 
