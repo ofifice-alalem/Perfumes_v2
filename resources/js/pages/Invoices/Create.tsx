@@ -157,6 +157,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const [showNumberPad, setShowNumberPad] = useState(false);
   const [numberPadTitle, setNumberPadTitle] = useState('');
   const [numberPadInitialValue, setNumberPadInitialValue] = useState('');
+  const [numberPadMaxValue, setNumberPadMaxValue] = useState<number | undefined>(undefined);
   const [numberPadCallback, setNumberPadCallback] = useState<((value: string) => void) | null>(null);
   
   // Sale type modal state
@@ -260,7 +261,31 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
   const grandTotal  = debtPayment ? total + originalDebt : total;
   const totalPaid   = payments.reduce((s, p) => s + (+p.amount || 0), 0) + debtAmount;
   const remaining   = grandTotal - totalPaid;
-  const canAdd    = selectedProduct && (isTier ? (!needsSize || selSize) : selSaleType) && (!needsSize || selSize) && (!needsQty || selQty);
+  // حساب الكمية المستهلكة من المخزون لمنتج معين في السلة الحالية
+  function getCartConsumed(productId: number): number {
+    return cart
+      .filter(i => i.product_id === productId)
+      .reduce((s, i) => s + +i.quantity, 0);
+  }
+
+  const availableStock = selectedProduct
+    ? +selectedProduct.stock - getCartConsumed(selectedProduct.id)
+    : 0;
+
+  // الحد الأقصى للعدد (كم مرة يمكن إضافة هذا المنتج)
+  const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
+    ? (() => {
+        if (effectiveST === 'unit_based') return availableStock;
+        const qty = resolveQuantity(selectedProduct, effectiveST, selSize, '1', sizes);
+        return qty > 0 ? Math.floor(availableStock / qty) : 0;
+      })()
+    : undefined;
+
+  const canAdd = selectedProduct
+    && (isTier ? (!needsSize || selSize) : selSaleType)
+    && (!needsSize || selSize)
+    && (!needsQty || selQty)
+    && (maxCount === undefined || maxCount > 0);
 
   function addToCart() {
     if (!selectedProduct || (!isTier && !selSaleType)) return;
@@ -885,6 +910,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     onClick={() => {
                       setNumberPadTitle(needsQty ? "الكمية" : "العدد");
                       setNumberPadInitialValue(selQty || '1');
+                      setNumberPadMaxValue(maxCount !== undefined ? maxCount : undefined);
                       setNumberPadCallback(() => (value: string) => setSelQty(value));
                       setShowNumberPad(true);
                     }}
@@ -935,6 +961,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     className="spatial-button flex items-center gap-3 px-8 h-16 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
                     <Plus className="w-6 h-6" /> إضافة
                   </button>
+                </div>
+              )}
+
+              {/* Stock warning */}
+              {selectedProduct && maxCount !== undefined && maxCount === 0 && (
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <span className="text-sm font-bold text-red-600 dark:text-red-400">المخزون غير كافٍ — المتاح: {availableStock} {selectedProduct.category.unit}</span>
                 </div>
               )}
             </div>
@@ -1064,8 +1098,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             value={displayCount}
                             onClick={(e) => {
                               e.stopPropagation();
+                              const cartProduct = products.find(p => p.id === groupedItem.product_id);
+                              const consumed = cart
+                                .filter((_, i) => !groupedItem.originalIndices.includes(i))
+                                .filter(i => i.product_id === groupedItem.product_id)
+                                .reduce((s, i) => s + +i.quantity, 0);
+                              const stockLeft = cartProduct ? +cartProduct.stock - consumed : 0;
+                              const itemQty = +groupedItem.quantity;
+                              const cartMax = groupedItem.sale_type === 'unit_based'
+                                ? stockLeft
+                                : (itemQty > 0 ? Math.floor(stockLeft / itemQty) : 0);
                               setNumberPadTitle(groupedItem.sale_type === 'unit_based' ? "الكمية" : "العدد");
                               setNumberPadInitialValue(String(displayCount));
+                              setNumberPadMaxValue(cartMax);
                               setNumberPadCallback(() => (value: string) => {
                                 const newCount = parseInt(value) || 1;
                                 const currentCount = displayCount;
@@ -1488,7 +1533,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
       {/* Number Pad Modal */}
       <NumberPadModal
         isOpen={showNumberPad}
-        onClose={() => setShowNumberPad(false)}
+        onClose={() => { setShowNumberPad(false); setNumberPadMaxValue(undefined); }}
         onConfirm={(value) => {
           if (numberPadCallback) {
             numberPadCallback(value);
@@ -1496,6 +1541,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         }}
         initialValue={numberPadInitialValue}
         title={numberPadTitle}
+        maxValue={numberPadMaxValue}
       />
     </AppShell>
   );

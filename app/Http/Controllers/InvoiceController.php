@@ -69,6 +69,20 @@ class InvoiceController extends Controller
         ]);
 
         $data['user_id'] = Auth::id() ?? 1;
+
+        // التحقق من المخزون لكل منتج قبل الحفظ
+        $stockCheck = [];
+        foreach ($data['items'] as $item) {
+            $pid = $item['product_id'];
+            $stockCheck[$pid] = ($stockCheck[$pid] ?? 0) + $item['quantity'];
+        }
+        foreach ($stockCheck as $pid => $totalQty) {
+            $product = \App\Models\Product::find($pid);
+            if ($product && $product->stock < $totalQty) {
+                return back()->with('error', "المخزون غير كافٍ للمنتج: {$product->name}. المتاح: {$product->stock}");
+            }
+        }
+
         $invoice = $this->invoices->createInvoice($data);
 
         foreach ($data['items'] as $item) {

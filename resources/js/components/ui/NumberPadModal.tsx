@@ -8,9 +8,10 @@ interface NumberPadModalProps {
   onConfirm: (value: string) => void;
   initialValue?: string;
   title: string;
+  maxValue?: number;
 }
 
-export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', title }: NumberPadModalProps) {
+export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', title, maxValue }: NumberPadModalProps) {
   const [value, setValue] = useState('');
   const [hasStartedTyping, setHasStartedTyping] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -48,14 +49,23 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   if (!isOpen) return null;
 
-  function handleNumberClick(num: string) { setValue(prev => prev + num); setHasStartedTyping(true); }
+  function handleNumberClick(num: string) {
+    const next = value + num;
+    if (maxValue !== undefined && +next > maxValue) return;
+    setValue(next);
+    setHasStartedTyping(true);
+  }
   function handleDelete() { setValue(prev => prev.slice(0, -1)); }
   function handleClear() { setValue(''); setHasStartedTyping(false); }
   function handleConfirm() {
     const finalValue = hasStartedTyping ? value : (initialValue || '1');
+    if (!finalValue || finalValue === '0') return;
     onConfirm(finalValue);
     onClose();
   }
+
+  const currentNum = hasStartedTyping ? +value : +(initialValue || 0);
+  const isOverMax = maxValue !== undefined && currentNum > maxValue;
 
   const nums = ['1','2','3','4','5','6','7','8','9'];
   const btnBase = 'rounded-[20px] flex items-center justify-center font-black transition-all active:scale-[0.93]';
@@ -71,17 +81,28 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
           </button>
         </div>
         <div className="px-8 py-6">
-          <div className="w-full h-24 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 flex items-center justify-center">
+          <div className={`w-full h-24 rounded-[20px] border flex items-center justify-center transition-colors ${
+            isOverMax
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-black/3 dark:bg-white/3 border-black/5 dark:border-white/5'
+          }`}>
             {hasStartedTyping
-              ? <span className="font-black text-4xl text-slate-800 dark:text-white">{value || '0'}</span>
+              ? <span className={`font-black text-4xl ${isOverMax ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>{value || '0'}</span>
               : <span className="font-bold text-2xl text-slate-400 dark:text-white/30">{initialValue || 'ابدأ الكتابة...'}</span>
             }
           </div>
         </div>
-        <div className="px-8 pb-4 text-sm text-slate-400 dark:text-white/30 text-center">
+        <div className="px-8 pb-4 text-sm text-center">
+          {maxValue !== undefined && (
+            <span className={`font-bold block mb-1 ${
+              isOverMax ? 'text-red-500' : 'text-slate-400 dark:text-white/30'
+            }`}>
+              {isOverMax ? `⚠️ يتجاوز المتاح (${maxValue})` : `المتاح: ${maxValue}`}
+            </span>
+          )}
           {!hasStartedTyping && initialValue
-            ? <span>القيمة الحالية: <strong>{initialValue}</strong> • ابدأ الكتابة للتغيير أو اضغط تأكيد للاحتفاظ</span>
-            : <span>الأرقام • Backspace للمسح • Enter للتأكيد</span>
+            ? <span className="text-slate-400 dark:text-white/30">القيمة الحالية: <strong>{initialValue}</strong> • ابدأ الكتابة للتغيير أو اضغط تأكيد للاحتفاظ</span>
+            : <span className="text-slate-400 dark:text-white/30">الأرقام • Backspace للمسح • Enter للتأكيد</span>
           }
         </div>
         <div className="px-8 pb-8">
@@ -107,8 +128,8 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
               <Delete className="w-6 h-6" />
             </button>
           </div>
-          <button onClick={handleConfirm}
-            className="w-full h-20 rounded-[24px] bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-black text-xl transition-all active:scale-[0.98] shadow-lg border-2 border-primary/20">
+          <button onClick={handleConfirm} disabled={isOverMax}
+            className="w-full h-20 rounded-[24px] bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white font-black text-xl transition-all active:scale-[0.98] shadow-lg border-2 border-primary/20 disabled:opacity-40 disabled:cursor-not-allowed">
             <div className="flex items-center justify-center gap-3">
               <span>✓</span><span>تأكيد</span><span className="text-sm opacity-75">(Enter)</span>
             </div>
@@ -130,12 +151,23 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
           </button>
         </div>
         <div className="px-6 pt-4 pb-3">
-          <div className="w-full h-16 rounded-[18px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex items-center justify-center">
+          <div className={`w-full h-16 rounded-[18px] border flex items-center justify-center transition-colors ${
+            isOverMax
+              ? 'bg-red-500/10 border-red-500/30'
+              : 'bg-black/3 dark:bg-white/5 border-black/5 dark:border-white/10'
+          }`}>
             {hasStartedTyping
-              ? <span className="font-black text-4xl text-slate-800 dark:text-white">{value || '0'}</span>
+              ? <span className={`font-black text-4xl ${isOverMax ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>{value || '0'}</span>
               : <span className="font-bold text-lg text-slate-400 dark:text-white/30">{initialValue || 'ابدأ الكتابة...'}</span>
             }
           </div>
+          {maxValue !== undefined && (
+            <p className={`text-center text-xs font-bold mt-2 ${
+              isOverMax ? 'text-red-500' : 'text-slate-400 dark:text-white/30'
+            }`}>
+              {isOverMax ? `⚠️ يتجاوز المتاح (${maxValue})` : `المتاح: ${maxValue}`}
+            </p>
+          )}
         </div>
         <div className="px-6 pb-8 pt-2 grid grid-cols-3 gap-2">
           {nums.map(n => (
@@ -156,8 +188,8 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
             className={`${btnBase} h-16 bg-orange-500/10 border border-orange-500/20 text-orange-500 disabled:opacity-30`}>
             <Delete className="w-5 h-5" />
           </button>
-          <button onClick={handleConfirm}
-            className={`${btnBase} col-span-3 h-16 bg-primary hover:bg-primary/90 text-white text-lg font-black shadow-lg`}>
+          <button onClick={handleConfirm} disabled={isOverMax}
+            className={`${btnBase} col-span-3 h-16 bg-primary hover:bg-primary/90 text-white text-lg font-black shadow-lg disabled:opacity-40 disabled:cursor-not-allowed`}>
             ✓ تأكيد
           </button>
         </div>
