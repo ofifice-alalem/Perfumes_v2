@@ -577,26 +577,6 @@ export default function InvoiceShow({ invoice, customerDebt, debtPayments, produ
               )}
             </SpatialCard>
 
-            {/* Debt Payments */}
-            {debtPayments.length > 0 && (
-              <SpatialCard title="سدادات الدين السابق" icon={<AlertCircle className="w-4 h-4" />}>
-                <p className="text-xs font-bold text-slate-400 dark:text-white/40 mb-3">مدفوعات مستقلة عن هذه الفاتورة — تُخفض الدين الكلي للعميل</p>
-                <div className="flex flex-col gap-2">
-                  {debtPayments.map(p => (
-                    <div key={p.id} className="flex items-center justify-between p-3 rounded-[14px] bg-amber-500/5 border border-amber-500/15">
-                      <div>
-                        <span className="font-bold text-slate-800 dark:text-white text-sm">{p.payment_method.name}</span>
-                        <p className="text-xs font-bold text-slate-400 dark:text-white/40 mt-0.5">
-                          {new Date(p.created_at).toLocaleDateString('ar')}
-                        </p>
-                      </div>
-                      <span className="font-black text-amber-600 dark:text-amber-400">{p.amount} د</span>
-                    </div>
-                  ))}
-                </div>
-              </SpatialCard>
-            )}
-
             {/* Customer Financial Status */}
             {customerDebt && invoice.customer && (
               <SpatialCard title="الوضع المالي للعميل" icon={<AlertCircle className="w-4 h-4" />}>
