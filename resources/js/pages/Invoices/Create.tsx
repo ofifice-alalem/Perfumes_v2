@@ -126,6 +126,7 @@ function resolveLineTotal(saleType: string, price: number, quantity: number): nu
 
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, invoice }: Props) {
   const [mobileTab, setMobileTab] = useState<'add'|'cart'|'pay'>('add');
+  const [resetKey, setResetKey] = useState(0);
   const [customerId,   setCustomerId]   = useState('');
   const [customerType, setCustomerType] = useState<'regular'|'vip'>('regular');
   const [notes,        setNotes]        = useState('');
@@ -511,6 +512,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     setSelQty('');
     setSelMethod('');
     setSelAmount('');
+    setResetKey(k => k + 1);
   }
 
   const customerOptions = [
@@ -796,7 +798,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                   <User className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <ModernSelect label="" options={customerOptions} defaultValue="زبون نقدي" placeholder="اختر العميل"
+                  <ModernSelect key={resetKey} label="" options={customerOptions} defaultValue="زبون نقدي" placeholder="اختر العميل"
                     onSelect={val => {
                       const c = customers.find(c => c.name === val);
                       setCustomerId(c && c.id !== 1 ? String(c.id) : '');
