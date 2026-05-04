@@ -11,7 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->foreignId('category_id')->constrained()->restrictOnDelete();
-            $table->foreignId('price_tier_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('price_tier_id')->nullable()->nullOnDelete()->constrained();
             $table->enum('selling_type', ['tier_based', 'unit_priced']);
             $table->decimal('stock', 10, 2)->default(0);
             $table->decimal('min_stock', 10, 2)->default(0);

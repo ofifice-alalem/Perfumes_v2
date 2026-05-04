@@ -10,10 +10,13 @@ return new class extends Migration {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('phone', 20)->nullable()->unique();
+            $table->string('phone', 20)->unique()->nullable();
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->decimal('total_purchases', 10, 2)->default(0);
+            $table->decimal('total_paid', 10, 2)->default(0);
+            $table->decimal('total_returns', 10, 2)->default(0);
+            $table->decimal('total_settlements', 10, 2)->default(0);
             $table->decimal('total_debt', 10, 2)->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();

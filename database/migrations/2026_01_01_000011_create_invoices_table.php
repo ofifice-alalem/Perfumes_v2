@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
-            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('customer_id')->nullable()->nullOnDelete()->constrained();
             $table->enum('customer_type', ['regular', 'vip'])->default('regular');
             $table->decimal('total', 10, 2)->default(0);
             $table->decimal('paid_amount', 10, 2)->default(0);

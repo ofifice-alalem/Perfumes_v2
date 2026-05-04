@@ -11,12 +11,12 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('invoice_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
-            $table->foreignId('size_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('size_id')->nullable()->nullOnDelete()->constrained();
             $table->enum('sale_type', ['tier_decant', 'unit_decant', 'full_bottle', 'unit_based']);
             $table->decimal('quantity', 10, 2)->default(1);
             $table->decimal('unit_price', 10, 2);
             $table->decimal('line_total', 10, 2);
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at')->nullable();
 
             $table->index('invoice_id');
             $table->index('product_id');

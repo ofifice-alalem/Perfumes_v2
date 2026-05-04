@@ -11,6 +11,7 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->enum('unit', ['ml', 'pcs', 'g']);
+            $table->boolean('is_operational')->default(false);
             $table->timestamps();
         });
     }

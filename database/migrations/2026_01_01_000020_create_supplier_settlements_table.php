@@ -7,21 +7,22 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('supplier_payments', function (Blueprint $table) {
+        Schema::create('supplier_settlements', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('purchase_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('supplier_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('purchase_id')->nullable()->nullOnDelete()->constrained();
             $table->foreignId('payment_method_id')->constrained()->restrictOnDelete();
             $table->decimal('amount', 10, 2);
             $table->string('notes')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('created_at')->nullable();
 
-            $table->index('purchase_id');
+            $table->index('supplier_id');
             $table->index('created_at');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('supplier_payments');
+        Schema::dropIfExists('supplier_settlements');
     }
 };
