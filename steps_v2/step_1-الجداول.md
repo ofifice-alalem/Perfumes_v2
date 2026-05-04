@@ -9,10 +9,11 @@
 - **دورة شراء كاملة:** مورد → فاتورة شراء → مخزون → دفع للمورد
 - **نظام مالي مستقل:** مدفوعات وتسويات مرتبطة بالعميل/المورد مباشرة، لا بالفاتورة فقط
 - **تتبع التالف** والمواد التشغيلية
+- **نظام المرتجعات:** إرجاع بضاعة للمورد مع تسوية مالية تلقائية أو يدوية
 
 ---
 
-## عدد الجداول: 23 جدول
+## عدد الجداول: 25 جدول
 
 ```
  1. users
@@ -36,8 +37,10 @@
 19. purchase_items
 20. supplier_payments
 21. supplier_settlements
-22. waste_logs
-23. waste_items
+22. purchase_returns
+23. purchase_return_items
+24. waste_logs
+25. waste_items
 ```
 
 ---
@@ -700,7 +703,83 @@ INDEX (created_at)
 
 ---
 
-### 22. `waste_logs`
+### 22. `purchase_returns`
+
+**الوظيفة:** رأس سجل المرتجع — إرجاع بضاعة للمورد. كل عملية إرجاع تخصم من المخزون وقد تُنشئ تسوية مالية تلقائياً أو يدوياً.
+
+| الحقل | النوع | القيود | الوصف |
+|-------|-------|--------|-------|
+| id | BIGINT | PK, AUTO_INCREMENT | المعرف |
+| supplier_id | BIGINT | FK → suppliers.id, RESTRICT | المورد |
+| purchase_id | BIGINT | FK → purchases.id, NULL ON DELETE, NULLABLE | فاتورة الشراء المرجعية |
+| settlement_id | BIGINT | FK → supplier_settlements.id, NULL ON DELETE, NULLABLE | التسوية المرتبطة |
+| total | DECIMAL(10,2) | DEFAULT 0 | إجمالي قيمة المرتجع |
+| notes | TEXT | NULLABLE | ملاحظات |
+| created_at | TIMESTAMP | — | تاريخ الإرجاع |
+| updated_at | TIMESTAMP | — | تاريخ التحديث |
+
+**Indexes:**
+```
+INDEX (supplier_id)
+INDEX (created_at)
+```
+
+**قواعد:**
+```
+- purchase_id = NULL  → مرتجع مستقل غير مرتبط بفاتورة محددة
+- purchase_id موجود  → مرتجع من فاتورة شراء محددة
+- settlement_id = NULL  → لم تُنشأ تسوية بعد أو لا حاجة لها
+- settlement_id موجود  → تسوية مرتبطة بهذا المرتجع
+- عند حذف فاتورة شراء: purchase_id يصبح NULL
+- عند حذف التسوية: settlement_id يصبح NULL
+```
+
+**منطق التسوية عند الإرجاع:**
+```
+مورد نقدي (id=1):
+  → تسوية تلقائية دائماً بقيمة المرتجع
+
+مورد مسجّل:
+  → النظام يحسب total_debt بعد الإرجاع
+  → إذا total_debt بعد الإرجاع > 0:
+       لا تسوية — المرتجع يُخفّض الدين فقط
+  → إذا total_debt بعد الإرجاع <= 0:
+       يظهر خيار: [إنشاء تسوية] [لاحقاً]
+```
+
+---
+
+### 23. `purchase_return_items`
+
+**الوظيفة:** أسطر المرتجع — كل سطر يمثل منتجاً واحداً مع كميته وسعره. عند إضافة السطر: `products.stock -= quantity` فوراً.
+
+| الحقل | النوع | القيود | الوصف |
+|-------|-------|--------|-------|
+| id | BIGINT | PK, AUTO_INCREMENT | المعرف |
+| purchase_return_id | BIGINT | FK → purchase_returns.id, CASCADE | سجل المرتجع |
+| product_id | BIGINT | FK → products.id, RESTRICT | المنتج |
+| quantity | DECIMAL(10,2) | NOT NULL | الكمية المرتجعة |
+| unit_cost | DECIMAL(10,2) | NOT NULL | سعر الوحدة وقت الإرجاع (snapshot) |
+| line_total | DECIMAL(10,2) | NOT NULL | الإجمالي = unit_cost × quantity |
+| created_at | TIMESTAMP | — | تاريخ الإنشاء |
+
+**Indexes:**
+```
+INDEX (purchase_return_id)
+INDEX (product_id)
+FOREIGN KEY (purchase_return_id) ON DELETE CASCADE
+```
+
+**قاعدة تحديث المخزون:**
+```
+إضافة سطر:  products.stock -= quantity
+حذف سطر:    products.stock += quantity
+حذف السجل:  يُعاد مخزون كل الأسطر قبل الحذف (CASCADE)
+```
+
+---
+
+### 24. `waste_logs`
 
 **الوظيفة:** رأس سجل التالف. يجمع معلومات من سجّله ومتى. سجل واحد يمكن أن يحتوي على أكثر من منتج تالف.
 
@@ -720,7 +799,7 @@ INDEX (created_at)
 
 ---
 
-### 23. `waste_items`
+### 25. `waste_items`
 
 **الوظيفة:** سطر واحد لكل منتج تالف داخل السجل. عند إضافة السطر: `products.stock -= quantity` فوراً.
 
@@ -788,6 +867,7 @@ products (selling_type + stock + min_stock)
   ├── original_perfume_details.product_id  [عطور أصلية فقط]
   ├── invoice_items.product_id
   ├── purchase_items.product_id
+  ├── purchase_return_items.product_id
   └── waste_items.product_id
 
 payment_methods
@@ -810,6 +890,10 @@ purchases (رأس فاتورة الشراء)
   ├── purchase_items.purchase_id       [CASCADE]
   ├── supplier_payments.purchase_id    [NULL ON DELETE]
   └── supplier_settlements.purchase_id [NULL ON DELETE]
+
+purchase_returns (رأس سجل المرتجع)
+  ├── purchase_return_items.purchase_return_id  [CASCADE]
+  └── supplier_settlements.id  [NULL ON DELETE]
 
 waste_logs (رأس سجل التالف)
   └── waste_items.waste_log_id  [CASCADE]
@@ -888,12 +972,23 @@ waste_logs (رأس سجل التالف)
 31. حذف purchase → supplier_payments.purchase_id يصبح NULL
 ```
 
+### قواعد المرتجعات
+```
+32. products.stock -= quantity فور إضافة أي سطر مرتجع
+33. لا يمكن إرجاع أكثر من المخزون المتاح
+34. حذف سطر مرتجع → stock += quantity (إعادة المخزون)
+35. حذف سجل المرتجع → يُعاد مخزون كل الأسطر قبل الحذف (CASCADE)
+36. مورد نقدي → تسوية تلقائية دائماً بقيمة المرتجع
+37. مورد مسجّل + total_debt بعد الإرجاع > 0 → لا تسوية، المرتجع يُخفّض الدين
+38. مورد مسجّل + total_debt بعد الإرجاع <= 0 → يظهر خيار إنشاء تسوية
+```
+
 ### قواعد التالف
 ```
-32. stock -= quantity فور إضافة أي سطر تالف
-33. لا يمكن تسجيل تالف أكثر من المخزون المتاح
-34. حذف سطر تالف → stock += quantity (إعادة المخزون)
-35. حذف سجل التالف → يُعاد مخزون كل الأسطر ثم يحذف (CASCADE)
+39. stock -= quantity فور إضافة أي سطر تالف
+40. لا يمكن تسجيل تالف أكثر من المخزون المتاح
+41. حذف سطر تالف → stock += quantity (إعادة المخزون)
+42. حذف سجل التالف → يُعاد مخزون كل الأسطر ثم يحذف (CASCADE)
 ```
 
 ---
@@ -922,6 +1017,8 @@ waste_logs (رأس سجل التالف)
 19. purchase_items        ← يعتمد على purchases + products
 20. supplier_payments     ← يعتمد على suppliers + purchases + payment_methods
 21. supplier_settlements  ← يعتمد على suppliers + purchases + payment_methods
-22. waste_logs            ← يعتمد على users
-23. waste_items           ← يعتمد على waste_logs + products
+22. purchase_returns      ← يعتمد على suppliers + purchases + supplier_settlements
+23. purchase_return_items ← يعتمد على purchase_returns + products
+24. waste_logs            ← يعتمد على users
+25. waste_items           ← يعتمد على waste_logs + products
 ```
