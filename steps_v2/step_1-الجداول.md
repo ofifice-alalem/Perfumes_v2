@@ -333,6 +333,9 @@ UNIQUE (name)
 | email | VARCHAR(255) | NULLABLE | البريد الإلكتروني |
 | address | TEXT | NULLABLE | العنوان |
 | total_purchases | DECIMAL(10,2) | DEFAULT 0 | إجمالي المشتريات (cached) |
+| total_paid | DECIMAL(10,2) | DEFAULT 0 | إجمالي المدفوع (cached) |
+| total_returns | DECIMAL(10,2) | DEFAULT 0 | إجمالي المرتجع (cached) |
+| total_settlements | DECIMAL(10,2) | DEFAULT 0 | إجمالي التسويات (cached) |
 | total_debt | DECIMAL(10,2) | DEFAULT 0 | إجمالي الديون الحالية (cached) |
 | is_active | BOOLEAN | DEFAULT true | حالة النشاط |
 | created_at | TIMESTAMP | — | تاريخ التسجيل |
@@ -344,10 +347,7 @@ INDEX (is_active)
 UNIQUE (phone)
 ```
 
-**معادلة الدين الكلي:**
-```
-total_debt = SUM(invoices.total) - SUM(payments.amount) + SUM(settlements.amount)
-```
+**الحقول المالية:** جميعها cached values تُحدَّث تلقائياً من النظام.
 
 **قواعد الزبون النقدي (id=1):**
 ```
