@@ -33,14 +33,14 @@
 15. payments
 16. settlements
 17. suppliers
-18. purchases
-19. purchase_items
-20. supplier_payments
-21. supplier_settlements
-22. purchase_returns
-23. purchase_return_items
-24. waste_logs
-25. waste_items
+20. purchases
+21. purchase_items
+22. supplier_payments
+23. supplier_settlements
+24. purchase_returns
+25. purchase_return_items
+26. waste_logs
+27. waste_items
 ```
 
 ---
@@ -533,7 +533,83 @@ total_debt = SUM(invoices.total) - SUM(payments.amount) + SUM(settlements.amount
 
 ---
 
-### 17. `suppliers`
+### 17. `invoice_returns`
+
+**الوظيفة:** رأس سجل المرتجع من العميل. كل عملية إرجاع تزيد المخزون وقد تُنشئ تسوية مالية تلقائياً أو يدوياً.
+
+| الحقل | النوع | القيود | الوصف |
+|-------|-------|--------|-------|
+| id | BIGINT | PK, AUTO_INCREMENT | المعرف |
+| customer_id | BIGINT | FK → customers.id, RESTRICT | العميل |
+| invoice_id | BIGINT | FK → invoices.id, NULL ON DELETE, NULLABLE | الفاتورة المرجعية |
+| settlement_id | BIGINT | FK → settlements.id, NULL ON DELETE, NULLABLE | التسوية المرتبطة |
+| total | DECIMAL(10,2) | DEFAULT 0 | إجمالي قيمة المرتجع |
+| notes | TEXT | NULLABLE | ملاحظات |
+| created_at | TIMESTAMP | — | تاريخ الإرجاع |
+| updated_at | TIMESTAMP | — | تاريخ التحديث |
+
+**Indexes:**
+```
+INDEX (customer_id)
+INDEX (created_at)
+```
+
+**قواعد:**
+```
+- invoice_id = NULL  → مرتجع مستقل غير مرتبط بفاتورة محددة
+- invoice_id موجود  → مرتجع من فاتورة بيع محددة
+- settlement_id = NULL  → لم تُنشأ تسوية بعد أو لا حاجة لها
+- settlement_id موجود  → تسوية مرتبطة بهذا المرتجع
+- عند حذف فاتورة: invoice_id يصبح NULL
+- عند حذف التسوية: settlement_id يصبح NULL
+```
+
+**منطق التسوية عند الإرجاع:**
+```
+زبون نقدي (id=1):
+  → تسوية تلقائية دائماً بقيمة المرتجع
+
+زبون مسجّل:
+  → النظام يحسب total_debt بعد الإرجاع
+  → إذا total_debt بعد الإرجاع > 0:
+       لا تسوية — المرتجع يُخفّض الدين فقط
+  → إذا total_debt بعد الإرجاع <= 0:
+       يظهر خيار: [إنشاء تسوية] [لاحقاً]
+```
+
+---
+
+### 18. `invoice_return_items`
+
+**الوظيفة:** أسطر المرتجع من العميل — كل سطر يمثل منتجاً واحداً مع كميته وسعره. عند إضافة السطر: `products.stock += quantity` فوراً.
+
+| الحقل | النوع | القيود | الوصف |
+|-------|-------|--------|-------|
+| id | BIGINT | PK, AUTO_INCREMENT | المعرف |
+| invoice_return_id | BIGINT | FK → invoice_returns.id, CASCADE | سجل المرتجع |
+| product_id | BIGINT | FK → products.id, RESTRICT | المنتج |
+| quantity | DECIMAL(10,2) | NOT NULL | الكمية المرتجعة |
+| unit_price | DECIMAL(10,2) | NOT NULL | سعر الوحدة وقت الإرجاع (snapshot) |
+| line_total | DECIMAL(10,2) | NOT NULL | الإجمالي = unit_price × quantity |
+| created_at | TIMESTAMP | — | تاريخ الإنشاء |
+
+**Indexes:**
+```
+INDEX (invoice_return_id)
+INDEX (product_id)
+FOREIGN KEY (invoice_return_id) ON DELETE CASCADE
+```
+
+**قاعدة تحديث المخزون:**
+```
+إضافة سطر:  products.stock += quantity
+حذف سطر:    products.stock -= quantity
+حذف السجل:  يُعاد خصم مخزون كل الأسطر قبل الحذف (CASCADE)
+```
+
+---
+
+### 19. `suppliers`
 
 **الوظيفة:** بيانات الموردين لتتبع المشتريات والمدفوعات. نفس منطق customers لكن من جهة الشراء.
 
@@ -571,7 +647,7 @@ total_debt = SUM(purchases.total) - SUM(supplier_payments.amount) + SUM(supplier
 
 ---
 
-### 18. `purchases`
+### 20. `purchases`
 
 **الوظيفة:** رأس فاتورة الشراء. نفس منطق invoices لكن معكوس — أنت المشتري والمورد هو البائع.
 
@@ -606,7 +682,7 @@ payment_status: نفس منطق invoices
 
 ---
 
-### 19. `purchase_items`
+### 21. `purchase_items`
 
 **الوظيفة:** أسطر فاتورة الشراء. كل سطر يمثل منتجاً واحداً مع كميته وسعر شرائه. عند إضافة السطر: `products.stock += quantity` تلقائياً.
 
@@ -636,7 +712,7 @@ FOREIGN KEY (purchase_id) ON DELETE CASCADE
 
 ---
 
-### 20. `supplier_payments`
+### 22. `supplier_payments`
 
 **الوظيفة:** كل دفعة تدفعها للمورد. مرتبطة بالمورد مباشرة (`supplier_id` إجباري) وبفاتورة الشراء اختيارياً (`purchase_id` nullable).
 
@@ -675,7 +751,7 @@ total_debt يُعاد حسابه: SUM(purchases.total) - SUM(supplier_payments.a
 
 ---
 
-### 21. `supplier_settlements`
+### 23. `supplier_settlements`
 
 **الوظيفة:** التسويات مع الموردين — المورد يُعيد مبلغاً للمتجر (رد بضاعة، خصم، إلغاء فاتورة مدفوعة، ...).
 
@@ -703,7 +779,7 @@ INDEX (created_at)
 
 ---
 
-### 22. `purchase_returns`
+### 24. `purchase_returns`
 
 **الوظيفة:** رأس سجل المرتجع — إرجاع بضاعة للمورد. كل عملية إرجاع تخصم من المخزون وقد تُنشئ تسوية مالية تلقائياً أو يدوياً.
 
@@ -749,7 +825,7 @@ INDEX (created_at)
 
 ---
 
-### 23. `purchase_return_items`
+### 25. `purchase_return_items`
 
 **الوظيفة:** أسطر المرتجع — كل سطر يمثل منتجاً واحداً مع كميته وسعره. عند إضافة السطر: `products.stock -= quantity` فوراً.
 
@@ -779,7 +855,7 @@ FOREIGN KEY (purchase_return_id) ON DELETE CASCADE
 
 ---
 
-### 24. `waste_logs`
+### 26. `waste_logs`
 
 **الوظيفة:** رأس سجل التالف. يجمع معلومات من سجّله ومتى. سجل واحد يمكن أن يحتوي على أكثر من منتج تالف.
 
@@ -799,7 +875,7 @@ INDEX (created_at)
 
 ---
 
-### 25. `waste_items`
+### 27. `waste_items`
 
 **الوظيفة:** سطر واحد لكل منتج تالف داخل السجل. عند إضافة السطر: `products.stock -= quantity` فوراً.
 
@@ -972,7 +1048,7 @@ waste_logs (رأس سجل التالف)
 31. حذف purchase → supplier_payments.purchase_id يصبح NULL
 ```
 
-### قواعد المرتجعات
+### قواعد مرتجعات الموردين
 ```
 32. products.stock -= quantity فور إضافة أي سطر مرتجع
 33. لا يمكن إرجاع أكثر من المخزون المتاح
@@ -983,6 +1059,16 @@ waste_logs (رأس سجل التالف)
 38. مورد مسجّل + total_debt بعد الإرجاع <= 0 → يظهر خيار إنشاء تسوية
 ```
 
+
+### قواعد مرتجعات العملاء
+```
+39. products.stock += quantity فور إضافة أي سطر مرتجع من عميل
+40. حذف سطر مرتجع → stock -= quantity
+41. حذف سجل المرتجع → يُعاد خصم مخزون كل الأسطر (CASCADE)
+42. زبون نقدي → تسوية تلقائية دائماً بقيمة المرتجع
+43. زبون مسجّل + total_debt بعد الإرجاع > 0 → لا تسوية، المرتجع يُخفّض الدين
+44. زبون مسجّل + total_debt بعد الإرجاع <= 0 → يظهر خيار إنشاء تسوية
+```
 ### قواعد التالف
 ```
 39. stock -= quantity فور إضافة أي سطر تالف
@@ -1013,12 +1099,14 @@ waste_logs (رأس سجل التالف)
 15. invoice_items         ← يعتمد على invoices + products + sizes
 16. payments              ← يعتمد على customers + invoices + payment_methods
 17. settlements           ← يعتمد على customers + invoices + payment_methods
-18. purchases             ← يعتمد على suppliers
-19. purchase_items        ← يعتمد على purchases + products
-20. supplier_payments     ← يعتمد على suppliers + purchases + payment_methods
-21. supplier_settlements  ← يعتمد على suppliers + purchases + payment_methods
-22. purchase_returns      ← يعتمد على suppliers + purchases + supplier_settlements
-23. purchase_return_items ← يعتمد على purchase_returns + products
-24. waste_logs            ← يعتمد على users
-25. waste_items           ← يعتمد على waste_logs + products
+18. invoice_returns       ← يعتمد على customers + invoices + settlements
+19. invoice_return_items  ← يعتمد على invoice_returns + products
+20. purchases             ← يعتمد على suppliers
+21. purchase_items        ← يعتمد على purchases + products
+22. supplier_payments     ← يعتمد على suppliers + purchases + payment_methods
+23. supplier_settlements  ← يعتمد على suppliers + purchases + payment_methods
+24. purchase_returns      ← يعتمد على suppliers + purchases + supplier_settlements
+25. purchase_return_items ← يعتمد على purchase_returns + products
+26. waste_logs            ← يعتمد على users
+27. waste_items           ← يعتمد على waste_logs + products
 ```
