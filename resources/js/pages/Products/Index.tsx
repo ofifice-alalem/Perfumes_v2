@@ -489,31 +489,22 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         <div key={product.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
 
                                             {/* رأس */}
-                                            <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-start justify-between gap-3">
-                                                <div className="flex flex-col gap-1 min-w-0 flex-1">
-                                                    <span className="font-black text-slate-800 dark:text-white text-lg leading-tight">{product.name}</span>
-                                                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/50">{product.category.name}</span>
-                                                        {product.selling_type === 'tier_based' && (
-                                                            <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300">تير {product.price_tier?.name}</span>
-                                                        )}
-                                                        {product.category.is_operational && (
-                                                            <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-black/8 dark:bg-white/12 text-slate-500 dark:text-white/60">تشغيلي</span>
-                                                        )}
-                                                    </div>
+                                            <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
+                                                <span className="font-black text-slate-800 dark:text-white text-lg leading-tight">{product.name}</span>
+                                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                                    <span className="text-sm font-bold text-slate-400 dark:text-white/50">{product.category.name}</span>
+                                                    {product.selling_type === 'tier_based' && (
+                                                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300">تير {product.price_tier?.name}</span>
+                                                    )}
+                                                    {product.category.is_operational && (
+                                                        <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-black/8 dark:bg-white/12 text-slate-500 dark:text-white/60">تشغيلي</span>
+                                                    )}
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <button onClick={() => startEdit(product)}
-                                                        className="w-9 h-9 rounded-[12px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all flex items-center justify-center">
-                                                        <Pencil className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button onClick={() => deleteProduct(product.id)}
-                                                        className="w-9 h-9 rounded-[12px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
+                                            </div>
 
-                                                {/* مدى السعر — فقط لو كان عنده سعر */}
+                                            {/* بيانات */}
+                                            <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
+
                                                 {hasPrice && (
                                                     <div className="flex items-center justify-between py-3.5">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">مدى السعر</span>
@@ -525,7 +516,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     </div>
                                                 )}
 
-                                                {/* سعر العبوة — فقط لو كان عنده */}
                                                 {hasBottle && (
                                                     <div className="flex items-center justify-between py-3.5">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">سعر العبوة</span>
@@ -537,7 +527,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     </div>
                                                 )}
 
-                                                {/* المخزون */}
                                                 <div className="flex items-center justify-between py-3.5">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">المخزون</span>
                                                     <div className="flex items-baseline gap-1.5">
@@ -546,7 +535,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     </div>
                                                 </div>
 
-                                                {/* الحد الأدنى */}
                                                 <div className="flex items-center justify-between py-3.5">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">الحد الأدنى</span>
                                                     <div className="flex items-baseline gap-1.5">
@@ -556,6 +544,19 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 </div>
 
                                             </div>
+
+                                            {/* الإجراءات */}
+                                            <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
+                                                <button onClick={() => startEdit(product)}
+                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                                                    <Pencil className="w-4 h-4" /> تعديل
+                                                </button>
+                                                <button onClick={() => deleteProduct(product.id)}
+                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                    <Trash2 className="w-4 h-4" /> حذف
+                                                </button>
+                                            </div>
+
                                         </div>
                                     );
                                 })}
