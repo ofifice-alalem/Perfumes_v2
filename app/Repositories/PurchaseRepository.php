@@ -78,7 +78,6 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
             $newQty  = (float) $data['quantity'];
             $diff    = $newQty - $oldQty;
 
-            // تحديث المخزون بالفرق
             if ($diff !== 0.0) {
                 Product::findOrFail($item->product_id)->increment('stock', $diff);
             }
@@ -91,6 +90,16 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
             $purchase = $this->model->findOrFail($purchaseId);
             $purchase->recalculate();
+
+            // المورد النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($purchase->supplier_id == 1) {
+                $payment = SupplierPayment::where('purchase_id', $purchaseId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $purchase->fresh()->total]);
+                    $purchase->recalculate();
+                }
+            }
+
             $this->updateSupplierDebt($purchase->fresh());
         });
     }
@@ -100,13 +109,21 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
         DB::transaction(function () use ($purchaseId, $itemId) {
             $item = PurchaseItem::where('purchase_id', $purchaseId)->findOrFail($itemId);
 
-            // إعادة خصم المخزون
             Product::findOrFail($item->product_id)->decrement('stock', $item->quantity);
-
             $item->delete();
 
             $purchase = $this->model->findOrFail($purchaseId);
             $purchase->recalculate();
+
+            // المورد النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($purchase->supplier_id == 1) {
+                $payment = SupplierPayment::where('purchase_id', $purchaseId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $purchase->fresh()->total]);
+                    $purchase->recalculate();
+                }
+            }
+
             $this->updateSupplierDebt($purchase->fresh());
         });
     }
