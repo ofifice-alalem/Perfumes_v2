@@ -43,7 +43,7 @@ class CategoryController extends Controller
 
         $data['is_operational'] = $request->boolean('is_operational');
 
-        $this->categories->update($id, $data);
+        $this->categories->update($data, $id);
 
         return back()->with('success', 'تم تحديث التصنيف بنجاح');
     }

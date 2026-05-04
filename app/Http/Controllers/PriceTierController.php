@@ -39,7 +39,7 @@ class PriceTierController extends Controller
             'description' => 'nullable|string|max:255',
         ]);
 
-        $this->tiers->update($id, $data);
+        $this->tiers->update($data, $id);
 
         return back()->with('success', 'تم تحديث التير بنجاح');
     }

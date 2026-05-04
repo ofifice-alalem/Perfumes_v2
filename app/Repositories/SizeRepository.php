@@ -2,16 +2,11 @@
 
 namespace App\Repositories;
 
-use App\Models\Size;
 use App\Repositories\Contracts\SizeRepositoryInterface;
+use Prettus\Repository\Eloquent\Repository;
 
-class SizeRepository extends BaseRepository implements SizeRepositoryInterface
+class SizeRepository extends Repository implements SizeRepositoryInterface
 {
-    public function __construct(Size $model)
-    {
-        parent::__construct($model);
-    }
-
     public function allOrdered()
     {
         return $this->model->orderBy('unit')->orderBy('value')->get();
@@ -19,7 +14,7 @@ class SizeRepository extends BaseRepository implements SizeRepositoryInterface
 
     public function isUsed(int $id): bool
     {
-        $size = $this->model->findOrFail($id);
+        $size = $this->find($id);
         return $size->tierPrices()->exists() || $size->invoiceItems()->exists();
     }
 }

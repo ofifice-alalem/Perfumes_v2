@@ -41,7 +41,7 @@ class SizeController extends Controller
 
         $data['unit'] = 'ml';
 
-        $this->sizes->update($id, $data);
+        $this->sizes->update($data, $id);
 
         return back()->with('success', 'تم تحديث الحجم بنجاح');
     }

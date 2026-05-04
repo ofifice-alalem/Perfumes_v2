@@ -2,7 +2,9 @@
 
 namespace App\Repositories\Contracts;
 
-interface PriceTierRepositoryInterface extends RepositoryInterface
+use Prettus\Repository\Contracts\Repository;
+
+interface PriceTierRepositoryInterface extends Repository
 {
     public function allWithPrices();
     public function hasProducts(int $id): bool;

@@ -2,7 +2,9 @@
 
 namespace App\Repositories\Contracts;
 
-interface SizeRepositoryInterface extends RepositoryInterface
+use Prettus\Repository\Contracts\Repository;
+
+interface SizeRepositoryInterface extends Repository
 {
     public function allOrdered();
     public function isUsed(int $id): bool;

@@ -2,17 +2,12 @@
 
 namespace App\Repositories;
 
-use App\Models\PriceTier;
 use App\Models\TierPrice;
 use App\Repositories\Contracts\PriceTierRepositoryInterface;
+use Prettus\Repository\Eloquent\Repository;
 
-class PriceTierRepository extends BaseRepository implements PriceTierRepositoryInterface
+class PriceTierRepository extends Repository implements PriceTierRepositoryInterface
 {
-    public function __construct(PriceTier $model)
-    {
-        parent::__construct($model);
-    }
-
     public function allWithPrices()
     {
         return $this->model
@@ -23,7 +18,7 @@ class PriceTierRepository extends BaseRepository implements PriceTierRepositoryI
 
     public function hasProducts(int $id): bool
     {
-        return $this->model->findOrFail($id)->products()->exists();
+        return $this->find($id)->products()->exists();
     }
 
     public function syncPrices(int $tierId, array $prices): void

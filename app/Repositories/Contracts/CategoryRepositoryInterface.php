@@ -2,7 +2,9 @@
 
 namespace App\Repositories\Contracts;
 
-interface CategoryRepositoryInterface extends RepositoryInterface
+use Prettus\Repository\Contracts\Repository;
+
+interface CategoryRepositoryInterface extends Repository
 {
     public function allOrdered();
     public function hasProducts(int $id): bool;
