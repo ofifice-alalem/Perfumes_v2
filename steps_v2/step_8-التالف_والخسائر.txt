@@ -143,6 +143,10 @@ WasteRepository:
    - findWithRelations(id)
    - createLog(data)         → ينشئ waste_log
    - addItem(logId, data)    → ينشئ waste_item + stock -= quantity
+   - updateItem(logId, itemId, data) → يعدّل waste_item + يصحح المخزون:
+                                         diff = newQty - oldQty
+                                         diff > 0 → stock -= diff
+                                         diff < 0 → stock += abs(diff)
    - removeItem(logId, id)   → يحذف waste_item + stock += quantity
 
 WasteController:
@@ -162,6 +166,7 @@ WasteController:
 Route::resource('waste', WasteController::class)->except(['edit']);
 Route::post('waste/store-with-items', [WasteController::class, 'storeWithItems']);
 Route::post('waste/{id}/items', [WasteController::class, 'addItem']);
+Route::patch('waste/{id}/items/{itemId}', [WasteController::class, 'updateItem']);
 Route::delete('waste/{id}/items/{itemId}', [WasteController::class, 'removeItem']);
 
 
