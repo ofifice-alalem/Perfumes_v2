@@ -8,6 +8,7 @@ interface Category {
   id: number;
   name: string;
   unit: 'ml' | 'pcs' | 'g';
+  is_operational: boolean;
 }
 
 interface Props {
@@ -32,12 +33,12 @@ export default function CategoriesIndex({ categories, flash }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const createForm = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g' });
-  const editForm   = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g' });
+  const createForm = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g', is_operational: false });
+  const editForm   = useForm({ name: '', unit: 'ml' as 'ml' | 'pcs' | 'g', is_operational: false });
 
   function startEdit(cat: Category) {
     setEditingId(cat.id);
-    editForm.setData({ name: cat.name, unit: cat.unit });
+    editForm.setData({ name: cat.name, unit: cat.unit, is_operational: cat.is_operational });
   }
 
   function submitCreate() {
@@ -117,6 +118,19 @@ export default function CategoriesIndex({ categories, flash }: Props) {
               </div>
 
               <div className="flex items-end gap-2">
+                <label className="flex items-center gap-2 cursor-pointer select-none h-12 px-3 rounded-[16px] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10">
+                  <span className="text-xs font-bold text-slate-600 dark:text-white/60">تشغيلي</span>
+                  <div
+                    onClick={() => createForm.setData('is_operational', !createForm.data.is_operational)}
+                    className={`w-10 h-6 rounded-full transition-colors duration-200 flex items-center px-1 shrink-0 ${
+                      createForm.data.is_operational ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                      createForm.data.is_operational ? '-translate-x-4' : 'translate-x-0'
+                    }`} />
+                  </div>
+                </label>
                 <button onClick={submitCreate} disabled={createForm.processing}
                   className="spatial-button flex items-center gap-2 px-5 h-12 text-sm"
                 >
@@ -167,6 +181,19 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                             }}
                           />
                         </div>
+                        <label className="flex items-center gap-2 cursor-pointer select-none h-11 px-3 rounded-[12px] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 shrink-0">
+                          <span className="text-xs font-bold text-slate-500 dark:text-white/50">تشغيلي</span>
+                          <div
+                            onClick={() => editForm.setData('is_operational', !editForm.data.is_operational)}
+                            className={`w-9 h-5 rounded-full transition-colors duration-200 flex items-center px-0.5 shrink-0 ${
+                              editForm.data.is_operational ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'
+                            }`}
+                          >
+                            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${
+                              editForm.data.is_operational ? '-translate-x-4' : 'translate-x-0'
+                            }`} />
+                          </div>
+                        </label>
                         <button onClick={() => submitEdit(cat.id)}
                           className="w-11 h-11 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shrink-0"
                         >
@@ -187,7 +214,12 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                           <span className="font-black text-xs">{cat.unit}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-slate-800 dark:text-white truncate">{cat.name}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 dark:text-white truncate">{cat.name}</span>
+                            {cat.is_operational && (
+                              <span className="text-xs font-bold px-2.5 py-1 rounded-[10px] bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-slate-500 dark:text-white/50 shrink-0">تشغيلي</span>
+                            )}
+                          </div>
                           <span className={`text-xs font-bold px-2 py-0.5 rounded-[6px] mt-1 self-start ${unitColors[cat.unit]}`}>{unitLabels[cat.unit]}</span>
                         </div>
                       </div>

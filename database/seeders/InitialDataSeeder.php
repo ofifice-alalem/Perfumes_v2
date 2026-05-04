@@ -16,11 +16,12 @@ class InitialDataSeeder extends Seeder
     {
         // 1. Categories
         $categories = [
-            ['name' => 'عطور زيتية',  'unit' => 'ml'],
-            ['name' => 'عطور أصلية',  'unit' => 'ml'],
-            ['name' => 'بخور',         'unit' => 'pcs'],
-            ['name' => 'وشق',          'unit' => 'g'],
-            ['name' => 'مبخرة',        'unit' => 'pcs'],
+            ['name' => 'عطور زيتية',        'unit' => 'ml',  'is_operational' => false],
+            ['name' => 'عطور أصلية',        'unit' => 'ml',  'is_operational' => false],
+            ['name' => 'بخور',               'unit' => 'pcs', 'is_operational' => false],
+            ['name' => 'وشق',                'unit' => 'g',   'is_operational' => false],
+            ['name' => 'مبخرة',              'unit' => 'pcs', 'is_operational' => false],
+            ['name' => 'مستلزمات تشغيلية',  'unit' => 'pcs', 'is_operational' => true],
         ];
         foreach ($categories as $cat) {
             Category::firstOrCreate(['name' => $cat['name']], $cat);

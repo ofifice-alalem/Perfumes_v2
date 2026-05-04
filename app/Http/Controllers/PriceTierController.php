@@ -58,11 +58,17 @@ class PriceTierController extends Controller
     public function updatePrices(Request $request, int $id)
     {
         $data = $request->validate([
-            'prices'                => 'required|array',
-            'prices.*.size_id'      => 'required|exists:sizes,id',
-            'prices.*.price_regular'=> 'required|numeric|min:0',
-            'prices.*.price_vip'    => 'required|numeric|min:0',
+            'prices'                 => 'required|array',
+            'prices.*.size_id'       => 'required|exists:sizes,id',
+            'prices.*.price_regular' => 'required|numeric|min:0',
+            'prices.*.price_vip'     => 'required|numeric|min:0',
         ]);
+
+        foreach ($data['prices'] as $price) {
+            if ($price['price_vip'] > $price['price_regular']) {
+                return back()->with('error', 'سعر VIP يجب أن يكون أقل من أو يساوي السعر العادي');
+            }
+        }
 
         $this->tiers->syncPrices($id, $data['prices']);
 
