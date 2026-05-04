@@ -37,19 +37,23 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
             ]);
 
             if ($data['selling_type'] === 'unit_priced') {
-                ProductPrice::create([
-                    'product_id'             => $product->id,
-                    'price_per_unit_regular' => $data['price_per_unit_regular'],
-                    'price_per_unit_vip'     => $data['price_per_unit_vip'],
-                    'full_bottle_regular'    => $data['full_bottle_regular'] ?? null,
-                    'full_bottle_vip'        => $data['full_bottle_vip'] ?? null,
-                ]);
+                $category = \App\Models\Category::find($data['category_id']);
 
-                if (!empty($data['bottle_volume'])) {
-                    OriginalPerfumeDetail::create([
-                        'product_id'    => $product->id,
-                        'bottle_volume' => $data['bottle_volume'],
+                if (!$category->is_operational) {
+                    ProductPrice::create([
+                        'product_id'             => $product->id,
+                        'price_per_unit_regular' => $data['price_per_unit_regular'],
+                        'price_per_unit_vip'     => $data['price_per_unit_vip'],
+                        'full_bottle_regular'    => $data['full_bottle_regular'] ?? null,
+                        'full_bottle_vip'        => $data['full_bottle_vip'] ?? null,
                     ]);
+
+                    if (!empty($data['bottle_volume'])) {
+                        OriginalPerfumeDetail::create([
+                            'product_id'    => $product->id,
+                            'bottle_volume' => $data['bottle_volume'],
+                        ]);
+                    }
                 }
             }
 
@@ -71,22 +75,29 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
             ], $id);
 
             if ($data['selling_type'] === 'unit_priced') {
-                ProductPrice::updateOrCreate(
-                    ['product_id' => $product->id],
-                    [
-                        'price_per_unit_regular' => $data['price_per_unit_regular'],
-                        'price_per_unit_vip'     => $data['price_per_unit_vip'],
-                        'full_bottle_regular'    => $data['full_bottle_regular'] ?? null,
-                        'full_bottle_vip'        => $data['full_bottle_vip'] ?? null,
-                    ]
-                );
+                $category = \App\Models\Category::find($data['category_id']);
 
-                if (!empty($data['bottle_volume'])) {
-                    OriginalPerfumeDetail::updateOrCreate(
+                if (!$category->is_operational) {
+                    ProductPrice::updateOrCreate(
                         ['product_id' => $product->id],
-                        ['bottle_volume' => $data['bottle_volume']]
+                        [
+                            'price_per_unit_regular' => $data['price_per_unit_regular'],
+                            'price_per_unit_vip'     => $data['price_per_unit_vip'],
+                            'full_bottle_regular'    => $data['full_bottle_regular'] ?? null,
+                            'full_bottle_vip'        => $data['full_bottle_vip'] ?? null,
+                        ]
                     );
+
+                    if (!empty($data['bottle_volume'])) {
+                        OriginalPerfumeDetail::updateOrCreate(
+                            ['product_id' => $product->id],
+                            ['bottle_volume' => $data['bottle_volume']]
+                        );
+                    } else {
+                        OriginalPerfumeDetail::where('product_id', $product->id)->delete();
+                    }
                 } else {
+                    ProductPrice::where('product_id', $product->id)->delete();
                     OriginalPerfumeDetail::where('product_id', $product->id)->delete();
                 }
             } else {

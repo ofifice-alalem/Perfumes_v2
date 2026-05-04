@@ -36,6 +36,7 @@ const emptyForm = {
 };
 
 function resolveSellingType(cat: Category): 'tier_based' | 'unit_priced' {
+    if (cat.is_operational) return 'unit_priced';
     return cat.unit === 'ml' && cat.name.includes('زيت') ? 'tier_based' : 'unit_priced';
 }
 
@@ -184,8 +185,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 </div>
                             </div>
 
-                            {/* حقول الأسعار */}
-                            {createCat && createForm.data.selling_type === 'unit_priced' && (
+                            {/* حقول الأسعار — فقط للمنتجات غير التشغيلية */}
+                            {createCat && createForm.data.selling_type === 'unit_priced' && !createCat.is_operational && (
                                 <div className="flex flex-col gap-4 pt-4 border-t border-black/5 dark:border-white/5">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="flex flex-col gap-2">
@@ -314,8 +315,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 />
                                             </div>
 
-                                            {/* حقول الأسعار - تعديل */}
-                                            {editCat && editForm.data.selling_type === 'unit_priced' && (
+                                            {/* حقول الأسعار — فقط للمنتجات غير التشغيلية */}
+                                            {editCat && editForm.data.selling_type === 'unit_priced' && !editCat.is_operational && (
                                                 <div className="flex flex-col gap-4 pt-4 border-t border-black/5 dark:border-white/5">
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div className="flex flex-col gap-2">
