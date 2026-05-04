@@ -61,10 +61,19 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
                 'line_total'  => $lineTotal,
             ]);
 
-            // زيادة المخزون
             Product::findOrFail($itemData['product_id'])->increment('stock', $quantity);
 
             $purchase->recalculate();
+
+            // المورد النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($purchase->supplier_id == 1) {
+                $payment = SupplierPayment::where('purchase_id', $purchaseId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $purchase->fresh()->total]);
+                    $purchase->recalculate();
+                }
+            }
+
             $this->updateSupplierDebt($purchase->fresh());
         });
     }
@@ -162,7 +171,7 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
         $totalPaid = SupplierPayment::where('supplier_id', $purchase->supplier_id)->sum('amount');
         $totalSettled = \App\Models\SupplierSettlement::where('supplier_id', $purchase->supplier_id)->sum('amount');
-        $totalDebt = $totalPurchases - $totalPaid - $totalSettled;
+        $totalDebt = $totalPurchases - $totalPaid + $totalSettled;
 
         $supplier->update([
             'total_debt'      => $totalDebt,

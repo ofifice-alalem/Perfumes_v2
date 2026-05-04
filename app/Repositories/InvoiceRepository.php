@@ -119,6 +119,16 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
             // تحديث إجمالي الفاتورة
             $this->recalculateInvoice($invoice);
+
+            // الزبون النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($invoice->customer_id == 1) {
+                $payment = Payment::where('invoice_id', $invoiceId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $invoice->fresh()->total]);
+                    $this->recalculateInvoice($invoice->fresh());
+                }
+            }
+
             $this->updateCustomerDebt($invoice->customer_id);
         });
     }
@@ -170,6 +180,16 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
             $invoice = $this->model->findOrFail($invoiceId);
             $this->recalculateInvoice($invoice);
+
+            // الزبون النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($invoice->customer_id == 1) {
+                $payment = Payment::where('invoice_id', $invoiceId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $invoice->fresh()->total]);
+                    $this->recalculateInvoice($invoice->fresh());
+                }
+            }
+
             $this->updateCustomerDebt($invoice->customer_id);
         });
     }
@@ -184,6 +204,16 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
             }
             $invoice = $this->model->findOrFail($invoiceId);
             $this->recalculateInvoice($invoice);
+
+            // الزبون النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($invoice->customer_id == 1) {
+                $payment = Payment::where('invoice_id', $invoiceId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $invoice->fresh()->total]);
+                    $this->recalculateInvoice($invoice->fresh());
+                }
+            }
+
             $this->updateCustomerDebt($invoice->customer_id);
         });
     }
@@ -198,6 +228,16 @@ class InvoiceRepository extends BaseRepository implements InvoiceRepositoryInter
 
             $invoice = $this->model->findOrFail($invoiceId);
             $this->recalculateInvoice($invoice);
+
+            // الزبون النقدي: تحديث الدفعة لتطابق الإجمالي الجديد
+            if ($invoice->customer_id == 1) {
+                $payment = Payment::where('invoice_id', $invoiceId)->first();
+                if ($payment) {
+                    $payment->update(['amount' => $invoice->fresh()->total]);
+                    $this->recalculateInvoice($invoice->fresh());
+                }
+            }
+
             $this->updateCustomerDebt($invoice->customer_id);
         });
     }

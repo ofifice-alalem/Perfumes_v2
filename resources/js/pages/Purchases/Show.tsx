@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Trash2, Check, X, CreditCard, Package, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, X, CreditCard, Package, Pencil, ArrowLeftRight } from 'lucide-react';
 
 interface Category  { id: number; name: string; unit: string; }
 interface Product   { id: number; name: string; stock: string; category: Category; }
@@ -489,26 +489,18 @@ export default function PurchaseShow({ purchase, products, paymentMethods, suppl
                     </span>
                   </div>
 
+                  {/* علينا للمورد → دفعة */}
                   {+supplierFinancialSummary.total_debt > 0 && (
                     !showAddSupplierPayment ? (
-                      <div className="flex gap-2 mt-1">
-                        <button onClick={() => setShowAddSupplierPayment(true)}
-                          className="flex-1 h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
-                            bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
-                            hover:bg-emerald-500 hover:text-white hover:border-emerald-500
-                            dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
-                            dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
-                          <CreditCard className="w-4 h-4" /> دفعة
-                        </button>
-                        <button onClick={() => setShowAddSettlement(true)}
-                          className="flex-1 h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
-                            bg-primary/10 text-primary border border-primary/20
-                            hover:bg-primary hover:text-white hover:border-primary
-                            transition-all">
-                          <Check className="w-4 h-4" /> تسوية
-                        </button>
-                      </div>
-                    ) : showAddSupplierPayment ? (
+                      <button onClick={() => setShowAddSupplierPayment(true)}
+                        className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                          bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                          hover:bg-emerald-500 hover:text-white hover:border-emerald-500
+                          dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                          dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
+                        <CreditCard className="w-4 h-4" /> تسجيل دفعة
+                      </button>
+                    ) : (
                       <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
                         <AddSupplierPaymentForm
                           supplierId={purchase.supplier.id}
@@ -518,12 +510,26 @@ export default function PurchaseShow({ purchase, products, paymentMethods, suppl
                           onClose={() => setShowAddSupplierPayment(false)}
                         />
                       </div>
+                    )
+                  )}
+
+                  {/* لنا على المورد → تسوية */}
+                  {+supplierFinancialSummary.total_debt < 0 && (
+                    !showAddSettlement ? (
+                      <button onClick={() => setShowAddSettlement(true)}
+                        className="w-full h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                          bg-amber-500/10 text-amber-600 border border-amber-500/20
+                          hover:bg-amber-500 hover:text-white hover:border-amber-500
+                          dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30
+                          dark:hover:bg-amber-500 dark:hover:text-white transition-all">
+                        <ArrowLeftRight className="w-4 h-4" /> إنشاء تسوية
+                      </button>
                     ) : (
                       <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
                         <AddSettlementForm
                           supplierId={purchase.supplier.id}
                           purchaseId={purchase.id}
-                          totalDebt={supplierFinancialSummary.total_debt.toString()}
+                          totalDebt={Math.abs(+supplierFinancialSummary.total_debt).toString()}
                           paymentMethods={paymentMethods}
                           onClose={() => setShowAddSettlement(false)}
                         />

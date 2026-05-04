@@ -457,12 +457,14 @@ export default function InvoiceShow({ invoice, customerDebt, debtPayments, produ
                     <span className="text-center">الإجمالي</span>
                     <span></span>
                   </div>
-                  {groupedItems.map(({ item, count, totalLine, ids }) => (
+                  {groupedItems.map(({ item, count, totalLine, ids }) => {
+                    const displayCount = item.sale_type === 'unit_based' ? +item.quantity : count;
+                    return (
                     <div key={ids.join('-')}>
                       {/* Desktop row */}
                       <div className="hidden sm:grid grid-cols-[60px_2fr_80px_90px_100px_88px] gap-3 px-4 py-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all items-center">
                         <div className="flex items-center justify-center">
-                          <span className="w-10 h-10 rounded-[10px] bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-sm">{count}</span>
+                          <span className="w-10 h-10 rounded-[10px] bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary text-sm">{displayCount}</span>
                         </div>
                         <div className="min-w-0 flex flex-col justify-center">
                           <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product.name}</span>
@@ -502,7 +504,7 @@ export default function InvoiceShow({ invoice, customerDebt, debtPayments, produ
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex flex-col items-center flex-1">
                             <span className="text-[10px] font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">عدد</span>
-                            <span className="font-black text-slate-800 dark:text-white text-sm">{count}</span>
+                            <span className="font-black text-slate-800 dark:text-white text-sm">{displayCount}</span>
                           </div>
                           <div className="w-px h-8 bg-black/10 dark:bg-white/10" />
                           <div className="flex flex-col items-center flex-1">
@@ -531,7 +533,8 @@ export default function InvoiceShow({ invoice, customerDebt, debtPayments, produ
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </SpatialCard>

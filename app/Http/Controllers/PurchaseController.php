@@ -90,7 +90,7 @@ class PurchaseController extends Controller
         ];
         $supplierFinancialSummary['total_debt'] = 
             $supplierFinancialSummary['total_purchases'] - 
-            $supplierFinancialSummary['total_payments'] - 
+            $supplierFinancialSummary['total_payments'] + 
             $supplierFinancialSummary['total_settlements'];
 
         return Inertia::render('Purchases/Show', [
@@ -177,7 +177,7 @@ class PurchaseController extends Controller
             $totalPurchases = \App\Models\Purchase::where('supplier_id', $supplierId)->sum('total');
             $totalPaid      = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->sum('amount');
             $totalSettled   = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->sum('amount');
-            $totalDebt      = $totalPurchases - $totalPaid - $totalSettled;
+            $totalDebt      = $totalPurchases - $totalPaid + $totalSettled;
 
             $supplier->update([
                 'total_purchases' => $totalPurchases,
