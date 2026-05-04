@@ -257,17 +257,35 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 )}
 
                 {/* فلتر التصنيف */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                     <button onClick={() => setFilterCat(null)}
-                        className={`px-4 h-9 rounded-[14px] font-bold text-sm transition-all ${!filterCat ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-                        الكل ({products.length})
+                        className={`flex items-center gap-1.5 px-4 h-9 rounded-full font-bold text-sm transition-all whitespace-nowrap shrink-0 ${
+                            !filterCat
+                                ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                                : 'bg-black/5 dark:bg-white/8 text-slate-500 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/12 border border-black/5 dark:border-white/8'
+                        }`}>
+                        الكل
+                        <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${
+                            !filterCat ? 'bg-white/20 text-white' : 'bg-black/8 dark:bg-white/10 text-slate-500 dark:text-white/50'
+                        }`}>{products.length}</span>
                     </button>
-                    {categories.map(cat => (
-                        <button key={cat.id} onClick={() => setFilterCat(cat.id)}
-                            className={`px-4 h-9 rounded-[14px] font-bold text-sm transition-all ${filterCat === cat.id ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/10'}`}>
-                            {cat.name} ({products.filter(p => p.category.id === cat.id).length})
-                        </button>
-                    ))}
+                    {categories.map(cat => {
+                        const count = products.filter(p => p.category.id === cat.id).length;
+                        const active = filterCat === cat.id;
+                        return (
+                            <button key={cat.id} onClick={() => setFilterCat(cat.id)}
+                                className={`flex items-center gap-1.5 px-4 h-9 rounded-full font-bold text-sm transition-all whitespace-nowrap shrink-0 ${
+                                    active
+                                        ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                                        : 'bg-black/5 dark:bg-white/8 text-slate-500 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/12 border border-black/5 dark:border-white/8'
+                                }`}>
+                                {cat.name}
+                                <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${
+                                    active ? 'bg-white/20 text-white' : 'bg-black/8 dark:bg-white/10 text-slate-500 dark:text-white/50'
+                                }`}>{count}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* نموذج التعديل */}
@@ -392,15 +410,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <div className="hidden lg:block overflow-x-auto">
                                 <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="border-b border-black/5 dark:border-white/5">
+                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['الاسم', 'التصنيف', 'مدى السعر', 'سعر العبوة', 'المخزون', 'الحد الأدنى', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-3 py-3 text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {filtered.map((product, idx) => (
-                                            <tr key={product.id} className={`${idx < filtered.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''} hover:bg-black/2 dark:hover:bg-white/2 transition-colors`}>
+                                            <tr key={product.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors group">
                                                 <td className="px-3 py-3">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-bold text-slate-800 dark:text-white">{product.name}</span>
@@ -412,18 +430,26 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <td className="px-3 py-3 font-bold text-slate-600 dark:text-white/70 whitespace-nowrap">{product.category.name}</td>
                                                 <td className="px-3 py-3 whitespace-nowrap">
                                                     {product.selling_type === 'tier_based' ? (
-                                                        <span className="font-bold text-slate-500 dark:text-white/50">تير {product.price_tier?.name}</span>
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-sm">تير {product.price_tier?.name}</span>
                                                     ) : product.product_price ? (
-                                                        <span className="font-bold text-slate-800 dark:text-white">{product.product_price.price_per_unit_vip} — {product.product_price.price_per_unit_regular}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{product.product_price.price_per_unit_vip}</span>
+                                                            <span className="text-slate-300 dark:text-white/30 font-bold">—</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{product.product_price.price_per_unit_regular}</span>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-slate-300 dark:text-white/20 font-bold">--</span>
+                                                        <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap">
                                                     {product.product_price?.full_bottle_regular ? (
-                                                        <span className="font-bold text-slate-800 dark:text-white">{product.product_price.full_bottle_vip} — {product.product_price.full_bottle_regular}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{product.product_price.full_bottle_vip}</span>
+                                                            <span className="text-slate-300 dark:text-white/30 font-bold">—</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{product.product_price.full_bottle_regular}</span>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-slate-300 dark:text-white/20 font-bold">--</span>
+                                                        <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap">
@@ -453,62 +479,86 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </div>
 
                             {/* كاردات — Mobile */}
-                            <div className="flex flex-col gap-3 lg:hidden">
-                                {filtered.map(product => (
-                                    <div key={product.id} className="flex flex-col gap-3 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-bold text-slate-800 dark:text-white">{product.name}</span>
-                                                    {product.category.is_operational && (
-                                                        <span className="text-xs font-bold px-2 py-0.5 rounded-[6px] bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-slate-500 dark:text-white/50">تشغيلي</span>
-                                                    )}
+                            <div className="flex flex-col gap-4 lg:hidden">
+                                {filtered.map(product => {
+                                    const hasPrice = product.selling_type === 'unit_priced' && product.product_price;
+                                    const hasBottle = !!product.product_price?.full_bottle_regular;
+                                    const lowStock = Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0;
+
+                                    return (
+                                        <div key={product.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+
+                                            {/* رأس */}
+                                            <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-start justify-between gap-3">
+                                                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                                    <span className="font-black text-slate-800 dark:text-white text-lg leading-tight">{product.name}</span>
+                                                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/50">{product.category.name}</span>
+                                                        {product.selling_type === 'tier_based' && (
+                                                            <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300">تير {product.price_tier?.name}</span>
+                                                        )}
+                                                        {product.category.is_operational && (
+                                                            <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-black/8 dark:bg-white/12 text-slate-500 dark:text-white/60">تشغيلي</span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{product.category.name}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <button onClick={() => startEdit(product)}
-                                                    className="flex items-center gap-1 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                    <Pencil className="w-3 h-3" /> تعديل
-                                                </button>
-                                                <button onClick={() => deleteProduct(product.id)}
-                                                    className="flex items-center gap-1 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                    <Trash2 className="w-3 h-3" /> حذف
-                                                </button>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button onClick={() => startEdit(product)}
+                                                        className="w-9 h-9 rounded-[12px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all flex items-center justify-center">
+                                                        <Pencil className="w-3.5 h-3.5" />
+                                                    </button>
+                                                    <button onClick={() => deleteProduct(product.id)}
+                                                        className="w-9 h-9 rounded-[12px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+
+                                                {/* مدى السعر — فقط لو كان عنده سعر */}
+                                                {hasPrice && (
+                                                    <div className="flex items-center justify-between py-3.5">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">مدى السعر</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{product.product_price!.price_per_unit_vip}</span>
+                                                            <span className="text-slate-300 dark:text-white/25 font-bold">—</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{product.product_price!.price_per_unit_regular}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* سعر العبوة — فقط لو كان عنده */}
+                                                {hasBottle && (
+                                                    <div className="flex items-center justify-between py-3.5">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">سعر العبوة</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{product.product_price!.full_bottle_vip}</span>
+                                                            <span className="text-slate-300 dark:text-white/25 font-bold">—</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{product.product_price!.full_bottle_regular}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* المخزون */}
+                                                <div className="flex items-center justify-between py-3.5">
+                                                    <span className="text-sm font-bold text-slate-400 dark:text-white/40">المخزون</span>
+                                                    <div className="flex items-baseline gap-1.5">
+                                                        <span className={`font-black text-lg ${lowStock ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>{product.stock}</span>
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">{unitLabels[product.category.unit]}</span>
+                                                    </div>
+                                                </div>
+
+                                                {/* الحد الأدنى */}
+                                                <div className="flex items-center justify-between py-3.5">
+                                                    <span className="text-sm font-bold text-slate-400 dark:text-white/40">الحد الأدنى</span>
+                                                    <div className="flex items-baseline gap-1.5">
+                                                        <span className="font-black text-lg text-slate-600 dark:text-white/70">{product.min_stock}</span>
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">{unitLabels[product.category.unit]}</span>
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-black/5 dark:border-white/5">
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-slate-400 dark:text-white/30 font-bold">مدى السعر</span>
-                                                {product.selling_type === 'tier_based' ? (
-                                                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">تير {product.price_tier?.name}</span>
-                                                ) : product.product_price ? (
-                                                    <span className="text-sm font-bold text-slate-800 dark:text-white">{product.product_price.price_per_unit_vip} — {product.product_price.price_per_unit_regular}</span>
-                                                ) : (
-                                                    <span className="text-sm font-bold text-slate-300 dark:text-white/20">--</span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-slate-400 dark:text-white/30 font-bold">سعر العبوة</span>
-                                                {product.product_price?.full_bottle_regular ? (
-                                                    <span className="text-sm font-bold text-slate-800 dark:text-white">{product.product_price.full_bottle_vip} — {product.product_price.full_bottle_regular}</span>
-                                                ) : (
-                                                    <span className="text-sm font-bold text-slate-300 dark:text-white/20">--</span>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-slate-400 dark:text-white/30 font-bold">المخزون</span>
-                                                <span className={`text-sm font-bold ${Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
-                                                    {product.stock} {unitLabels[product.category.unit]}
-                                                </span>
-                                            </div>
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-xs text-slate-400 dark:text-white/30 font-bold">الحد الأدنى</span>
-                                                <span className="text-sm font-bold text-slate-500 dark:text-white/50">{product.min_stock} {unitLabels[product.category.unit]}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </>
                     )}
