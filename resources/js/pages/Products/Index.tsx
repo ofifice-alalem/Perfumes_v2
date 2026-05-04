@@ -288,115 +288,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     })}
                 </div>
 
-                {/* نموذج التعديل */}
-                {editingId !== null && (
-                    <SpatialCard title="تعديل منتج" icon={<Pencil className="w-4 h-4" />}>
-                        <div className="flex flex-col gap-4">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <div className="flex flex-col gap-2 flex-1">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
-                                    <input value={editForm.data.name}
-                                        onChange={e => editForm.setData('name', e.target.value)}
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
-                                    />
-                                    {editForm.errors.name && <p className="text-xs text-red-500 font-bold">{editForm.errors.name}</p>}
-                                </div>
-                                <div className="w-full sm:w-52">
-                                    <ModernSelect label="التصنيف"
-                                        options={categories.map(c => ({ label: c.name, badge: c.unit }))}
-                                        defaultValue={editCat?.name ?? ''}
-                                        onSelect={val => onSelectCategory(editForm, val)}
-                                    />
-                                </div>
-                                {editForm.data.selling_type === 'tier_based' && (
-                                    <div className="w-full sm:w-40">
-                                        <ModernSelect label="التير"
-                                            options={tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name }))}
-                                            defaultValue={tierDefaultValue(editForm)}
-                                            onSelect={val => onSelectTier(editForm, val)}
-                                        />
-                                        {editForm.errors.price_tier_id && <p className="text-xs text-red-500 font-bold mt-1">{editForm.errors.price_tier_id}</p>}
-                                    </div>
-                                )}
-                                <div className="flex flex-col gap-2 w-full sm:w-36">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حد التنبيه</label>
-                                    <input type="number" min="0" step="0.01"
-                                        value={editForm.data.min_stock}
-                                        onChange={e => editForm.setData('min_stock', e.target.value)}
-                                        placeholder="0"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
-                                    />
-                                </div>
-                            </div>
-
-                            {editCat && editForm.data.selling_type === 'unit_priced' && !editCat.is_operational && (
-                                <div className="flex flex-col gap-4 pt-4 border-t border-black/5 dark:border-white/5">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — عادي</label>
-                                            <input type="number" min="0" step="0.01"
-                                                value={editForm.data.price_per_unit_regular}
-                                                onChange={e => editForm.setData('price_per_unit_regular', e.target.value)}
-                                                className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — VIP</label>
-                                            <input type="number" min="0" step="0.01"
-                                                value={editForm.data.price_per_unit_vip}
-                                                onChange={e => editForm.setData('price_per_unit_vip', e.target.value)}
-                                                className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
-                                            />
-                                        </div>
-                                    </div>
-                                    {editIsOriginal && (
-                                        <>
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حجم العبوة (ml)</label>
-                                                <input type="number" min="0.01" step="0.01"
-                                                    value={editForm.data.bottle_volume}
-                                                    onChange={e => editForm.setData('bottle_volume', e.target.value)}
-                                                    placeholder="مثال: 200"
-                                                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="flex flex-col gap-2">
-                                                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر العبوة كاملة — عادي</label>
-                                                    <input type="number" min="0" step="0.01"
-                                                        value={editForm.data.full_bottle_regular}
-                                                        onChange={e => editForm.setData('full_bottle_regular', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
-                                                    />
-                                                </div>
-                                                <div className="flex flex-col gap-2">
-                                                    <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">سعر العبوة كاملة — VIP</label>
-                                                    <input type="number" min="0" step="0.01"
-                                                        value={editForm.data.full_bottle_vip}
-                                                        onChange={e => editForm.setData('full_bottle_vip', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-2 pt-2">
-                                <button onClick={() => submitEdit(editingId!)}
-                                    className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
-                                    <Check className="w-4 h-4" /> حفظ
-                                </button>
-                                <button onClick={() => setEditingId(null)}
-                                    className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-all">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </SpatialCard>
-                )}
-
                 {/* القائمة */}
                 <SpatialCard title={`المنتجات (${filtered.length})`} icon={<Package className="w-4 h-4" />}>
                     {filtered.length === 0 ? (
@@ -418,6 +309,88 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {filtered.map((product, idx) => (
+                                            editingId === product.id ? (
+                                                <tr key={product.id}>
+                                                    <td colSpan={7} className="px-4 py-4">
+                                                        <div className="flex flex-col gap-4 p-4 rounded-[16px] bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/25">
+                                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                                <div className="flex flex-col gap-1.5 flex-1">
+                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الاسم</label>
+                                                                    <input value={editForm.data.name}
+                                                                        onChange={e => editForm.setData('name', e.target.value)}
+                                                                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold"
+                                                                    />
+                                                                    {editForm.errors.name && <p className="text-xs text-red-500 font-bold">{editForm.errors.name}</p>}
+                                                                </div>
+                                                                <div className="w-full sm:w-48">
+                                                                    <ModernSelect label="التصنيف"
+                                                                        options={categories.map(c => ({ label: c.name, badge: c.unit }))}
+                                                                        defaultValue={editCat?.name ?? ''}
+                                                                        onSelect={val => onSelectCategory(editForm, val)}
+                                                                    />
+                                                                </div>
+                                                                {editForm.data.selling_type === 'tier_based' && (
+                                                                    <div className="w-full sm:w-36">
+                                                                        <ModernSelect label="التير"
+                                                                            options={tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name }))}
+                                                                            defaultValue={tierDefaultValue(editForm)}
+                                                                            onSelect={val => onSelectTier(editForm, val)}
+                                                                        />
+                                                                    </div>
+                                                                )}
+                                                                <div className="flex flex-col gap-1.5 w-full sm:w-32">
+                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">حد التنبيه</label>
+                                                                    <input type="number" min="0" step="0.01"
+                                                                        value={editForm.data.min_stock}
+                                                                        onChange={e => editForm.setData('min_stock', e.target.value)}
+                                                                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            {editCat && editForm.data.selling_type === 'unit_priced' && !editCat.is_operational && (
+                                                                <div className="flex flex-col gap-3 pt-3 border-t border-black/5 dark:border-white/8">
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <div className="flex flex-col gap-1.5">
+                                                                            <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — عادي</label>
+                                                                            <input type="number" min="0" step="0.01" value={editForm.data.price_per_unit_regular} onChange={e => editForm.setData('price_per_unit_regular', e.target.value)} className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold" />
+                                                                        </div>
+                                                                        <div className="flex flex-col gap-1.5">
+                                                                            <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — VIP</label>
+                                                                            <input type="number" min="0" step="0.01" value={editForm.data.price_per_unit_vip} onChange={e => editForm.setData('price_per_unit_vip', e.target.value)} className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold" />
+                                                                        </div>
+                                                                    </div>
+                                                                    {editIsOriginal && (
+                                                                        <div className="flex flex-col gap-3">
+                                                                            <div className="flex flex-col gap-1.5">
+                                                                                <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">حجم العبوة (ml)</label>
+                                                                                <input type="number" min="0.01" step="0.01" value={editForm.data.bottle_volume} onChange={e => editForm.setData('bottle_volume', e.target.value)} placeholder="200" className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold" />
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-3">
+                                                                                <div className="flex flex-col gap-1.5">
+                                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر العبوة — عادي</label>
+                                                                                    <input type="number" min="0" step="0.01" value={editForm.data.full_bottle_regular} onChange={e => editForm.setData('full_bottle_regular', e.target.value)} className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold" />
+                                                                                </div>
+                                                                                <div className="flex flex-col gap-1.5">
+                                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر العبوة — VIP</label>
+                                                                                    <input type="number" min="0" step="0.01" value={editForm.data.full_bottle_vip} onChange={e => editForm.setData('full_bottle_vip', e.target.value)} className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold" />
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            <div className="flex items-center gap-2">
+                                                                <button onClick={() => submitEdit(product.id)} className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
+                                                                    <Check className="w-4 h-4" /> حفظ
+                                                                </button>
+                                                                <button onClick={() => setEditingId(null)} className="h-10 px-4 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                                                    إلغاء
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
                                             <tr key={product.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors group">
                                                 <td className="px-3 py-3">
                                                     <div className="flex items-center gap-2">
@@ -477,6 +450,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     </div>
                                                 </td>
                                             </tr>
+                                            )
                                         ))}
                                     </tbody>
                                 </table>
@@ -490,6 +464,77 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     const lowStock = Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0;
 
                                     return (
+                                        editingId === product.id ? (
+                                        <div key={product.id} className="rounded-[24px] border border-primary/25 dark:border-primary/30 overflow-hidden">
+                                            <div className="px-5 py-3 bg-primary/5 dark:bg-primary/10 flex items-center justify-between">
+                                                <span className="font-black text-slate-700 dark:text-white/80 text-sm">تعديل: {product.name}</span>
+                                                <button onClick={() => setEditingId(null)} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-all">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="flex flex-col gap-4 p-5">
+                                                <div className="flex flex-col gap-3">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الاسم</label>
+                                                        <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        {editForm.errors.name && <p className="text-xs text-red-500 font-bold">{editForm.errors.name}</p>}
+                                                    </div>
+                                                    <ModernSelect label="التصنيف"
+                                                        options={categories.map(c => ({ label: c.name, badge: c.unit }))}
+                                                        defaultValue={editCat?.name ?? ''}
+                                                        onSelect={val => onSelectCategory(editForm, val)}
+                                                    />
+                                                    {editForm.data.selling_type === 'tier_based' && (
+                                                        <ModernSelect label="التير"
+                                                            options={tiers.map(t => ({ label: `تير ${t.name}`, badge: t.name }))}
+                                                            defaultValue={tierDefaultValue(editForm)}
+                                                            onSelect={val => onSelectTier(editForm, val)}
+                                                        />
+                                                    )}
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">حد التنبيه</label>
+                                                        <input type="number" min="0" step="0.01" value={editForm.data.min_stock} onChange={e => editForm.setData('min_stock', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                    </div>
+                                                </div>
+                                                {editCat && editForm.data.selling_type === 'unit_priced' && !editCat.is_operational && (
+                                                    <div className="flex flex-col gap-3 pt-3 border-t border-black/5 dark:border-white/8">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — عادي</label>
+                                                            <input type="number" min="0" step="0.01" value={editForm.data.price_per_unit_regular} onChange={e => editForm.setData('price_per_unit_regular', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                                                        </div>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر {unitLabels[editCat.unit]} — VIP</label>
+                                                            <input type="number" min="0" step="0.01" value={editForm.data.price_per_unit_vip} onChange={e => editForm.setData('price_per_unit_vip', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                                                        </div>
+                                                        {editIsOriginal && (
+                                                            <>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">حجم العبوة (ml)</label>
+                                                                    <input type="number" min="0.01" step="0.01" value={editForm.data.bottle_volume} onChange={e => editForm.setData('bottle_volume', e.target.value)} placeholder="200" className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر العبوة — عادي</label>
+                                                                    <input type="number" min="0" step="0.01" value={editForm.data.full_bottle_regular} onChange={e => editForm.setData('full_bottle_regular', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر العبوة — VIP</label>
+                                                                    <input type="number" min="0" step="0.01" value={editForm.data.full_bottle_vip} onChange={e => editForm.setData('full_bottle_vip', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-3 pt-2">
+                                                    <button onClick={() => submitEdit(product.id)} className="flex-1 spatial-button flex items-center justify-center gap-2 h-11 text-sm">
+                                                        <Check className="w-4 h-4" /> حفظ
+                                                    </button>
+                                                    <button onClick={() => setEditingId(null)} className="flex-1 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                                        إلغاء
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        ) : (
                                         <div key={product.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
 
                                             {/* رأس */}
@@ -567,6 +612,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             </div>
 
                                         </div>
+                                        )
                                     );
                                 })}
                             </div>
