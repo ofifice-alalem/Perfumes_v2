@@ -313,6 +313,66 @@
 
 
 ================================================================================
+                    ⚙️ قواعد التحديث التلقائي (Observers)
+================================================================================
+
+كل تغيير في الجداول أدناه يُطلق Observer يحدّث الحقول المؤقتة تلقائياً.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PurchaseItemObserver                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted / updated في purchase_items
+يحدّث:
+   purchases.total          = SUM(purchase_items.line_total)
+   purchases.due_amount     = total - paid_amount
+   purchases.payment_status = حسب القاعدة
+   suppliers.total_purchases = SUM(purchases.total)
+   suppliers.total_debt      = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SupplierPaymentObserver                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في supplier_payments
+يحدّث:
+   إذا purchase_id موجود:
+      purchases.paid_amount    = SUM(supplier_payments.amount WHERE purchase_id)
+      purchases.due_amount     = total - paid_amount
+      purchases.payment_status = حسب القاعدة
+   دائماً:
+      suppliers.total_paid = SUM(supplier_payments.amount)
+      suppliers.total_debt = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SupplierSettlementObserver                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في supplier_settlements
+يحدّث:
+   suppliers.total_settlements = SUM(supplier_settlements.amount)
+   suppliers.total_debt        = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PurchaseReturnItemObserver                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في purchase_return_items
+يحدّث:
+   purchase_returns.total      = SUM(purchase_return_items.line_total)
+   suppliers.total_returns     = SUM(purchase_returns.total)
+   suppliers.total_debt        = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ معادلة total_debt للمورد                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+total_debt = total_purchases - total_paid + total_settlements - total_returns
+
+قاعدة: supplier_id = 1 (مورد نقدي) → لا يُحدَّث أي حقل مالي
+
+
+================================================================================
                         🎯 ما اكتمل بعد هذه المرحلة
 ================================================================================
 

@@ -316,6 +316,66 @@
 
 
 ================================================================================
+                    ⚙️ قواعد التحديث التلقائي (Observers)
+================================================================================
+
+كل تغيير في الجداول أدناه يُطلق Observer يحدّث الحقول المؤقتة تلقائياً.
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ InvoiceItemObserver                                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted / updated في invoice_items
+يحدّث:
+   invoices.total          = SUM(invoice_items.line_total)
+   invoices.due_amount     = total - paid_amount
+   invoices.payment_status = حسب القاعدة
+   customers.total_purchases = SUM(invoices.total)
+   customers.total_debt      = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PaymentObserver                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في payments
+يحدّث:
+   إذا invoice_id موجود:
+      invoices.paid_amount    = SUM(payments.amount WHERE invoice_id)
+      invoices.due_amount     = total - paid_amount
+      invoices.payment_status = حسب القاعدة
+   دائماً:
+      customers.total_paid = SUM(payments.amount)
+      customers.total_debt = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ SettlementObserver                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في settlements
+يحدّث:
+   customers.total_settlements = SUM(settlements.amount)
+   customers.total_debt        = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ InvoiceReturnItemObserver                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+عند: created / deleted في invoice_return_items
+يحدّث:
+   invoice_returns.total      = SUM(invoice_return_items.line_total)
+   customers.total_returns    = SUM(invoice_returns.total)
+   customers.total_debt       = إعادة حساب
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ معادلة total_debt للعميل                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+total_debt = total_purchases - total_paid + total_settlements - total_returns
+
+قاعدة: customer_id = 1 (زبون نقدي) → لا يُحدَّث أي حقل مالي
+
+
+================================================================================
                         🎯 ما اكتمل بعد هذه المرحلة
 ================================================================================
 

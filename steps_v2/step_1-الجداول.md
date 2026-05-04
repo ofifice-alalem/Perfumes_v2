@@ -621,6 +621,9 @@ FOREIGN KEY (invoice_return_id) ON DELETE CASCADE
 | email | VARCHAR(255) | NULLABLE | البريد الإلكتروني |
 | address | TEXT | NULLABLE | العنوان |
 | total_purchases | DECIMAL(10,2) | DEFAULT 0 | إجمالي المشتريات منه (cached) |
+| total_paid | DECIMAL(10,2) | DEFAULT 0 | إجمالي ما دفعته له (cached) |
+| total_returns | DECIMAL(10,2) | DEFAULT 0 | إجمالي المرتجعات (cached) |
+| total_settlements | DECIMAL(10,2) | DEFAULT 0 | إجمالي التسويات (cached) |
 | total_debt | DECIMAL(10,2) | DEFAULT 0 | إجمالي ما ندين له (cached) |
 | is_active | BOOLEAN | DEFAULT true | حالة النشاط |
 | created_at | TIMESTAMP | — | تاريخ التسجيل |
@@ -632,9 +635,11 @@ INDEX (is_active)
 UNIQUE (phone)
 ```
 
+**الحقول المالية:** جميعها cached values تُحدَّث تلقائياً عبر Observers.
+
 **معادلة الدين الكلي:**
 ```
-total_debt = SUM(purchases.total) - SUM(supplier_payments.amount) + SUM(supplier_settlements.amount)
+total_debt = total_purchases - total_paid + total_settlements - total_returns
 ```
 
 **قواعد المورد النقدي (id=1):**
@@ -1075,6 +1080,105 @@ waste_logs (رأس سجل التالف)
 40. لا يمكن تسجيل تالف أكثر من المخزون المتاح
 41. حذف سطر تالف → stock += quantity (إعادة المخزون)
 42. حذف سجل التالف → يُعاد مخزون كل الأسطر ثم يحذف (CASCADE)
+```
+
+---
+
+## قواعد التحديث التلقائي (Observers)
+
+### المبدأ
+
+جميع الحقول المُعلَّمة بـ **(cached)** لا تُحدَّث يدوياً في كل مكان.
+بدلاً من ذلك تُحدَّث عبر **Observers** مركزية تُستدعى تلقائياً عند أي تغيير.
+الهدف: ضمان دقة البيانات وتجنب تكرار الكود.
+
+---
+
+### جدول `invoices` — الحقول المؤقتة
+
+| الحقل | يُحدَّث عند | المصدر |
+|-------|------------|--------|
+| total | إضافة/حذف/تعديل invoice_item | SUM(invoice_items.line_total) |
+| paid_amount | إضافة/حذف payment مرتبط بالفاتورة | SUM(payments.amount WHERE invoice_id) |
+| due_amount | أي تغيير في total أو paid_amount | total - paid_amount |
+| payment_status | أي تغيير في paid_amount | unpaid / partial / paid |
+
+**Observer:** `InvoiceObserver` أو يُستدعى من `InvoiceItemObserver` و `PaymentObserver`
+
+---
+
+### جدول `purchases` — الحقول المؤقتة
+
+| الحقل | يُحدَّث عند | المصدر |
+|-------|------------|--------|
+| total | إضافة/حذف/تعديل purchase_item | SUM(purchase_items.line_total) |
+| paid_amount | إضافة/حذف supplier_payment مرتبط | SUM(supplier_payments.amount WHERE purchase_id) |
+| due_amount | أي تغيير في total أو paid_amount | total - paid_amount |
+| payment_status | أي تغيير في paid_amount | unpaid / partial / paid |
+
+**Observer:** `PurchaseObserver` أو يُستدعى من `PurchaseItemObserver` و `SupplierPaymentObserver`
+
+---
+
+### جدول `customers` — الحقول المؤقتة
+
+| الحقل | يُحدَّث عند | المصدر |
+|-------|------------|--------|
+| total_purchases | إضافة/حذف invoice | SUM(invoices.total) |
+| total_paid | إضافة/حذف payment | SUM(payments.amount) |
+| total_returns | إضافة/حذف invoice_return | SUM(invoice_returns.total) |
+| total_settlements | إضافة/حذف settlement | SUM(settlements.amount) |
+| total_debt | أي تغيير في الحقول أعلاه | total_purchases - total_paid + total_settlements - total_returns |
+
+**Observer:** `CustomerBalanceObserver` — يُستدعى من:
+```
+InvoiceObserver        → عند إنشاء/حذف فاتورة
+PaymentObserver        → عند إنشاء/حذف دفعة
+SettlementObserver     → عند إنشاء/حذف تسوية
+InvoiceReturnObserver  → عند إنشاء/حذف مرتجع
+```
+
+**قاعدة الزبون النقدي:**
+```
+customer_id = 1 → لا يُحدَّث أي حقل مالي
+```
+
+---
+
+### جدول `suppliers` — الحقول المؤقتة
+
+| الحقل | يُحدَّث عند | المصدر |
+|-------|------------|--------|
+| total_purchases | إضافة/حذف purchase | SUM(purchases.total) |
+| total_paid | إضافة/حذف supplier_payment | SUM(supplier_payments.amount) |
+| total_returns | إضافة/حذف purchase_return | SUM(purchase_returns.total) |
+| total_settlements | إضافة/حذف supplier_settlement | SUM(supplier_settlements.amount) |
+| total_debt | أي تغيير في الحقول أعلاه | total_purchases - total_paid + total_settlements - total_returns |
+
+**Observer:** `SupplierBalanceObserver` — يُستدعى من:
+```
+PurchaseObserver          → عند إنشاء/حذف فاتورة شراء
+SupplierPaymentObserver   → عند إنشاء/حذف دفعة
+SupplierSettlementObserver → عند إنشاء/حذف تسوية
+PurchaseReturnObserver    → عند إنشاء/حذف مرتجع
+```
+
+**قاعدة المورد النقدي:**
+```
+supplier_id = 1 → لا يُحدَّث أي حقل مالي
+```
+
+---
+
+### ملاحظات مهمة
+
+```
+1. لا تُحدَّث الحقول المؤقتة مباشرة من Controller أو Repository
+2. كل تغيير يمر عبر Observer المعني
+3. عند حذف فاتورة → invoice_id في payments يصبح NULL
+   لكن total_debt للعميل يُعاد حسابه بشكل صحيح
+4. الدين السالب مسموح — يعني الطرف الآخر مدين
+5. Observer لا يعمل على id=1 (نقدي) في كلا الجدولين
 ```
 
 ---
