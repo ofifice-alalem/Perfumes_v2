@@ -145,7 +145,7 @@ class PurchaseRepository extends BaseRepository implements PurchaseRepositoryInt
 
         $totalPaid = SupplierPayment::where('supplier_id', $purchase->supplier_id)->sum('amount');
         $totalSettled = \App\Models\SupplierSettlement::where('supplier_id', $purchase->supplier_id)->sum('amount');
-        $totalDebt = $totalPurchases - $totalPaid + $totalSettled;
+        $totalDebt = $totalPurchases - $totalPaid - $totalSettled;
 
         $supplier->update([
             'total_debt'      => $totalDebt,

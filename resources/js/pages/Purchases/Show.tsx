@@ -3,6 +3,7 @@ import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, Check, X, CreditCard, Package, Pencil } from 'lucide-react';
 
 interface Category  { id: number; name: string; unit: string; }
@@ -53,6 +54,7 @@ function AddItemForm({ purchaseId, products, onClose }: {
 }) {
   const form = useForm({ product_id: '', quantity: '', unit_cost: '' });
   const [totalPrice, setTotalPrice] = useState('');
+  const [showPad, setShowPad] = useState<'qty' | 'total' | null>(null);
 
   const selectedProduct = products.find(p => p.id === +form.data.product_id);
   const unitCostPreview = form.data.quantity && totalPrice && +form.data.quantity > 0
@@ -94,15 +96,17 @@ function AddItemForm({ purchaseId, products, onClose }: {
             <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">
               الكمية ({selectedProduct.category.unit})
             </label>
-            <input type="number" min="0.01" step="0.01" value={form.data.quantity}
-              onChange={e => handleQtyChange(e.target.value)}
-              placeholder="0" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+            <button onClick={() => setShowPad('qty')}
+              className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+              {form.data.quantity || <span className="text-slate-400 dark:text-white/30">0</span>}
+            </button>
           </div>
           <div className="flex flex-col gap-2">
             <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">السعر الإجمالي (د)</label>
-            <input type="number" min="0" step="0.01" value={totalPrice}
-              onChange={e => handleTotalChange(e.target.value)}
-              placeholder="0.00" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+            <button onClick={() => setShowPad('total')}
+              className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+              {totalPrice || <span className="text-slate-400 dark:text-white/30">0.00</span>}
+            </button>
           </div>
         </div>
       )}
@@ -124,6 +128,13 @@ function AddItemForm({ purchaseId, products, onClose }: {
           <X className="w-4 h-4" /> إلغاء
         </button>
       </div>
+
+      <NumberPadModal isOpen={showPad === 'qty'} title={`الكمية (${selectedProduct?.category.unit ?? ''})`}
+        initialValue={form.data.quantity} onClose={() => setShowPad(null)}
+        onConfirm={v => { handleQtyChange(v); setShowPad(null); }} />
+      <NumberPadModal isOpen={showPad === 'total'} title="السعر الإجمالي"
+        initialValue={totalPrice} onClose={() => setShowPad(null)}
+        onConfirm={v => { handleTotalChange(v); setShowPad(null); }} />
     </div>
   );
 }
@@ -185,95 +196,119 @@ function EditItemRow({ item, purchaseId, onClose }: {
 function AddSupplierPaymentForm({ supplierId, purchaseId, totalDebt, paymentMethods, onClose }: {
   supplierId: number; purchaseId: number; totalDebt: string; paymentMethods: PaymentMethod[]; onClose: () => void;
 }) {
-  const form = useForm({ 
-    supplier_id: supplierId,
-    redirect_purchase: purchaseId,
-    payment_method_id: '', 
-    amount: totalDebt, 
-    notes: '' 
-  });
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [amount, setAmount] = useState(totalDebt);
+  const [processing, setProcessing] = useState(false);
+  const [showAmountPad, setShowAmountPad] = useState(false);
 
   function submit() {
-    form.post('/supplier-payments', { onSuccess: onClose });
+    if (!paymentMethod || !amount) return;
+    setProcessing(true);
+    router.post('/supplier-payments', {
+      supplier_id: supplierId,
+      redirect_purchase: purchaseId,
+      payment_method_id: paymentMethod,
+      amount: amount,
+      notes: `سداد دين — من فاتورة #${purchaseId}`,
+    }, {
+      onSuccess: () => onClose(),
+      onFinish: () => setProcessing(false),
+    });
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <ModernSelect label="وسيلة الدفع"
-        options={paymentMethods.map(m => ({ label: m.name }))}
-        defaultValue=""
-        onSelect={val => form.setData('payment_method_id', String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-      />
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-        <input type="number" min="0.01" step="0.01" value={form.data.amount}
-          onChange={e => form.setData('amount', e.target.value)}
-          className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-        {form.errors.amount && <p className="text-xs text-red-500 font-bold">{form.errors.amount}</p>}
+    <>
+      <div className="flex flex-col gap-3">
+        <ModernSelect label="وسيلة الدفع" placeholder="اختر..."
+          options={paymentMethods.map(m => ({ label: m.name }))}
+          defaultValue=""
+          onSelect={val => setPaymentMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+          <button onClick={() => setShowAmountPad(true)}
+            className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+            {amount || <span className="text-slate-400 dark:text-white/30">{totalDebt}</span>}
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={submit} disabled={processing || !paymentMethod || !amount}
+            className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+            <Check className="w-4 h-4" /> تأكيد
+          </button>
+          <button onClick={onClose}
+            className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظات</label>
-        <textarea value={form.data.notes}
-          onChange={e => form.setData('notes', e.target.value)}
-          className="spatial-input rounded-[16px] px-4 py-3 text-[15px] font-bold resize-none" rows={2} />
-      </div>
-      <div className="flex items-center gap-2">
-        <button onClick={submit} disabled={form.processing || !form.data.payment_method_id}
-          className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
-          <Check className="w-4 h-4" /> تسجيل
-        </button>
-        <button onClick={onClose}
-          className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-          <X className="w-4 h-4" /> إلغاء
-        </button>
-      </div>
-    </div>
+
+      <NumberPadModal isOpen={showAmountPad}
+        onClose={() => setShowAmountPad(false)}
+        onConfirm={v => setAmount(v)}
+        initialValue={amount}
+        title="مبلغ الدفعة" />
+    </>
   );
 }
 
-// ── Add Payment Form ──────────────────────────────────────────────────────────
-function AddPaymentForm({ purchaseId, dueAmount, paymentMethods, onClose }: {
-  purchaseId: number; dueAmount: string; paymentMethods: PaymentMethod[]; onClose: () => void;
+// ── Add Settlement Form ──────────────────────────────────
+function AddSettlementForm({ supplierId, purchaseId, totalDebt, paymentMethods, onClose }: {
+  supplierId: number; purchaseId: number; totalDebt: string; paymentMethods: PaymentMethod[]; onClose: () => void;
 }) {
-  const form = useForm({ payment_method_id: '', amount: dueAmount, notes: '' });
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [amount, setAmount] = useState(totalDebt);
+  const [processing, setProcessing] = useState(false);
+  const [showAmountPad, setShowAmountPad] = useState(false);
 
   function submit() {
-    form.post(`/purchases/${purchaseId}/payments`, { onSuccess: onClose });
+    if (!paymentMethod || !amount) return;
+    setProcessing(true);
+    router.post('/supplier-settlements', {
+      supplier_id: supplierId,
+      redirect_purchase: purchaseId,
+      payment_method_id: paymentMethod,
+      amount,
+      notes: `تسوية دين — من فاتورة #${purchaseId}`,
+    }, { onSuccess: () => onClose(), onFinish: () => setProcessing(false) });
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <ModernSelect label="وسيلة الدفع"
-        options={paymentMethods.map(m => ({ label: m.name }))}
-        defaultValue=""
-        onSelect={val => form.setData('payment_method_id', String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-      />
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-        <input type="number" min="0.01" step="0.01" value={form.data.amount}
-          onChange={e => form.setData('amount', e.target.value)}
-          className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-        {form.errors.amount && <p className="text-xs text-red-500 font-bold">{form.errors.amount}</p>}
+    <>
+      <div className="flex flex-col gap-3">
+        <ModernSelect label="وسيلة الدفع" placeholder="اختر..."
+          options={paymentMethods.map(m => ({ label: m.name }))}
+          defaultValue=""
+          onSelect={val => setPaymentMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+          <button onClick={() => setShowAmountPad(true)}
+            className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold text-right cursor-pointer hover:border-primary/40 transition-all">
+            {amount}
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={submit} disabled={processing || !paymentMethod || !amount}
+            className="flex-1 spatial-button h-11 text-sm disabled:opacity-50 flex items-center justify-center gap-2">
+            <Check className="w-4 h-4" /> تأكيد
+          </button>
+          <button onClick={onClose}
+            className="px-4 h-11 rounded-[20px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <button onClick={submit} disabled={form.processing || !form.data.payment_method_id}
-          className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
-          <Check className="w-4 h-4" /> تسجيل
-        </button>
-        <button onClick={onClose}
-          className="flex items-center gap-2 px-4 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-          <X className="w-4 h-4" /> إلغاء
-        </button>
-      </div>
-    </div>
+      <NumberPadModal isOpen={showAmountPad} onClose={() => setShowAmountPad(false)}
+        onConfirm={v => setAmount(v)} initialValue={amount} title="مبلغ التسوية" />
+    </>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PurchaseShow({ purchase, products, paymentMethods, supplierFinancialSummary, flash }: Props) {
   const [showAddItem,   setShowAddItem]   = useState(false);
-  const [showAddPayment, setShowAddPayment] = useState(false);
   const [showAddSupplierPayment, setShowAddSupplierPayment] = useState(false);
+  const [showAddSettlement, setShowAddSettlement] = useState(false);
   const [editItemId,    setEditItemId]    = useState<number | null>(null);
   const [deleteItemId,  setDeleteItemId]  = useState<number | null>(null);
 
@@ -431,57 +466,76 @@ export default function PurchaseShow({ purchase, products, paymentMethods, suppl
 
             {/* Supplier Financial Status */}
             {purchase.supplier.id !== 1 && (
-              <SpatialCard title="الوضع المالي للمورد">
+              <SpatialCard title="الوضع المالي للمورد" className="order-last">
                 <div className="flex flex-col gap-3">
-                  {[
-                    { label: 'إجمالي المشتريات', value: (+supplierFinancialSummary.total_purchases).toFixed(2), cls: 'text-slate-800 dark:text-white' },
-                    { label: 'إجمالي المدفوعات', value: (+supplierFinancialSummary.total_payments).toFixed(2), cls: 'text-emerald-600 dark:text-emerald-400' },
-                    { label: 'إجمالي التسويات', value: (+supplierFinancialSummary.total_settlements).toFixed(2), cls: 'text-amber-600 dark:text-amber-400' },
-                    { label: 'الدين الكلي', value: (+supplierFinancialSummary.total_debt).toFixed(2), cls: +supplierFinancialSummary.total_debt > 0 ? 'text-red-500' : +supplierFinancialSummary.total_debt < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-white/30' },
-                  ].map(({ label, value, cls }) => (
-                    <div key={label} className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5 last:border-0">
-                      <span className="text-sm font-bold text-slate-500 dark:text-white/50">{label}</span>
-                      <span className={`font-black text-lg ${cls}`}>{value} د</span>
-                    </div>
-                  ))}
-                </div>
-                {+supplierFinancialSummary.total_debt > 0 && (
-                  <button
-                    onClick={() => setShowAddSupplierPayment(true)}
-                    className="spatial-button w-full mt-3 flex items-center justify-center gap-2 h-11 text-sm"
-                  >
-                    <CreditCard className="w-4 h-4" /> سداد دفعة للمورد
-                  </button>
-                )}
-                {showAddSupplierPayment && (
-                  <div className="mt-3 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                    <AddSupplierPaymentForm 
-                      supplierId={purchase.supplier.id} 
-                      purchaseId={purchase.id}
-                      totalDebt={supplierFinancialSummary.total_debt.toString()}
-                      paymentMethods={paymentMethods} 
-                      onClose={() => setShowAddSupplierPayment(false)} 
-                    />
+                  <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">إجمالي المشتريات</span>
+                    <span className="font-black text-slate-800 dark:text-white">{(+supplierFinancialSummary.total_purchases).toFixed(2)} د</span>
                   </div>
-                )}
+                  <div className="flex items-center justify-between py-2 border-b border-black/5 dark:border-white/5">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">إجمالي المدفوع</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400">{(+supplierFinancialSummary.total_payments).toFixed(2)} د</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-500 dark:text-white/50">
+                      {+supplierFinancialSummary.total_debt > 0 ? 'علينا للمورد' : +supplierFinancialSummary.total_debt < 0 ? 'لنا على المورد' : 'مسدد'}
+                    </span>
+                    <span className={`font-black text-lg ${
+                      +supplierFinancialSummary.total_debt > 0 ? 'text-red-500'
+                      : +supplierFinancialSummary.total_debt < 0 ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-400 dark:text-white/30'
+                    }`}>
+                      {+supplierFinancialSummary.total_debt === 0 ? 'مسدد' : `${Math.abs(+supplierFinancialSummary.total_debt).toFixed(2)} د`}
+                    </span>
+                  </div>
+
+                  {+supplierFinancialSummary.total_debt > 0 && (
+                    !showAddSupplierPayment ? (
+                      <div className="flex gap-2 mt-1">
+                        <button onClick={() => setShowAddSupplierPayment(true)}
+                          className="flex-1 h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                            bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                            hover:bg-emerald-500 hover:text-white hover:border-emerald-500
+                            dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30
+                            dark:hover:bg-emerald-500 dark:hover:text-white transition-all">
+                          <CreditCard className="w-4 h-4" /> دفعة
+                        </button>
+                        <button onClick={() => setShowAddSettlement(true)}
+                          className="flex-1 h-11 rounded-[20px] flex items-center justify-center gap-2 font-black text-sm
+                            bg-primary/10 text-primary border border-primary/20
+                            hover:bg-primary hover:text-white hover:border-primary
+                            transition-all">
+                          <Check className="w-4 h-4" /> تسوية
+                        </button>
+                      </div>
+                    ) : showAddSupplierPayment ? (
+                      <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        <AddSupplierPaymentForm
+                          supplierId={purchase.supplier.id}
+                          purchaseId={purchase.id}
+                          totalDebt={supplierFinancialSummary.total_debt.toString()}
+                          paymentMethods={paymentMethods}
+                          onClose={() => setShowAddSupplierPayment(false)}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3 p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        <AddSettlementForm
+                          supplierId={purchase.supplier.id}
+                          purchaseId={purchase.id}
+                          totalDebt={supplierFinancialSummary.total_debt.toString()}
+                          paymentMethods={paymentMethods}
+                          onClose={() => setShowAddSettlement(false)}
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
               </SpatialCard>
             )}
 
             {/* Payments */}
-            <SpatialCard title="الدفعات للمورد" icon={<CreditCard className="w-4 h-4" />}
-              action={+purchase.due_amount > 0 && (
-                <button onClick={() => setShowAddPayment(true)}
-                  className="spatial-button flex items-center gap-1.5 px-4 h-9 text-sm">
-                  <Plus className="w-4 h-4" /> دفعة
-                </button>
-              )}
-            >
-              {showAddPayment && (
-                <div className="mb-4 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                  <AddPaymentForm purchaseId={purchase.id} dueAmount={purchase.due_amount}
-                    paymentMethods={paymentMethods} onClose={() => setShowAddPayment(false)} />
-                </div>
-              )}
+            <SpatialCard title="الدفعات المباشرة" icon={<CreditCard className="w-4 h-4" />}>
 
               {purchase.payments.length === 0 ? (
                 <p className="text-sm font-bold text-slate-400 dark:text-white/30 text-center py-4">لا توجد دفعات</p>

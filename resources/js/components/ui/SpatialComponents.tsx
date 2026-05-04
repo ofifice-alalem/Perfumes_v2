@@ -90,13 +90,18 @@ export function ModernSelect({
   defaultValue?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState(() => {
-    if (!defaultValue) return '';
+  const resolveLabel = (val: string) => {
+    if (!val) return '';
     const norm = (options as (string | { label: string; value?: string })[]).map(o =>
       typeof o === 'string' ? { label: o, value: o } : { label: o.label, value: o.value ?? o.label }
     );
-    return norm.find(o => o.value === defaultValue)?.label ?? defaultValue;
-  });
+    return norm.find(o => o.value === val)?.label ?? val;
+  };
+  const [selected, setSelected] = useState(() => resolveLabel(defaultValue));
+
+  useEffect(() => {
+    setSelected(resolveLabel(defaultValue));
+  }, [defaultValue]);
   const [search, setSearch] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);

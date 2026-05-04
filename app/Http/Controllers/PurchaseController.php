@@ -31,6 +31,7 @@ class PurchaseController extends Controller
             'defaultSupplierId' => 1,
             'products'       => Product::with('category')->orderBy('name')->get(),
             'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(),
+            'pageKey'        => uniqid(),
         ]);
     }
 
@@ -89,7 +90,7 @@ class PurchaseController extends Controller
         ];
         $supplierFinancialSummary['total_debt'] = 
             $supplierFinancialSummary['total_purchases'] - 
-            $supplierFinancialSummary['total_payments'] + 
+            $supplierFinancialSummary['total_payments'] - 
             $supplierFinancialSummary['total_settlements'];
 
         return Inertia::render('Purchases/Show', [
@@ -161,36 +162,26 @@ class PurchaseController extends Controller
     {
         $purchase = $this->purchases->find($id);
         $supplierId = $purchase->supplier_id;
-        $purchaseId = $purchase->id;
-
-        // تحديث المدفوعات المرتبطة بالفاتورة
-        $payments = \App\Models\SupplierPayment::where('purchase_id', $purchaseId)->get();
-        foreach ($payments as $payment) {
-            $oldNotes = $payment->notes ? $payment->notes . ' | ' : '';
-            $payment->update([
-                'purchase_id' => null,
-                'notes' => $oldNotes . "تم سداد هذا المبلغ من فاتورة محذوفة برقم #{$purchaseId}",
-            ]);
-        }
 
         // إعادة خصم المخزون لكل سطر
         foreach ($purchase->items as $item) {
             $item->product->decrement('stock', $item->quantity);
         }
 
+        // purchase_id في supplier_payments سيصبح null تلقائياً (nullOnDelete)
         $purchase->delete();
 
         // إعادة حساب دين المورد
         $supplier = \App\Models\Supplier::find($supplierId);
         if ($supplier) {
             $totalPurchases = \App\Models\Purchase::where('supplier_id', $supplierId)->sum('total');
-            $totalPaid = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->sum('amount');
-            $totalSettled = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->sum('amount');
-            $totalDebt = $totalPurchases - $totalPaid + $totalSettled;
+            $totalPaid      = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->sum('amount');
+            $totalSettled   = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->sum('amount');
+            $totalDebt      = $totalPurchases - $totalPaid - $totalSettled;
 
             $supplier->update([
                 'total_purchases' => $totalPurchases,
-                'total_debt' => $totalDebt,
+                'total_debt'      => $totalDebt,
             ]);
         }
 

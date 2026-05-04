@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
@@ -15,6 +15,7 @@ interface Props {
   products: Product[];
   paymentMethods: PaymentMethod[];
   defaultSupplierId: number;
+  pageKey: string;
   flash?: { success?: string; error?: string };
 }
 
@@ -34,21 +35,17 @@ interface PaymentEntry {
   amount: string;
 }
 
-export default function PurchaseCreate({ suppliers, products, paymentMethods, defaultSupplierId, flash }: Props) {
+export default function PurchaseCreate(props: Props) {
+  return <PurchaseCreateInner key={props.pageKey} {...props} />;
+}
+
+function PurchaseCreateInner({ suppliers, products, paymentMethods, defaultSupplierId, flash }: Props) {
   const [supplierId, setSupplierId] = useState(String(defaultSupplierId));
   const [notes,       setNotes]       = useState('');
   const [cart,        setCart]        = useState<CartItem[]>([]);
   const [payments,    setPayments]    = useState<PaymentEntry[]>([]);
   const [processing,  setProcessing]  = useState(false);
   const [paymentManuallySet, setPaymentManuallySet] = useState(false);
-
-  // مسح البيانات عند تحميل الصفحة
-  useEffect(() => {
-    setCart([]);
-    setPayments([]);
-    setNotes('');
-    setPaymentManuallySet(false);
-  }, []);
 
   // Add product form state
   const [selProduct,    setSelProduct]    = useState('');
