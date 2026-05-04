@@ -3,6 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Package } from 'lucide-react';
+import { DeleteModal } from '@/components/ui/DeleteModal';
 
 interface Category  { id: number; name: string; unit: 'ml' | 'pcs' | 'g'; is_operational: boolean; }
 interface PriceTier { id: number; name: string; description: string | null; }
@@ -102,7 +103,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     }
 
     function deleteProduct(id: number) {
-        if (!confirm('هل أنت متأكد من الحذف؟')) return;
         router.delete(`/products/${id}`);
     }
 
@@ -466,10 +466,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                             <Pencil className="w-3 h-3" /> تعديل
                                                         </button>
-                                                        <button onClick={() => deleteProduct(product.id)}
-                                                            className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                            <Trash2 className="w-3 h-3" /> حذف
-                                                        </button>
+                                                        <DeleteModal
+                                                            onConfirm={() => deleteProduct(product.id)}
+                                                            trigger={
+                                                                <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                    <Trash2 className="w-3 h-3" /> حذف
+                                                                </button>
+                                                            }
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -551,10 +555,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                     <Pencil className="w-4 h-4" /> تعديل
                                                 </button>
-                                                <button onClick={() => deleteProduct(product.id)}
-                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                    <Trash2 className="w-4 h-4" /> حذف
-                                                </button>
+                                                <DeleteModal
+                                                    onConfirm={() => deleteProduct(product.id)}
+                                                    wrapperClassName="flex-1"
+                                                    trigger={
+                                                        <button className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> حذف
+                                                        </button>
+                                                    }
+                                                />
                                             </div>
 
                                         </div>

@@ -1,0 +1,98 @@
+import { useState } from 'react';
+import { Trash2, AlertTriangle, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
+
+interface DeleteModalProps {
+    title?: string;
+    description?: string;
+    onConfirm: () => void;
+    trigger?: React.ReactNode;
+    triggerClassName?: string;
+    wrapperClassName?: string;
+}
+
+export function DeleteModal({
+    title = 'تأكيد الحذف',
+    description = 'هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذا الإجراء.',
+    onConfirm,
+    trigger,
+    triggerClassName,
+    wrapperClassName,
+}: DeleteModalProps) {
+    const [open, setOpen] = useState(false);
+
+    function handleConfirm() {
+        setOpen(false);
+        onConfirm();
+    }
+
+    return (
+        <>
+            {trigger ? (
+                <div className={wrapperClassName} onClick={() => setOpen(true)}>{trigger}</div>
+            ) : (
+                <button
+                    onClick={() => setOpen(true)}
+                    className={triggerClassName ?? 'flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-bold text-sm'}
+                >
+                    <Trash2 className="w-3.5 h-3.5" /> حذف
+                </button>
+            )}
+
+            {open && createPortal(
+                <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"
+                        onClick={() => setOpen(false)}
+                    />
+
+                    {/* Modal */}
+                    <div className="relative w-full sm:max-w-sm rounded-[28px] p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200
+                        border border-black/10 dark:border-white/[0.12]
+                        bg-gradient-to-br from-white to-slate-100
+                        dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
+                        backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
+
+                        {/* أيقونة التحذير */}
+                        <div className="flex items-center justify-between">
+                            <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
+                                <AlertTriangle className="w-6 h-6 text-red-500" />
+                            </div>
+                            <button
+                                onClick={() => setOpen(false)}
+                                className="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/70 flex items-center justify-center transition-all"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* النص */}
+                        <div className="flex flex-col gap-1.5">
+                            <h3 className="text-lg font-black text-slate-800 dark:text-white">{title}</h3>
+                            <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">{description}</p>
+                        </div>
+
+                        {/* الأزرار */}
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setOpen(false)}
+                                className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10"
+                            >
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={handleConfirm}
+                                className="flex-1 h-11 rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30"
+                            >
+                                <Trash2 className="w-4 h-4" /> حذف
+                            </button>
+                        </div>
+
+                    </div>
+                </div>,
+                document.body
+            )}
+        </>
+    );
+}
