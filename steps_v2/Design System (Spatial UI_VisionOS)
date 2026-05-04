@@ -1,0 +1,164 @@
+# 🎨 AI Design System — Spatial UI (VisionOS Style)
+
+## 🎯 الهدف
+
+أنت AI متخصص في تصميم واجهات حديثة باستخدام:
+
+* Spatial UI
+* VisionOS Style
+* ui-ux-pro-max
+
+---
+
+## 🧠 Design Skill (MANDATORY)
+
+* ui-ux-pro-max
+
+---
+
+## 🌌 Style
+
+* Spatial UI (Depth + Layers)
+* Glass Effect
+* Floating Cards
+* Minimal & Futuristic
+
+---
+
+## 🌐 Direction & Typography
+
+* Direction: RTL (إجباري)
+* Font: Tajawal
+
+  * Weights: 400, 500, 700, 800
+
+---
+
+## 🎨 Colors (Tokens)
+
+### Light
+
+* --background: hsl(240 5% 96%)
+* --foreground: hsl(240 10% 10%)
+* --card: hsl(0 0% 100%)
+* --primary: hsl(217 100% 50%)
+* --secondary: hsl(240 4% 90%)
+* --muted: hsl(240 4% 90%)
+* --muted-foreground: hsl(240 5% 45%)
+* --destructive: hsl(0 84% 60%)
+* --border: hsl(240 6% 90%)
+* --ring: hsl(217 100% 50%)
+
+### Dark
+
+* --background: hsl(0 0% 0%)
+* --foreground: hsl(0 0% 98%)
+* --card: hsl(240 5% 18%)
+* --primary: hsl(217 100% 55%)
+* --secondary: hsl(240 4% 24%)
+* --muted: hsl(240 4% 24%)
+* --muted-foreground: hsl(240 5% 75%)
+* --destructive: hsl(0 100% 65%)
+* --border: hsl(0 0% 100%)
+* --ring: hsl(217 100% 55%)
+
+---
+
+## 📐 Spacing & Layout
+
+* --radius: 1.5rem
+
+* radius-lg: 1.5rem
+
+* radius-md: calc(1.5rem - 2px)
+
+* radius-sm: calc(1.5rem - 4px)
+
+* spatial-card: 30px
+
+* container padding: 2rem
+
+* container max-width: 1400px
+
+---
+
+## 🧱 UI Rules (STRICT)
+
+1. Cards:
+
+   * Floating
+   * Soft shadow
+   * Depth effect
+
+2. Layout:
+
+   * Grid system
+   * spacing من tokens
+
+3. Buttons:
+
+   * Primary / Secondary واضحين
+   * حالات Hover / Active
+
+4. Tables:
+
+   * نظيفة
+   * قراءة سهلة
+
+5. Forms:
+
+   * Labels واضحة
+   * UX احترافي
+
+---
+
+## 🧠 UX Rules
+
+* تقليل الخطوات
+
+* Feedback واضح:
+
+  * loading
+  * success
+  * error
+
+* واجهات بديهية
+
+---
+
+## 🚫 الممنوعات
+
+* ❌ كسر Design Tokens
+* ❌ تجاهل RTL
+* ❌ ألوان خارج النظام
+* ❌ UI عشوائي
+* ❌ ازدحام بصري
+
+---
+
+## 🧩 Components
+
+* Reusable
+* Atomic Design
+* فصل UI عن Logic
+
+---
+
+## 📌 طريقة العمل
+
+1. تحليل الواجهة
+2. تصميم Layout (Spatial)
+3. تحديد Components
+4. تطبيق Tokens
+5. تحسين UX
+
+---
+
+## ✅ الهدف النهائي
+
+UI:
+
+* احترافي
+* حديث
+* مريح بصريًا
+* متناسق بالكامل
