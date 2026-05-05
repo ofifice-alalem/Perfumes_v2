@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { DeleteModal } from '@/components/ui/DeleteModal';
-import { Plus, RotateCcw, Eye, Trash2 } from 'lucide-react';
+import { Plus, RotateCcw, Eye, Trash2, AlertTriangle, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface Supplier { id: number; name: string; }
 interface PurchaseReturn {
@@ -10,10 +11,12 @@ interface PurchaseReturn {
     supplier: Supplier;
     purchase: { id: number } | null;
     total: string;
+    recovered_amount: string;
+    recovery_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null;
     created_at: string;
     deleted_at: string | null;
-    settlement: { id: number; amount: string } | null;
+    settlements_total: string | null;
 }
 interface Paginated<T> {
     data: T[];
@@ -27,12 +30,124 @@ interface Props {
     flash?: { success?: string; error?: string };
 }
 
+const recoveryLabel = { unpaid: 'لم يُسترد', partial: 'جزئي', paid: 'مسترد' };
+const recoveryClass  = {
+    unpaid:  'bg-red-500/10 text-red-500',
+    partial: 'bg-amber-500/10 text-amber-500',
+    paid:    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+};
+
 function fmt(v: string) {
     const n = parseFloat(v);
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ── Reusable RadioGroup ───────────────────────────────────────────────────────
+function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
+    value: boolean; onChange: (v: boolean) => void;
+    yesLabel: string; yesDesc: string; noLabel: string; noDesc: string;
+}) {
+    return (
+        <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(true)}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
+                    {value && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{yesLabel}</span>
+                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">{yesDesc}</span>
+                </div>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(false)}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
+                    {!value && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{noLabel}</span>
+                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">{noDesc}</span>
+                </div>
+            </label>
+        </div>
+    );
+}
+
+// ── Modal إلغاء المرتجع ───────────────────────────────────────────────────────
+function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () => void }) {
+    const [deleteSettlements, setDeleteSettlements] = useState(false);
+    const settlementsTotal = parseFloat(ret.settlements_total ?? '0');
+    const hasSettlements   = settlementsTotal > 0;
+
+    function confirm() {
+        router.delete(`/purchase-returns/${ret.id}`, {
+            data: { delete_settlements: deleteSettlements },
+            onSuccess: onClose,
+        });
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full sm:max-w-md rounded-[28px] p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200
+                border border-black/10 dark:border-white/[0.12]
+                bg-gradient-to-br from-white to-slate-100
+                dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
+                backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
+
+                <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <button onClick={onClose}
+                        className="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <h3 className="text-lg font-black text-slate-800 dark:text-white">إلغاء المرتجع</h3>
+                    <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                        سيتم إلغاء المرتجع واستعادة المخزون.
+                    </p>
+                </div>
+
+                {hasSettlements && (
+                    <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">التسويات المرتبطة بهذا المرتجع</span>
+                            <span className="font-black text-purple-500 text-sm">{fmt(String(settlementsTotal))}</span>
+                        </div>
+                        <div className="h-px bg-black/8 dark:bg-white/8" />
+                        <RadioGroup
+                            value={deleteSettlements}
+                            onChange={setDeleteSettlements}
+                            yesLabel="نعم، احذف التسويات معه"
+                            yesDesc="المبلغ لم يُسترد فعلاً"
+                            noLabel="لا، أبقِ التسويات كرصيد مستقل"
+                            noDesc="المبلغ استُرد فعلاً وسيبقى في سجل المورد"
+                        />
+                    </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                    <button onClick={onClose}
+                        className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+                        إلغاء
+                    </button>
+                    <button onClick={confirm}
+                        className="flex-1 h-11 rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30">
+                        <Trash2 className="w-4 h-4" /> تأكيد الإلغاء
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+// ── الصفحة الرئيسية ───────────────────────────────────────────────────────────
 export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }: Props) {
+    const [cancelTarget, setCancelTarget] = useState<PurchaseReturn | null>(null);
+
     return (
         <AppShell pageTitle="المرتجعات">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
@@ -62,7 +177,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['#', 'المورد', 'الفاتورة', 'الإجمالي', 'تسوية', 'الحالة', 'التاريخ', ''].map(h => (
+                                            {['#', 'المورد', 'الفاتورة', 'الإجمالي', 'المسترد', 'الحالة', 'التاريخ', ''].map(h => (
                                                 <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
@@ -73,23 +188,19 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                 <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
                                                 <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
                                                 <td className="px-4 py-3">
-                                                    {r.purchase ? (
-                                                        <Link href={`/purchases/${r.purchase.id}`} className="text-primary font-bold hover:underline">#{r.purchase.id}</Link>
-                                                    ) : <span className="text-slate-400 dark:text-white/30 font-bold">مستقل</span>}
+                                                    {r.purchase
+                                                        ? <Link href={`/purchases/${r.purchase.id}`} className="text-primary font-bold hover:underline">#{r.purchase.id}</Link>
+                                                        : <span className="text-slate-400 dark:text-white/30 font-bold">مستقل</span>}
                                                 </td>
                                                 <td className="px-4 py-3 font-black text-orange-500">{fmt(r.total)}</td>
-                                                <td className="px-4 py-3">
-                                                    {r.settlement ? (
-                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-purple-500/10 text-purple-500">✓ {fmt(r.settlement.amount)}</span>
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/30">—</span>
-                                                    )}
-                                                </td>
+                                                <td className="px-4 py-3 font-black text-purple-500">{fmt(r.recovered_amount)}</td>
                                                 <td className="px-4 py-3">
                                                     {r.deleted_at ? (
                                                         <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
                                                     ) : (
-                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">نشط</span>
+                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] ${recoveryClass[r.recovery_status]}`}>
+                                                            {recoveryLabel[r.recovery_status]}
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
@@ -107,16 +218,10 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                                 <RotateCcw className="w-3 h-3" /> استعادة
                                                             </button>
                                                         ) : (
-                                                            <DeleteModal
-                                                                title="إلغاء المرتجع"
-                                                                description="سيتم إلغاء المرتجع واستعادة المخزون وإلغاء التسوية المرتبطة."
-                                                                onConfirm={() => router.delete(`/purchase-returns/${r.id}`)}
-                                                                trigger={
-                                                                    <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                        <Trash2 className="w-3 h-3" /> إلغاء
-                                                                    </button>
-                                                                }
-                                                            />
+                                                            <button onClick={() => setCancelTarget(r)}
+                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                <Trash2 className="w-3 h-3" /> إلغاء
+                                                            </button>
                                                         )}
                                                     </div>
                                                 </td>
@@ -137,7 +242,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{r.id}</span>
                                                     {r.deleted_at
                                                         ? <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
-                                                        : r.settlement && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">تسوية</span>
+                                                        : <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${recoveryClass[r.recovery_status]}`}>{recoveryLabel[r.recovery_status]}</span>
                                                     }
                                                 </div>
                                             </div>
@@ -154,17 +259,10 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                     <RotateCcw className="w-4 h-4" /> استعادة
                                                 </button>
                                             ) : (
-                                                <DeleteModal
-                                                    title="إلغاء المرتجع"
-                                                    description="سيتم إلغاء المرتجع واستعادة المخزون."
-                                                    onConfirm={() => router.delete(`/purchase-returns/${r.id}`)}
-                                                    wrapperClassName="flex-1"
-                                                    trigger={
-                                                        <button className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                            <Trash2 className="w-4 h-4" /> إلغاء
-                                                        </button>
-                                                    }
-                                                />
+                                                <button onClick={() => setCancelTarget(r)}
+                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                    <Trash2 className="w-4 h-4" /> إلغاء
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -191,6 +289,13 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                     )}
                 </SpatialCard>
             </div>
+
+            {cancelTarget && (
+                <CancelReturnModal
+                    ret={cancelTarget}
+                    onClose={() => setCancelTarget(null)}
+                />
+            )}
         </AppShell>
     );
 }

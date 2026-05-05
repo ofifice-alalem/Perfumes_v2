@@ -17,7 +17,7 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
 
     public function paginated(int $perPage = 20)
     {
-        return QueryBuilder::for($this->model->with(['supplier']))
+        return QueryBuilder::for($this->model->with(['supplier'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('payment_status'),

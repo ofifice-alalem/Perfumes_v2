@@ -118,29 +118,33 @@ class PurchaseController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $purchase       = $this->purchases->findWithRelations($id);
-        $deletePayments = request()->boolean('delete_payments', false);
+        $purchase          = $this->purchases->findWithRelations($id);
+        $deletePayments    = request()->boolean('delete_payments', false);
+        $deleteSettlements = request()->boolean('delete_settlements', false);
 
-        DB::transaction(function () use ($purchase, $deletePayments) {
-            // 1. Restore stock for all items (observer fires on delete)
+        DB::transaction(function () use ($purchase, $deletePayments, $deleteSettlements) {
+            // 1. Restore stock for all items
             foreach ($purchase->items as $item) {
                 $item->delete();
             }
 
-            // 2. Handle linked payments based on user choice
+            // 2. Handle linked payments
             if ($deletePayments) {
-                // Soft delete payments linked to this purchase
                 SupplierPayment::where('purchase_id', $purchase->id)->delete();
             } else {
-                // Detach payments — keep them as independent supplier debt records
                 SupplierPayment::where('purchase_id', $purchase->id)
                     ->update(['purchase_id' => null]);
             }
 
-            // 3. Soft delete linked settlements
-            SupplierSettlement::where('purchase_id', $purchase->id)->delete();
+            // 3. Handle linked settlements
+            if ($deleteSettlements) {
+                SupplierSettlement::where('purchase_id', $purchase->id)->delete();
+            } else {
+                SupplierSettlement::where('purchase_id', $purchase->id)
+                    ->update(['purchase_id' => null]);
+            }
 
-            // 4. Soft delete the purchase itself
+            // 4. Soft delete the purchase
             $purchase->delete();
 
             // 5. Recalculate supplier totals

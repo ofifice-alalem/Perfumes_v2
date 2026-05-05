@@ -17,6 +17,7 @@ interface Purchase {
     notes: string | null;
     created_at: string;
     deleted_at: string | null;
+    settlements_total: string | null;
 }
 interface Paginated<T> {
     data: T[];
@@ -45,15 +46,47 @@ function fmt(v: string) {
 
 // ── Modal إلغاء الفاتورة ──────────────────────────────────────────────────────
 function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClose: () => void }) {
-    const [deletePayments, setDeletePayments] = useState(false);
-    const paidAmount = parseFloat(purchase.paid_amount);
-    const hasPayments = paidAmount > 0;
+    const [deletePayments,    setDeletePayments]    = useState(false);
+    const [deleteSettlements, setDeleteSettlements] = useState(false);
+
+    const paidAmount       = parseFloat(purchase.paid_amount);
+    const settlementsTotal = parseFloat(purchase.settlements_total ?? '0');
+    const hasPayments      = paidAmount > 0;
+    const hasSettlements   = settlementsTotal > 0;
 
     function confirm() {
         router.delete(`/purchases/${purchase.id}`, {
-            data: { delete_payments: deletePayments },
+            data: { delete_payments: deletePayments, delete_settlements: deleteSettlements },
             onSuccess: onClose,
         });
+    }
+
+    function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
+        value: boolean; onChange: (v: boolean) => void;
+        yesLabel: string; yesDesc: string; noLabel: string; noDesc: string;
+    }) {
+        return (
+            <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(true)}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
+                        {value && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{yesLabel}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">{yesDesc}</span>
+                    </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(false)}>
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
+                        {!value && <div className="w-2 h-2 rounded-full bg-white" />}
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{noLabel}</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">{noDesc}</span>
+                    </div>
+                </label>
+            </div>
+        );
     }
 
     return createPortal(
@@ -80,45 +113,45 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                 <div className="flex flex-col gap-1.5">
                     <h3 className="text-lg font-black text-slate-800 dark:text-white">إلغاء فاتورة الشراء</h3>
                     <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
-                        سيتم إلغاء الفاتورة واسترداد المخزون وإلغاء التسويات المرتبطة بها.
+                        سيتم إلغاء الفاتورة واسترداد المخزون.
                     </p>
                 </div>
 
-                {/* خيار الدفعات — يظهر فقط إذا كان هناك دفعات */}
+                {/* خيار الدفعات */}
                 {hasPayments && (
                     <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">
-                                الدفعات المرتبطة بهذه الفاتورة
-                            </span>
-                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                                {fmt(purchase.paid_amount)}
-                            </span>
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">الدفعات المرتبطة</span>
+                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{fmt(purchase.paid_amount)}</span>
                         </div>
-
                         <div className="h-px bg-black/8 dark:bg-white/8" />
+                        <RadioGroup
+                            value={deletePayments}
+                            onChange={setDeletePayments}
+                            yesLabel="نعم، احذف الدفعات معها"
+                            yesDesc="الفاتورة كانت خطأ في الإدخال"
+                            noLabel="لا، أبقِ الدفعات كدين على المورد"
+                            noDesc="المال دُفع فعلاً وسيبقى في سجل المورد"
+                        />
+                    </div>
+                )}
 
-                        {/* خيار نعم */}
-                        <label className="flex items-center gap-3 cursor-pointer group" onClick={() => setDeletePayments(true)}>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${deletePayments ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
-                                {deletePayments && <div className="w-2 h-2 rounded-full bg-white" />}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-slate-700 dark:text-white/80 text-sm">نعم، احذف الدفعات معها</span>
-                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">الفاتورة كانت خطأ في الإدخال</span>
-                            </div>
-                        </label>
-
-                        {/* خيار لا */}
-                        <label className="flex items-center gap-3 cursor-pointer group" onClick={() => setDeletePayments(false)}>
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!deletePayments ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
-                                {!deletePayments && <div className="w-2 h-2 rounded-full bg-white" />}
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-slate-700 dark:text-white/80 text-sm">لا، أبقِ الدفعات كدين على المورد</span>
-                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">المال دُفع فعلاً وسيبقى في سجل المورد</span>
-                            </div>
-                        </label>
+                {/* خيار التسويات */}
+                {hasSettlements && (
+                    <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">التسويات المرتبطة</span>
+                            <span className="font-black text-purple-500 text-sm">{fmt(String(settlementsTotal))}</span>
+                        </div>
+                        <div className="h-px bg-black/8 dark:bg-white/8" />
+                        <RadioGroup
+                            value={deleteSettlements}
+                            onChange={setDeleteSettlements}
+                            yesLabel="نعم، احذف التسويات معها"
+                            yesDesc="التسوية لم تُنفَّذ فعلاً"
+                            noLabel="لا، أبقِ التسويات كرصيد مستقل"
+                            noDesc="المبلغ استُرد فعلاً وسيبقى في سجل المورد"
+                        />
                     </div>
                 )}
 

@@ -123,16 +123,22 @@ class PurchaseReturnController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $purchaseReturn = $this->returns->findWithRelations($id);
+        $purchaseReturn      = $this->returns->findWithRelations($id);
+        $deleteSettlements   = request()->boolean('delete_settlements', false);
 
-        DB::transaction(function () use ($purchaseReturn) {
+        DB::transaction(function () use ($purchaseReturn, $deleteSettlements) {
             // 1. Restore stock for all return items
             foreach ($purchaseReturn->items as $item) {
                 $item->delete();
             }
 
-            // 2. Soft delete all linked settlements
-            SupplierSettlement::where('purchase_return_id', $purchaseReturn->id)->delete();
+            // 2. Handle linked settlements
+            if ($deleteSettlements) {
+                SupplierSettlement::where('purchase_return_id', $purchaseReturn->id)->delete();
+            } else {
+                SupplierSettlement::where('purchase_return_id', $purchaseReturn->id)
+                    ->update(['purchase_return_id' => null]);
+            }
 
             // 3. Soft delete the return itself
             $purchaseReturn->delete();

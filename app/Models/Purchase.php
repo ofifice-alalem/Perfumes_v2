@@ -39,6 +39,11 @@ class Purchase extends Model implements Auditable
         return $this->hasMany(SupplierPayment::class);
     }
 
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(SupplierSettlement::class);
+    }
+
     public function returns(): HasMany
     {
         return $this->hasMany(PurchaseReturn::class);
