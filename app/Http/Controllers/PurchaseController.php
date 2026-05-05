@@ -123,9 +123,10 @@ class PurchaseController extends Controller
         $deleteSettlements = request()->boolean('delete_settlements', false);
 
         DB::transaction(function () use ($purchase, $deletePayments, $deleteSettlements) {
-            // 1. Restore stock for all items
+            // 1. Restore stock manually — do NOT delete items (they stay as historical record)
             foreach ($purchase->items as $item) {
-                $item->delete();
+                \App\Models\Product::where('id', $item->product_id)
+                    ->decrement('stock', $item->quantity);
             }
 
             // 2. Handle linked payments
@@ -170,9 +171,10 @@ class PurchaseController extends Controller
             // 3. Restore linked settlements
             SupplierSettlement::withTrashed()->where('purchase_id', $purchase->id)->restore();
 
-            // 4. Re-add stock for all items
+            // 4. Re-add stock for all items (items were never deleted)
             foreach ($purchase->items as $item) {
-                \App\Models\Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+                \App\Models\Product::where('id', $item->product_id)
+                    ->increment('stock', $item->quantity);
             }
 
             // 5. Recalculate supplier totals

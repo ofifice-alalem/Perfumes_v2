@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
@@ -27,20 +27,30 @@ function fmt(n: number) {
 
 export default function PurchaseReturnsCreate({ suppliers, products, paymentMethods, flash }: Props) {
     const [items,       setItems]       = useState<ItemRow[]>([emptyItem()]);
-    const [settlements, setSettlements] = useState<SettlementRow[]>([]);
+    const [settlements, setSettlements] = useState<SettlementRow[]>([emptySettlement()]);
 
     const form = useForm({
-        supplier_id:  '',
+        supplier_id:  '1',
         purchase_id:  '',
         notes:        '',
         items:        [] as ItemRow[],
         settlements:  [] as SettlementRow[],
     });
 
-    const isCash      = form.data.supplier_id === '1';
-    const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
+    const isCash         = form.data.supplier_id === '1';
+    const grandTotal     = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
     const totalRecovered = settlements.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const remaining   = grandTotal - totalRecovered;
+    const remaining      = grandTotal - totalRecovered;
+
+    // Auto-sync first row amount with grandTotal when only one row and no method selected yet
+    useEffect(() => {
+        setSettlements(prev => {
+            if (prev.length === 1 && prev[0].payment_method_id === '') {
+                return [{ ...prev[0], amount: grandTotal > 0 ? fmt(grandTotal) : '' }];
+            }
+            return prev;
+        });
+    }, [grandTotal]);
 
     // ── options ──────────────────────────────────────────────────────────────
     const supplierOptions = [
@@ -71,8 +81,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
         setSettlements(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
     }
     function addSettlement() {
-        const amount = settlements.length === 0 && remaining > 0 ? fmt(remaining) : '';
-        setSettlements(prev => [...prev, { ...emptySettlement(), amount }]);
+        setSettlements(prev => [...prev, emptySettlement()]);
     }
 
     // ── submit ────────────────────────────────────────────────────────────────
@@ -83,7 +92,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
 
     const selectedSupplierLabel = form.data.supplier_id === '1'
         ? 'مورد نقدي'
-        : (suppliers.find(s => String(s.id) === form.data.supplier_id)?.name ?? '');
+        : (suppliers.find(s => String(s.id) === form.data.supplier_id)?.name ?? 'مورد نقدي');
 
     return (
         <AppShell pageTitle="مرتجع جديد">
@@ -114,7 +123,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                 defaultValue={selectedSupplierLabel}
                                 onSelect={val => {
                                     form.setData('supplier_id', resolveSupplier(val));
-                                    setSettlements([]);
+                                    setSettlements([emptySettlement()]);
                                 }}
                             />
                             {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
@@ -199,18 +208,12 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                     <div className="flex flex-col gap-3">
 
                         {/* تنبيه المورد النقدي */}
-                        {isCash && settlements.length === 0 && (
+                        {isCash && (
                             <div className="px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20">
                                 <p className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                                    ⚠️ المورد النقدي — سيتم إنشاء استرداد تلقائي كامل عند الحفظ
+                                    ⚠️ المورد النقدي — يجب تسجيل الاسترداد كاملاً
                                 </p>
                             </div>
-                        )}
-
-                        {settlements.length === 0 && !isCash && (
-                            <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-2 text-center">
-                                لا يوجد استرداد — المبلغ سيبقى كرصيد دائن عند المورد
-                            </p>
                         )}
 
                         {settlements.map((row, idx) => (

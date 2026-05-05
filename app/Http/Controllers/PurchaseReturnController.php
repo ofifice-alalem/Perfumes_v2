@@ -127,9 +127,10 @@ class PurchaseReturnController extends Controller
         $deleteSettlements   = request()->boolean('delete_settlements', false);
 
         DB::transaction(function () use ($purchaseReturn, $deleteSettlements) {
-            // 1. Restore stock for all return items
+            // 1. Restore stock manually — do NOT delete items (they stay as historical record)
             foreach ($purchaseReturn->items as $item) {
-                $item->delete();
+                Product::where('id', $item->product_id)
+                    ->increment('stock', $item->quantity);
             }
 
             // 2. Handle linked settlements
@@ -166,9 +167,10 @@ class PurchaseReturnController extends Controller
                 ->where('purchase_return_id', $purchaseReturn->id)
                 ->restore();
 
-            // 3. Re-deduct stock for all return items
+            // 3. Re-deduct stock for all return items (items were never deleted)
             foreach ($purchaseReturn->items as $item) {
-                Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                Product::where('id', $item->product_id)
+                    ->decrement('stock', $item->quantity);
             }
 
             // 4. Recalculate supplier totals
