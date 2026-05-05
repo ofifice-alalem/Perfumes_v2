@@ -36,6 +36,12 @@ function fmt(v: string) {
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtDate(v: string | null): string {
+    if (!v) return '—';
+    const d = new Date(v.replace(' ', 'T'));
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+}
+
 export default function SupplierSettlementsIndex({ settlements, suppliers, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
 
@@ -174,7 +180,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                             <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
                                             <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {new Date(s.created_at).toLocaleDateString('en-GB')}
+                                                {fmtDate(s.created_at)}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">

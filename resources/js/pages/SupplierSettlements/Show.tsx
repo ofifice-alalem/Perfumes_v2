@@ -30,6 +30,12 @@ function fmt(v: string | number) {
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtDate(v: string | null): string {
+    if (!v) return '—';
+    const d = new Date(v.replace(' ', 'T'));
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+}
+
 export default function SupplierSettlementsShow({ settlement, flash }: Props) {
     const isSoftDeleted = !!settlement.deleted_at;
 
@@ -62,7 +68,7 @@ export default function SupplierSettlementsShow({ settlement, flash }: Props) {
                     {[
                         { label: 'المبلغ',       value: fmt(settlement.amount),                    color: 'text-purple-500' },
                         { label: 'وسيلة الرد',   value: settlement.payment_method.name,            color: 'text-slate-800 dark:text-white' },
-                        { label: 'التاريخ',       value: new Date(settlement.created_at).toLocaleDateString('en-GB'), color: 'text-slate-800 dark:text-white' },
+                        { label: 'التاريخ',       value: fmtDate(settlement.created_at), color: 'text-slate-800 dark:text-white' },
                     ].map(s => (
                         <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
                             <span className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">{s.label}</span>

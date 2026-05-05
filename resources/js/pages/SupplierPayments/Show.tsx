@@ -28,6 +28,12 @@ function fmt(v: string | number) {
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function fmtDate(v: string | null): string {
+    if (!v) return '—';
+    const d = new Date(v.replace(' ', 'T'));
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+}
+
 export default function SupplierPaymentsShow({ payment, flash }: Props) {
     const isSoftDeleted = !!payment.deleted_at;
 
@@ -60,7 +66,7 @@ export default function SupplierPaymentsShow({ payment, flash }: Props) {
                     {[
                         { label: 'المبلغ',        value: fmt(payment.amount),                    color: 'text-emerald-600 dark:text-emerald-400' },
                         { label: 'وسيلة الدفع',   value: payment.payment_method.name,            color: 'text-slate-800 dark:text-white' },
-                        { label: 'التاريخ',        value: new Date(payment.created_at).toLocaleDateString('en-GB'), color: 'text-slate-800 dark:text-white' },
+                        { label: 'التاريخ',        value: fmtDate(payment.created_at), color: 'text-slate-800 dark:text-white' },
                     ].map(s => (
                         <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
                             <span className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">{s.label}</span>
