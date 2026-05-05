@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useForm, Link, router } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
-import { ArrowRight, Plus, Trash2, Package, CreditCard, RefreshCw, RotateCcw } from 'lucide-react';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
@@ -59,18 +60,20 @@ function fmt(v: string | number) {
 }
 
 export default function PurchasesShow({ purchase, paymentMethods, flash }: Props) {
-    const [showPaymentForm,    setShowPaymentForm]    = useState(false);
-    const [showSettlementForm, setShowSettlementForm] = useState(false);
-    const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([emptyRow()]);
-    const [submitting, setSubmitting]   = useState(false);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
+    const [paymentRows,     setPaymentRows]     = useState<PaymentRow[]>([emptyRow()]);
+    const [submitting,      setSubmitting]      = useState(false);
 
-    const settlementForm = useForm({
-        supplier_id:       String(purchase.supplier.id),
-        purchase_id:       String(purchase.id),
-        payment_method_id: '',
-        amount:            '',
-        notes:             '',
-    });
+    // NumberPad
+    const [showPad,     setShowPad]     = useState(false);
+    const [padTitle,    setPadTitle]    = useState('');
+    const [padInitial,  setPadInitial]  = useState('');
+    const [padMax,      setPadMax]      = useState<number | undefined>(undefined);
+    const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
+
+    function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
+        setPadTitle(title); setPadInitial(initial); setPadMax(max); setPadCallback(() => cb); setShowPad(true);
+    }
 
     const methodOptions = paymentMethods.map(m => ({ label: m.name }));
 
@@ -82,11 +85,12 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
         setPaymentRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
     }
 
-    const totalPaid  = parseFloat(purchase.paid_amount);
-    const due        = parseFloat(purchase.due_amount);
-    const rowsTotal  = paymentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const due          = parseFloat(purchase.due_amount);
+    const supplierDebt = parseFloat(purchase.supplier.total_debt);
+    // الحد الأقصى للدفعة = أصغر قيمة بين متبقي الفاتورة ودين المورد
+    const maxPayment   = Math.min(due, supplierDebt);
+    const rowsTotal    = paymentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
 
-    // Submit all payment rows one by one
     function submitPayments() {
         const valid = paymentRows.filter(r => r.payment_method_id && parseFloat(r.amount) > 0);
         if (valid.length === 0) return;
@@ -115,20 +119,11 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
         postNext(0);
     }
 
-    function submitSettlement() {
-        settlementForm.post('/supplier-settlements', {
-            onSuccess: () => {
-                settlementForm.reset('payment_method_id', 'amount', 'notes');
-                setShowSettlementForm(false);
-            },
-        });
-    }
-
-    const isCash       = purchase.supplier.id === 1;
-    const supplierDebt = parseFloat(purchase.supplier.total_debt);
-    const isCancelled  = !!purchase.deleted_at;
+    const isCash      = purchase.supplier.id === 1;
+    const isCancelled = !!purchase.deleted_at;
 
     return (
+        <>
         <AppShell pageTitle={`فاتورة #${purchase.id}`}>
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
@@ -144,9 +139,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                 {statusLabel[purchase.payment_status]}
                             </span>
                             {isCancelled && (
-                                <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">
-                                    ملغية
-                                </span>
+                                <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">ملغية</span>
                             )}
                         </div>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">{purchase.supplier.name}</p>
@@ -170,9 +163,9 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 {/* Summary */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                        { label: 'الإجمالي',   value: fmt(purchase.total),             color: 'text-slate-800 dark:text-white' },
-                        { label: 'المدفوع',    value: fmt(purchase.paid_amount),        color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'المتبقي',    value: fmt(purchase.due_amount),         color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
+                        { label: 'الإجمالي',   value: fmt(purchase.total),              color: 'text-slate-800 dark:text-white' },
+                        { label: 'المدفوع',    value: fmt(purchase.paid_amount),         color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'المتبقي',    value: fmt(purchase.due_amount),          color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
                         { label: 'دين المورد', value: fmt(purchase.supplier.total_debt), color: supplierDebt > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
                     ].map(s => (
                         <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
@@ -210,7 +203,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 {/* Payments */}
                 <SpatialCard title={`الدفعات (${purchase.payments.length})`} icon={<CreditCard className="w-4 h-4" />}
                     action={
-                        !isCash && purchase.payment_status !== 'paid' && (
+                        !isCash && !isCancelled && purchase.payment_status !== 'paid' && maxPayment > 0 && (
                             <button onClick={() => { setShowPaymentForm(p => !p); setPaymentRows([emptyRow()]); }}
                                 className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
                                 <Plus className="w-3.5 h-3.5" /> تسجيل دفع
@@ -218,14 +211,18 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                         )
                     }
                 >
-                    {/* Multi-payment form */}
                     {showPaymentForm && (
                         <div className="mb-5 p-4 rounded-[20px] bg-primary/5 border border-primary/20 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
-                                <span className="font-black text-slate-700 dark:text-white/80 text-sm">تسجيل دفعات جديدة</span>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="font-black text-slate-700 dark:text-white/80 text-sm">تسجيل دفعات جديدة</span>
+                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                        الحد الأقصى: {fmt(maxPayment)} (أصغر قيمة بين المتبقي ودين المورد)
+                                    </span>
+                                </div>
                                 <button onClick={() => setPaymentRows(p => [...p, emptyRow()])}
                                     className="flex items-center gap-1.5 px-3 h-8 rounded-[12px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs border border-primary/20">
-                                    <Plus className="w-3 h-3" /> إضافة وسيلة دفع
+                                    <Plus className="w-3 h-3" /> إضافة وسيلة
                                 </button>
                             </div>
 
@@ -239,11 +236,11 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                     />
                                     <div className="flex flex-col gap-1.5 w-36">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
-                                        <input type="number" min="0.01" step="0.01"
-                                            value={row.amount}
-                                            onChange={e => setRow(idx, 'amount', e.target.value)}
-                                            placeholder={idx === 0 ? fmt(due) : '0.00'}
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                        <button
+                                            onClick={() => openPad('المبلغ', row.amount || fmt(maxPayment), v => setRow(idx, 'amount', v), maxPayment)}
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxPayment)}</span>}
+                                        </button>
                                     </div>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
@@ -260,16 +257,19 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                 </div>
                             ))}
 
-                            {/* ملخص */}
                             {paymentRows.length > 1 && (
                                 <div className="flex items-center justify-between px-2">
                                     <span className="font-bold text-slate-500 dark:text-white/50 text-sm">إجمالي هذه الدفعات</span>
-                                    <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(rowsTotal)}</span>
+                                    <span className={`font-black ${rowsTotal > maxPayment ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {fmt(rowsTotal)}
+                                        {rowsTotal > maxPayment && <span className="text-xs mr-1">(يتجاوز الحد)</span>}
+                                    </span>
                                 </div>
                             )}
 
                             <div className="flex gap-2">
-                                <button onClick={submitPayments} disabled={submitting}
+                                <button onClick={submitPayments}
+                                    disabled={submitting || rowsTotal > maxPayment || rowsTotal <= 0}
                                     className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
                                     {submitting ? 'جارٍ الحفظ...' : 'حفظ الدفعات'}
                                 </button>
@@ -320,57 +320,6 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                     )}
                 </SpatialCard>
 
-                {/* Settlements */}
-                {!isCash && (
-                    <SpatialCard title="التسويات" icon={<RefreshCw className="w-4 h-4" />}
-                        action={
-                            supplierDebt < 0 && (
-                                <button onClick={() => setShowSettlementForm(p => !p)}
-                                    className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all font-bold text-sm border border-purple-500/20">
-                                    <Plus className="w-3.5 h-3.5" /> تسوية جديدة
-                                </button>
-                            )
-                        }
-                    >
-                        {showSettlementForm && (
-                            <div className="mb-4 p-4 rounded-[16px] bg-purple-500/5 border border-purple-500/20 flex flex-col gap-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <ModernSelect
-                                        label="وسيلة الدفع"
-                                        options={methodOptions}
-                                        defaultValue={paymentMethods.find(m => String(m.id) === settlementForm.data.payment_method_id)?.name ?? ''}
-                                        onSelect={val => settlementForm.setData('payment_method_id', resolveMethodId(val))}
-                                    />
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
-                                        <input type="number" min="0.01" step="0.01" value={settlementForm.data.amount}
-                                            onChange={e => settlementForm.setData('amount', e.target.value)}
-                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                                    </div>
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
-                                        <input value={settlementForm.data.notes} onChange={e => settlementForm.setData('notes', e.target.value)}
-                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={submitSettlement} disabled={settlementForm.processing}
-                                        className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
-                                        حفظ التسوية
-                                    </button>
-                                    <button onClick={() => setShowSettlementForm(false)}
-                                        className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                                        إلغاء
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">
-                            {supplierDebt >= 0 ? 'لا حاجة لتسوية — المورد لا يزال مديناً' : 'المورد دائن — يمكن إنشاء تسوية'}
-                        </p>
-                    </SpatialCard>
-                )}
-
                 {/* Returns */}
                 {purchase.returns.length > 0 && (
                     <SpatialCard title={`المرتجعات (${purchase.returns.length})`} icon={<RotateCcw className="w-4 h-4" />}>
@@ -401,5 +350,15 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 )}
             </div>
         </AppShell>
+
+        <NumberPadModal
+            isOpen={showPad}
+            title={padTitle}
+            initialValue={padInitial}
+            maxValue={padMax}
+            onClose={() => setShowPad(false)}
+            onConfirm={v => { padCallback?.(v); setShowPad(false); }}
+        />
+        </>
     );
 }
