@@ -49,14 +49,18 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
     const [deletePayments,    setDeletePayments]    = useState(false);
     const [deleteSettlements, setDeleteSettlements] = useState(false);
 
+    const isCash           = purchase.supplier.id === 1;
     const paidAmount       = parseFloat(purchase.paid_amount);
     const settlementsTotal = parseFloat(purchase.settlements_total ?? '0');
-    const hasPayments      = paidAmount > 0;
-    const hasSettlements   = settlementsTotal > 0;
+    const hasPayments      = !isCash && paidAmount > 0;        // نقدي → تُحذف تلقائياً
+    const hasSettlements   = !isCash && settlementsTotal > 0;  // نقدي → تُحذف تلقائياً
 
     function confirm() {
         router.delete(`/purchases/${purchase.id}`, {
-            data: { delete_payments: deletePayments, delete_settlements: deleteSettlements },
+            data: {
+                delete_payments:    isCash ? true : deletePayments,
+                delete_settlements: isCash ? true : deleteSettlements,
+            },
             onSuccess: onClose,
         });
     }

@@ -74,12 +74,14 @@ function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
 // ── Modal إلغاء المرتجع ───────────────────────────────────────────────────────
 function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () => void }) {
     const [deleteSettlements, setDeleteSettlements] = useState(false);
+
+    const isCash           = ret.supplier.id === 1;
     const settlementsTotal = parseFloat(ret.settlements_total ?? '0');
-    const hasSettlements   = settlementsTotal > 0;
+    const hasSettlements   = !isCash && settlementsTotal > 0; // نقدي → تُحذف تلقائياً
 
     function confirm() {
         router.delete(`/purchase-returns/${ret.id}`, {
-            data: { delete_settlements: deleteSettlements },
+            data: { delete_settlements: isCash ? true : deleteSettlements },
             onSuccess: onClose,
         });
     }
