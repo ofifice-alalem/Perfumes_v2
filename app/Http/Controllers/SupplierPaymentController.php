@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\SupplierPaymentRequest;
+use App\Models\PaymentMethod;
+use App\Models\SupplierPayment;
+use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
+use App\Repositories\Contracts\SupplierPaymentRepositoryInterface;
+use App\Repositories\Contracts\SupplierRepositoryInterface;
+use Illuminate\Http\RedirectResponse;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class SupplierPaymentController extends Controller
+{
+    public function __construct(
+        private SupplierPaymentRepositoryInterface $payments,
+        private SupplierRepositoryInterface $suppliers,
+        private PaymentMethodRepositoryInterface $paymentMethods,
+    ) {}
+
+    public function index(): Response
+    {
+        return Inertia::render('SupplierPayments/Index', [
+            'payments'       => $this->payments->paginated(20),
+            'suppliers'      => $this->suppliers->forSelectList(),
+            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    public function store(SupplierPaymentRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+
+        SupplierPayment::create([
+            'supplier_id'       => $data['supplier_id'],
+            'purchase_id'       => $data['purchase_id'] ?? null,
+            'payment_method_id' => $data['payment_method_id'],
+            'amount'            => $data['amount'],
+            'notes'             => $data['notes'] ?? null,
+            'created_at'        => now(),
+        ]);
+
+        $redirectTo = $data['purchase_id']
+            ? redirect()->route('purchases.show', $data['purchase_id'])
+            : back();
+
+        return $redirectTo->with('success', 'تم تسجيل الدفعة بنجاح');
+    }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $payment = $this->payments->find($id);
+        $purchaseId = $payment->purchase_id;
+
+        $payment->delete();
+
+        return ($purchaseId ? redirect()->route('purchases.show', $purchaseId) : back())
+            ->with('success', 'تم حذف الدفعة بنجاح');
+    }
+}

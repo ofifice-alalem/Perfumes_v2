@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class PurchaseReturn extends Model
+class PurchaseReturn extends Model implements Auditable
 {
+    use AuditableTrait;
+
     protected $fillable = ['supplier_id', 'purchase_id', 'settlement_id', 'total', 'notes'];
 
     protected $casts = [

@@ -1,0 +1,182 @@
+import { router } from '@inertiajs/react';
+import { useForm, Link } from '@inertiajs/react';
+import { useState } from 'react';
+import { AppShell } from '@/components/layout/AppShell';
+import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { DeleteModal } from '@/components/ui/DeleteModal';
+import { Plus, CreditCard, X, Check } from 'lucide-react';
+
+interface Supplier      { id: number; name: string; }
+interface PaymentMethod { id: number; name: string; }
+interface SupplierPayment {
+    id: number;
+    supplier: Supplier;
+    purchase: { id: number } | null;
+    payment_method: PaymentMethod;
+    amount: string;
+    notes: string | null;
+    created_at: string;
+}
+interface Paginated<T> {
+    data: T[];
+    total: number;
+    last_page: number;
+    links: { url: string | null; label: string; active: boolean }[];
+}
+interface Props {
+    payments:       Paginated<SupplierPayment>;
+    suppliers:      Supplier[];
+    paymentMethods: PaymentMethod[];
+    flash?: { success?: string; error?: string };
+}
+
+function fmt(v: string) {
+    const n = parseFloat(v);
+    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default function SupplierPaymentsIndex({ payments, suppliers, paymentMethods, flash }: Props) {
+    const [showCreate, setShowCreate] = useState(false);
+
+    const form = useForm({
+        supplier_id: '', purchase_id: '', payment_method_id: '', amount: '', notes: '',
+    });
+
+    function submit() {
+        form.post('/supplier-payments', {
+            onSuccess: () => { form.reset(); setShowCreate(false); },
+        });
+    }
+
+    return (
+        <AppShell pageTitle="مدفوعات الموردين">
+            <div className="flex flex-col gap-6 pb-32 lg:pb-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">مدفوعات الموردين</h1>
+                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">سجل جميع الدفعات للموردين</p>
+                    </div>
+                    <button onClick={() => setShowCreate(p => !p)}
+                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
+                        <Plus className="w-4 h-4" /> دفعة جديدة
+                    </button>
+                </div>
+
+                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
+                {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
+
+                {showCreate && (
+                    <SpatialCard title="دفعة جديدة" icon={<Plus className="w-4 h-4" />}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
+                                <select value={form.data.supplier_id} onChange={e => form.setData('supplier_id', e.target.value)}
+                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
+                                    <option value="">اختر مورداً</option>
+                                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+                                </select>
+                                {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold">{form.errors.supplier_id}</p>}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
+                                <select value={form.data.payment_method_id} onChange={e => form.setData('payment_method_id', e.target.value)}
+                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
+                                    <option value="">اختر...</option>
+                                    {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
+                                </select>
+                                {form.errors.payment_method_id && <p className="text-xs text-red-500 font-bold">{form.errors.payment_method_id}</p>}
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                                <input type="number" min="0.01" step="0.01" value={form.data.amount}
+                                    onChange={e => form.setData('amount', e.target.value)}
+                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                {form.errors.amount && <p className="text-xs text-red-500 font-bold">{form.errors.amount}</p>}
+                            </div>
+                            <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
+                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظة (اختياري)</label>
+                                <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
+                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-4">
+                            <button onClick={submit} disabled={form.processing}
+                                className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
+                                <Check className="w-4 h-4" /> حفظ
+                            </button>
+                            <button onClick={() => { setShowCreate(false); form.reset(); }}
+                                className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </SpatialCard>
+                )}
+
+                <SpatialCard title={`الدفعات (${payments.total})`} icon={<CreditCard className="w-4 h-4" />}>
+                    {payments.data.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
+                            <span className="text-4xl">💳</span>
+                            <span className="font-bold">لا توجد دفعات بعد</span>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                        {['المورد', 'الفاتورة', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
+                                            <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                    {payments.data.map(p => (
+                                        <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                            <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
+                                            <td className="px-4 py-3">
+                                                {p.purchase ? (
+                                                    <Link href={`/purchases/${p.purchase.id}`} className="text-primary font-bold hover:underline">#{p.purchase.id}</Link>
+                                                ) : <span className="text-slate-400 dark:text-white/30 font-bold">مستقلة</span>}
+                                            </td>
+                                            <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{p.payment_method.name}</td>
+                                            <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(p.amount)}</td>
+                                            <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{p.notes ?? '—'}</td>
+                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
+                                                {new Date(p.created_at).toLocaleDateString('ar-SA')}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <DeleteModal
+                                                    onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                    trigger={
+                                                        <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                            <span>حذف</span>
+                                                        </button>
+                                                    }
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                    {payments.last_page > 1 && (
+                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
+                            {payments.links.map((link, i) => (
+                                link.url ? (
+                                    <Link key={i} href={link.url}
+                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10'}`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                ) : (
+                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                )
+                            ))}
+                        </div>
+                    )}
+                </SpatialCard>
+            </div>
+        </AppShell>
+    );
+}

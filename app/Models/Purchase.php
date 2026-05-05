@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Purchase extends Model
+class Purchase extends Model implements Auditable
 {
+    use AuditableTrait;
+
     protected $fillable = [
         'supplier_id', 'total', 'paid_amount',
         'due_amount', 'payment_status', 'notes',
@@ -32,6 +36,11 @@ class Purchase extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(SupplierPayment::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(PurchaseReturn::class);
     }
 
     public function recalculate(): void

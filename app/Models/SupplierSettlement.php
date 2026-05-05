@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class SupplierSettlement extends Model
+class SupplierSettlement extends Model implements Auditable
 {
+    use AuditableTrait;
+
     public $timestamps = false;
 
     protected $fillable = ['supplier_id', 'purchase_id', 'payment_method_id', 'amount', 'notes'];

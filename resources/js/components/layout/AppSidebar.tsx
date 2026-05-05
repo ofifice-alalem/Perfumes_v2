@@ -1,7 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
-  Tags, Layers, Ruler, DollarSign, Power,
+  Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
+  CreditCard, RefreshCw,
   PanelRightClose, PanelRightOpen,
 } from 'lucide-react';
 
@@ -11,17 +12,20 @@ interface AppSidebarProps {
 }
 
 const navItems = [
-  { icon: <LayoutDashboard className="w-5 h-5" />, label: 'الرئيسية',       href: '/' },
-  { icon: <ShoppingCart className="w-5 h-5" />,    label: 'الفواتير',        href: '/invoices' },
-  { icon: <Truck className="w-5 h-5" />,           label: 'المشتريات',       href: '/purchases' },
-  { icon: <Package className="w-5 h-5" />,         label: 'المنتجات',        href: '/products' },
-  { icon: <Layers className="w-5 h-5" />,          label: 'التصنيفات',       href: '/categories' },
-  { icon: <Tags className="w-5 h-5" />,            label: 'التيرات والأسعار', href: '/price-tiers' },
-  { icon: <Ruler className="w-5 h-5" />,           label: 'الأحجام',         href: '/sizes' },
-  { icon: <Users className="w-5 h-5" />,           label: 'المستخدمون',      href: '/users' },
-  { icon: <Users className="w-5 h-5" />,           label: 'العملاء',         href: '/customers' },
-  { icon: <Truck className="w-5 h-5" />,           label: 'الموردون',        href: '/suppliers' },
-  { icon: <DollarSign className="w-5 h-5" />,      label: 'وسائل الدفع',     href: '/payment-methods' },
+  { icon: <LayoutDashboard className="w-5 h-5" />, label: 'الرئيسية',         href: '/' },
+  { icon: <ShoppingCart className="w-5 h-5" />,    label: 'الفواتير',          href: '/invoices' },
+  { icon: <Truck className="w-5 h-5" />,           label: 'المشتريات',         href: '/purchases' },
+  { icon: <CreditCard className="w-5 h-5" />,      label: 'مدفوعات الموردين',  href: '/supplier-payments' },
+  { icon: <RefreshCw className="w-5 h-5" />,       label: 'تسويات الموردين',   href: '/supplier-settlements' },
+  { icon: <RotateCcw className="w-5 h-5" />,       label: 'مرتجعات الموردين',  href: '/purchase-returns' },
+  { icon: <Package className="w-5 h-5" />,         label: 'المنتجات',          href: '/products' },
+  { icon: <Layers className="w-5 h-5" />,          label: 'التصنيفات',         href: '/categories' },
+  { icon: <Tags className="w-5 h-5" />,            label: 'التيرات والأسعار',  href: '/price-tiers' },
+  { icon: <Ruler className="w-5 h-5" />,           label: 'الأحجام',           href: '/sizes' },
+  { icon: <Users className="w-5 h-5" />,           label: 'المستخدمون',        href: '/users' },
+  { icon: <Users className="w-5 h-5" />,           label: 'العملاء',           href: '/customers' },
+  { icon: <Truck className="w-5 h-5" />,           label: 'الموردون',          href: '/suppliers' },
+  { icon: <DollarSign className="w-5 h-5" />,      label: 'وسائل الدفع',       href: '/payment-methods' },
 ];
 
 export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {

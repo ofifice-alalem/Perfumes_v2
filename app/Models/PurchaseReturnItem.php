@@ -4,9 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class PurchaseReturnItem extends Model
+class PurchaseReturnItem extends Model implements Auditable
 {
+    use AuditableTrait;
+
     public $timestamps = false;
 
     protected $fillable = ['purchase_return_id', 'product_id', 'quantity', 'unit_cost', 'line_total'];
