@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class PurchaseRequest extends FormRequest
 {
@@ -17,7 +18,6 @@ class PurchaseRequest extends FormRequest
             'items.*.product_id'             => 'required|integer|exists:products,id',
             'items.*.quantity'               => 'required|numeric|min:0.01',
             'items.*.line_total'             => 'required|numeric|min:0',
-            // Multiple payments (optional for regular supplier, required for cash)
             'payments'                       => 'nullable|array',
             'payments.*.payment_method_id'   => 'required_with:payments.*.amount|integer|exists:payment_methods,id',
             'payments.*.amount'              => 'required_with:payments.*.payment_method_id|numeric|min:0.01',
@@ -25,17 +25,38 @@ class PurchaseRequest extends FormRequest
         ];
     }
 
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $data = $this->validated();
+
+            $isCash    = (int) ($data['supplier_id'] ?? 0) === 1;
+            $lineTotal = collect($data['items'] ?? [])->sum('line_total');
+            $totalPaid = collect($data['payments'] ?? [])->sum('amount');
+
+            // قاعدة 6: مورد نقدي → يجب الدفع الكامل
+            if ($isCash && $totalPaid < $lineTotal - 0.01) {
+                $v->errors()->add('payments', 'المورد النقدي يتطلب الدفع الكامل قبل التأكيد.');
+            }
+
+            // قاعدة 9: لا يمكن أن يتجاوز المدفوع إجمالي الفاتورة
+            if ($totalPaid > $lineTotal + 0.01) {
+                $v->errors()->add('payments', 'إجمالي الدفعات يتجاوز قيمة الفاتورة.');
+            }
+        });
+    }
+
     public function messages(): array
     {
         return [
-            'supplier_id.required'                  => 'المورد مطلوب',
-            'items.required'                        => 'يجب إضافة منتج واحد على الأقل',
-            'items.*.product_id.required'           => 'المنتج مطلوب',
-            'items.*.quantity.min'                  => 'الكمية يجب أن تكون أكبر من صفر',
-            'items.*.line_total.min'                => 'الإجمالي يجب أن يكون أكبر من أو يساوي صفر',
+            'supplier_id.required'                       => 'المورد مطلوب',
+            'items.required'                             => 'يجب إضافة منتج واحد على الأقل',
+            'items.*.product_id.required'                => 'المنتج مطلوب',
+            'items.*.quantity.min'                       => 'الكمية يجب أن تكون أكبر من صفر',
+            'items.*.line_total.min'                     => 'الإجمالي يجب أن يكون أكبر من أو يساوي صفر',
             'payments.*.payment_method_id.required_with' => 'وسيلة الدفع مطلوبة',
-            'payments.*.amount.required_with'       => 'المبلغ مطلوب',
-            'payments.*.amount.min'                 => 'المبلغ يجب أن يكون أكبر من صفر',
+            'payments.*.amount.required_with'            => 'المبلغ مطلوب',
+            'payments.*.amount.min'                      => 'المبلغ يجب أن يكون أكبر من صفر',
         ];
     }
 }

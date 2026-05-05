@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Supplier;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class SupplierSettlementRequest extends FormRequest
 {
@@ -18,6 +20,22 @@ class SupplierSettlementRequest extends FormRequest
             'amount'            => 'required|numeric|min:0.01',
             'notes'             => 'nullable|string|max:500',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v) {
+            $supplierId = $this->input('supplier_id');
+            if (!$supplierId) return;
+
+            $supplier = Supplier::find($supplierId);
+            if (!$supplier) return;
+
+            // قاعدة 19: لا يمكن إنشاء تسوية إذا كان total_debt > 0
+            if ((float) $supplier->total_debt > 0) {
+                $v->errors()->add('supplier_id', 'لا يمكن إنشاء تسوية والمورد لا يزال مديناً (' . number_format($supplier->total_debt, 2) . '). استخدم الدفعة بدلاً.');
+            }
+        });
     }
 
     public function messages(): array

@@ -29,6 +29,15 @@ class SupplierSettlementController extends Controller
         ]);
     }
 
+    public function show(int $id): Response
+    {
+        $settlement = \App\Models\SupplierSettlement::with(['supplier', 'purchase', 'purchaseReturn', 'paymentMethod'])->findOrFail($id);
+
+        return Inertia::render('SupplierSettlements/Show', [
+            'settlement' => $settlement,
+        ]);
+    }
+
     public function store(SupplierSettlementRequest $request): RedirectResponse
     {
         $data = $request->validated();

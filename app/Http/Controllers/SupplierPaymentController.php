@@ -29,6 +29,15 @@ class SupplierPaymentController extends Controller
         ]);
     }
 
+    public function show(int $id): Response
+    {
+        $payment = \App\Models\SupplierPayment::with(['supplier', 'purchase', 'paymentMethod'])->findOrFail($id);
+
+        return Inertia::render('SupplierPayments/Show', [
+            'payment' => $payment,
+        ]);
+    }
+
     public function store(SupplierPaymentRequest $request): RedirectResponse
     {
         $data = $request->validated();

@@ -172,7 +172,9 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                     {payments.data.map(p => (
                                         <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                            <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
+                                            <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
+                                                <Link href={`/supplier-payments/${p.id}`} className="hover:text-primary transition-colors">{p.supplier.name}</Link>
+                                            </td>
                                             <td className="px-4 py-3">
                                                 {p.purchase ? (
                                                     <Link href={`/purchases/${p.purchase.id}`} className="text-primary font-bold hover:underline">#{p.purchase.id}</Link>
@@ -185,14 +187,20 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                                 {new Date(p.created_at).toLocaleDateString('en-GB')}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <DeleteModal
-                                                    onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
-                                                    trigger={
-                                                        <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                            حذف
-                                                        </button>
-                                                    }
-                                                />
+                                                <div className="flex items-center gap-2">
+                                                    <Link href={`/supplier-payments/${p.id}`}
+                                                        className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
+                                                        عرض
+                                                    </Link>
+                                                    <DeleteModal
+                                                        onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                        trigger={
+                                                            <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                حذف
+                                                            </button>
+                                                        }
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

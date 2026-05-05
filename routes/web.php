@@ -37,11 +37,13 @@ Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->n
 
 // Supplier Payments
 Route::get('supplier-payments', [SupplierPaymentController::class, 'index'])->name('supplier-payments.index');
+Route::get('supplier-payments/{id}', [SupplierPaymentController::class, 'show'])->name('supplier-payments.show');
 Route::post('supplier-payments', [SupplierPaymentController::class, 'store'])->name('supplier-payments.store');
 Route::delete('supplier-payments/{id}', [SupplierPaymentController::class, 'destroy'])->name('supplier-payments.destroy');
 
 // Supplier Settlements
 Route::get('supplier-settlements', [SupplierSettlementController::class, 'index'])->name('supplier-settlements.index');
+Route::get('supplier-settlements/{id}', [SupplierSettlementController::class, 'show'])->name('supplier-settlements.show');
 Route::post('supplier-settlements', [SupplierSettlementController::class, 'store'])->name('supplier-settlements.store');
 Route::delete('supplier-settlements/{id}', [SupplierSettlementController::class, 'destroy'])->name('supplier-settlements.destroy');
 
