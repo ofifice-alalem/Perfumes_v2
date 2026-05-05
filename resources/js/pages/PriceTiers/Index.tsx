@@ -22,11 +22,17 @@ const tierColors: Record<string, string> = {
 };
 const defaultColor = 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20';
 
+function fmt(val: string | null | undefined): string {
+  if (!val) return '—';
+  const n = parseFloat(val);
+  return Number.isInteger(n) ? String(n) : n.toString();
+}
+
 export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
-  const [editingId, setEditingId]       = useState<number | null>(null);
+  const [editingId, setEditingId]             = useState<number | null>(null);
   const [editingPricesId, setEditingPricesId] = useState<number | null>(null);
-  const [showCreate, setShowCreate]     = useState(false);
-  const [pricesData, setPricesData]     = useState<Record<number, { price_regular: string; price_vip: string }>>({});
+  const [showCreate, setShowCreate]           = useState(false);
+  const [pricesData, setPricesData]           = useState<Record<number, { price_regular: string; price_vip: string }>>({});
 
   const createForm = useForm({ name: '', description: '' });
   const editForm   = useForm({ name: '', description: '' });
@@ -77,7 +83,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
   }
 
   return (
-    <AppShell pageTitle="Step 2 — البنية التحتية">
+    <AppShell pageTitle="التيرات والأسعار">
       <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
         {/* Header */}
@@ -102,25 +108,27 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
         {/* Create Form */}
         {showCreate && (
           <SpatialCard title="تير جديد" icon={<Plus className="w-4 h-4" />}>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex flex-col gap-2 w-full sm:w-32">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
-                <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
-                  placeholder="A" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-                {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-2 w-full sm:w-32">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
+                  <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
+                    placeholder="A" className="spatial-input h-14 rounded-[16px] px-4 text-[15px] font-bold" />
+                  {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الوصف</label>
+                  <input value={createForm.data.description} onChange={e => createForm.setData('description', e.target.value)}
+                    placeholder="مثال: اقتصادي" className="spatial-input h-14 rounded-[16px] px-4 text-[15px] font-bold" />
+                </div>
               </div>
-              <div className="flex flex-col gap-2 flex-1">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الوصف</label>
-                <input value={createForm.data.description} onChange={e => createForm.setData('description', e.target.value)}
-                  placeholder="مثال: اقتصادي" className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-              </div>
-              <div className="flex items-end gap-2">
-                <button onClick={submitCreate} disabled={createForm.processing} className="spatial-button flex items-center gap-2 px-5 h-12 text-sm">
+              <div className="flex gap-2">
+                <button onClick={submitCreate} disabled={createForm.processing} className="flex-1 sm:flex-none spatial-button flex items-center justify-center gap-2 px-5 h-11 text-sm">
                   <Check className="w-4 h-4" /> حفظ
                 </button>
                 <button onClick={() => { setShowCreate(false); createForm.reset(); }}
-                  className="h-12 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-all">
-                  <X className="w-4 h-4" />
+                  className="flex-1 sm:flex-none h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all flex items-center justify-center">
+                  إلغاء
                 </button>
               </div>
             </div>
@@ -137,65 +145,62 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
           </SpatialCard>
         ) : (
           tiers.map(tier => (
-            <SpatialCard key={tier.id}
-              title=""
-              hideHeader
-              className="overflow-hidden"
-            >
-              {/* Tier Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className={`w-12 h-12 rounded-[16px] border flex items-center justify-center shrink-0 ${tierColors[tier.name] ?? defaultColor}`}>
-                    <span className="font-black text-lg">{tier.name}</span>
-                  </div>
-                  {editingId === tier.id ? (
-                    <div className="flex gap-2 flex-1">
-                      <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)}
-                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-20" />
-                      <input value={editForm.data.description} onChange={e => editForm.setData('description', e.target.value)}
-                        placeholder="الوصف" className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold flex-1" />
+            <SpatialCard key={tier.id} title="" hideHeader className="overflow-hidden">
+
+              {/* رأس التير */}
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`w-12 h-12 rounded-[16px] border flex items-center justify-center shrink-0 ${tierColors[tier.name] ?? defaultColor}`}>
+                  <span className="font-black text-lg">{tier.name}</span>
+                </div>
+
+                {editingId === tier.id ? (
+                  <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                    <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)}
+                      className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full sm:w-20" />
+                    <input value={editForm.data.description} onChange={e => editForm.setData('description', e.target.value)}
+                      placeholder="الوصف" className="spatial-input h-14 rounded-[12px] px-4 text-[14px] font-bold flex-1" />
+                    <div className="flex gap-2">
                       <button onClick={() => submitEdit(tier.id)}
-                        className="w-10 h-10 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shrink-0">
-                        <Check className="w-4 h-4" />
+                        className="flex-1 sm:flex-none h-10 px-4 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center gap-1.5 hover:bg-emerald-600 transition-all font-bold text-sm">
+                        <Check className="w-4 h-4" /> حفظ
                       </button>
                       <button onClick={() => setEditingId(null)}
-                        className="w-10 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-500 flex items-center justify-center hover:bg-black/10 transition-all shrink-0">
-                        <X className="w-4 h-4" />
+                        className="flex-1 sm:flex-none h-10 px-4 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-500 flex items-center justify-center hover:bg-black/10 transition-all font-bold text-sm">
+                        إلغاء
                       </button>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-between gap-3">
                     <div>
                       <span className="font-black text-slate-800 dark:text-white text-lg">تير {tier.name}</span>
                       {tier.description && <p className="text-sm font-bold text-slate-400 dark:text-white/40">{tier.description}</p>}
                     </div>
-                  )}
-                </div>
-
-                {editingId !== tier.id && (
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => startEdit(tier)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
-                      <Pencil className="w-3.5 h-3.5" /> تعديل
-                    </button>
-                    <DeleteModal
-                      onConfirm={() => deleteTier(tier.id)}
-                      trigger={
-                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
-                          <Trash2 className="w-3.5 h-3.5" /> حذف
-                        </button>
-                      }
-                    />
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button onClick={() => startEdit(tier)}
+                        className="flex items-center gap-1.5 px-3 h-9 rounded-[12px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                        <Pencil className="w-3.5 h-3.5" /> <span className="hidden sm:inline">تعديل</span>
+                      </button>
+                      <DeleteModal
+                        onConfirm={() => deleteTier(tier.id)}
+                        trigger={
+                          <button className="flex items-center gap-1.5 px-3 h-9 rounded-[12px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                            <Trash2 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">حذف</span>
+                          </button>
+                        }
+                      />
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Prices Table */}
-              <div className="border border-black/5 dark:border-white/5 rounded-[20px] overflow-hidden">
-                {/* Table Header */}
-                <div className="grid grid-cols-3 bg-black/3 dark:bg-white/3 px-4 py-2.5">
+              {/* جدول الأسعار */}
+              <div className="rounded-[20px] overflow-hidden border border-black/5 dark:border-white/5">
+                {/* Header */}
+                <div className="grid grid-cols-3 bg-black/3 dark:bg-white/3 px-4 py-3">
                   <span className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الحجم</span>
                   <span className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest text-center">عادي</span>
-                  <span className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest text-center">VIP</span>
+                  <span className="text-xs font-black text-primary uppercase tracking-widest text-center">VIP</span>
                 </div>
 
                 {sizes.length === 0 ? (
@@ -203,62 +208,64 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                     أضف أحجاماً أولاً من صفحة الأحجام
                   </div>
                 ) : (
-                  sizes.map((size, idx) => {
-                    const existing = tier.tier_prices.find(p => p.size_id === size.id);
-                    return (
-                      <div key={size.id} className={`grid grid-cols-3 items-center px-4 py-3 ${idx < sizes.length - 1 ? 'border-b border-black/5 dark:border-white/5' : ''}`}>
-                        <span className="font-bold text-slate-800 dark:text-white text-sm">{size.label}</span>
+                  <div className="divide-y divide-black/5 dark:divide-white/5">
+                    {sizes.map(size => {
+                      const existing = tier.tier_prices.find(p => p.size_id === size.id);
+                      return (
+                        <div key={size.id} className="grid grid-cols-3 items-center px-4 py-3.5">
+                          <span className="font-bold text-slate-800 dark:text-white text-sm">{size.label}</span>
 
-                        {editingPricesId === tier.id ? (
-                          <>
-                            <div className="px-2">
-                              <input type="number" min="0" step="0.01"
-                                value={pricesData[size.id]?.price_regular ?? ''}
-                                onChange={e => setPricesData(prev => ({ ...prev, [size.id]: { ...prev[size.id], price_regular: e.target.value } }))}
-                                className="spatial-input h-9 rounded-[10px] px-3 text-[13px] font-bold w-full text-center"
-                              />
-                            </div>
-                            <div className="px-2">
-                              <input type="number" min="0" step="0.01"
-                                value={pricesData[size.id]?.price_vip ?? ''}
-                                onChange={e => setPricesData(prev => ({ ...prev, [size.id]: { ...prev[size.id], price_vip: e.target.value } }))}
-                                className="spatial-input h-9 rounded-[10px] px-3 text-[13px] font-bold w-full text-center"
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <span className="text-center font-black text-slate-800 dark:text-white text-sm">
-                              {existing ? existing.price_regular : <span className="text-slate-300 dark:text-white/20">—</span>}
-                            </span>
-                            <span className="text-center font-black text-primary text-sm">
-                              {existing ? existing.price_vip : <span className="text-slate-300 dark:text-white/20">—</span>}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })
+                          {editingPricesId === tier.id ? (
+                            <>
+                              <div className="px-1.5">
+                                <input type="number" min="0" step="0.01"
+                                  value={pricesData[size.id]?.price_regular ?? ''}
+                                  onChange={e => setPricesData(prev => ({ ...prev, [size.id]: { ...prev[size.id], price_regular: e.target.value } }))}
+                                  className="spatial-input h-10 rounded-[10px] px-3 text-[14px] font-bold w-full text-center"
+                                />
+                              </div>
+                              <div className="px-1.5">
+                                <input type="number" min="0" step="0.01"
+                                  value={pricesData[size.id]?.price_vip ?? ''}
+                                  onChange={e => setPricesData(prev => ({ ...prev, [size.id]: { ...prev[size.id], price_vip: e.target.value } }))}
+                                  className="spatial-input h-10 rounded-[10px] px-3 text-[14px] font-bold w-full text-center"
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-center font-black text-slate-800 dark:text-white text-sm">
+                                {existing ? fmt(existing.price_regular) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                              </span>
+                              <span className="text-center font-black text-primary text-sm">
+                                {existing ? fmt(existing.price_vip) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
-              {/* Prices Actions */}
-              <div className="mt-4 flex items-center gap-2">
+              {/* أزرار الأسعار */}
+              <div className="mt-4 flex gap-2">
                 {editingPricesId === tier.id ? (
                   <>
                     <button onClick={() => submitPrices(tier.id)}
-                      className="flex items-center gap-1.5 px-5 h-10 rounded-[14px] bg-emerald-500 text-white hover:bg-emerald-600 transition-all font-bold text-sm">
+                      className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] bg-emerald-500 text-white hover:bg-emerald-600 transition-all font-bold text-sm">
                       <Save className="w-4 h-4" /> حفظ الأسعار
                     </button>
                     <button onClick={() => setEditingPricesId(null)}
-                      className="flex items-center gap-1.5 px-4 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all font-bold text-sm">
+                      className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all font-bold text-sm">
                       <X className="w-4 h-4" /> إلغاء
                     </button>
                   </>
                 ) : (
                   <button onClick={() => startEditPrices(tier)}
-                    className="flex items-center gap-1.5 px-5 h-10 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
-                    <Pencil className="w-3.5 h-3.5" /> تعديل الأسعار
+                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                    <Pencil className="w-4 h-4" /> تعديل الأسعار
                   </button>
                 )}
               </div>
