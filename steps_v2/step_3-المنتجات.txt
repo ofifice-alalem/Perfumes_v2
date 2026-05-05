@@ -12,7 +12,7 @@
    عطر زيتي         → products فقط
    عطر أصلي         → products + original_perfume_details + product_prices
    بخور/وشق/مبخرة  → products + product_prices
-   مستلزمات تشغيلية → products + product_prices (اختياري)
+   مستلزمات تشغيلية → products فقط (لا product_prices — غير قابلة للبيع)
 
 📌 منطق السعر عند البيع:
    كل منتج له سعران: price_regular (الأعلى) و price_vip (الأدنى).
@@ -318,8 +318,8 @@ INSERT INTO product_prices (
    │   ✅ انتهى                                          │
    ├─────────────────────────────────────────────────────┤
    │ مستلزمات تشغيلية (is_operational = true)            │
-   │   products (unit_priced)                            │
-   │   product_prices (اختياري — لا تُباع)               │
+   │   products فقط                                      │
+   │   ❌ لا product_prices — غير قابلة للبيع             │
    │   ✅ انتهى                                          │
    └─────────────────────────────────────────────────────┘
 
@@ -330,7 +330,7 @@ INSERT INTO product_prices (
 
 1.  ✅ selling_type = 'tier_based'  → price_tier_id مطلوب
 2.  ✅ selling_type = 'unit_priced' → price_tier_id = NULL
-3.  ✅ كل unit_priced يجب أن يكون له سجل في product_prices
+3.  ✅ كل unit_priced قابل للبيع يجب أن يكون له سجل في product_prices
 4.  ✅ original_perfume_details يوجد فقط للعطور الأصلية
 5.  ✅ full_bottle_regular/vip → NULL لكل شيء عدا العطور الأصلية
 6.  ✅ UNIQUE (product_id) في product_prices و original_perfume_details
@@ -338,6 +338,7 @@ INSERT INTO product_prices (
 8.  ✅ السعر عند البيع يدخله البائع يدوياً ضمن المدى: price_vip <= unit_price <= price_regular
 9.  ✅ price_regular = الحد الأقصى / price_vip = الحد الأدنى — كلاهما مرجع للمدى لا للتحديد التلقائي
 10. ✅ customer_type في الفاتورة مرجع فقط — لا يُحدد السعر تلقائياً
+11. ✅ المستلزمات التشغيلية (is_operational = true) → لا product_prices، لا تظهر في POS
 
 
 ================================================================================
