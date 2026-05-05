@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { ArrowRight, Plus, Trash2, Package, CreditCard, RefreshCw, RotateCcw } from 'lucide-react';
 
@@ -51,11 +51,11 @@ const statusClass  = {
 
 function fmt(v: string | number) {
     const n = typeof v === 'string' ? parseFloat(v) : v;
-    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function PurchasesShow({ purchase, paymentMethods, flash }: Props) {
-    const [showPaymentForm, setShowPaymentForm]     = useState(false);
+    const [showPaymentForm, setShowPaymentForm]       = useState(false);
     const [showSettlementForm, setShowSettlementForm] = useState(false);
 
     const paymentForm = useForm({
@@ -73,6 +73,12 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
         amount:            '',
         notes:             '',
     });
+
+    const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
+
+    function resolveMethodId(label: string): string {
+        return String(paymentMethods.find(m => m.name === label)?.id ?? '');
+    }
 
     function submitPayment() {
         paymentForm.post('/supplier-payments', {
@@ -123,9 +129,9 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 {/* Summary */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                        { label: 'الإجمالي',  value: fmt(purchase.total),       color: 'text-slate-800 dark:text-white' },
-                        { label: 'المدفوع',   value: fmt(purchase.paid_amount),  color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'المتبقي',   value: fmt(purchase.due_amount),   color: 'text-amber-500' },
+                        { label: 'الإجمالي',   value: fmt(purchase.total),       color: 'text-slate-800 dark:text-white' },
+                        { label: 'المدفوع',    value: fmt(purchase.paid_amount),  color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'المتبقي',    value: fmt(purchase.due_amount),   color: 'text-amber-500' },
                         { label: 'دين المورد', value: fmt(purchase.supplier.total_debt), color: supplierDebt > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
                     ].map(s => (
                         <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
@@ -150,7 +156,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                 {purchase.items.map(item => (
                                     <tr key={item.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{item.product.name}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{item.quantity}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{parseFloat(item.quantity).toLocaleString('en-US')}</td>
                                         <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{fmt(item.unit_cost)}</td>
                                         <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(item.line_total)}</td>
                                     </tr>
@@ -173,37 +179,34 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 >
                     {showPaymentForm && (
                         <div className="mb-4 p-4 rounded-[16px] bg-primary/5 border border-primary/20 flex flex-col gap-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">وسيلة الدفع</label>
-                                    <select value={paymentForm.data.payment_method_id} onChange={e => paymentForm.setData('payment_method_id', e.target.value)}
-                                        className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold">
-                                        <option value="">اختر...</option>
-                                        {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                                    </select>
-                                    {paymentForm.errors.payment_method_id && <p className="text-xs text-red-500 font-bold">{paymentForm.errors.payment_method_id}</p>}
-                                </div>
-                                <div className="flex flex-col gap-1.5">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <ModernSelect
+                                    label="وسيلة الدفع"
+                                    options={paymentMethodOptions}
+                                    defaultValue={paymentMethods.find(m => String(m.id) === paymentForm.data.payment_method_id)?.name ?? ''}
+                                    onSelect={val => paymentForm.setData('payment_method_id', resolveMethodId(val))}
+                                />
+                                <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
                                     <input type="number" min="0.01" step="0.01" value={paymentForm.data.amount}
                                         onChange={e => paymentForm.setData('amount', e.target.value)}
                                         placeholder={`المتبقي: ${fmt(purchase.due_amount)}`}
-                                        className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold" />
+                                        className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                                     {paymentForm.errors.amount && <p className="text-xs text-red-500 font-bold">{paymentForm.errors.amount}</p>}
                                 </div>
-                                <div className="flex flex-col gap-1.5">
+                                <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
                                     <input value={paymentForm.data.notes} onChange={e => paymentForm.setData('notes', e.target.value)}
-                                        className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold" />
+                                        className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                                 </div>
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={submitPayment} disabled={paymentForm.processing}
-                                    className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
+                                    className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
                                     حفظ الدفعة
                                 </button>
                                 <button onClick={() => setShowPaymentForm(false)}
-                                    className="h-10 px-4 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                    className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                     إلغاء
                                 </button>
                             </div>
@@ -229,7 +232,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                             <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
                                             <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {new Date(pay.created_at).toLocaleDateString('ar-SA')}
+                                                {new Date(pay.created_at).toLocaleDateString('en-GB')}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal
@@ -263,34 +266,32 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                     >
                         {showSettlementForm && (
                             <div className="mb-4 p-4 rounded-[16px] bg-purple-500/5 border border-purple-500/20 flex flex-col gap-3">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">وسيلة الدفع</label>
-                                        <select value={settlementForm.data.payment_method_id} onChange={e => settlementForm.setData('payment_method_id', e.target.value)}
-                                            className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold">
-                                            <option value="">اختر...</option>
-                                            {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                                        </select>
-                                    </div>
-                                    <div className="flex flex-col gap-1.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <ModernSelect
+                                        label="وسيلة الدفع"
+                                        options={paymentMethodOptions}
+                                        defaultValue={paymentMethods.find(m => String(m.id) === settlementForm.data.payment_method_id)?.name ?? ''}
+                                        onSelect={val => settlementForm.setData('payment_method_id', resolveMethodId(val))}
+                                    />
+                                    <div className="flex flex-col gap-2">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
                                         <input type="number" min="0.01" step="0.01" value={settlementForm.data.amount}
                                             onChange={e => settlementForm.setData('amount', e.target.value)}
-                                            className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold" />
+                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                                     </div>
-                                    <div className="flex flex-col gap-1.5">
+                                    <div className="flex flex-col gap-2">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
                                         <input value={settlementForm.data.notes} onChange={e => settlementForm.setData('notes', e.target.value)}
-                                            className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold" />
+                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={submitSettlement} disabled={settlementForm.processing}
-                                        className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
+                                        className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
                                         حفظ التسوية
                                     </button>
                                     <button onClick={() => setShowSettlementForm(false)}
-                                        className="h-10 px-4 rounded-[14px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                        className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                         إلغاء
                                     </button>
                                 </div>
@@ -318,7 +319,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                     <div className="flex flex-wrap gap-2">
                                         {ret.items.map(i => (
                                             <span key={i.id} className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60">
-                                                {i.product.name} × {i.quantity}
+                                                {i.product.name} × {parseFloat(i.quantity).toLocaleString('en-US')}
                                             </span>
                                         ))}
                                     </div>

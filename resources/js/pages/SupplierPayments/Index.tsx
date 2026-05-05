@@ -2,7 +2,7 @@ import { router } from '@inertiajs/react';
 import { useForm, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { Plus, CreditCard, X, Check } from 'lucide-react';
 
@@ -32,7 +32,7 @@ interface Props {
 
 function fmt(v: string) {
     const n = parseFloat(v);
-    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function SupplierPaymentsIndex({ payments, suppliers, paymentMethods, flash }: Props) {
@@ -41,6 +41,16 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
     const form = useForm({
         supplier_id: '', purchase_id: '', payment_method_id: '', amount: '', notes: '',
     });
+
+    const supplierOptions      = suppliers.map(s => ({ label: s.name }));
+    const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
+
+    function resolveSupplierIdFromLabel(label: string): string {
+        return String(suppliers.find(s => s.name === label)?.id ?? '');
+    }
+    function resolveMethodIdFromLabel(label: string): string {
+        return String(paymentMethods.find(m => m.name === label)?.id ?? '');
+    }
 
     function submit() {
         form.post('/supplier-payments', {
@@ -68,35 +78,35 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                 {showCreate && (
                     <SpatialCard title="دفعة جديدة" icon={<Plus className="w-4 h-4" />}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
-                                <select value={form.data.supplier_id} onChange={e => form.setData('supplier_id', e.target.value)}
-                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
-                                    <option value="">اختر مورداً</option>
-                                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-                                </select>
-                                {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold">{form.errors.supplier_id}</p>}
+                            <div>
+                                <ModernSelect
+                                    label="المورد"
+                                    options={supplierOptions}
+                                    defaultValue={suppliers.find(s => String(s.id) === form.data.supplier_id)?.name ?? ''}
+                                    onSelect={val => form.setData('supplier_id', resolveSupplierIdFromLabel(val))}
+                                />
+                                {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
-                                <select value={form.data.payment_method_id} onChange={e => form.setData('payment_method_id', e.target.value)}
-                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold">
-                                    <option value="">اختر...</option>
-                                    {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                                </select>
-                                {form.errors.payment_method_id && <p className="text-xs text-red-500 font-bold">{form.errors.payment_method_id}</p>}
+                            <div>
+                                <ModernSelect
+                                    label="وسيلة الدفع"
+                                    options={paymentMethodOptions}
+                                    defaultValue={paymentMethods.find(m => String(m.id) === form.data.payment_method_id)?.name ?? ''}
+                                    onSelect={val => form.setData('payment_method_id', resolveMethodIdFromLabel(val))}
+                                />
+                                {form.errors.payment_method_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.payment_method_id}</p>}
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
                                 <input type="number" min="0.01" step="0.01" value={form.data.amount}
                                     onChange={e => form.setData('amount', e.target.value)}
-                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
-                                {form.errors.amount && <p className="text-xs text-red-500 font-bold">{form.errors.amount}</p>}
+                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
+                                {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
                             </div>
                             <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
                                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظة (اختياري)</label>
                                 <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
-                                    className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                             </div>
                         </div>
                         <div className="flex items-center gap-2 mt-4">
@@ -141,14 +151,14 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                             <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(p.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{p.notes ?? '—'}</td>
                                             <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {new Date(p.created_at).toLocaleDateString('ar-SA')}
+                                                {new Date(p.created_at).toLocaleDateString('en-GB')}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal
                                                     onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
                                                     trigger={
                                                         <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                            <span>حذف</span>
+                                                            حذف
                                                         </button>
                                                     }
                                                 />

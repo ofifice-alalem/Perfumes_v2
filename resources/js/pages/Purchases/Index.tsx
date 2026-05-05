@@ -39,7 +39,7 @@ const statusClass = {
 
 function fmt(v: string) {
     const n = parseFloat(v);
-    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
@@ -97,7 +97,7 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
-                                                    {new Date(p.created_at).toLocaleDateString('ar-SA')}
+                                                    {new Date(p.created_at).toLocaleDateString('en-GB')}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
@@ -170,7 +170,6 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
                             {purchases.last_page > 1 && (
                                 <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
                                     {purchases.links.map((link, i) => (
