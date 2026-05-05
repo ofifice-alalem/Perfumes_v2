@@ -7,7 +7,6 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\PurchaseReturn;
 use App\Models\PurchaseReturnItem;
-use App\Models\Supplier;
 use App\Models\SupplierSettlement;
 use App\Observers\PurchaseItemObserver;
 use App\Repositories\Contracts\PurchaseRepositoryInterface;
@@ -45,17 +44,21 @@ class PurchaseReturnController extends Controller
 
     public function store(PurchaseReturnRequest $request): RedirectResponse
     {
-        $data = $request->validated();
+        $data   = $request->validated();
         $isCash = (int) $data['supplier_id'] === 1;
 
         $purchaseReturn = DB::transaction(function () use ($data, $isCash) {
             $purchaseReturn = PurchaseReturn::create([
-                'supplier_id' => $data['supplier_id'],
-                'purchase_id' => $data['purchase_id'] ?? null,
-                'notes'       => $data['notes'] ?? null,
-                'total'       => 0,
+                'supplier_id'      => $data['supplier_id'],
+                'purchase_id'      => $data['purchase_id'] ?? null,
+                'notes'            => $data['notes'] ?? null,
+                'total'            => 0,
+                'recovered_amount' => 0,
+                'due_recovery'     => 0,
+                'recovery_status'  => 'unpaid',
             ]);
 
+            // Create return items (observers update stock + return.total)
             foreach ($data['items'] as $item) {
                 $lineTotal = (float) $item['line_total'];
                 $quantity  = (float) $item['quantity'];
@@ -73,37 +76,34 @@ class PurchaseReturnController extends Controller
 
             $purchaseReturn->refresh();
 
-            // Auto-settlement for cash supplier
-            if ($isCash && $purchaseReturn->total > 0) {
-                $settlement = SupplierSettlement::create([
-                    'supplier_id'       => $purchaseReturn->supplier_id,
-                    'purchase_id'       => $purchaseReturn->purchase_id,
-                    'payment_method_id' => $data['payment_method_id'] ?? PaymentMethod::first()->id,
-                    'amount'            => $purchaseReturn->total,
-                    'notes'             => 'تسوية تلقائية — مرتجع مورد نقدي',
-                    'created_at'        => now(),
-                ]);
-                $purchaseReturn->update(['settlement_id' => $settlement->id]);
+            // Create settlements (recoveries) — same pattern as purchase payments
+            $settlements = $data['settlements'] ?? [];
+
+            // Cash supplier with no explicit settlements → auto full recovery
+            if ($isCash && empty($settlements) && $purchaseReturn->total > 0) {
+                $defaultMethod = PaymentMethod::first();
+                if ($defaultMethod) {
+                    $settlements = [[
+                        'payment_method_id' => $defaultMethod->id,
+                        'amount'            => $purchaseReturn->total,
+                        'notes'             => 'استرداد تلقائي — مورد نقدي',
+                    ]];
+                }
             }
 
-            // For regular supplier: create settlement if requested and total_debt <= 0
-            if (!$isCash && !empty($data['create_settlement']) && !empty($data['payment_method_id'])) {
-                $supplier = Supplier::find($data['supplier_id']);
-                // Recalculate after return items were saved
-                PurchaseItemObserver::recalculateSupplier($data['supplier_id']);
-                $supplier->refresh();
+            foreach ($settlements as $settlement) {
+                $amount = (float) $settlement['amount'];
+                if ($amount <= 0) continue;
 
-                if ((float) $supplier->total_debt <= 0 && $purchaseReturn->total > 0) {
-                    $settlement = SupplierSettlement::create([
-                        'supplier_id'       => $purchaseReturn->supplier_id,
-                        'purchase_id'       => $purchaseReturn->purchase_id,
-                        'payment_method_id' => $data['payment_method_id'],
-                        'amount'            => $purchaseReturn->total,
-                        'notes'             => 'تسوية مرتجع — ' . ($data['notes'] ?? ''),
-                        'created_at'        => now(),
-                    ]);
-                    $purchaseReturn->update(['settlement_id' => $settlement->id]);
-                }
+                SupplierSettlement::create([
+                    'supplier_id'       => $purchaseReturn->supplier_id,
+                    'purchase_id'       => $purchaseReturn->purchase_id,
+                    'purchase_return_id' => $purchaseReturn->id,
+                    'payment_method_id' => $settlement['payment_method_id'],
+                    'amount'            => $amount,
+                    'notes'             => $settlement['notes'] ?? null,
+                    'created_at'        => now(),
+                ]);
             }
 
             return $purchaseReturn;
@@ -116,7 +116,8 @@ class PurchaseReturnController extends Controller
     public function show(int $id): Response
     {
         return Inertia::render('PurchaseReturns/Show', [
-            'return' => $this->returns->findWithRelations($id),
+            'return'         => $this->returns->findWithRelations($id),
+            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -125,15 +126,13 @@ class PurchaseReturnController extends Controller
         $purchaseReturn = $this->returns->findWithRelations($id);
 
         DB::transaction(function () use ($purchaseReturn) {
-            // 1. Restore stock for all return items (observer fires on delete)
+            // 1. Restore stock for all return items
             foreach ($purchaseReturn->items as $item) {
                 $item->delete();
             }
 
-            // 2. Soft delete linked settlement if exists
-            if ($purchaseReturn->settlement_id) {
-                \App\Models\SupplierSettlement::where('id', $purchaseReturn->settlement_id)->delete();
-            }
+            // 2. Soft delete all linked settlements
+            SupplierSettlement::where('purchase_return_id', $purchaseReturn->id)->delete();
 
             // 3. Soft delete the return itself
             $purchaseReturn->delete();
@@ -144,25 +143,26 @@ class PurchaseReturnController extends Controller
             }
         });
 
-        return redirect()->route('purchase-returns.index')->with('success', 'تم إلغاء المرتجع بنجاح');
+        return redirect()->route('purchase-returns.index')
+            ->with('success', 'تم إلغاء المرتجع بنجاح');
     }
 
     public function restore(int $id): RedirectResponse
     {
-        $purchaseReturn = \App\Models\PurchaseReturn::withTrashed()->findOrFail($id);
+        $purchaseReturn = PurchaseReturn::withTrashed()->findOrFail($id);
 
         DB::transaction(function () use ($purchaseReturn) {
             // 1. Restore return
             $purchaseReturn->restore();
 
-            // 2. Restore linked settlement
-            if ($purchaseReturn->settlement_id) {
-                \App\Models\SupplierSettlement::withTrashed()->where('id', $purchaseReturn->settlement_id)->restore();
-            }
+            // 2. Restore linked settlements
+            SupplierSettlement::withTrashed()
+                ->where('purchase_return_id', $purchaseReturn->id)
+                ->restore();
 
             // 3. Re-deduct stock for all return items
             foreach ($purchaseReturn->items as $item) {
-                \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+                Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
             }
 
             // 4. Recalculate supplier totals
@@ -171,6 +171,7 @@ class PurchaseReturnController extends Controller
             }
         });
 
-        return redirect()->route('purchase-returns.show', $id)->with('success', 'تم استعادة المرتجع بنجاح');
+        return redirect()->route('purchase-returns.show', $id)
+            ->with('success', 'تم استعادة المرتجع بنجاح');
     }
 }

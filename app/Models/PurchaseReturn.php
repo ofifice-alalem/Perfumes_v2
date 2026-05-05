@@ -13,11 +13,27 @@ class PurchaseReturn extends Model implements Auditable
 {
     use AuditableTrait, SoftDeletes;
 
-    protected $fillable = ['supplier_id', 'purchase_id', 'settlement_id', 'total', 'notes'];
+    protected $fillable = ['supplier_id', 'purchase_id', 'settlement_id', 'total', 'recovered_amount', 'due_recovery', 'recovery_status', 'notes'];
 
     protected $casts = [
-        'total' => 'decimal:2',
+        'total'            => 'decimal:2',
+        'recovered_amount' => 'decimal:2',
+        'due_recovery'     => 'decimal:2',
     ];
+
+    public function recalculate(): void
+    {
+        $this->recovered_amount = $this->settlements()->sum('amount');
+        $this->due_recovery     = $this->total - $this->recovered_amount;
+
+        $this->recovery_status = match(true) {
+            $this->recovered_amount <= 0             => 'unpaid',
+            $this->recovered_amount >= $this->total  => 'paid',
+            default                                  => 'partial',
+        };
+
+        $this->save();
+    }
 
     public function supplier(): BelongsTo
     {
@@ -37,5 +53,10 @@ class PurchaseReturn extends Model implements Auditable
     public function items(): HasMany
     {
         return $this->hasMany(PurchaseReturnItem::class);
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(SupplierSettlement::class, 'purchase_return_id');
     }
 }

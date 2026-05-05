@@ -11,9 +11,10 @@ class SupplierSettlementRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'supplier_id'       => 'required|integer|exists:suppliers,id',
-            'purchase_id'       => 'nullable|integer|exists:purchases,id',
-            'payment_method_id' => 'required|integer|exists:payment_methods,id',
+            'supplier_id'        => 'required|integer|exists:suppliers,id',
+            'purchase_id'        => 'nullable|integer|exists:purchases,id',
+            'purchase_return_id' => 'nullable|integer|exists:purchase_returns,id',
+            'payment_method_id'  => 'required|integer|exists:payment_methods,id',
             'amount'            => 'required|numeric|min:0.01',
             'notes'             => 'nullable|string|max:500',
         ];

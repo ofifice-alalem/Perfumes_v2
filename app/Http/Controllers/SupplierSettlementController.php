@@ -34,17 +34,20 @@ class SupplierSettlementController extends Controller
         $data = $request->validated();
 
         SupplierSettlement::create([
-            'supplier_id'       => $data['supplier_id'],
-            'purchase_id'       => $data['purchase_id'] ?? null,
-            'payment_method_id' => $data['payment_method_id'],
-            'amount'            => $data['amount'],
-            'notes'             => $data['notes'] ?? null,
-            'created_at'        => now(),
+            'supplier_id'        => $data['supplier_id'],
+            'purchase_id'        => $data['purchase_id'] ?? null,
+            'purchase_return_id' => $data['purchase_return_id'] ?? null,
+            'payment_method_id'  => $data['payment_method_id'],
+            'amount'             => $data['amount'],
+            'notes'              => $data['notes'] ?? null,
+            'created_at'         => now(),
         ]);
 
-        $redirectTo = $data['purchase_id']
-            ? redirect()->route('purchases.show', $data['purchase_id'])
-            : back();
+        $redirectTo = $data['purchase_return_id']
+            ? redirect()->route('purchase-returns.show', $data['purchase_return_id'])
+            : ($data['purchase_id']
+                ? redirect()->route('purchases.show', $data['purchase_id'])
+                : back());
 
         return $redirectTo->with('success', 'تم تسجيل التسوية بنجاح');
     }

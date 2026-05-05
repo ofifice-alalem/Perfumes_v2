@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Trash2, Check, ArrowRight, RotateCcw } from 'lucide-react';
+import { Plus, Trash2, Check, ArrowRight, RotateCcw, RefreshCw } from 'lucide-react';
 
-interface Supplier      { id: number; name: string; total_debt: string; }
+interface Supplier      { id: number; name: string; }
 interface Product       { id: number; name: string; stock: string; }
 interface PaymentMethod { id: number; name: string; }
 
@@ -15,57 +15,69 @@ interface Props {
     flash?: { success?: string; error?: string };
 }
 
-interface ItemRow { product_id: string; quantity: string; line_total: string; }
-const emptyItem = (): ItemRow => ({ product_id: '', quantity: '', line_total: '' });
+interface ItemRow       { product_id: string; quantity: string; line_total: string; }
+interface SettlementRow { payment_method_id: string; amount: string; notes: string; }
+
+const emptyItem       = (): ItemRow       => ({ product_id: '', quantity: '', line_total: '' });
+const emptySettlement = (): SettlementRow => ({ payment_method_id: '', amount: '', notes: '' });
+
+function fmt(n: number) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 export default function PurchaseReturnsCreate({ suppliers, products, paymentMethods, flash }: Props) {
-    const [items, setItems] = useState<ItemRow[]>([emptyItem()]);
+    const [items,       setItems]       = useState<ItemRow[]>([emptyItem()]);
+    const [settlements, setSettlements] = useState<SettlementRow[]>([]);
 
     const form = useForm({
-        supplier_id:       '',
-        purchase_id:       '',
-        notes:             '',
-        create_settlement: false,
-        payment_method_id: '',
-        items:             [] as ItemRow[],
+        supplier_id:  '',
+        purchase_id:  '',
+        notes:        '',
+        items:        [] as ItemRow[],
+        settlements:  [] as SettlementRow[],
     });
 
-    const isCash = form.data.supplier_id === '1';
-    const selectedSupplier = suppliers.find(s => String(s.id) === form.data.supplier_id);
-    const grandTotal = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
+    const isCash      = form.data.supplier_id === '1';
+    const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
+    const totalRecovered = settlements.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const remaining   = grandTotal - totalRecovered;
 
-    const currentDebt      = selectedSupplier ? parseFloat(selectedSupplier.total_debt) : 0;
-    const debtAfterReturn  = currentDebt - grandTotal;
-    const showSettlementOption = !isCash && form.data.supplier_id && debtAfterReturn <= 0 && grandTotal > 0;
-
-    // options
+    // ── options ──────────────────────────────────────────────────────────────
     const supplierOptions = [
         { label: 'مورد نقدي', badge: 'نقدي' },
         ...suppliers.map(s => ({ label: s.name })),
     ];
-    const productOptions       = products.map(p => ({ label: p.name, meta: p.stock }));
-    const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
+    const productOptions = products.map(p => ({ label: p.name, meta: p.stock }));
+    const methodOptions  = paymentMethods.map(m => ({ label: m.name }));
 
-    function resolveSupplierIdFromLabel(label: string): string {
+    function resolveSupplier(label: string) {
         if (label === 'مورد نقدي') return '1';
         return String(suppliers.find(s => s.name === label)?.id ?? '');
     }
-    function resolveProductIdFromLabel(label: string): string {
+    function resolveProduct(label: string) {
         return String(products.find(p => p.name === label)?.id ?? '');
     }
-    function resolveMethodIdFromLabel(label: string): string {
+    function resolveMethod(label: string) {
         return String(paymentMethods.find(m => m.name === label)?.id ?? '');
     }
 
-    function setItemProduct(idx: number, label: string) {
-        setItems(prev => prev.map((r, i) => i === idx ? { ...r, product_id: resolveProductIdFromLabel(label) } : r));
-    }
+    // ── items helpers ─────────────────────────────────────────────────────────
     function setItem(idx: number, field: keyof ItemRow, val: string) {
         setItems(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
     }
 
+    // ── settlements helpers ───────────────────────────────────────────────────
+    function setSettlement(idx: number, field: keyof SettlementRow, val: string) {
+        setSettlements(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+    }
+    function addSettlement() {
+        const amount = settlements.length === 0 && remaining > 0 ? fmt(remaining) : '';
+        setSettlements(prev => [...prev, { ...emptySettlement(), amount }]);
+    }
+
+    // ── submit ────────────────────────────────────────────────────────────────
     function submit() {
-        form.transform(data => ({ ...data, items }));
+        form.transform(data => ({ ...data, items, settlements }));
         form.post('/purchase-returns', { preserveScroll: true });
     }
 
@@ -73,19 +85,18 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
         ? 'مورد نقدي'
         : (suppliers.find(s => String(s.id) === form.data.supplier_id)?.name ?? '');
 
-    const selectedPaymentLabel = paymentMethods.find(m => String(m.id) === form.data.payment_method_id)?.name ?? '';
-
     return (
         <AppShell pageTitle="مرتجع جديد">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
+                {/* Header */}
                 <div className="flex items-center gap-3">
                     <Link href="/purchase-returns" className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all">
                         <ArrowRight className="w-5 h-5" />
                     </Link>
                     <div>
                         <h1 className="text-2xl font-black text-slate-800 dark:text-white">مرتجع جديد</h1>
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">إرجاع بضاعة للمورد</p>
+                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">إرجاع بضاعة للمورد واسترداد المبلغ</p>
                     </div>
                 </div>
 
@@ -93,7 +104,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                     <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>
                 )}
 
-                {/* Header */}
+                {/* ── بيانات المرتجع ── */}
                 <SpatialCard title="بيانات المرتجع" icon={<RotateCcw className="w-4 h-4" />}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
@@ -101,69 +112,30 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                 label="المورد"
                                 options={supplierOptions}
                                 defaultValue={selectedSupplierLabel}
-                                onSelect={val => form.setData('supplier_id', resolveSupplierIdFromLabel(val))}
+                                onSelect={val => {
+                                    form.setData('supplier_id', resolveSupplier(val));
+                                    setSettlements([]);
+                                }}
                             />
                             {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
                         </div>
-
                         <div className="flex flex-col gap-2">
                             <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">رقم الفاتورة (اختياري)</label>
-                            <input type="number" min="1" value={form.data.purchase_id}
+                            <input type="number" min="1"
+                                value={form.data.purchase_id}
                                 onChange={e => form.setData('purchase_id', e.target.value)}
                                 placeholder="اتركه فارغاً للمرتجع المستقل"
                                 className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                         </div>
-
                         <div className="flex flex-col gap-2 sm:col-span-2">
                             <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظات (اختياري)</label>
                             <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
                                 className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
                         </div>
                     </div>
-
-                    {/* Cash supplier notice */}
-                    {isCash && (
-                        <div className="mt-4 p-4 rounded-[16px] bg-amber-500/10 border border-amber-500/20">
-                            <p className="text-sm font-bold text-amber-600 dark:text-amber-400 mb-3">
-                                ⚠️ المورد النقدي — سيتم إنشاء تسوية تلقائية بقيمة المرتجع
-                            </p>
-                            <ModernSelect
-                                label="وسيلة الدفع للتسوية"
-                                options={paymentMethodOptions}
-                                defaultValue={selectedPaymentLabel}
-                                onSelect={val => form.setData('payment_method_id', resolveMethodIdFromLabel(val))}
-                            />
-                        </div>
-                    )}
-
-                    {/* Settlement option for regular supplier */}
-                    {showSettlementOption && (
-                        <div className="mt-4 p-4 rounded-[16px] bg-purple-500/10 border border-purple-500/20">
-                            <p className="text-sm font-bold text-purple-600 dark:text-purple-400 mb-3">
-                                بعد هذا المرتجع، سيصبح رصيد المورد:{' '}
-                                <span className="font-black">{debtAfterReturn.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
-                                {debtAfterReturn < 0 ? ' (المورد دائن)' : ' (صفر)'}
-                            </p>
-                            <label className="flex items-center gap-3 cursor-pointer mb-3">
-                                <div onClick={() => form.setData('create_settlement', !form.data.create_settlement)}
-                                    className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 shrink-0 ${form.data.create_settlement ? 'bg-purple-500' : 'bg-black/10 dark:bg-white/10'}`}>
-                                    <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${form.data.create_settlement ? '-translate-x-4' : 'translate-x-0'}`} />
-                                </div>
-                                <span className="font-bold text-slate-700 dark:text-white/80 text-sm">إنشاء تسوية الآن</span>
-                            </label>
-                            {form.data.create_settlement && (
-                                <ModernSelect
-                                    label="وسيلة الدفع"
-                                    options={paymentMethodOptions}
-                                    defaultValue={selectedPaymentLabel}
-                                    onSelect={val => form.setData('payment_method_id', resolveMethodIdFromLabel(val))}
-                                />
-                            )}
-                        </div>
-                    )}
                 </SpatialCard>
 
-                {/* Items */}
+                {/* ── المنتجات المرتجعة ── */}
                 <SpatialCard title="المنتجات المرتجعة" icon={<Plus className="w-4 h-4" />}
                     action={
                         <button onClick={() => setItems(p => [...p, emptyItem()])}
@@ -173,54 +145,129 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                     }
                 >
                     <div className="flex flex-col gap-3">
-                        {items.map((item, idx) => {
-                            const selectedProductLabel = products.find(p => String(p.id) === item.product_id)?.name ?? '';
-                            return (
-                                <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                    <ModernSelect
-                                        label="المنتج"
-                                        options={productOptions}
-                                        defaultValue={selectedProductLabel}
-                                        onSelect={val => setItemProduct(idx, val)}
-                                        placeholder="اختر منتجاً..."
-                                    />
-                                    <div className="flex flex-col gap-1.5 w-28">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الكمية</label>
-                                        <input type="number" min="0.01" step="0.01" value={item.quantity}
-                                            onChange={e => setItem(idx, 'quantity', e.target.value)}
-                                            placeholder="0"
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5 w-32">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي</label>
-                                        <input type="number" min="0" step="0.01" value={item.line_total}
-                                            onChange={e => setItem(idx, 'line_total', e.target.value)}
-                                            placeholder="0.00"
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                    </div>
-                                    <button onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
-                                        disabled={items.length === 1}
-                                        className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                        {items.map((item, idx) => (
+                            <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                <ModernSelect
+                                    label="المنتج"
+                                    options={productOptions}
+                                    defaultValue={products.find(p => String(p.id) === item.product_id)?.name ?? ''}
+                                    onSelect={val => setItem(idx, 'product_id', resolveProduct(val))}
+                                    placeholder="اختر منتجاً..."
+                                />
+                                <div className="flex flex-col gap-1.5 w-28">
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الكمية</label>
+                                    <input type="number" min="0.01" step="0.01"
+                                        value={item.quantity}
+                                        onChange={e => setItem(idx, 'quantity', e.target.value)}
+                                        placeholder="0"
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
                                 </div>
-                            );
-                        })}
+                                <div className="flex flex-col gap-1.5 w-32">
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي</label>
+                                    <input type="number" min="0" step="0.01"
+                                        value={item.line_total}
+                                        onChange={e => setItem(idx, 'line_total', e.target.value)}
+                                        placeholder="0.00"
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                </div>
+                                <button onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
+                                    disabled={items.length === 1}
+                                    className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
 
                         {form.errors.items && <p className="text-xs text-red-500 font-bold">{form.errors.items}</p>}
 
                         <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
                             <span className="font-bold text-slate-500 dark:text-white/50">إجمالي المرتجع</span>
-                            <span className="text-2xl font-black text-orange-500">
-                                {grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
+                            <span className="text-2xl font-black text-orange-500">{fmt(grandTotal)}</span>
                         </div>
                     </div>
                 </SpatialCard>
 
+                {/* ── الاسترداد ── */}
+                <SpatialCard title="الاسترداد" icon={<RefreshCw className="w-4 h-4" />}
+                    action={
+                        <button onClick={addSettlement}
+                            className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all font-bold text-sm border border-purple-500/20">
+                            <Plus className="w-3.5 h-3.5" /> إضافة استرداد
+                        </button>
+                    }
+                >
+                    <div className="flex flex-col gap-3">
+
+                        {/* تنبيه المورد النقدي */}
+                        {isCash && settlements.length === 0 && (
+                            <div className="px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20">
+                                <p className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                    ⚠️ المورد النقدي — سيتم إنشاء استرداد تلقائي كامل عند الحفظ
+                                </p>
+                            </div>
+                        )}
+
+                        {settlements.length === 0 && !isCash && (
+                            <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-2 text-center">
+                                لا يوجد استرداد — المبلغ سيبقى كرصيد دائن عند المورد
+                            </p>
+                        )}
+
+                        {settlements.map((row, idx) => (
+                            <div key={idx} className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end p-3 rounded-[16px] bg-purple-500/5 border border-purple-500/15">
+                                <ModernSelect
+                                    label="وسيلة الاسترداد"
+                                    options={methodOptions}
+                                    defaultValue={paymentMethods.find(m => String(m.id) === row.payment_method_id)?.name ?? ''}
+                                    onSelect={val => setSettlement(idx, 'payment_method_id', resolveMethod(val))}
+                                />
+                                <div className="flex flex-col gap-1.5 w-36">
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
+                                    <input type="number" min="0.01" step="0.01"
+                                        value={row.amount}
+                                        onChange={e => setSettlement(idx, 'amount', e.target.value)}
+                                        placeholder="0.00"
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة (اختياري)</label>
+                                    <input value={row.notes}
+                                        onChange={e => setSettlement(idx, 'notes', e.target.value)}
+                                        placeholder="مثال: نقدي، حوالة..."
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                </div>
+                                <button onClick={() => setSettlements(p => p.filter((_, i) => i !== idx))}
+                                    className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+
+                        {/* ملخص الاسترداد */}
+                        {settlements.length > 0 && (
+                            <div className="flex flex-col gap-2 pt-3 border-t border-black/5 dark:border-white/5">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-500 dark:text-white/50">إجمالي المسترد</span>
+                                    <span className="text-lg font-black text-purple-500">{fmt(totalRecovered)}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="font-bold text-slate-500 dark:text-white/50">المتبقي (رصيد دائن)</span>
+                                    <span className={`text-lg font-black ${remaining > 0 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                        {fmt(Math.max(0, remaining))}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </SpatialCard>
+
+                {/* ── أزرار الحفظ ── */}
                 <div className="flex items-center gap-3">
-                    <button onClick={submit} disabled={form.processing || items.every(i => !i.product_id)}
-                        className="spatial-button flex items-center gap-2 px-6 h-12 text-sm disabled:opacity-50">
+                    <button
+                        onClick={submit}
+                        disabled={form.processing || items.every(i => !i.product_id) || !form.data.supplier_id}
+                        className="spatial-button flex items-center gap-2 px-6 h-12 text-sm disabled:opacity-50"
+                    >
                         <Check className="w-4 h-4" /> حفظ المرتجع
                     </button>
                     <Link href="/purchase-returns"
