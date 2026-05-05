@@ -18,6 +18,7 @@ const navItems = [
   { icon: <Layers className="w-5 h-5" />,          label: 'التصنيفات',       href: '/categories' },
   { icon: <Tags className="w-5 h-5" />,            label: 'التيرات والأسعار', href: '/price-tiers' },
   { icon: <Ruler className="w-5 h-5" />,           label: 'الأحجام',         href: '/sizes' },
+  { icon: <Users className="w-5 h-5" />,           label: 'المستخدمون',      href: '/users' },
   { icon: <Users className="w-5 h-5" />,           label: 'العملاء',         href: '/customers' },
   { icon: <Truck className="w-5 h-5" />,           label: 'الموردون',        href: '/suppliers' },
   { icon: <DollarSign className="w-5 h-5" />,      label: 'وسائل الدفع',     href: '/payment-methods' },
