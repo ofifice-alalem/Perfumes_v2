@@ -17,7 +17,7 @@ class SupplierSettlementRepository extends Repository implements SupplierSettlem
 
     public function paginated(int $perPage = 20)
     {
-        return QueryBuilder::for($this->model->with(['supplier', 'purchase', 'paymentMethod']))
+        return QueryBuilder::for($this->model->with(['supplier', 'purchase', 'purchaseReturn', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),

@@ -12,6 +12,7 @@ interface SupplierSettlement {
     id: number;
     supplier: Supplier;
     purchase: { id: number } | null;
+    purchase_return: { id: number } | null;
     payment_method: PaymentMethod;
     amount: string;
     notes: string | null;
@@ -151,7 +152,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                        {['المورد', 'الفاتورة', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
+                                        {['المورد', 'المرجع', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
                                             <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                         ))}
                                     </tr>
@@ -161,8 +162,10 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                         <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
                                             <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{s.supplier.name}</td>
                                             <td className="px-4 py-3">
-                                                {s.purchase ? (
-                                                    <Link href={`/purchases/${s.purchase.id}`} className="text-primary font-bold hover:underline">#{s.purchase.id}</Link>
+                                                {s.purchase_return ? (
+                                                    <Link href={`/purchase-returns/${s.purchase_return.id}`} className="text-orange-500 font-bold hover:underline">مرتجع #{s.purchase_return.id}</Link>
+                                                ) : s.purchase ? (
+                                                    <Link href={`/purchases/${s.purchase.id}`} className="text-primary font-bold hover:underline">فاتورة #{s.purchase.id}</Link>
                                                 ) : <span className="text-slate-400 dark:text-white/30 font-bold">مستقلة</span>}
                                             </td>
                                             <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{s.payment_method.name}</td>
