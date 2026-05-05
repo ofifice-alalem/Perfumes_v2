@@ -51,10 +51,11 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     const [showPad,     setShowPad]     = useState(false);
     const [padTitle,    setPadTitle]    = useState('');
     const [padInitial,  setPadInitial]  = useState('');
+    const [padMax,      setPadMax]      = useState<number | undefined>(undefined);
     const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
 
-    function openPad(title: string, initial: string, cb: (v: string) => void) {
-        setPadTitle(title); setPadInitial(initial); setPadCallback(() => cb); setShowPad(true);
+    function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
+        setPadTitle(title); setPadInitial(initial); setPadCallback(() => cb); setPadMax(max); setShowPad(true);
     }
 
     // Payment form
@@ -424,6 +425,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
             isOpen={showPad}
             title={padTitle}
             initialValue={padInitial}
+            maxValue={padMax}
             onClose={() => setShowPad(false)}
             onConfirm={v => { padCallback?.(v); setShowPad(false); }}
         />
