@@ -27,7 +27,7 @@ interface Props {
 
 function fmt(v: string) {
     const n = parseFloat(v);
-    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }: Props) {
@@ -84,7 +84,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                    {new Date(r.created_at).toLocaleDateString('ar-SA')}
+                                                    {new Date(r.created_at).toLocaleDateString('en-GB')}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <Link href={`/purchase-returns/${r.id}`}

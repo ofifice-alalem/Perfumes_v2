@@ -32,7 +32,7 @@ interface Props {
 
 function fmt(v: string) {
     const n = parseFloat(v);
-    return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function PurchaseReturnsShow({ return: ret, flash }: Props) {
@@ -116,7 +116,7 @@ export default function PurchaseReturnsShow({ return: ret, flash }: Props) {
                             <div className="flex flex-col gap-1">
                                 <span className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">التاريخ</span>
                                 <span className="font-bold text-slate-500 dark:text-white/50 text-sm">
-                                    {new Date(ret.settlement.created_at).toLocaleDateString('ar-SA')}
+                                    {new Date(ret.settlement.created_at).toLocaleDateString('en-GB')}
                                 </span>
                             </div>
                         </div>

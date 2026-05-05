@@ -42,6 +42,9 @@ interface Props {
     flash?: { success?: string; error?: string };
 }
 
+interface PaymentRow { payment_method_id: string; amount: string; notes: string; }
+const emptyRow = (): PaymentRow => ({ payment_method_id: '', amount: '', notes: '' });
+
 const statusLabel = { unpaid: 'غير مدفوع', partial: 'جزئي', paid: 'مدفوع' };
 const statusClass  = {
     unpaid:  'bg-red-500/10 text-red-500',
@@ -55,16 +58,10 @@ function fmt(v: string | number) {
 }
 
 export default function PurchasesShow({ purchase, paymentMethods, flash }: Props) {
-    const [showPaymentForm, setShowPaymentForm]       = useState(false);
+    const [showPaymentForm,    setShowPaymentForm]    = useState(false);
     const [showSettlementForm, setShowSettlementForm] = useState(false);
-
-    const paymentForm = useForm({
-        supplier_id:       String(purchase.supplier.id),
-        purchase_id:       String(purchase.id),
-        payment_method_id: '',
-        amount:            '',
-        notes:             '',
-    });
+    const [paymentRows, setPaymentRows] = useState<PaymentRow[]>([emptyRow()]);
+    const [submitting, setSubmitting]   = useState(false);
 
     const settlementForm = useForm({
         supplier_id:       String(purchase.supplier.id),
@@ -74,25 +71,59 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
         notes:             '',
     });
 
-    const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
+    const methodOptions = paymentMethods.map(m => ({ label: m.name }));
 
-    function resolveMethodId(label: string): string {
+    function resolveMethodId(label: string) {
         return String(paymentMethods.find(m => m.name === label)?.id ?? '');
     }
 
-    function submitPayment() {
-        paymentForm.post('/supplier-payments', {
-            onSuccess: () => { paymentForm.reset('payment_method_id', 'amount', 'notes'); setShowPaymentForm(false); },
-        });
+    function setRow(idx: number, field: keyof PaymentRow, val: string) {
+        setPaymentRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+    }
+
+    const totalPaid  = parseFloat(purchase.paid_amount);
+    const due        = parseFloat(purchase.due_amount);
+    const rowsTotal  = paymentRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+
+    // Submit all payment rows one by one
+    function submitPayments() {
+        const valid = paymentRows.filter(r => r.payment_method_id && parseFloat(r.amount) > 0);
+        if (valid.length === 0) return;
+        setSubmitting(true);
+
+        function postNext(i: number) {
+            if (i >= valid.length) {
+                setSubmitting(false);
+                setPaymentRows([emptyRow()]);
+                setShowPaymentForm(false);
+                return;
+            }
+            const row = valid[i];
+            router.post('/supplier-payments', {
+                supplier_id:       String(purchase.supplier.id),
+                purchase_id:       String(purchase.id),
+                payment_method_id: row.payment_method_id,
+                amount:            row.amount,
+                notes:             row.notes || null,
+            }, {
+                preserveScroll: true,
+                onSuccess: () => postNext(i + 1),
+                onError:   () => setSubmitting(false),
+            });
+        }
+        postNext(0);
     }
 
     function submitSettlement() {
         settlementForm.post('/supplier-settlements', {
-            onSuccess: () => { settlementForm.reset('payment_method_id', 'amount', 'notes'); setShowSettlementForm(false); },
+            onSuccess: () => {
+                settlementForm.reset('payment_method_id', 'amount', 'notes');
+                setShowSettlementForm(false);
+            },
         });
     }
 
-    const isCash = purchase.supplier.id === 1;
+    const isCash       = purchase.supplier.id === 1;
     const supplierDebt = parseFloat(purchase.supplier.total_debt);
 
     return (
@@ -119,19 +150,15 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                     </Link>
                 </div>
 
-                {flash?.success && (
-                    <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>
-                )}
-                {flash?.error && (
-                    <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>
-                )}
+                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
+                {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
                 {/* Summary */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {[
-                        { label: 'الإجمالي',   value: fmt(purchase.total),       color: 'text-slate-800 dark:text-white' },
-                        { label: 'المدفوع',    value: fmt(purchase.paid_amount),  color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'المتبقي',    value: fmt(purchase.due_amount),   color: 'text-amber-500' },
+                        { label: 'الإجمالي',   value: fmt(purchase.total),             color: 'text-slate-800 dark:text-white' },
+                        { label: 'المدفوع',    value: fmt(purchase.paid_amount),        color: 'text-emerald-600 dark:text-emerald-400' },
+                        { label: 'المتبقي',    value: fmt(purchase.due_amount),         color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
                         { label: 'دين المورد', value: fmt(purchase.supplier.total_debt), color: supplierDebt > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
                     ].map(s => (
                         <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
@@ -170,40 +197,67 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                 <SpatialCard title={`الدفعات (${purchase.payments.length})`} icon={<CreditCard className="w-4 h-4" />}
                     action={
                         !isCash && purchase.payment_status !== 'paid' && (
-                            <button onClick={() => setShowPaymentForm(p => !p)}
+                            <button onClick={() => { setShowPaymentForm(p => !p); setPaymentRows([emptyRow()]); }}
                                 className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
-                                <Plus className="w-3.5 h-3.5" /> دفعة جديدة
+                                <Plus className="w-3.5 h-3.5" /> تسجيل دفع
                             </button>
                         )
                     }
                 >
+                    {/* Multi-payment form */}
                     {showPaymentForm && (
-                        <div className="mb-4 p-4 rounded-[16px] bg-primary/5 border border-primary/20 flex flex-col gap-3">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <ModernSelect
-                                    label="وسيلة الدفع"
-                                    options={paymentMethodOptions}
-                                    defaultValue={paymentMethods.find(m => String(m.id) === paymentForm.data.payment_method_id)?.name ?? ''}
-                                    onSelect={val => paymentForm.setData('payment_method_id', resolveMethodId(val))}
-                                />
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
-                                    <input type="number" min="0.01" step="0.01" value={paymentForm.data.amount}
-                                        onChange={e => paymentForm.setData('amount', e.target.value)}
-                                        placeholder={`المتبقي: ${fmt(purchase.due_amount)}`}
-                                        className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                                    {paymentForm.errors.amount && <p className="text-xs text-red-500 font-bold">{paymentForm.errors.amount}</p>}
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
-                                    <input value={paymentForm.data.notes} onChange={e => paymentForm.setData('notes', e.target.value)}
-                                        className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                                </div>
+                        <div className="mb-5 p-4 rounded-[20px] bg-primary/5 border border-primary/20 flex flex-col gap-4">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-slate-700 dark:text-white/80 text-sm">تسجيل دفعات جديدة</span>
+                                <button onClick={() => setPaymentRows(p => [...p, emptyRow()])}
+                                    className="flex items-center gap-1.5 px-3 h-8 rounded-[12px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs border border-primary/20">
+                                    <Plus className="w-3 h-3" /> إضافة وسيلة دفع
+                                </button>
                             </div>
+
+                            {paymentRows.map((row, idx) => (
+                                <div key={idx} className="grid grid-cols-[1fr_auto_1fr_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                    <ModernSelect
+                                        label="وسيلة الدفع"
+                                        options={methodOptions}
+                                        defaultValue={paymentMethods.find(m => String(m.id) === row.payment_method_id)?.name ?? ''}
+                                        onSelect={val => setRow(idx, 'payment_method_id', resolveMethodId(val))}
+                                    />
+                                    <div className="flex flex-col gap-1.5 w-36">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
+                                        <input type="number" min="0.01" step="0.01"
+                                            value={row.amount}
+                                            onChange={e => setRow(idx, 'amount', e.target.value)}
+                                            placeholder={idx === 0 ? fmt(due) : '0.00'}
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
+                                        <input value={row.notes}
+                                            onChange={e => setRow(idx, 'notes', e.target.value)}
+                                            placeholder="اختياري..."
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                    </div>
+                                    <button onClick={() => paymentRows.length > 1 ? setPaymentRows(p => p.filter((_, i) => i !== idx)) : null}
+                                        disabled={paymentRows.length === 1}
+                                        className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+
+                            {/* ملخص */}
+                            {paymentRows.length > 1 && (
+                                <div className="flex items-center justify-between px-2">
+                                    <span className="font-bold text-slate-500 dark:text-white/50 text-sm">إجمالي هذه الدفعات</span>
+                                    <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(rowsTotal)}</span>
+                                </div>
+                            )}
+
                             <div className="flex gap-2">
-                                <button onClick={submitPayment} disabled={paymentForm.processing}
-                                    className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
-                                    حفظ الدفعة
+                                <button onClick={submitPayments} disabled={submitting}
+                                    className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
+                                    {submitting ? 'جارٍ الحفظ...' : 'حفظ الدفعات'}
                                 </button>
                                 <button onClick={() => setShowPaymentForm(false)}
                                     className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
@@ -236,7 +290,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal
-                                                    onConfirm={() => router.delete(`/supplier-payments/${pay.id}`)}
+                                                    onConfirm={() => router.delete(`/supplier-payments/${pay.id}`, { preserveScroll: true })}
                                                     trigger={
                                                         <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
                                                             <Trash2 className="w-3 h-3" />
@@ -269,7 +323,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <ModernSelect
                                         label="وسيلة الدفع"
-                                        options={paymentMethodOptions}
+                                        options={methodOptions}
                                         defaultValue={paymentMethods.find(m => String(m.id) === settlementForm.data.payment_method_id)?.name ?? ''}
                                         onSelect={val => settlementForm.setData('payment_method_id', resolveMethodId(val))}
                                     />

@@ -52,7 +52,7 @@ export default function CustomersIndex({ customers, flash }: Props) {
 
     function fmt(val: string) {
         const n = parseFloat(val);
-        return isNaN(n) ? '0' : n.toLocaleString('ar-SA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
 
     return (

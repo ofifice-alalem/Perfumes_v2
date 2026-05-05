@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PurchaseRequest;
-use App\Http\Requests\SupplierPaymentRequest;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\PurchaseItem;
@@ -43,7 +42,7 @@ class PurchaseController extends Controller
     {
         $data = $request->validated();
 
-        DB::transaction(function () use ($data) {
+        $purchase = DB::transaction(function () use ($data) {
             $isCash = (int) $data['supplier_id'] === 1;
 
             $purchase = $this->purchases->create([
@@ -55,6 +54,7 @@ class PurchaseController extends Controller
                 'payment_status' => 'unpaid',
             ]);
 
+            // Create purchase items (observers update stock + purchase.total)
             foreach ($data['items'] as $item) {
                 $lineTotal = (float) $item['line_total'];
                 $quantity  = (float) $item['quantity'];
@@ -70,47 +70,54 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            // For cash supplier: record immediate full payment
-            if ($isCash && !empty($data['paid_amount']) && (float) $data['paid_amount'] > 0) {
-                $purchase->refresh();
+            $purchase->refresh();
+
+            // Handle payments (multiple supported)
+            $payments = $data['payments'] ?? [];
+
+            if ($isCash && empty($payments)) {
+                // Cash supplier with no explicit payments → auto full payment not possible without method
+                // Just skip — frontend enforces at least one payment for cash
+            }
+
+            foreach ($payments as $payment) {
+                $amount = (float) $payment['amount'];
+                if ($amount <= 0) continue;
+
                 SupplierPayment::create([
                     'supplier_id'       => $purchase->supplier_id,
                     'purchase_id'       => $purchase->id,
-                    'payment_method_id' => $data['payment_method_id'],
-                    'amount'            => $purchase->total,
-                    'notes'             => 'دفع فوري — مورد نقدي',
+                    'payment_method_id' => $payment['payment_method_id'],
+                    'amount'            => $amount,
+                    'notes'             => $payment['notes'] ?? null,
                     'created_at'        => now(),
                 ]);
             }
+
+            return $purchase;
         });
 
-        return redirect()->route('purchases.index')->with('success', 'تم إنشاء فاتورة الشراء بنجاح');
+        return redirect()->route('purchases.show', $purchase->id)
+            ->with('success', 'تم إنشاء فاتورة الشراء بنجاح');
     }
 
     public function show(int $id): Response
     {
-        $purchase       = $this->purchases->findWithRelations($id);
-        $paymentMethods = PaymentMethod::orderBy('name')->get(['id', 'name']);
-
         return Inertia::render('Purchases/Show', [
-            'purchase'       => $purchase,
-            'paymentMethods' => $paymentMethods,
+            'purchase'       => $this->purchases->findWithRelations($id),
+            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function edit(int $id): Response
     {
-        $purchase = $this->purchases->findWithRelations($id);
-
         return Inertia::render('Purchases/Edit', [
-            'purchase' => $purchase,
+            'purchase' => $this->purchases->findWithRelations($id),
         ]);
     }
 
     public function update(PurchaseRequest $request, int $id): RedirectResponse
     {
-        $purchase = $this->purchases->find($id);
-
         $this->purchases->update(['notes' => $request->validated()['notes'] ?? null], $id);
 
         return redirect()->route('purchases.show', $id)->with('success', 'تم تحديث الفاتورة بنجاح');
@@ -121,7 +128,6 @@ class PurchaseController extends Controller
         $purchase = $this->purchases->findWithRelations($id);
 
         DB::transaction(function () use ($purchase) {
-            // Items cascade-delete via DB, but observers need to fire for stock
             foreach ($purchase->items as $item) {
                 $item->delete();
             }
