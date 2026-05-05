@@ -7,14 +7,23 @@ use App\Models\ProductPrice;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 use Prettus\Repository\Eloquent\Repository;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ProductRepository extends Repository implements ProductRepositoryInterface
 {
-    public function allWithRelations()
+    public function allWithRelations(array $filters = [])
     {
-        return $this->model
-            ->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail'])
-            ->orderBy('name')
+        return QueryBuilder::for($this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail']))
+            ->allowedFilters(
+                AllowedFilter::exact('category_id'),
+                AllowedFilter::exact('selling_type'),
+                AllowedFilter::exact('price_tier_id'),
+                AllowedFilter::callback('low_stock', fn($q) => $q->whereColumn('stock', '<=', 'min_stock')),
+                AllowedFilter::partial('name'),
+            )
+            ->allowedSorts('name', 'stock', 'created_at')
+            ->defaultSort('name')
             ->get();
     }
 
