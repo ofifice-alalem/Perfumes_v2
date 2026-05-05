@@ -7,6 +7,8 @@ use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\PurchaseItem;
 use App\Models\SupplierPayment;
+use App\Models\SupplierSettlement;
+use App\Observers\PurchaseItemObserver;
 use App\Repositories\Contracts\PurchaseRepositoryInterface;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use Illuminate\Http\RedirectResponse;
@@ -54,7 +56,6 @@ class PurchaseController extends Controller
                 'payment_status' => 'unpaid',
             ]);
 
-            // Create purchase items (observers update stock + purchase.total)
             foreach ($data['items'] as $item) {
                 $lineTotal = (float) $item['line_total'];
                 $quantity  = (float) $item['quantity'];
@@ -72,15 +73,7 @@ class PurchaseController extends Controller
 
             $purchase->refresh();
 
-            // Handle payments (multiple supported)
-            $payments = $data['payments'] ?? [];
-
-            if ($isCash && empty($payments)) {
-                // Cash supplier with no explicit payments → auto full payment not possible without method
-                // Just skip — frontend enforces at least one payment for cash
-            }
-
-            foreach ($payments as $payment) {
+            foreach ($data['payments'] ?? [] as $payment) {
                 $amount = (float) $payment['amount'];
                 if ($amount <= 0) continue;
 
@@ -125,15 +118,65 @@ class PurchaseController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $purchase = $this->purchases->findWithRelations($id);
+        $purchase       = $this->purchases->findWithRelations($id);
+        $deletePayments = request()->boolean('delete_payments', false);
 
-        DB::transaction(function () use ($purchase) {
+        DB::transaction(function () use ($purchase, $deletePayments) {
+            // 1. Restore stock for all items (observer fires on delete)
             foreach ($purchase->items as $item) {
                 $item->delete();
             }
+
+            // 2. Handle linked payments based on user choice
+            if ($deletePayments) {
+                // Soft delete payments linked to this purchase
+                SupplierPayment::where('purchase_id', $purchase->id)->delete();
+            } else {
+                // Detach payments — keep them as independent supplier debt records
+                SupplierPayment::where('purchase_id', $purchase->id)
+                    ->update(['purchase_id' => null]);
+            }
+
+            // 3. Soft delete linked settlements
+            SupplierSettlement::where('purchase_id', $purchase->id)->delete();
+
+            // 4. Soft delete the purchase itself
             $purchase->delete();
+
+            // 5. Recalculate supplier totals
+            if ($purchase->supplier_id && $purchase->supplier_id !== 1) {
+                PurchaseItemObserver::recalculateSupplier($purchase->supplier_id);
+            }
         });
 
-        return redirect()->route('purchases.index')->with('success', 'تم حذف الفاتورة بنجاح');
+        return redirect()->route('purchases.index')->with('success', 'تم إلغاء الفاتورة بنجاح');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $purchase = \App\Models\Purchase::withTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($purchase) {
+            // 1. Restore purchase
+            $purchase->restore();
+
+            // 2. Restore linked payments
+            SupplierPayment::withTrashed()->where('purchase_id', $purchase->id)->restore();
+
+            // 3. Restore linked settlements
+            SupplierSettlement::withTrashed()->where('purchase_id', $purchase->id)->restore();
+
+            // 4. Re-add stock for all items
+            foreach ($purchase->items as $item) {
+                \App\Models\Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+            }
+
+            // 5. Recalculate supplier totals
+            if ($purchase->supplier_id && $purchase->supplier_id !== 1) {
+                PurchaseItemObserver::recalculateSupplier($purchase->supplier_id);
+            }
+        });
+
+        return redirect()->route('purchases.show', $id)->with('success', 'تم استعادة الفاتورة بنجاح');
     }
 }

@@ -32,6 +32,7 @@ interface Purchase {
     total: string; paid_amount: string; due_amount: string;
     payment_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null; created_at: string;
+    deleted_at: string | null;
     items: PurchaseItem[];
     payments: SupplierPayment[];
     returns: PurchaseReturn[];
@@ -125,6 +126,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
 
     const isCash       = purchase.supplier.id === 1;
     const supplierDebt = parseFloat(purchase.supplier.total_debt);
+    const isCancelled  = !!purchase.deleted_at;
 
     return (
         <AppShell pageTitle={`فاتورة #${purchase.id}`}>
@@ -141,13 +143,25 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                             <span className={`text-sm font-bold px-3 py-1 rounded-[10px] ${statusClass[purchase.payment_status]}`}>
                                 {statusLabel[purchase.payment_status]}
                             </span>
+                            {isCancelled && (
+                                <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">
+                                    ملغية
+                                </span>
+                            )}
                         </div>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">{purchase.supplier.name}</p>
                     </div>
-                    <Link href={`/purchase-returns/create?purchase_id=${purchase.id}&supplier_id=${purchase.supplier.id}`}
-                        className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
-                        <RotateCcw className="w-4 h-4" /> مرتجع
-                    </Link>
+                    {isCancelled ? (
+                        <button onClick={() => router.post(`/purchases/${purchase.id}/restore`)}
+                            className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                            <RotateCcw className="w-4 h-4" /> استعادة
+                        </button>
+                    ) : (
+                        <Link href={`/purchase-returns/create?purchase_id=${purchase.id}&supplier_id=${purchase.supplier.id}`}
+                            className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
+                            <RotateCcw className="w-4 h-4" /> مرتجع
+                        </Link>
+                    )}
                 </div>
 
                 {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}

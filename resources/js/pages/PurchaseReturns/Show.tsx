@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { ArrowRight, RotateCcw, Package } from 'lucide-react';
@@ -22,6 +22,7 @@ interface PurchaseReturn {
     total: string;
     notes: string | null;
     created_at: string;
+    deleted_at: string | null;
     items: ReturnItem[];
     settlement: Settlement | null;
 }
@@ -44,10 +45,21 @@ export default function PurchaseReturnsShow({ return: ret, flash }: Props) {
                     <Link href="/purchase-returns" className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all">
                         <ArrowRight className="w-5 h-5" />
                     </Link>
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">مرتجع #{ret.id}</h1>
+                    <div className="flex-1">
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">مرتجع #{ret.id}</h1>
+                            {ret.deleted_at && (
+                                <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">ملغي</span>
+                            )}
+                        </div>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">{ret.supplier.name}</p>
                     </div>
+                    {ret.deleted_at ? (
+                        <button onClick={() => router.post(`/purchase-returns/${ret.id}/restore`)}
+                            className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                            <RotateCcw className="w-4 h-4" /> استعادة
+                        </button>
+                    ) : null}
                 </div>
 
                 {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}

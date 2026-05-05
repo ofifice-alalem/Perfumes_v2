@@ -1,7 +1,8 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { Plus, RotateCcw, Eye } from 'lucide-react';
+import { DeleteModal } from '@/components/ui/DeleteModal';
+import { Plus, RotateCcw, Eye, Trash2 } from 'lucide-react';
 
 interface Supplier { id: number; name: string; }
 interface PurchaseReturn {
@@ -11,6 +12,7 @@ interface PurchaseReturn {
     total: string;
     notes: string | null;
     created_at: string;
+    deleted_at: string | null;
     settlement: { id: number; amount: string } | null;
 }
 interface Paginated<T> {
@@ -60,14 +62,14 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['#', 'المورد', 'الفاتورة', 'الإجمالي', 'تسوية', 'التاريخ', ''].map(h => (
+                                            {['#', 'المورد', 'الفاتورة', 'الإجمالي', 'تسوية', 'الحالة', 'التاريخ', ''].map(h => (
                                                 <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {data.data.map(r => (
-                                            <tr key={r.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                            <tr key={r.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${r.deleted_at ? 'opacity-50' : ''}`}>
                                                 <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
                                                 <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
                                                 <td className="px-4 py-3">
@@ -83,14 +85,40 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/30">—</span>
                                                     )}
                                                 </td>
+                                                <td className="px-4 py-3">
+                                                    {r.deleted_at ? (
+                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
+                                                    ) : (
+                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">نشط</span>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
                                                     {new Date(r.created_at).toLocaleDateString('en-GB')}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <Link href={`/purchase-returns/${r.id}`}
-                                                        className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                        <Eye className="w-3 h-3" /> عرض
-                                                    </Link>
+                                                    <div className="flex items-center gap-2">
+                                                        <Link href={`/purchase-returns/${r.id}`}
+                                                            className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
+                                                            <Eye className="w-3 h-3" /> عرض
+                                                        </Link>
+                                                        {r.deleted_at ? (
+                                                            <button onClick={() => router.post(`/purchase-returns/${r.id}/restore`)}
+                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
+                                                                <RotateCcw className="w-3 h-3" /> استعادة
+                                                            </button>
+                                                        ) : (
+                                                            <DeleteModal
+                                                                title="إلغاء المرتجع"
+                                                                description="سيتم إلغاء المرتجع واستعادة المخزون وإلغاء التسوية المرتبطة."
+                                                                onConfirm={() => router.delete(`/purchase-returns/${r.id}`)}
+                                                                trigger={
+                                                                    <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                        <Trash2 className="w-3 h-3" /> إلغاء
+                                                                    </button>
+                                                                }
+                                                            />
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -101,13 +129,16 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                             {/* Mobile */}
                             <div className="flex flex-col gap-4 lg:hidden">
                                 {data.data.map(r => (
-                                    <div key={r.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                    <div key={r.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${r.deleted_at ? 'opacity-60' : ''}`}>
                                         <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                             <div>
                                                 <span className="font-black text-slate-800 dark:text-white">{r.supplier.name}</span>
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{r.id}</span>
-                                                    {r.settlement && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">تسوية</span>}
+                                                    {r.deleted_at
+                                                        ? <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                                        : r.settlement && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500">تسوية</span>
+                                                    }
                                                 </div>
                                             </div>
                                             <span className="font-black text-lg text-orange-500">{fmt(r.total)}</span>
@@ -117,6 +148,24 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                                                 className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                 <Eye className="w-4 h-4" /> عرض
                                             </Link>
+                                            {r.deleted_at ? (
+                                                <button onClick={() => router.post(`/purchase-returns/${r.id}/restore`)}
+                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                                    <RotateCcw className="w-4 h-4" /> استعادة
+                                                </button>
+                                            ) : (
+                                                <DeleteModal
+                                                    title="إلغاء المرتجع"
+                                                    description="سيتم إلغاء المرتجع واستعادة المخزون."
+                                                    onConfirm={() => router.delete(`/purchase-returns/${r.id}`)}
+                                                    wrapperClassName="flex-1"
+                                                    trigger={
+                                                        <button className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> إلغاء
+                                                        </button>
+                                                    }
+                                                />
+                                            )}
                                         </div>
                                     </div>
                                 ))}

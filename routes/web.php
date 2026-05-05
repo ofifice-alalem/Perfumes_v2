@@ -33,6 +33,7 @@ Route::resource('payment-methods', PaymentMethodController::class)->except(['cre
 // Purchases
 Route::resource('purchases', PurchaseController::class)->except(['edit']);
 Route::get('purchases/{purchase}/edit', [PurchaseController::class, 'edit'])->name('purchases.edit');
+Route::post('purchases/{id}/restore', [PurchaseController::class, 'restore'])->name('purchases.restore');
 
 // Supplier Payments
 Route::get('supplier-payments', [SupplierPaymentController::class, 'index'])->name('supplier-payments.index');
@@ -49,3 +50,5 @@ Route::get('purchase-returns', [PurchaseReturnController::class, 'index'])->name
 Route::get('purchase-returns/create', [PurchaseReturnController::class, 'create'])->name('purchase-returns.create');
 Route::post('purchase-returns', [PurchaseReturnController::class, 'store'])->name('purchase-returns.store');
 Route::get('purchase-returns/{id}', [PurchaseReturnController::class, 'show'])->name('purchase-returns.show');
+Route::delete('purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->name('purchase-returns.destroy');
+Route::post('purchase-returns/{id}/restore', [PurchaseReturnController::class, 'restore'])->name('purchase-returns.restore');

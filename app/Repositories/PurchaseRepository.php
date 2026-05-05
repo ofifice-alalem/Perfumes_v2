@@ -33,6 +33,7 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
     public function findWithRelations(int $id)
     {
         return $this->model
+            ->withTrashed()
             ->with([
                 'supplier',
                 'items.product',

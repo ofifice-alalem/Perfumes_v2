@@ -31,6 +31,7 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
     public function findWithRelations(int $id)
     {
         return $this->model
+            ->withTrashed()
             ->with(['supplier', 'purchase', 'items.product', 'settlement.paymentMethod'])
             ->findOrFail($id);
     }

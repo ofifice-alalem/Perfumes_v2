@@ -119,4 +119,58 @@ class PurchaseReturnController extends Controller
             'return' => $this->returns->findWithRelations($id),
         ]);
     }
+
+    public function destroy(int $id): RedirectResponse
+    {
+        $purchaseReturn = $this->returns->findWithRelations($id);
+
+        DB::transaction(function () use ($purchaseReturn) {
+            // 1. Restore stock for all return items (observer fires on delete)
+            foreach ($purchaseReturn->items as $item) {
+                $item->delete();
+            }
+
+            // 2. Soft delete linked settlement if exists
+            if ($purchaseReturn->settlement_id) {
+                \App\Models\SupplierSettlement::where('id', $purchaseReturn->settlement_id)->delete();
+            }
+
+            // 3. Soft delete the return itself
+            $purchaseReturn->delete();
+
+            // 4. Recalculate supplier totals
+            if ($purchaseReturn->supplier_id && $purchaseReturn->supplier_id !== 1) {
+                PurchaseItemObserver::recalculateSupplier($purchaseReturn->supplier_id);
+            }
+        });
+
+        return redirect()->route('purchase-returns.index')->with('success', 'تم إلغاء المرتجع بنجاح');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $purchaseReturn = \App\Models\PurchaseReturn::withTrashed()->findOrFail($id);
+
+        DB::transaction(function () use ($purchaseReturn) {
+            // 1. Restore return
+            $purchaseReturn->restore();
+
+            // 2. Restore linked settlement
+            if ($purchaseReturn->settlement_id) {
+                \App\Models\SupplierSettlement::withTrashed()->where('id', $purchaseReturn->settlement_id)->restore();
+            }
+
+            // 3. Re-deduct stock for all return items
+            foreach ($purchaseReturn->items as $item) {
+                \App\Models\Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+            }
+
+            // 4. Recalculate supplier totals
+            if ($purchaseReturn->supplier_id && $purchaseReturn->supplier_id !== 1) {
+                PurchaseItemObserver::recalculateSupplier($purchaseReturn->supplier_id);
+            }
+        });
+
+        return redirect()->route('purchase-returns.show', $id)->with('success', 'تم استعادة المرتجع بنجاح');
+    }
 }
