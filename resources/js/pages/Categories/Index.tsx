@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { DeleteModal } from '@/components/ui/DeleteModal';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 
 interface Category {
@@ -54,7 +55,6 @@ export default function CategoriesIndex({ categories, flash }: Props) {
   }
 
   function deleteCategory(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
     router.delete(`/categories/${id}`);
   }
 
@@ -232,12 +232,14 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                           <Pencil className="w-3.5 h-3.5" />
                           تعديل
                         </button>
-                        <button onClick={() => deleteCategory(cat.id)}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-bold text-sm"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          حذف
-                        </button>
+                        <DeleteModal
+                          onConfirm={() => deleteCategory(cat.id)}
+                          trigger={
+                            <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all duration-200 font-bold text-sm">
+                              <Trash2 className="w-3.5 h-3.5" /> حذف
+                            </button>
+                          }
+                        />
                       </div>
                     </>
                   )}

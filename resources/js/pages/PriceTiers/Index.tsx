@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { DeleteModal } from '@/components/ui/DeleteModal';
 import { Plus, Pencil, Trash2, X, Check, Tags, Save } from 'lucide-react';
 
 interface Size { id: number; label: string; value: string; }
@@ -72,7 +73,6 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
   }
 
   function deleteTier(id: number) {
-    if (!confirm('هل أنت متأكد من الحذف؟')) return;
     router.delete(`/price-tiers/${id}`);
   }
 
@@ -177,10 +177,14 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                       className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all duration-200 font-bold text-sm">
                       <Pencil className="w-3.5 h-3.5" /> تعديل
                     </button>
-                    <button onClick={() => deleteTier(tier.id)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
-                      <Trash2 className="w-3.5 h-3.5" /> حذف
-                    </button>
+                    <DeleteModal
+                      onConfirm={() => deleteTier(tier.id)}
+                      trigger={
+                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 h-9 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 font-bold text-sm">
+                          <Trash2 className="w-3.5 h-3.5" /> حذف
+                        </button>
+                      }
+                    />
                   </div>
                 )}
               </div>

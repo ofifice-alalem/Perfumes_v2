@@ -29,6 +29,12 @@ interface Props {
 
 const unitLabels = { ml: 'مليلتر', pcs: 'قطعة', g: 'غرام' };
 
+function fmt(val: string | null | undefined): string {
+    if (!val) return '';
+    const n = parseFloat(val);
+    return Number.isInteger(n) ? String(n) : n.toString();
+}
+
 const emptyForm = {
     name: '', category_id: '', selling_type: 'tier_based' as 'tier_based' | 'unit_priced',
     price_tier_id: '', min_stock: '',
@@ -406,9 +412,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         <span className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-sm">تير {product.price_tier?.name}</span>
                                                     ) : product.product_price ? (
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{product.product_price.price_per_unit_vip}</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{fmt(product.product_price.price_per_unit_vip)}</span>
                                                             <span className="text-slate-300 dark:text-white/30 font-bold">—</span>
-                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{product.product_price.price_per_unit_regular}</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{fmt(product.product_price.price_per_unit_regular)}</span>
                                                         </div>
                                                     ) : (
                                                         <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
@@ -417,9 +423,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <td className="px-3 py-3 whitespace-nowrap">
                                                     {product.product_price?.full_bottle_regular ? (
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{product.product_price.full_bottle_vip}</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{fmt(product.product_price.full_bottle_vip)}</span>
                                                             <span className="text-slate-300 dark:text-white/30 font-bold">—</span>
-                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{product.product_price.full_bottle_regular}</span>
+                                                            <span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-sm">{fmt(product.product_price.full_bottle_regular)}</span>
                                                         </div>
                                                     ) : (
                                                         <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
@@ -427,11 +433,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap">
                                                     <span className={`font-bold ${Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
-                                                        {product.stock} {unitLabels[product.category.unit]}
+                                                        {fmt(product.stock)} {unitLabels[product.category.unit]}
                                                     </span>
                                                 </td>
                                                 <td className="px-3 py-3 whitespace-nowrap">
-                                                    <span className="font-bold text-slate-500 dark:text-white/50">{product.min_stock} {unitLabels[product.category.unit]}</span>
+                                                    <span className="font-bold text-slate-500 dark:text-white/50">{fmt(product.min_stock)} {unitLabels[product.category.unit]}</span>
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <div className="flex items-center gap-2">
@@ -558,9 +564,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     <div className="flex items-center justify-between py-3.5">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">مدى السعر</span>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{product.product_price!.price_per_unit_vip}</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{fmt(product.product_price!.price_per_unit_vip)}</span>
                                                             <span className="text-slate-300 dark:text-white/25 font-bold">—</span>
-                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{product.product_price!.price_per_unit_regular}</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{fmt(product.product_price!.price_per_unit_regular)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -569,9 +575,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     <div className="flex items-center justify-between py-3.5">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">سعر العبوة</span>
                                                         <div className="flex items-center gap-2">
-                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{product.product_price!.full_bottle_vip}</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-base">{fmt(product.product_price!.full_bottle_vip)}</span>
                                                             <span className="text-slate-300 dark:text-white/25 font-bold">—</span>
-                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{product.product_price!.full_bottle_regular}</span>
+                                                            <span className="px-3 py-1 rounded-[10px] bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white/80 font-black text-base">{fmt(product.product_price!.full_bottle_regular)}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -579,7 +585,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <div className="flex items-center justify-between py-3.5">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">المخزون</span>
                                                     <div className="flex items-baseline gap-1.5">
-                                                        <span className={`font-black text-lg ${lowStock ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>{product.stock}</span>
+                                                        <span className={`font-black text-lg ${lowStock ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>{fmt(product.stock)}</span>
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">{unitLabels[product.category.unit]}</span>
                                                     </div>
                                                 </div>
@@ -587,7 +593,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <div className="flex items-center justify-between py-3.5">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">الحد الأدنى</span>
                                                     <div className="flex items-baseline gap-1.5">
-                                                        <span className="font-black text-lg text-slate-600 dark:text-white/70">{product.min_stock}</span>
+                                                        <span className="font-black text-lg text-slate-600 dark:text-white/70">{fmt(product.min_stock)}</span>
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">{unitLabels[product.category.unit]}</span>
                                                     </div>
                                                 </div>
