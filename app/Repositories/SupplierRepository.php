@@ -62,6 +62,6 @@ class SupplierRepository extends Repository implements SupplierRepositoryInterfa
         return $this->model->withoutCash()
             ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'phone']);
+            ->get(['id', 'name', 'phone', 'total_debt']);
     }
 }

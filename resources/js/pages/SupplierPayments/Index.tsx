@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, CreditCard, X, Check } from 'lucide-react';
 
-interface Supplier      { id: number; name: string; }
+interface Supplier      { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
 interface SupplierPayment {
     id: number;
@@ -37,12 +38,18 @@ function fmt(v: string) {
 
 export default function SupplierPaymentsIndex({ payments, suppliers, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
+    const [showPad,    setShowPad]    = useState(false);
 
     const form = useForm({
         supplier_id: '', purchase_id: '', payment_method_id: '', amount: '', notes: '',
     });
 
-    const supplierOptions      = suppliers.map(s => ({ label: s.name }));
+    const selectedSupplier = suppliers.find(s => String(s.id) === form.data.supplier_id);
+    const supplierDebt     = selectedSupplier ? parseFloat(selectedSupplier.total_debt) : 0;
+    // maxValue = دين المورد (لا يمكن الدفع أكثر من الدين)
+    const maxPayment       = supplierDebt > 0 ? supplierDebt : undefined;
+
+    const supplierOptions      = suppliers.map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveSupplierIdFromLabel(label: string): string {
@@ -59,6 +66,7 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
     }
 
     return (
+        <>
         <AppShell pageTitle="مدفوعات الموردين">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -82,10 +90,29 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                 <ModernSelect
                                     label="المورد"
                                     options={supplierOptions}
-                                    defaultValue={suppliers.find(s => String(s.id) === form.data.supplier_id)?.name ?? ''}
-                                    onSelect={val => form.setData('supplier_id', resolveSupplierIdFromLabel(val))}
+                                    defaultValue={selectedSupplier?.name ?? ''}
+                                    onSelect={val => {
+                                        form.setData('supplier_id', resolveSupplierIdFromLabel(val));
+                                        form.setData('amount', '');
+                                    }}
                                 />
                                 {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
+                                {/* عرض الدين بعد اختيار المورد */}
+                                {selectedSupplier && (
+                                    <div className={`mt-2 px-3 py-2 rounded-[12px] flex items-center justify-between ${
+                                        supplierDebt > 0
+                                            ? 'bg-amber-500/10 border border-amber-500/20'
+                                            : 'bg-emerald-500/10 border border-emerald-500/20'
+                                    }`}>
+                                        <span className="text-xs font-bold text-slate-500 dark:text-white/50">دين المورد</span>
+                                        <span className={`font-black text-sm ${
+                                            supplierDebt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
+                                        }`}>
+                                            {fmt(selectedSupplier.total_debt)}
+                                            {supplierDebt <= 0 && <span className="text-xs mr-1">(لا يوجد دين)</span>}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <ModernSelect
@@ -98,9 +125,13 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                                <input type="number" min="0.01" step="0.01" value={form.data.amount}
-                                    onChange={e => form.setData('amount', e.target.value)}
-                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
+                                <button
+                                    onClick={() => setShowPad(true)}
+                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                    {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">
+                                        {maxPayment ? fmt(maxPayment) : '0.00'}
+                                    </span>}
+                                </button>
                                 {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
                             </div>
                             <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
@@ -110,8 +141,8 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                             </div>
                         </div>
                         <div className="flex items-center gap-2 mt-4">
-                            <button onClick={submit} disabled={form.processing}
-                                className="spatial-button flex items-center gap-2 px-5 h-11 text-sm">
+                            <button onClick={submit} disabled={form.processing || !form.data.supplier_id || !form.data.amount}
+                                className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
                                 <Check className="w-4 h-4" /> حفظ
                             </button>
                             <button onClick={() => { setShowCreate(false); form.reset(); }}
@@ -188,5 +219,15 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                 </SpatialCard>
             </div>
         </AppShell>
+
+        <NumberPadModal
+            isOpen={showPad}
+            title="المبلغ"
+            initialValue={form.data.amount || (maxPayment ? String(maxPayment) : '')}
+            maxValue={maxPayment}
+            onClose={() => setShowPad(false)}
+            onConfirm={v => { form.setData('amount', v); setShowPad(false); }}
+        />
+        </>
     );
 }
