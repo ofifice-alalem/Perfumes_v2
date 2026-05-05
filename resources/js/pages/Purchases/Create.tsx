@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
@@ -27,7 +27,7 @@ function fmt(n: number) {
 
 export default function PurchasesCreate({ suppliers, products, paymentMethods, flash }: Props) {
     const [items,    setItems]    = useState<ItemRow[]>([emptyItem()]);
-    const [payments, setPayments] = useState<PaymentRow[]>([]);
+    const [payments, setPayments] = useState<PaymentRow[]>([emptyPayment()]);
 
     const form = useForm({
         supplier_id: '1',
@@ -40,6 +40,16 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     const grandTotal = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
     const totalPaid  = payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
     const remaining  = grandTotal - totalPaid;
+
+    // Auto-sync first row amount with grandTotal when only one row and no method selected yet
+    useEffect(() => {
+        setPayments(prev => {
+            if (prev.length === 1 && prev[0].payment_method_id === '') {
+                return [{ ...prev[0], amount: grandTotal > 0 ? fmt(grandTotal) : '' }];
+            }
+            return prev;
+        });
+    }, [grandTotal]);
 
     // ── options ──────────────────────────────────────────────
     const supplierOptions = [
@@ -118,7 +128,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                 onSelect={val => {
                                     form.setData('supplier_id', resolveSupplier(val));
                                     // Reset payments when switching supplier type
-                                    setPayments([]);
+                                    setPayments([emptyPayment()]);
                                 }}
                             />
                             {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
@@ -200,18 +210,14 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                     <div className="flex flex-col gap-3">
 
                         {/* تنبيه المورد النقدي */}
-                        {isCash && payments.length === 0 && (
-                            <div className="px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20">
-                                <p className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                                    ⚠️ المورد النقدي يتطلب دفعاً فورياً — أضف دفعة واحدة على الأقل
+                        {isCash && (
+                            <div className={`px-4 py-3 rounded-[14px] border ${remaining > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                                <p className={`text-sm font-bold ${remaining > 0 ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                    {remaining > 0
+                                        ? `⚠️ المورد النقدي يتطلب دفعاً كاملاً — المتبقي: ${fmt(remaining)}`
+                                        : '✓ تم تغطية المبلغ كاملاً'}
                                 </p>
                             </div>
-                        )}
-
-                        {payments.length === 0 && !isCash && (
-                            <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-2 text-center">
-                                لا توجد دفعات — الفاتورة ستُسجَّل كدين على المورد
-                            </p>
                         )}
 
                         {payments.map((pay, idx) => (
@@ -267,7 +273,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                 <div className="flex items-center gap-3">
                     <button
                         onClick={submit}
-                        disabled={form.processing || items.every(i => !i.product_id) || (isCash && payments.length === 0)}
+                        disabled={form.processing || items.every(i => !i.product_id) || (isCash && remaining > 0)}
                         className="spatial-button flex items-center gap-2 px-6 h-12 text-sm disabled:opacity-50"
                     >
                         <Check className="w-4 h-4" /> حفظ الفاتورة
