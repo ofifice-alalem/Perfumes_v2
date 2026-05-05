@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Plus, RotateCcw, Eye, Trash2, AlertTriangle, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { DateFilterInput } from '@/components/ui/DateFilterInput';
 
 interface Supplier { id: number; name: string; }
 interface PurchaseReturn {
@@ -187,20 +188,8 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                     <option value="paid">مسترد</option>
                 </select>
             </div>
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">من تاريخ</label>
-                <div className="relative">
-                    <input type="date" value={fDateFrom} onChange={e => setFDateFrom(e.target.value)}
-                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
-                </div>
-            </div>
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">إلى تاريخ</label>
-                <div className="relative">
-                    <input type="date" value={fDateTo} onChange={e => setFDateTo(e.target.value)}
-                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
-                </div>
-            </div>
+            <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
+            <DateFilterInput label="إلى تاريخ" value={fDateTo} onChange={setFDateTo} />
             {hasFilter && (
                 <button onClick={resetFilter}
                     className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
