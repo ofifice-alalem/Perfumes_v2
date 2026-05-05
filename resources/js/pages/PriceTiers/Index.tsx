@@ -154,18 +154,20 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                 </div>
 
                 {editingId === tier.id ? (
-                  <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                    <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)}
-                      className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full sm:w-20" />
-                    <input value={editForm.data.description} onChange={e => editForm.setData('description', e.target.value)}
-                      placeholder="الوصف" className="spatial-input h-14 rounded-[12px] px-4 text-[14px] font-bold flex-1" />
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)}
+                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full sm:w-20" />
+                      <input value={editForm.data.description} onChange={e => editForm.setData('description', e.target.value)}
+                        placeholder="الوصف" className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full sm:flex-1" />
+                    </div>
                     <div className="flex gap-2">
                       <button onClick={() => submitEdit(tier.id)}
-                        className="flex-1 sm:flex-none h-10 px-4 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center gap-1.5 hover:bg-emerald-600 transition-all font-bold text-sm">
+                        className="flex-1 h-10 px-4 rounded-[12px] bg-emerald-500 text-white flex items-center justify-center gap-1.5 hover:bg-emerald-600 transition-all font-bold text-sm">
                         <Check className="w-4 h-4" /> حفظ
                       </button>
                       <button onClick={() => setEditingId(null)}
-                        className="flex-1 sm:flex-none h-10 px-4 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-500 flex items-center justify-center hover:bg-black/10 transition-all font-bold text-sm">
+                        className="flex-1 h-10 px-4 rounded-[12px] bg-black/5 dark:bg-white/5 text-slate-500 flex items-center justify-center hover:bg-black/10 transition-all font-bold text-sm">
                         إلغاء
                       </button>
                     </div>
