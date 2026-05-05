@@ -35,10 +35,25 @@ class PurchaseReturnController extends Controller
 
     public function create(): Response
     {
+        $supplierId = request()->integer('supplier_id', 1);
+        $isCash     = $supplierId === 1;
+
+        if ($isCash) {
+            $products = Product::orderBy('name')->get(['id', 'name', 'stock']);
+        } else {
+            // Only products purchased from this supplier
+            $products = Product::whereHas('purchaseItems', function ($q) use ($supplierId) {
+                $q->whereHas('purchase', fn($q) => $q->where('supplier_id', $supplierId));
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'stock']);
+        }
+
         return Inertia::render('PurchaseReturns/Create', [
-            'suppliers'      => $this->suppliers->forSelectList(),
-            'products'       => Product::orderBy('name')->get(['id', 'name', 'stock']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'suppliers'        => $this->suppliers->forSelectList(),
+            'products'         => $products,
+            'paymentMethods'   => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'selected_supplier_id' => $supplierId,
         ]);
     }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, Link } from '@inertiajs/react';
+import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { Plus, Trash2, Check, ArrowRight, RotateCcw, RefreshCw } from 'lucide-react';
@@ -9,9 +9,10 @@ interface Product       { id: number; name: string; stock: string; }
 interface PaymentMethod { id: number; name: string; }
 
 interface Props {
-    suppliers:      Supplier[];
-    products:       Product[];
-    paymentMethods: PaymentMethod[];
+    suppliers:             Supplier[];
+    products:              Product[];
+    paymentMethods:        PaymentMethod[];
+    selected_supplier_id?: number;
     flash?: { success?: string; error?: string };
 }
 
@@ -25,12 +26,12 @@ function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function PurchaseReturnsCreate({ suppliers, products, paymentMethods, flash }: Props) {
+export default function PurchaseReturnsCreate({ suppliers, products, paymentMethods, selected_supplier_id, flash }: Props) {
     const [items,       setItems]       = useState<ItemRow[]>([emptyItem()]);
     const [settlements, setSettlements] = useState<SettlementRow[]>([emptySettlement()]);
 
     const form = useForm({
-        supplier_id:  '1',
+        supplier_id:  String(selected_supplier_id ?? 1),
         purchase_id:  '',
         notes:        '',
         items:        [] as ItemRow[],
@@ -122,8 +123,12 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                 options={supplierOptions}
                                 defaultValue={selectedSupplierLabel}
                                 onSelect={val => {
-                                    form.setData('supplier_id', resolveSupplier(val));
-                                    setSettlements([emptySettlement()]);
+                                    const id = resolveSupplier(val);
+                                    // Reload page with new supplier_id to fetch filtered products
+                                    router.get('/purchase-returns/create', { supplier_id: id }, {
+                                        preserveScroll: true,
+                                        replace: true,
+                                    });
                                 }}
                             />
                             {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
@@ -147,12 +152,21 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                 {/* ── المنتجات المرتجعة ── */}
                 <SpatialCard title="المنتجات المرتجعة" icon={<Plus className="w-4 h-4" />}
                     action={
+                        products.length > 0 && (
                         <button onClick={() => setItems(p => [...p, emptyItem()])}
                             className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
                             <Plus className="w-3.5 h-3.5" /> إضافة سطر
                         </button>
+                        )
                     }
                 >
+                    {products.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <p className="text-sm font-bold text-slate-400 dark:text-white/40">
+                                لا توجد مشتريات مسجلة من هذا المورد
+                            </p>
+                        </div>
+                    ) : (
                     <div className="flex flex-col gap-3">
                         {items.map((item, idx) => (
                             <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
@@ -194,6 +208,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                             <span className="text-2xl font-black text-orange-500">{fmt(grandTotal)}</span>
                         </div>
                     </div>
+                    )}
                 </SpatialCard>
 
                 {/* ── الاسترداد ── */}
