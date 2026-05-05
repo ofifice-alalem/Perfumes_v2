@@ -3,11 +3,12 @@ import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Link } from '@inertiajs/react';
-import { Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 
 interface Supplier { id: number; name: string; }
+interface Product  { id: number; name: string; }
 interface Purchase {
     id: number;
     supplier: Supplier;
@@ -30,6 +31,7 @@ interface Paginated<T> {
 interface Props {
     purchases: Paginated<Purchase>;
     suppliers: Supplier[];
+    products:  Product[];
     flash?: { success?: string; error?: string };
 }
 
@@ -40,8 +42,8 @@ const statusClass  = {
     paid:    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
 };
 
-function fmt(v: string) {
-    const n = parseFloat(v);
+function fmt(v: string | number) {
+    const n = typeof v === 'number' ? v : parseFloat(v);
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
@@ -173,37 +175,64 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
 }
 
 // ── الصفحة الرئيسية ───────────────────────────────────────────────────────────
-export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
+export default function PurchasesIndex({ purchases, suppliers, products, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Purchase | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
 
-    // فلتر fields
-    const [fSupplier, setFSupplier] = useState('');
-    const [fStatus,   setFStatus]   = useState('');
-    const [fDateFrom, setFDateFrom] = useState('');
-    const [fDateTo,   setFDateTo]   = useState('');
+    // قراءة الفلاتر الحالية من URL
+    const params = new URLSearchParams(window.location.search);
+    const [fSupplier,    setFSupplier]    = useState(params.get('filter[supplier_id]') ?? '');
+    const [fStatus,      setFStatus]      = useState(params.get('filter[payment_status]') ?? '');
+    const [fProduct,     setFProduct]     = useState(params.get('filter[product_id]') ?? '');
+    const [fDateFrom,    setFDateFrom]    = useState(params.get('filter[date_from]') ?? '');
+    const [fDateTo,      setFDateTo]      = useState(params.get('filter[date_to]') ?? '');
+    const [fAmountFrom,  setFAmountFrom]  = useState(params.get('filter[amount_from]') ?? '');
+    const [fAmountTo,    setFAmountTo]    = useState(params.get('filter[amount_to]') ?? '');
 
-    const filtered = purchases.data.filter(p => {
-        if (fSupplier && !p.supplier.name.toLowerCase().includes(fSupplier.toLowerCase())) return false;
-        if (fStatus   && p.payment_status !== fStatus) return false;
-        if (fDateFrom && p.created_at && p.created_at < fDateFrom) return false;
-        if (fDateTo   && p.created_at && p.created_at.slice(0, 10) > fDateTo) return false;
-        return true;
-    });
+    const hasFilter = fSupplier || fStatus || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
 
-    const hasFilter = fSupplier || fStatus || fDateFrom || fDateTo;
+    function applyFilter() {
+        const f: Record<string, string> = {};
+        if (fSupplier)   f['filter[supplier_id]']       = fSupplier;
+        if (fStatus)     f['filter[payment_status]']    = fStatus;
+        if (fProduct)    f['filter[product_id]']        = fProduct;
+        if (fDateFrom)   f['filter[date_from]']         = fDateFrom;
+        if (fDateTo)     f['filter[date_to]']           = fDateTo;
+        if (fAmountFrom) f['filter[amount_from]']       = fAmountFrom;
+        if (fAmountTo)   f['filter[amount_to]']         = fAmountTo;
+        router.get('/purchases', f, { preserveScroll: true });
+    }
 
     function resetFilter() {
-        setFSupplier(''); setFStatus(''); setFDateFrom(''); setFDateTo('');
+        setFSupplier(''); setFStatus(''); setFProduct('');
+        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo('');
+        router.get('/purchases', {}, { preserveScroll: true });
     }
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
+
+            {/* المورد */}
             <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المورد</label>
-                <input value={fSupplier} onChange={e => setFSupplier(e.target.value)}
-                    placeholder="بحث..." className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
+                <select value={fSupplier} onChange={e => setFSupplier(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+                </select>
             </div>
+
+            {/* المنتج */}
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المنتج</label>
+                <select value={fProduct} onChange={e => setFProduct(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    {products.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+                </select>
+            </div>
+
+            {/* حالة الدفع */}
             <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حالة الدفع</label>
                 <select value={fStatus} onChange={e => setFStatus(e.target.value)}
@@ -214,8 +243,27 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                     <option value="paid">مدفوع</option>
                 </select>
             </div>
+
+            {/* مجال السعر */}
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الإجمالي (من — إلى)</label>
+                <div className="flex gap-2">
+                    <input type="number" min="0" value={fAmountFrom} onChange={e => setFAmountFrom(e.target.value)}
+                        placeholder="من" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
+                    <input type="number" min="0" value={fAmountTo} onChange={e => setFAmountTo(e.target.value)}
+                        placeholder="إلى" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
+                </div>
+            </div>
+
+            {/* التاريخ */}
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={fDateTo} onChange={setFDateTo} />
+            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
+
+            {/* أزرار */}
+            <button onClick={applyFilter}
+                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" /> تطبيق الفلتر
+            </button>
             {hasFilter && (
                 <button onClick={resetFilter}
                     className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
@@ -264,8 +312,8 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                 {/* Main Layout */}
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`الفواتير (${filtered.length})`} icon={<ShoppingCart className="w-4 h-4" />}>
-                            {filtered.length === 0 ? (
+                        <SpatialCard title={`الفواتير (${purchases.total})`} icon={<ShoppingCart className="w-4 h-4" />}>
+                            {purchases.data.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">🛒</span>
                                     <span className="font-bold">لا توجد فواتير شراء</span>
@@ -283,7 +331,7 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {filtered.map(p => (
+                                                {purchases.data.map(p => (
                                                     <tr key={p.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${p.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{p.id}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
@@ -329,7 +377,7 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {filtered.map(p => (
+                                        {purchases.data.map(p => (
                                             <div key={p.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${p.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                     <div>

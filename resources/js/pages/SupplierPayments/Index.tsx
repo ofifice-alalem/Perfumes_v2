@@ -5,10 +5,11 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 
 interface Supplier      { id: number; name: string; total_debt: string; }
+interface Product       { id: number; name: string; }
 interface PaymentMethod { id: number; name: string; }
 interface SupplierPayment {
     id: number;
@@ -28,12 +29,13 @@ interface Paginated<T> {
 interface Props {
     payments:       Paginated<SupplierPayment>;
     suppliers:      Supplier[];
+    products:       Product[];
     paymentMethods: PaymentMethod[];
     flash?: { success?: string; error?: string };
 }
 
-function fmt(v: string) {
-    const n = parseFloat(v);
+function fmt(v: string | number) {
+    const n = typeof v === 'number' ? v : parseFloat(v);
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -43,29 +45,39 @@ function fmtDate(v: string | null): string {
     return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
 }
 
-export default function SupplierPaymentsIndex({ payments, suppliers, paymentMethods, flash }: Props) {
+export default function SupplierPaymentsIndex({ payments, suppliers, products, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [showPad,    setShowPad]    = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
 
-    // فلتر
-    const [fSupplier, setFSupplier] = useState('');
-    const [fMethod,   setFMethod]   = useState('');
-    const [fDateFrom, setFDateFrom] = useState('');
-    const [fDateTo,   setFDateTo]   = useState('');
+    // قراءة الفلاتر الحالية من URL
+    const params = new URLSearchParams(window.location.search);
+    const [fSupplier,   setFSupplier]   = useState(params.get('filter[supplier_id]') ?? '');
+    const [fMethod,     setFMethod]     = useState(params.get('filter[payment_method_id]') ?? '');
+    const [fProduct,    setFProduct]    = useState(params.get('filter[product_id]') ?? '');
+    const [fDateFrom,   setFDateFrom]   = useState(params.get('filter[date_from]') ?? '');
+    const [fDateTo,     setFDateTo]     = useState(params.get('filter[date_to]') ?? '');
+    const [fAmountFrom, setFAmountFrom] = useState(params.get('filter[amount_from]') ?? '');
+    const [fAmountTo,   setFAmountTo]   = useState(params.get('filter[amount_to]') ?? '');
 
-    const filtered = payments.data.filter(p => {
-        if (fSupplier && !p.supplier.name.toLowerCase().includes(fSupplier.toLowerCase())) return false;
-        if (fMethod   && p.payment_method.name !== fMethod) return false;
-        if (fDateFrom && p.created_at && p.created_at < fDateFrom) return false;
-        if (fDateTo   && p.created_at && p.created_at.slice(0, 10) > fDateTo) return false;
-        return true;
-    });
+    const hasFilter = fSupplier || fMethod || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
 
-    const hasFilter = fSupplier || fMethod || fDateFrom || fDateTo;
+    function applyFilter() {
+        const f: Record<string, string> = {};
+        if (fSupplier)   f['filter[supplier_id]']        = fSupplier;
+        if (fMethod)     f['filter[payment_method_id]']  = fMethod;
+        if (fProduct)    f['filter[product_id]']         = fProduct;
+        if (fDateFrom)   f['filter[date_from]']          = fDateFrom;
+        if (fDateTo)     f['filter[date_to]']            = fDateTo;
+        if (fAmountFrom) f['filter[amount_from]']        = fAmountFrom;
+        if (fAmountTo)   f['filter[amount_to]']          = fAmountTo;
+        router.get('/supplier-payments', f, { preserveScroll: true });
+    }
 
     function resetFilter() {
-        setFSupplier(''); setFMethod(''); setFDateFrom(''); setFDateTo('');
+        setFSupplier(''); setFMethod(''); setFProduct('');
+        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo('');
+        router.get('/supplier-payments', {}, { preserveScroll: true });
     }
 
     // نموذج الإنشاء
@@ -95,21 +107,57 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
+
+            {/* المورد */}
             <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المورد</label>
-                <input value={fSupplier} onChange={e => setFSupplier(e.target.value)}
-                    placeholder="بحث..." className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
+                <select value={fSupplier} onChange={e => setFSupplier(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
+                </select>
             </div>
+
+            {/* المنتج */}
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المنتج (في الفاتورة)</label>
+                <select value={fProduct} onChange={e => setFProduct(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    {products.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
+                </select>
+            </div>
+
+            {/* وسيلة الدفع */}
             <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
                 <select value={fMethod} onChange={e => setFMethod(e.target.value)}
                     className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
                     <option value="">الكل</option>
-                    {paymentMethods.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                    {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
                 </select>
             </div>
+
+            {/* مجال المبلغ */}
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ (من — إلى)</label>
+                <div className="flex gap-2">
+                    <input type="number" min="0" value={fAmountFrom} onChange={e => setFAmountFrom(e.target.value)}
+                        placeholder="من" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
+                    <input type="number" min="0" value={fAmountTo} onChange={e => setFAmountTo(e.target.value)}
+                        placeholder="إلى" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
+                </div>
+            </div>
+
+            {/* التاريخ */}
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={fDateTo} onChange={setFDateTo} />
+            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
+
+            {/* أزرار */}
+            <button onClick={applyFilter}
+                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" /> تطبيق الفلتر
+            </button>
             {hasFilter && (
                 <button onClick={resetFilter}
                     className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
@@ -220,8 +268,8 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`الدفعات (${filtered.length})`} icon={<CreditCard className="w-4 h-4" />}>
-                            {filtered.length === 0 ? (
+                        <SpatialCard title={`الدفعات (${payments.total})`} icon={<CreditCard className="w-4 h-4" />}>
+                            {payments.data.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">💳</span>
                                     <span className="font-bold">لا توجد دفعات</span>
@@ -238,7 +286,7 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {filtered.map(p => (
+                                                {payments.data.map(p => (
                                                     <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
                                                             <Link href={`/supplier-payments/${p.id}`} className="hover:text-primary transition-colors">{p.supplier.name}</Link>

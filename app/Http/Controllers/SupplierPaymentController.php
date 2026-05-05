@@ -23,9 +23,10 @@ class SupplierPaymentController extends Controller
     public function index(): Response
     {
         return Inertia::render('SupplierPayments/Index', [
-            'payments'       => $this->payments->paginated(20),
+            'payments'       => $this->payments->paginated(5),
             'suppliers'      => $this->suppliers->forSelectList(),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

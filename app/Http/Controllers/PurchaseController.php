@@ -26,8 +26,9 @@ class PurchaseController extends Controller
     public function index(): Response
     {
         return Inertia::render('Purchases/Index', [
-            'purchases' => $this->purchases->paginated(20),
+            'purchases' => $this->purchases->paginated(5),
             'suppliers' => $this->suppliers->forSelectList(),
+            'products'  => Product::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

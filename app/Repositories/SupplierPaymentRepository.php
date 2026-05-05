@@ -15,12 +15,18 @@ class SupplierPaymentRepository extends Repository implements SupplierPaymentRep
         return SupplierPayment::class;
     }
 
-    public function paginated(int $perPage = 20)
+    public function paginated(int $perPage = 5)
     {
         return QueryBuilder::for($this->model->with(['supplier', 'purchase', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),
+                AllowedFilter::exact('payment_method_id'),
+                AllowedFilter::callback('date_from',   fn($q, $v) => $q->whereDate('created_at', '>=', $v)),
+                AllowedFilter::callback('date_to',     fn($q, $v) => $q->whereDate('created_at', '<=', $v)),
+                AllowedFilter::callback('amount_from', fn($q, $v) => $q->where('amount', '>=', $v)),
+                AllowedFilter::callback('amount_to',   fn($q, $v) => $q->where('amount', '<=', $v)),
+                AllowedFilter::callback('product_id',  fn($q, $v) => $q->whereHas('purchase.items', fn($q) => $q->where('product_id', $v))),
             )
             ->allowedSorts('created_at', 'amount')
             ->defaultSort('-created_at')

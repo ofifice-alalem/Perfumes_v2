@@ -28,7 +28,7 @@ class PurchaseReturnController extends Controller
     public function index(): Response
     {
         return Inertia::render('PurchaseReturns/Index', [
-            'returns'   => $this->returns->paginated(20),
+            'returns'   => $this->returns->paginated(5),
             'suppliers' => $this->suppliers->forSelectList(),
         ]);
     }
