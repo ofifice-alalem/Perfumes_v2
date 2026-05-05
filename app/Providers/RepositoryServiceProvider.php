@@ -17,6 +17,8 @@ use App\Repositories\Contracts\CustomerRepositoryInterface;
 use App\Repositories\CustomerRepository;
 use App\Repositories\Contracts\SupplierRepositoryInterface;
 use App\Repositories\SupplierRepository;
+use App\Repositories\Contracts\PaymentMethodRepositoryInterface;
+use App\Repositories\PaymentMethodRepository;
 use App\Models\Category;
 use App\Models\Size;
 use App\Models\PriceTier;
@@ -24,6 +26,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\Supplier;
+use App\Models\PaymentMethod;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -36,5 +39,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(UserRepositoryInterface::class, fn() => new UserRepository(new User()));
         $this->app->bind(CustomerRepositoryInterface::class, fn() => new CustomerRepository(new Customer()));
         $this->app->bind(SupplierRepositoryInterface::class, fn() => new SupplierRepository(new Supplier()));
+        $this->app->bind(PaymentMethodRepositoryInterface::class, fn() => new PaymentMethodRepository(new PaymentMethod()));
     }
 }
