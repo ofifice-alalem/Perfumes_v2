@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, CreditCard, X, Check } from 'lucide-react';
+import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown } from 'lucide-react';
 
 interface Supplier      { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
@@ -45,23 +45,44 @@ function fmtDate(v: string | null): string {
 export default function SupplierPaymentsIndex({ payments, suppliers, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [showPad,    setShowPad]    = useState(false);
+    const [filterOpen, setFilterOpen] = useState(false);
 
+    // فلتر
+    const [fSupplier, setFSupplier] = useState('');
+    const [fMethod,   setFMethod]   = useState('');
+    const [fDateFrom, setFDateFrom] = useState('');
+    const [fDateTo,   setFDateTo]   = useState('');
+
+    const filtered = payments.data.filter(p => {
+        if (fSupplier && !p.supplier.name.toLowerCase().includes(fSupplier.toLowerCase())) return false;
+        if (fMethod   && p.payment_method.name !== fMethod) return false;
+        if (fDateFrom && p.created_at && p.created_at < fDateFrom) return false;
+        if (fDateTo   && p.created_at && p.created_at.slice(0, 10) > fDateTo) return false;
+        return true;
+    });
+
+    const hasFilter = fSupplier || fMethod || fDateFrom || fDateTo;
+
+    function resetFilter() {
+        setFSupplier(''); setFMethod(''); setFDateFrom(''); setFDateTo('');
+    }
+
+    // نموذج الإنشاء
     const form = useForm({
         supplier_id: '', purchase_id: '', payment_method_id: '', amount: '', notes: '',
     });
 
     const selectedSupplier = suppliers.find(s => String(s.id) === form.data.supplier_id);
     const supplierDebt     = selectedSupplier ? parseFloat(selectedSupplier.total_debt) : 0;
-    // maxValue = دين المورد (لا يمكن الدفع أكثر من الدين)
     const maxPayment       = supplierDebt > 0 ? supplierDebt : undefined;
 
     const supplierOptions      = suppliers.map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
-    function resolveSupplierIdFromLabel(label: string): string {
+    function resolveSupplierIdFromLabel(label: string) {
         return String(suppliers.find(s => s.name === label)?.id ?? '');
     }
-    function resolveMethodIdFromLabel(label: string): string {
+    function resolveMethodIdFromLabel(label: string) {
         return String(paymentMethods.find(m => m.name === label)?.id ?? '');
     }
 
@@ -70,6 +91,44 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
             onSuccess: () => { form.reset(); setShowCreate(false); },
         });
     }
+
+    const FilterPanel = () => (
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المورد</label>
+                <input value={fSupplier} onChange={e => setFSupplier(e.target.value)}
+                    placeholder="بحث..." className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
+                <select value={fMethod} onChange={e => setFMethod(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    {paymentMethods.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                </select>
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">من تاريخ</label>
+                <div className="relative">
+                    <input type="date" value={fDateFrom} onChange={e => setFDateFrom(e.target.value)}
+                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+                </div>
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">إلى تاريخ</label>
+                <div className="relative">
+                    <input type="date" value={fDateTo} onChange={e => setFDateTo(e.target.value)}
+                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+                </div>
+            </div>
+            {hasFilter && (
+                <button onClick={resetFilter}
+                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                    إعادة تعيين
+                </button>
+            )}
+        </div>
+    );
 
     return (
         <>
@@ -89,6 +148,7 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                 {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
                 {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
+                {/* نموذج الإنشاء */}
                 {showCreate && (
                     <SpatialCard title="دفعة جديدة" icon={<Plus className="w-4 h-4" />}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -103,17 +163,12 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                                     }}
                                 />
                                 {form.errors.supplier_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.supplier_id}</p>}
-                                {/* عرض الدين بعد اختيار المورد */}
                                 {selectedSupplier && (
                                     <div className={`mt-2 px-3 py-2 rounded-[12px] flex items-center justify-between ${
-                                        supplierDebt > 0
-                                            ? 'bg-amber-500/10 border border-amber-500/20'
-                                            : 'bg-emerald-500/10 border border-emerald-500/20'
+                                        supplierDebt > 0 ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-emerald-500/10 border border-emerald-500/20'
                                     }`}>
                                         <span className="text-xs font-bold text-slate-500 dark:text-white/50">دين المورد</span>
-                                        <span className={`font-black text-sm ${
-                                            supplierDebt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
-                                        }`}>
+                                        <span className={`font-black text-sm ${supplierDebt > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                             {fmt(selectedSupplier.total_debt)}
                                             {supplierDebt <= 0 && <span className="text-xs mr-1">(لا يوجد دين)</span>}
                                         </span>
@@ -131,12 +186,9 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                             </div>
                             <div className="flex flex-col gap-2">
                                 <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                                <button
-                                    onClick={() => setShowPad(true)}
+                                <button onClick={() => setShowPad(true)}
                                     className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                    {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">
-                                        {maxPayment ? fmt(maxPayment) : '0.00'}
-                                    </span>}
+                                    {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{maxPayment ? fmt(maxPayment) : '0.00'}</span>}
                                 </button>
                                 {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
                             </div>
@@ -159,78 +211,108 @@ export default function SupplierPaymentsIndex({ payments, suppliers, paymentMeth
                     </SpatialCard>
                 )}
 
-                <SpatialCard title={`الدفعات (${payments.total})`} icon={<CreditCard className="w-4 h-4" />}>
-                    {payments.data.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
-                            <span className="text-4xl">💳</span>
-                            <span className="font-bold">لا توجد دفعات بعد</span>
+                {/* Mobile Filter */}
+                <div className="lg:hidden">
+                    <button onClick={() => setFilterOpen(p => !p)}
+                        className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
+                        <div className="flex items-center gap-2">
+                            <SlidersHorizontal className="w-4 h-4" />
+                            فلترة
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                        {['المورد', 'الفاتورة', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                            <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                    {payments.data.map(p => (
-                                        <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                            <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
-                                                <Link href={`/supplier-payments/${p.id}`} className="hover:text-primary transition-colors">{p.supplier.name}</Link>
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {p.purchase ? (
-                                                    <Link href={`/purchases/${p.purchase.id}`} className="text-primary font-bold hover:underline">#{p.purchase.id}</Link>
-                                                ) : <span className="text-slate-400 dark:text-white/30 font-bold">مستقلة</span>}
-                                            </td>
-                                            <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{p.payment_method.name}</td>
-                                            <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(p.amount)}</td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{p.notes ?? '—'}</td>
-                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {fmtDate(p.created_at)}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <Link href={`/supplier-payments/${p.id}`}
-                                                        className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                        عرض
-                                                    </Link>
-                                                    <DeleteModal
-                                                        onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
-                                                        trigger={
-                                                            <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                حذف
-                                                            </button>
-                                                        }
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {filterOpen && (
+                        <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <FilterPanel />
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex gap-6">
+                    <div className="flex-1 min-w-0">
+                        <SpatialCard title={`الدفعات (${filtered.length})`} icon={<CreditCard className="w-4 h-4" />}>
+                            {filtered.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
+                                    <span className="text-4xl">💳</span>
+                                    <span className="font-bold">لا توجد دفعات</span>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                    {['المورد', 'الفاتورة', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
+                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                {filtered.map(p => (
+                                                    <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
+                                                            <Link href={`/supplier-payments/${p.id}`} className="hover:text-primary transition-colors">{p.supplier.name}</Link>
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            {p.purchase
+                                                                ? <Link href={`/purchases/${p.purchase.id}`} className="text-primary font-bold hover:underline">#{p.purchase.id}</Link>
+                                                                : <span className="text-slate-400 dark:text-white/30 font-bold">مستقلة</span>}
+                                                        </td>
+                                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{p.payment_method.name}</td>
+                                                        <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(p.amount)}</td>
+                                                        <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{p.notes ?? '—'}</td>
+                                                        <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{fmtDate(p.created_at)}</td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <Link href={`/supplier-payments/${p.id}`}
+                                                                    className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
+                                                                    عرض
+                                                                </Link>
+                                                                <DeleteModal
+                                                                    onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                                    trigger={
+                                                                        <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                            حذف
+                                                                        </button>
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {payments.last_page > 1 && (
+                                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
+                                            {payments.links.map((link, i) => (
+                                                link.url ? (
+                                                    <Link key={i} href={link.url}
+                                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10'}`}
+                                                        dangerouslySetInnerHTML={{ __html: link.label }}
                                                     />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                    {payments.last_page > 1 && (
-                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
-                            {payments.links.map((link, i) => (
-                                link.url ? (
-                                    <Link key={i} href={link.url}
-                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10'}`}
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                ) : (
-                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
-                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                    />
-                                )
-                            ))}
-                        </div>
-                    )}
-                </SpatialCard>
+                                                ) : (
+                                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
+                                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                                    />
+                                                )
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </SpatialCard>
+                    </div>
+
+                    {/* Desktop Filter */}
+                    <div className="hidden lg:block w-[260px] shrink-0">
+                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
+                            <FilterPanel />
+                        </SpatialCard>
+                    </div>
+                </div>
             </div>
         </AppShell>
 

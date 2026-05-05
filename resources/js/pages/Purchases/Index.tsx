@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Link } from '@inertiajs/react';
-import { Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X } from 'lucide-react';
+import { Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 interface Supplier { id: number; name: string; }
@@ -44,6 +44,12 @@ function fmt(v: string) {
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
+function fmtDate(v: string | null): string {
+    if (!v) return '—';
+    const d = new Date(v.replace(' ', 'T'));
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+}
+
 // ── Modal إلغاء الفاتورة ──────────────────────────────────────────────────────
 function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClose: () => void }) {
     const [deletePayments,    setDeletePayments]    = useState(false);
@@ -52,8 +58,8 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
     const isCash           = purchase.supplier.id === 1;
     const paidAmount       = parseFloat(purchase.paid_amount);
     const settlementsTotal = parseFloat(purchase.settlements_total ?? '0');
-    const hasPayments      = !isCash && paidAmount > 0;        // نقدي → تُحذف تلقائياً
-    const hasSettlements   = !isCash && settlementsTotal > 0;  // نقدي → تُحذف تلقائياً
+    const hasPayments      = !isCash && paidAmount > 0;
+    const hasSettlements   = !isCash && settlementsTotal > 0;
 
     function confirm() {
         router.delete(`/purchases/${purchase.id}`, {
@@ -102,7 +108,6 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                 dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
                 backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
 
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
                         <AlertTriangle className="w-6 h-6 text-red-500" />
@@ -113,7 +118,6 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                     </button>
                 </div>
 
-                {/* Title */}
                 <div className="flex flex-col gap-1.5">
                     <h3 className="text-lg font-black text-slate-800 dark:text-white">إلغاء فاتورة الشراء</h3>
                     <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
@@ -121,7 +125,6 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                     </p>
                 </div>
 
-                {/* خيار الدفعات */}
                 {hasPayments && (
                     <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
                         <div className="flex items-center justify-between mb-1">
@@ -130,17 +133,13 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                         </div>
                         <div className="h-px bg-black/8 dark:bg-white/8" />
                         <RadioGroup
-                            value={deletePayments}
-                            onChange={setDeletePayments}
-                            yesLabel="نعم، احذف الدفعات معها"
-                            yesDesc="الفاتورة كانت خطأ في الإدخال"
-                            noLabel="لا، أبقِ الدفعات كدين على المورد"
-                            noDesc="المال دُفع فعلاً وسيبقى في سجل المورد"
+                            value={deletePayments} onChange={setDeletePayments}
+                            yesLabel="نعم، احذف الدفعات معها" yesDesc="الفاتورة كانت خطأ في الإدخال"
+                            noLabel="لا، أبقِ الدفعات كدين على المورد" noDesc="المال دُفع فعلاً وسيبقى في سجل المورد"
                         />
                     </div>
                 )}
 
-                {/* خيار التسويات */}
                 {hasSettlements && (
                     <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
                         <div className="flex items-center justify-between mb-1">
@@ -149,17 +148,13 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
                         </div>
                         <div className="h-px bg-black/8 dark:bg-white/8" />
                         <RadioGroup
-                            value={deleteSettlements}
-                            onChange={setDeleteSettlements}
-                            yesLabel="نعم، احذف التسويات معها"
-                            yesDesc="التسوية لم تُنفَّذ فعلاً"
-                            noLabel="لا، أبقِ التسويات كرصيد مستقل"
-                            noDesc="المبلغ استُرد فعلاً وسيبقى في سجل المورد"
+                            value={deleteSettlements} onChange={setDeleteSettlements}
+                            yesLabel="نعم، احذف التسويات معها" yesDesc="التسوية لم تُنفَّذ فعلاً"
+                            noLabel="لا، أبقِ التسويات كرصيد مستقل" noDesc="المبلغ استُرد فعلاً وسيبقى في سجل المورد"
                         />
                     </div>
                 )}
 
-                {/* Buttons */}
                 <div className="flex items-center gap-3">
                     <button onClick={onClose}
                         className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
@@ -179,6 +174,67 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
 // ── الصفحة الرئيسية ───────────────────────────────────────────────────────────
 export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Purchase | null>(null);
+    const [filterOpen,   setFilterOpen]   = useState(false);
+
+    // فلتر fields
+    const [fSupplier, setFSupplier] = useState('');
+    const [fStatus,   setFStatus]   = useState('');
+    const [fDateFrom, setFDateFrom] = useState('');
+    const [fDateTo,   setFDateTo]   = useState('');
+
+    const filtered = purchases.data.filter(p => {
+        if (fSupplier && !p.supplier.name.toLowerCase().includes(fSupplier.toLowerCase())) return false;
+        if (fStatus   && p.payment_status !== fStatus) return false;
+        if (fDateFrom && p.created_at && p.created_at < fDateFrom) return false;
+        if (fDateTo   && p.created_at && p.created_at.slice(0, 10) > fDateTo) return false;
+        return true;
+    });
+
+    const hasFilter = fSupplier || fStatus || fDateFrom || fDateTo;
+
+    function resetFilter() {
+        setFSupplier(''); setFStatus(''); setFDateFrom(''); setFDateTo('');
+    }
+
+    const FilterPanel = () => (
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المورد</label>
+                <input value={fSupplier} onChange={e => setFSupplier(e.target.value)}
+                    placeholder="بحث..." className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold" />
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حالة الدفع</label>
+                <select value={fStatus} onChange={e => setFStatus(e.target.value)}
+                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
+                    <option value="">الكل</option>
+                    <option value="unpaid">غير مدفوع</option>
+                    <option value="partial">جزئي</option>
+                    <option value="paid">مدفوع</option>
+                </select>
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">من تاريخ</label>
+                <div className="relative">
+                    <input type="date" value={fDateFrom} onChange={e => setFDateFrom(e.target.value)}
+                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+                </div>
+            </div>
+            <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">إلى تاريخ</label>
+                <div className="relative">
+                    <input type="date" value={fDateTo} onChange={e => setFDateTo(e.target.value)}
+                        className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold w-full" />
+                </div>
+            </div>
+            {hasFilter && (
+                <button onClick={resetFilter}
+                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                    إعادة تعيين
+                </button>
+            )}
+        </div>
+    );
 
     return (
         <AppShell pageTitle="المشتريات">
@@ -195,155 +251,177 @@ export default function PurchasesIndex({ purchases, suppliers, flash }: Props) {
                     </Link>
                 </div>
 
-                {flash?.success && (
-                    <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>
-                )}
-                {flash?.error && (
-                    <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>
-                )}
+                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
+                {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
-                <SpatialCard title={`الفواتير (${purchases.total})`} icon={<ShoppingCart className="w-4 h-4" />}>
-                    {purchases.data.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
-                            <span className="text-4xl">🛒</span>
-                            <span className="font-bold">لا توجد فواتير شراء بعد</span>
+                {/* Mobile Filter */}
+                <div className="lg:hidden">
+                    <button onClick={() => setFilterOpen(p => !p)}
+                        className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
+                        <div className="flex items-center gap-2">
+                            <SlidersHorizontal className="w-4 h-4" />
+                            فلترة
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
-                    ) : (
-                        <>
-                            {/* Desktop Table */}
-                            <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['#', 'المورد', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {purchases.data.map(p => (
-                                            <tr key={p.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${p.deleted_at ? 'opacity-50' : ''}`}>
-                                                <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{p.id}</td>
-                                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
-                                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.total)}</td>
-                                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.paid_amount)}</td>
-                                                <td className="px-4 py-3 font-black text-amber-500 whitespace-nowrap">{fmt(p.due_amount)}</td>
-                                                <td className="px-4 py-3">
-                                                    {p.deleted_at ? (
-                                                        <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
-                                                    ) : (
-                                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] ${statusClass[p.payment_status]}`}>
-                                                            {statusLabel[p.payment_status]}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
-                                                    {new Date(p.created_at).toLocaleDateString('en-GB')}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <Link href={`/purchases/${p.id}`}
-                                                            className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                            <Eye className="w-3 h-3" /> عرض
-                                                        </Link>
-                                                        {p.deleted_at ? (
-                                                            <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
-                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
-                                                                <RotateCcw className="w-3 h-3" /> استعادة
-                                                            </button>
-                                                        ) : (
-                                                            <button onClick={() => setCancelTarget(p)}
-                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                <Trash2 className="w-3 h-3" /> إلغاء
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {filterOpen && (
+                        <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <FilterPanel />
+                        </div>
+                    )}
+                </div>
 
-                            {/* Mobile Cards */}
-                            <div className="flex flex-col gap-4 lg:hidden">
-                                {purchases.data.map(p => (
-                                    <div key={p.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${p.deleted_at ? 'opacity-60' : ''}`}>
-                                        <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                            <div>
-                                                <span className="font-black text-slate-800 dark:text-white">{p.supplier.name}</span>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{p.id}</span>
+                {/* Main Layout */}
+                <div className="flex gap-6">
+                    <div className="flex-1 min-w-0">
+                        <SpatialCard title={`الفواتير (${filtered.length})`} icon={<ShoppingCart className="w-4 h-4" />}>
+                            {filtered.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
+                                    <span className="text-4xl">🛒</span>
+                                    <span className="font-bold">لا توجد فواتير شراء</span>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Desktop Table */}
+                                    <div className="hidden lg:block overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                    {['#', 'المورد', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
+                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                {filtered.map(p => (
+                                                    <tr key={p.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${p.deleted_at ? 'opacity-50' : ''}`}>
+                                                        <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{p.id}</td>
+                                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
+                                                        <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.total)}</td>
+                                                        <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.paid_amount)}</td>
+                                                        <td className="px-4 py-3 font-black text-amber-500 whitespace-nowrap">{fmt(p.due_amount)}</td>
+                                                        <td className="px-4 py-3">
+                                                            {p.deleted_at ? (
+                                                                <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
+                                                            ) : (
+                                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] ${statusClass[p.payment_status]}`}>
+                                                                    {statusLabel[p.payment_status]}
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
+                                                            {fmtDate(p.created_at)}
+                                                        </td>
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <Link href={`/purchases/${p.id}`}
+                                                                    className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
+                                                                    <Eye className="w-3 h-3" /> عرض
+                                                                </Link>
+                                                                {p.deleted_at ? (
+                                                                    <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
+                                                                        className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
+                                                                        <RotateCcw className="w-3 h-3" /> استعادة
+                                                                    </button>
+                                                                ) : (
+                                                                    <button onClick={() => setCancelTarget(p)}
+                                                                        className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                        <Trash2 className="w-3 h-3" /> إلغاء
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile Cards */}
+                                    <div className="flex flex-col gap-4 lg:hidden">
+                                        {filtered.map(p => (
+                                            <div key={p.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${p.deleted_at ? 'opacity-60' : ''}`}>
+                                                <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
+                                                    <div>
+                                                        <span className="font-black text-slate-800 dark:text-white">{p.supplier.name}</span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{p.id}</span>
+                                                            {p.deleted_at ? (
+                                                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                                            ) : (
+                                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusClass[p.payment_status]}`}>
+                                                                    {statusLabel[p.payment_status]}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-black text-lg text-slate-800 dark:text-white">{fmt(p.total)}</span>
+                                                </div>
+                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المدفوع</span>
+                                                        <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(p.paid_amount)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
+                                                        <span className="font-black text-amber-500">{fmt(p.due_amount)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
+                                                    <Link href={`/purchases/${p.id}`}
+                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                                                        <Eye className="w-4 h-4" /> عرض
+                                                    </Link>
                                                     {p.deleted_at ? (
-                                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                                        <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
+                                                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                                            <RotateCcw className="w-4 h-4" /> استعادة
+                                                        </button>
                                                     ) : (
-                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusClass[p.payment_status]}`}>
-                                                            {statusLabel[p.payment_status]}
-                                                        </span>
+                                                        <button onClick={() => setCancelTarget(p)}
+                                                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> إلغاء
+                                                        </button>
                                                     )}
                                                 </div>
                                             </div>
-                                            <span className="font-black text-lg text-slate-800 dark:text-white">{fmt(p.total)}</span>
-                                        </div>
-                                        <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
-                                            <div className="flex items-center justify-between py-3">
-                                                <span className="text-sm font-bold text-slate-400 dark:text-white/40">المدفوع</span>
-                                                <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(p.paid_amount)}</span>
-                                            </div>
-                                            <div className="flex items-center justify-between py-3">
-                                                <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
-                                                <span className="font-black text-amber-500">{fmt(p.due_amount)}</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
-                                            <Link href={`/purchases/${p.id}`}
-                                                className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
-                                                <Eye className="w-4 h-4" /> عرض
-                                            </Link>
-                                            {p.deleted_at ? (
-                                                <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
-                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                                    <RotateCcw className="w-4 h-4" /> استعادة
-                                                </button>
-                                            ) : (
-                                                <button onClick={() => setCancelTarget(p)}
-                                                    className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                    <Trash2 className="w-4 h-4" /> إلغاء
-                                                </button>
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
 
-                            {/* Pagination */}
-                            {purchases.last_page > 1 && (
-                                <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
-                                    {purchases.links.map((link, i) => (
-                                        link.url ? (
-                                            <Link key={i} href={link.url}
-                                                className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ) : (
-                                            <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        )
-                                    ))}
-                                </div>
+                                    {/* Pagination */}
+                                    {purchases.last_page > 1 && (
+                                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
+                                            {purchases.links.map((link, i) => (
+                                                link.url ? (
+                                                    <Link key={i} href={link.url}
+                                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}
+                                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                                    />
+                                                ) : (
+                                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
+                                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                                    />
+                                                )
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
                             )}
-                        </>
-                    )}
-                </SpatialCard>
+                        </SpatialCard>
+                    </div>
+
+                    {/* Desktop Filter */}
+                    <div className="hidden lg:block w-[260px] shrink-0">
+                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
+                            <FilterPanel />
+                        </SpatialCard>
+                    </div>
+                </div>
             </div>
 
-            {/* Cancel Modal */}
             {cancelTarget && (
-                <CancelPurchaseModal
-                    purchase={cancelTarget}
-                    onClose={() => setCancelTarget(null)}
-                />
+                <CancelPurchaseModal purchase={cancelTarget} onClose={() => setCancelTarget(null)} />
             )}
         </AppShell>
     );
