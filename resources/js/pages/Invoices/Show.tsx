@@ -147,7 +147,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
     const tabs = [
         { key: 'items',       label: `الأصناف (${invoice.items.length})` },
         { key: 'payments',    label: `الدفعات (${invoice.payments.length})` },
-        { key: 'settlements', label: `التسويات (${invoice.settlements.length})` },
+        { key: 'settlements', label: `التسويات (${invoice.settlements?.length ?? 0})` },
         { key: 'returns',     label: `المرتجعات (${invoice.returns.length})` },
     ] as const;
 
@@ -347,7 +347,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
                 {/* Tab: Settlements */}
                 {activeTab === 'settlements' && (
-                    <SpatialCard title={`التسويات (${invoice.settlements.length})`} icon={<RefreshCw className="w-4 h-4" />}
+                    <SpatialCard title={`التسويات (${invoice.settlements?.length ?? 0})`} icon={<RefreshCw className="w-4 h-4" />}
                         action={
                             !isCash && !isCancelled && customerDebt < 0 && (
                                 <button onClick={() => { setShowSetForm(p => !p); setSetRows([emptySetRow()]); }}
@@ -399,7 +399,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                 </div>
                             </div>
                         )}
-                        {invoice.settlements.length === 0 ? (
+                        {!invoice.settlements || invoice.settlements.length === 0 ? (
                             <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">لا توجد تسويات مسجلة</p>
                         ) : (
                             <div className="overflow-x-auto">
@@ -412,7 +412,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {invoice.settlements.map(s => (
+                                        {invoice.settlements?.map(s => (
                                             <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
                                                 <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
                                                 <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
