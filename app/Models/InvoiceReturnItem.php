@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class InvoiceReturnItem extends Model
+class InvoiceReturnItem extends Model implements Auditable
 {
+    use AuditableTrait;
     public $timestamps = false;
 
     protected $fillable = ['invoice_return_id', 'product_id', 'quantity', 'unit_price', 'line_total'];

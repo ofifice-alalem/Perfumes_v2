@@ -5,12 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Settlement extends Model
+class Settlement extends Model implements Auditable
 {
+    use AuditableTrait, SoftDeletes;
     public $timestamps = false;
 
-    protected $fillable = ['customer_id', 'invoice_id', 'payment_method_id', 'amount', 'notes'];
+    protected $fillable = ['customer_id', 'invoice_id', 'invoice_return_id', 'payment_method_id', 'amount', 'notes'];
 
     protected $casts = [
         'amount'     => 'decimal:2',
@@ -35,5 +39,10 @@ class Settlement extends Model
     public function invoiceReturns(): HasMany
     {
         return $this->hasMany(InvoiceReturn::class);
+    }
+
+    public function invoiceReturn(): BelongsTo
+    {
+        return $this->belongsTo(InvoiceReturn::class, 'invoice_return_id');
     }
 }

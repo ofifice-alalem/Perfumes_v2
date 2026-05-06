@@ -27,6 +27,14 @@ use App\Repositories\Contracts\SupplierSettlementRepositoryInterface;
 use App\Repositories\SupplierSettlementRepository;
 use App\Repositories\Contracts\PurchaseReturnRepositoryInterface;
 use App\Repositories\PurchaseReturnRepository;
+use App\Repositories\Contracts\InvoiceRepositoryInterface;
+use App\Repositories\InvoiceRepository;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\PaymentRepository;
+use App\Repositories\Contracts\SettlementRepositoryInterface;
+use App\Repositories\SettlementRepository;
+use App\Repositories\Contracts\InvoiceReturnRepositoryInterface;
+use App\Repositories\InvoiceReturnRepository;
 use App\Models\Category;
 use App\Models\Size;
 use App\Models\PriceTier;
@@ -39,6 +47,10 @@ use App\Models\Purchase;
 use App\Models\SupplierPayment;
 use App\Models\SupplierSettlement;
 use App\Models\PurchaseReturn;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\Settlement;
+use App\Models\InvoiceReturn;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -56,5 +68,9 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(SupplierPaymentRepositoryInterface::class, fn() => new SupplierPaymentRepository(new SupplierPayment()));
         $this->app->bind(SupplierSettlementRepositoryInterface::class, fn() => new SupplierSettlementRepository(new SupplierSettlement()));
         $this->app->bind(PurchaseReturnRepositoryInterface::class, fn() => new PurchaseReturnRepository(new PurchaseReturn()));
+        $this->app->bind(InvoiceRepositoryInterface::class, fn() => new InvoiceRepository(new Invoice()));
+        $this->app->bind(PaymentRepositoryInterface::class, fn() => new PaymentRepository(new Payment()));
+        $this->app->bind(SettlementRepositoryInterface::class, fn() => new SettlementRepository(new Settlement()));
+        $this->app->bind(InvoiceReturnRepositoryInterface::class, fn() => new InvoiceReturnRepository(new InvoiceReturn()));
     }
 }

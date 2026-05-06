@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class InvoiceItem extends Model
+class InvoiceItem extends Model implements Auditable
 {
+    use AuditableTrait;
     public $timestamps = false;
 
     protected $fillable = [

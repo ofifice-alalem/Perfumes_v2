@@ -2,10 +2,12 @@
 
 namespace App\Observers;
 
+use App\Models\Product;
 use App\Models\InvoiceItem;
 
 /**
  * يُحدِّث:
+ *  - products: stock (decrease on sale, increase on deletion)
  *  - invoices: total, due_amount, payment_status
  *  - customers: total_purchases, total_debt
  */
@@ -13,18 +15,30 @@ class InvoiceItemObserver
 {
     public function created(InvoiceItem $item): void
     {
+        // stock -= quantity (selling decreases stock)
+        Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+
         $this->syncInvoice($item);
         $this->syncCustomer($item);
     }
 
     public function updated(InvoiceItem $item): void
     {
+        // stock -= (new_qty - old_qty)
+        $diff = $item->quantity - $item->getOriginal('quantity');
+        if ($diff != 0) {
+            Product::where('id', $item->product_id)->decrement('stock', $diff);
+        }
+
         $this->syncInvoice($item);
         $this->syncCustomer($item);
     }
 
     public function deleted(InvoiceItem $item): void
     {
+        // stock += quantity (cancelling a sale restores stock)
+        Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+
         $this->syncInvoice($item);
         $this->syncCustomer($item);
     }

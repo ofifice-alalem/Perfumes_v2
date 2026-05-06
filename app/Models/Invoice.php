@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use OwenIt\Auditing\Contracts\Auditable;
+use OwenIt\Auditing\Auditable as AuditableTrait;
 
-class Invoice extends Model
+class Invoice extends Model implements Auditable
 {
+    use AuditableTrait, SoftDeletes;
     protected $fillable = [
         'user_id', 'customer_id', 'customer_type',
         'total', 'paid_amount', 'due_amount',
@@ -38,6 +42,16 @@ class Invoice extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(Settlement::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(InvoiceReturn::class);
     }
 
     public function recalculate(): void
