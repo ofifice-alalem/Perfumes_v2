@@ -3,13 +3,29 @@ import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { SizeSelect } from '@/components/ui/SizeSelect';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
     CreditCard, ChevronLeft, User, AlertCircle, RotateCcw
 } from 'lucide-react';
 
 interface Customer      { id: number; name: string; total_debt: string; }
-interface Product       { id: number; name: string; stock: string; }
+interface Size          { id: number; label: string; value: string; }
+interface Category      { id: number; name: string; unit: string; }
+interface ProductPrice  {
+    price_per_unit_regular: string; price_per_unit_vip: string;
+    full_bottle_regular: string | null; full_bottle_vip: string | null;
+}
+interface OriginalDetail { bottle_volume: string; }
+interface TierPrice     { size_id: number; price_regular: string; price_vip: string; }
+interface PriceTier     { id: number; name: string; tier_prices?: TierPrice[]; }
+interface Product {
+    id: number; name: string; stock: string; selling_type: string;
+    category: Category;
+    price_tier: PriceTier | null;
+    product_price: ProductPrice | null;
+    original_perfume_detail: OriginalDetail | null;
+}
 interface PaymentMethod { id: number; name: string; }
 
 interface InvoiceItem {
@@ -27,6 +43,7 @@ interface InvoiceItem {
 interface Props {
     customers:             Customer[];
     products:              Product[];
+    sizes:                 Size[];
     paymentMethods:        PaymentMethod[];
     selected_customer_id?: number;
     selected_invoice_id?:  number | null;
@@ -54,10 +71,17 @@ function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function InvoiceReturnsCreate({ customers, products, paymentMethods, selected_customer_id, selected_invoice_id, invoice_items, flash }: Props) {
-    const [items,       setItems]       = useState<ItemRow[]>([emptyItem()]);
+export default function InvoiceReturnsCreate({ customers, products, sizes, paymentMethods, selected_customer_id, selected_invoice_id, invoice_items, flash }: Props) {
+    const [items,       setItems]       = useState<ItemRow[]>([]);
     const [settlements, setSettlements] = useState<SettlementRow[]>([emptySettlement()]);
     const [createSettlement, setCreateSettlement] = useState(false);
+    
+    // Product selection state
+    const [selProduct, setSelProduct] = useState('');
+    const [selSize, setSelSize] = useState('');
+    const [selQuantity, setSelQuantity] = useState('1');
+    const [selUnitPrice, setSelUnitPrice] = useState('');
+    const [selMinPrice, setSelMinPrice] = useState(0);
     
     // NumberPad state
     const [showPad, setShowPad] = useState(false);
@@ -109,6 +133,110 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
         unit_based: 'بالوحدة',
     };
     
+    const selectedProduct = products.find(p => String(p.id) === selProduct);
+    const availableStock = selectedProduct ? parseFloat(selectedProduct.stock) : 0;
+    const isTier = selectedProduct?.selling_type === 'tier_based';
+    const isOriginal = selectedProduct?.category?.unit === 'ml' && !isTier;
+    const needsSize = isTier || isOriginal;
+    
+    // حساب السعر الافتراضي والحد الأدنى
+    function resolveDefaultAndMin(): { defaultPrice: number; minPrice: number } {
+        if (!selectedProduct) return { defaultPrice: 0, minPrice: 0 };
+        
+        const pp = selectedProduct.product_price;
+        const pt = selectedProduct.price_tier;
+        
+        if (isTier) {
+            if (!selSize) return { defaultPrice: 0, minPrice: 0 };
+            if (selSize.startsWith('-custom-')) {
+                return {
+                    defaultPrice: pp ? +pp.price_per_unit_regular : 0,
+                    minPrice: pp ? +pp.price_per_unit_vip : 0,
+                };
+            }
+            const tp = pt?.tier_prices?.find(t => t.size_id === +selSize);
+            return tp ? {
+                defaultPrice: +tp.price_regular,
+                minPrice: +tp.price_vip
+            } : { defaultPrice: 0, minPrice: 0 };
+        }
+        
+        if (isOriginal) {
+            return pp ? {
+                defaultPrice: +pp.price_per_unit_regular,
+                minPrice: +pp.price_per_unit_vip,
+            } : { defaultPrice: 0, minPrice: 0 };
+        }
+        
+        // منتجات عادية
+        return pp ? {
+            defaultPrice: +pp.price_per_unit_regular,
+            minPrice: +pp.price_per_unit_vip,
+        } : { defaultPrice: 0, minPrice: 0 };
+    }
+    
+    // تحديث السعر عند تغيير المنتج أو الحجم
+    useEffect(() => {
+        if (!selectedProduct) {
+            setSelUnitPrice('');
+            setSelMinPrice(0);
+            return;
+        }
+        
+        if (needsSize && !selSize) {
+            setSelUnitPrice('');
+            setSelMinPrice(0);
+            return;
+        }
+        
+        const { defaultPrice, minPrice } = resolveDefaultAndMin();
+        if (defaultPrice > 0) {
+            setSelUnitPrice(defaultPrice.toFixed(2));
+            setSelMinPrice(minPrice);
+        } else {
+            setSelUnitPrice('');
+            setSelMinPrice(0);
+        }
+    }, [selectedProduct, selSize, needsSize]);
+    
+    // Preview calculations
+    const previewQty = parseFloat(selQuantity) || 0;
+    const previewPrice = parseFloat(selUnitPrice) || 0;
+    const previewTotal = previewQty > 0 && previewPrice > 0 ? previewQty * previewPrice : null;
+    
+    const canAddProduct = !!(selProduct && (!needsSize || selSize) && selQuantity && parseFloat(selQuantity) > 0 && selUnitPrice && parseFloat(selUnitPrice) >= selMinPrice);
+    
+    function addProductToCart() {
+        if (!selectedProduct || !selQuantity || !selUnitPrice) return;
+        if (needsSize && !selSize) return;
+        
+        const qty = parseFloat(selQuantity);
+        const price = parseFloat(selUnitPrice);
+        
+        if (qty <= 0 || price <= 0) return;
+        
+        const sizeLabel = selSize && !selSize.startsWith('-custom-')
+            ? (sizes.find(s => s.id === +selSize)?.label ?? '')
+            : selSize.startsWith('-custom-') ? `${selSize.replace('-custom-', '')} مل` : '';
+        
+        const newItem: ItemRow = {
+            product_id: String(selectedProduct.id),
+            product_name: selectedProduct.name,
+            size_label: sizeLabel || undefined,
+            quantity: qty.toString(),
+            unit_price: price.toFixed(2),
+            line_total: (qty * price).toFixed(2),
+        };
+        
+        setItems(prev => [...prev, newItem]);
+        
+        // Reset selection
+        setSelProduct('');
+        setSelSize('');
+        setSelQuantity('1');
+        setSelUnitPrice('');
+    }
+    
     const isCash      = form.data.customer_id === '1';
     const customer    = customers.find(c => String(c.id) === form.data.customer_id);
     const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
@@ -132,7 +260,7 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
         badge: c.id === 1 ? 'نقدي' : undefined,
         meta:  c.id !== 1 ? `دين: ${parseFloat(c.total_debt).toFixed(2)}` : undefined,
     }));
-    const productOptions = products.map(p => ({ label: p.name, meta: `مخزون: ${p.stock}` }));
+    const productOptions = products.map(p => ({ label: p.name, badge: '', meta: `${p.stock}` }));
     const methodOptions  = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveProduct(label: string) { return String(products.find(p => p.name === label)?.id ?? ''); }
@@ -233,216 +361,193 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
                         </div>
                     </div>
 
-                    {/* المنتجات المرتجعة */}
-                    <div className="flex-1 overflow-y-auto px-5 py-4">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <RotateCcw className="w-4 h-4 text-primary" />
-                                <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">المنتجات المرتجعة</span>
-                            </div>
-                            {!form.data.invoice_id && (
-                                <button onClick={() => setItems(p => [...p, emptyItem()])}
-                                    className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
-                                    <Plus className="w-3.5 h-3.5" /> إضافة سطر
-                                </button>
-                            )}
+                    {/* Add product form */}
+                    <div className="px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Package className="w-4 h-4 text-primary" />
+                            <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج للمرتجع</span>
                         </div>
+
                         <div className="flex flex-col gap-3">
-                        {form.data.invoice_id && invoice_items && invoice_items.length > 0 ? (
-                            // عرض عناصر الفاتورة الأصلية
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">المنتج</th>
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">النوع</th>
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الحجم</th>
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الكمية</th>
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">سعر الوحدة</th>
-                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الإجمالي</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {items.map((item, idx) => (
-                                            <tr key={idx} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                {/* اسم المنتج */}
-                                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{item.product_name}</td>
-                                                
-                                                {/* نوع البيع */}
-                                                <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 text-xs">
-                                                    {item.sale_type ? saleTypeLabels[item.sale_type] : '—'}
-                                                </td>
-                                                
-                                                {/* الحجم */}
-                                                <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50">
-                                                    {item.size_label ?? '—'}
-                                                </td>
-                                                
-                                                {/* الكمية */}
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-col gap-1">
-                                                        <input type="number" min="0" max={item.max_quantity} step="0.01" 
-                                                            value={item.quantity}
-                                                            onChange={e => setItem(idx, 'quantity', e.target.value)}
-                                                            placeholder="0" 
-                                                            className="w-24 px-3 py-1.5 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-bold text-sm text-center focus:border-primary focus:outline-none transition-all" />
-                                                        {item.max_quantity !== undefined && (
-                                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                                                ماكس: {item.max_quantity}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                
-                                                {/* سعر الوحدة */}
-                                                <td className="px-4 py-3">
-                                                    <input type="number" min="0" step="0.01" 
-                                                        value={item.unit_price}
-                                                        onChange={e => setItem(idx, 'unit_price', e.target.value)}
-                                                        placeholder="0.00" 
-                                                        className="w-28 px-3 py-1.5 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-bold text-sm text-center focus:border-primary focus:outline-none transition-all" />
-                                                </td>
-                                                
-                                                {/* الإجمالي */}
-                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">
-                                                    {parseFloat(item.line_total || '0').toFixed(2)}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : (
-                            // الوضع العادي - إضافة منتجات يدوياً
-                            items.map((item, idx) => (
-                                <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                    <ModernSelect label="المنتج" options={productOptions}
-                                        defaultValue={products.find(p => String(p.id) === item.product_id)?.name ?? ''}
-                                        onSelect={val => setItem(idx, 'product_id', resolveProduct(val))}
-                                        placeholder="اختر منتجاً..." />
-                                    <div className="flex flex-col gap-1.5 w-24">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الكمية</label>
-                                        <input type="number" min="0.01" step="0.01" value={item.quantity}
-                                            onChange={e => setItem(idx, 'quantity', e.target.value)}
-                                            placeholder="0" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5 w-28">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر الوحدة</label>
-                                        <input type="number" min="0" step="0.01" value={item.unit_price}
-                                            onChange={e => setItem(idx, 'unit_price', e.target.value)}
-                                            placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                    </div>
-                                    <div className="flex flex-col gap-1.5 w-28">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي</label>
-                                        <input type="number" min="0" step="0.01" value={item.line_total}
-                                            onChange={e => setItem(idx, 'line_total', e.target.value)}
-                                            placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                    </div>
-                                    <button onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
-                                        disabled={items.length === 1}
-                                        className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
-                                        <Trash2 className="w-4 h-4" />
+                            {/* Row 1: product + quantity + price + preview */}
+                            <div className="flex flex-wrap gap-3 items-end">
+                                <div className="flex-1 min-w-[180px]">
+                                    <ModernSelect
+                                        label=""
+                                        placeholder="اختر المنتج..."
+                                        options={productOptions}
+                                        defaultValue={selectedProduct?.name ?? ''}
+                                        onSelect={val => {
+                                            const p = products.find(p => p.name === val);
+                                            setSelProduct(p ? String(p.id) : '');
+                                            setSelSize('');
+                                            setSelQuantity('1');
+                                        }}
+                                    />
+                                </div>
+
+                                {/* quantity input */}
+                                {selectedProduct && (
+                                    <button
+                                        onClick={() => openPad('الكمية', selQuantity || '1', v => setSelQuantity(v), availableStock)}
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all">
+                                        {selQuantity || '1'}
                                     </button>
-                                </div>
-                            ))
-                        )}
-                            {form.errors.items && <p className="text-xs text-red-500 font-bold">{form.errors.items}</p>}
-                        </div>
-                        
-                        {/* Totals + Payment section */}
-                        {items.some(i => parseFloat(i.line_total) > 0) && (
-                            <div className="mt-4 flex flex-col gap-4">
-                                {/* Totals */}
-                                <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-bold text-slate-500 dark:text-white/40">إجمالي المرتجع</span>
-                                        <span className="text-lg font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</span>
-                                    </div>
-                                    {!isCash && grandTotal > 0 && (
-                                        <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
-                                            <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين بعد الإرجاع</span>
-                                            <span className={`font-bold ${debtAfterReturn > 0 ? 'text-amber-500' : debtAfterReturn < 0 ? 'text-purple-500' : 'text-slate-400'}`}>
-                                                {debtAfterReturn.toFixed(2)}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* Payment section */}
-                                {(isCash || showSettlementOption) && (
-                                    <div className="flex gap-3">
-                                        {/* يسار — تسجيل دفعة */}
-                                        <div className="flex flex-col gap-2 w-1/2">
-                                            <div className="flex flex-wrap gap-2">
-                                                {paymentMethods.map(m => (
-                                                    <button key={m.id}
-                                                        onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                                                        className={`flex-1 min-w-[70px] h-16 rounded-[16px] font-bold text-base transition-all border-2 ${
-                                                            selMethod === String(m.id)
-                                                                ? 'bg-primary border-primary text-white'
-                                                                : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
-                                                        }`}>
-                                                        {m.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => openPad('المبلغ', selAmount || grandTotal.toFixed(2), v => setSelAmount(v), grandTotal)}
-                                                    className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                                    {selAmount || grandTotal.toFixed(2)}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        if (!selMethod || !selAmount || +selAmount <= 0) return;
-                                                        const method = paymentMethods.find(m => m.id === +selMethod);
-                                                        if (!method) return;
-                                                        setSettlements(prev => {
-                                                            const existing = prev.findIndex(p => p.payment_method_id === selMethod);
-                                                            if (existing !== -1) {
-                                                                return prev.map((p, i) => i === existing
-                                                                    ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
-                                                                    : p
-                                                                );
-                                                            }
-                                                            return [...prev.filter(p => p.payment_method_id), { payment_method_id: selMethod, amount: selAmount, notes: '' }];
-                                                        });
-                                                        setSelMethod('');
-                                                        setSelAmount('');
-                                                    }}
-                                                    disabled={!selMethod || !selAmount}
-                                                    className="spatial-button flex items-center justify-center w-20 h-16 disabled:opacity-40 shrink-0">
-                                                    <Plus className="w-7 h-7" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        
-                                        {/* يمين — كاردات الدفعات */}
-                                        <div className="flex flex-col gap-2 w-1/2">
-                                            {settlements.filter(s => s.payment_method_id).length === 0 ? (
-                                                <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد تسويات</div>
-                                            ) : (
-                                                settlements.filter(s => s.payment_method_id).map((p, idx) => {
-                                                    const method = paymentMethods.find(m => String(m.id) === p.payment_method_id);
-                                                    return (
-                                                        <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
-                                                            <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
-                                                            <div className="flex flex-col min-w-0 flex-1">
-                                                                <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{method?.name}</span>
-                                                                <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
-                                                            </div>
-                                                            <button
-                                                                onClick={() => setSettlements(prev => prev.filter((_, i) => i !== idx))}
-                                                                className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
-                                                                <Trash2 className="w-5 h-5" />
-                                                            </button>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                        </div>
+                                )}
+
+                                {/* unit price input */}
+                                {selectedProduct && (
+                                    <div className="flex flex-col gap-1">
+                                        <button
+                                            onClick={() => openPad(`سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`, selUnitPrice, v => setSelUnitPrice(v))}
+                                            className={`spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-28 text-center cursor-pointer transition-all ${
+                                                selUnitPrice && +selUnitPrice < selMinPrice
+                                                    ? 'border-red-500/60 text-red-500'
+                                                    : 'hover:border-primary/40'
+                                            }`}>
+                                            {selUnitPrice || '0.00'}
+                                        </button>
+                                        {selUnitPrice && +selUnitPrice < selMinPrice && (
+                                            <span className="text-[10px] font-bold text-red-500">أقل من الحد الأدنى</span>
+                                        )}
                                     </div>
                                 )}
+
+                                {/* preview chips */}
+                                {previewTotal !== null && (
+                                    <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+                                        <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
+                                        <span className="font-black text-primary text-sm mr-1">{fmt(previewTotal)}</span>
+                                    </div>
+                                )}
+
+                                {/* add button */}
+                                {selectedProduct && (
+                                    <button
+                                        onClick={addProductToCart}
+                                        disabled={!canAddProduct}
+                                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                                        <Plus className="w-6 h-6" /> إضافة
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Row 2: sizes (if needed) */}
+                            {selectedProduct && needsSize && (
+                                <div className="w-full">
+                                    <SizeSelect
+                                        sizes={sizes}
+                                        selectedSizeId={selSize}
+                                        onSizeSelect={id => setSelSize(id)}
+                                        onPriceResolved={() => {}}
+                                        product={selectedProduct}
+                                        isVip={false}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Stock warning */}
+                            {selectedProduct && availableStock === 0 && (
+                                <div className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
+                                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">
+                                        المخزون غير كافٍ — المتاح: {availableStock}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* Totals + Payment section */}
+                    <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+                        {/* Totals */}
+                        <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-500 dark:text-white/40">إجمالي المرتجع</span>
+                                <span className="text-lg font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</span>
+                            </div>
+                            {!isCash && grandTotal > 0 && (
+                                <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+                                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين بعد الإرجاع</span>
+                                    <span className={`font-bold ${debtAfterReturn > 0 ? 'text-amber-500' : debtAfterReturn < 0 ? 'text-purple-500' : 'text-slate-400'}`}>
+                                        {debtAfterReturn.toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Payment section */}
+                        {(isCash || showSettlementOption) && (
+                            <div className="flex gap-3">
+                                {/* يسار — تسجيل دفعة */}
+                                <div className="flex flex-col gap-2 w-1/2">
+                                    <div className="flex flex-wrap gap-2">
+                                        {paymentMethods.map(m => (
+                                            <button key={m.id}
+                                                onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
+                                                className={`flex-1 min-w-[70px] h-16 rounded-[16px] font-bold text-base transition-all border-2 ${
+                                                    selMethod === String(m.id)
+                                                        ? 'bg-primary border-primary text-white'
+                                                        : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
+                                                }`}>
+                                                {m.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => openPad('المبلغ', selAmount || grandTotal.toFixed(2), v => setSelAmount(v), grandTotal)}
+                                            className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            {selAmount || grandTotal.toFixed(2)}
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (!selMethod || !selAmount || +selAmount <= 0) return;
+                                                const method = paymentMethods.find(m => m.id === +selMethod);
+                                                if (!method) return;
+                                                setSettlements(prev => {
+                                                    const existing = prev.findIndex(p => p.payment_method_id === selMethod);
+                                                    if (existing !== -1) {
+                                                        return prev.map((p, i) => i === existing
+                                                            ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
+                                                            : p
+                                                        );
+                                                    }
+                                                    return [...prev.filter(p => p.payment_method_id), { payment_method_id: selMethod, amount: selAmount, notes: '' }];
+                                                });
+                                                setSelMethod('');
+                                                setSelAmount('');
+                                            }}
+                                            disabled={!selMethod || !selAmount}
+                                            className="spatial-button flex items-center justify-center w-20 h-16 disabled:opacity-40 shrink-0">
+                                            <Plus className="w-7 h-7" />
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {/* يمين — كاردات الدفعات */}
+                                <div className="flex flex-col gap-2 w-1/2">
+                                    {settlements.filter(s => s.payment_method_id).length === 0 ? (
+                                        <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد تسويات</div>
+                                    ) : (
+                                        settlements.filter(s => s.payment_method_id).map((p, idx) => {
+                                            const method = paymentMethods.find(m => String(m.id) === p.payment_method_id);
+                                            return (
+                                                <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                                                    <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
+                                                    <div className="flex flex-col min-w-0 flex-1">
+                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{method?.name}</span>
+                                                        <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setSettlements(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

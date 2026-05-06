@@ -55,8 +55,40 @@ class InvoiceReturnController extends Controller
 
         return Inertia::render('InvoiceReturns/Create', [
             'customers'      => Customer::orderBy('name')->get(['id', 'name']),
-            'products'       => Product::whereHas('category', fn($q) => $q->where('is_operational', false))
-                ->orderBy('name')->get(['id', 'name', 'stock']),
+            'products'       => Product::with(['category', 'priceTier.tierPrices', 'productPrice', 'originalPerfumeDetail'])
+                ->whereHas('category', fn($q) => $q->where('is_operational', false))
+                ->orderBy('name')
+                ->get()
+                ->map(fn($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'stock' => $p->stock,
+                    'selling_type' => $p->selling_type,
+                    'category' => $p->category ? [
+                        'id' => $p->category->id,
+                        'name' => $p->category->name,
+                        'unit' => $p->category->unit,
+                    ] : null,
+                    'price_tier' => $p->priceTier ? [
+                        'id' => $p->priceTier->id,
+                        'name' => $p->priceTier->name,
+                        'tier_prices' => $p->priceTier->tierPrices->map(fn($tp) => [
+                            'size_id' => $tp->size_id,
+                            'price_regular' => $tp->price_regular,
+                            'price_vip' => $tp->price_vip,
+                        ]),
+                    ] : null,
+                    'product_price' => $p->productPrice ? [
+                        'price_per_unit_regular' => $p->productPrice->price_per_unit_regular,
+                        'price_per_unit_vip' => $p->productPrice->price_per_unit_vip,
+                        'full_bottle_regular' => $p->productPrice->full_bottle_regular,
+                        'full_bottle_vip' => $p->productPrice->full_bottle_vip,
+                    ] : null,
+                    'original_perfume_detail' => $p->originalPerfumeDetail ? [
+                        'bottle_volume' => $p->originalPerfumeDetail->bottle_volume,
+                    ] : null,
+                ]),
+            'sizes' => \App\Models\Size::orderBy('value')->get(['id', 'label', 'value']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
             'selected_customer_id' => (int) $customerId,
             'selected_invoice_id'  => $invoiceId ? (int) $invoiceId : null,
