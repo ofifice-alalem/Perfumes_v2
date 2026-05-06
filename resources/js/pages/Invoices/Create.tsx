@@ -112,10 +112,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [processing,    setProcessing]    = useState(false);
 
     // product selection
-    const [selProduct,  setSelProduct]  = useState('');
-    const [selSaleType, setSelSaleType] = useState('');
-    const [selSize,     setSelSize]     = useState('');
-    const [selQty,      setSelQty]      = useState('1');
+    const [selProduct,   setSelProduct]   = useState('');
+    const [selSaleType,  setSelSaleType]  = useState('');
+    const [selSize,      setSelSize]      = useState('');
+    const [selQty,       setSelQty]       = useState('1');
+    const [selUnitPrice, setSelUnitPrice] = useState('');
+    const [selMinPrice,  setSelMinPrice]  = useState(0);
 
     // payment input
     const [selMethod, setSelMethod] = useState('');
@@ -171,12 +173,54 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         }
     }, [selectedProduct, isTier, selSaleType]);
 
-    // auto-select default payment method
-    useEffect(() => {
-        if (!selMethod && paymentMethods.length > 0) {
-            setSelMethod(String(paymentMethods[0].id));
+    // ── حساب السعر الافتراضي والحد الأدنى لأي نوع بيع ──────────────────────
+    function resolveDefaultAndMin(): { defaultPrice: number; minPrice: number } {
+        if (!selectedProduct || !effectiveST) return { defaultPrice: 0, minPrice: 0 };
+        const pp = selectedProduct.product_price;
+        const pt = selectedProduct.price_tier;
+        switch (effectiveST) {
+            case 'tier_decant': {
+                if (!selSize) return { defaultPrice: 0, minPrice: 0 };
+                if (selSize.startsWith('-custom-')) {
+                    return {
+                        defaultPrice: pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0,
+                        minPrice:     pp ? +pp.price_per_unit_vip : 0,
+                    };
+                }
+                const tp = pt?.tier_prices?.find(t => t.size_id === +selSize);
+                return tp ? { defaultPrice: +(isVip ? tp.price_vip : tp.price_regular), minPrice: +tp.price_vip } : { defaultPrice: 0, minPrice: 0 };
+            }
+            case 'unit_decant':
+            case 'unit_based':
+                return pp ? {
+                    defaultPrice: +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular),
+                    minPrice:     +pp.price_per_unit_vip,
+                } : { defaultPrice: 0, minPrice: 0 };
+            case 'full_bottle':
+                return pp ? {
+                    defaultPrice: +(isVip ? (pp.full_bottle_vip ?? 0) : (pp.full_bottle_regular ?? 0)),
+                    minPrice:     +(pp.full_bottle_vip ?? 0),
+                } : { defaultPrice: 0, minPrice: 0 };
+            default: return { defaultPrice: 0, minPrice: 0 };
         }
-    }, [paymentMethods]);
+    }
+
+    // هل يجب إظهار حقل السعر؟ — عندما يكون نوع البيع محدداً والحجم محدداً (إن كان مطلوباً)
+    const showPriceField = !!(selectedProduct && effectiveST && (!needsSize || selSize));
+
+    // عند تغيير المنتج أو نوع البيع أو الحجم — نحدّث السعر الافتراضي تلقائياً
+    useEffect(() => {
+        if (showPriceField) {
+            const { defaultPrice, minPrice } = resolveDefaultAndMin();
+            if (defaultPrice > 0) {
+                setSelUnitPrice(defaultPrice.toFixed(2));
+                setSelMinPrice(minPrice);
+            } else {
+                setSelUnitPrice('');
+                setSelMinPrice(0);
+            }
+        }
+    }, [selProduct, selSaleType, selSize, isVip]);
 
     // stock calculations
     function getCartConsumed(productId: number): number {
@@ -193,9 +237,13 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         })()
         : undefined;
 
-    // preview
-    const previewPrice = selectedProduct && (isTier ? selSize : selSaleType)
-        ? resolvePrice(selectedProduct, effectiveST, selSize, isVip) : null;
+    // preview — يستخدم selUnitPrice إذا أدخله المستخدم وإلا السعر الافتراضي
+    const effectiveUnitPrice = selUnitPrice && +selUnitPrice >= selMinPrice
+        ? +selUnitPrice
+        : (selectedProduct && (isTier ? selSize : selSaleType)
+            ? resolvePrice(selectedProduct, effectiveST, selSize, isVip)
+            : null);
+    const previewPrice = effectiveUnitPrice;
     const previewQty = selectedProduct && (isTier ? selSize : selSaleType)
         ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
     const previewCount = effectiveST === 'unit_based' ? (+selQty || 1) : (parseInt(selQty) || 1);
@@ -229,15 +277,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     function addToCart() {
         if (!selectedProduct || (!isTier && !selSaleType)) return;
 
+        // السعر: إما ما أدخله المستخدم أو السعر الافتراضي
+        const unitPrice = selUnitPrice && +selUnitPrice >= selMinPrice
+            ? +selUnitPrice
+            : resolvePrice(selectedProduct, effectiveST, selSize, isVip);
+
         if (effectiveST === 'unit_based') {
-            const qty   = +selQty || 0;
-            const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
-            if (!qty || !price) return;
+            const qty = +selQty || 0;
+            if (!qty || !unitPrice) return;
             const newItem: CartItem = {
                 product_id: selectedProduct.id, product_name: selectedProduct.name,
                 sale_type: effectiveST, size_id: selSize, size_label: '',
-                quantity: String(qty), unit_price: price,
-                line_total: resolveLineTotal(effectiveST, price, qty),
+                quantity: String(qty), unit_price: unitPrice,
+                line_total: resolveLineTotal(effectiveST, unitPrice, qty),
             };
             setCart(prev => {
                 const newCart = [...prev, newItem];
@@ -248,9 +300,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 return newCart;
             });
         } else {
-            const qty   = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
-            const price = resolvePrice(selectedProduct, effectiveST, selSize, isVip);
-            if (!qty || !price) return;
+            const qty = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
+            if (!qty || !unitPrice) return;
             const sizeLabel = selSize.startsWith('-custom-')
                 ? `${selSize.replace('-custom-', '')} مل`
                 : (sizes.find(s => s.id === +selSize)?.label ?? '');
@@ -258,8 +309,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             const newItems: CartItem[] = Array.from({ length: count }, () => ({
                 product_id: selectedProduct.id, product_name: selectedProduct.name,
                 sale_type: effectiveST, size_id: selSize, size_label: sizeLabel,
-                quantity: String(qty), unit_price: price,
-                line_total: resolveLineTotal(effectiveST, price, qty),
+                quantity: String(qty), unit_price: unitPrice,
+                line_total: resolveLineTotal(effectiveST, unitPrice, qty),
             }));
             setCart(prev => {
                 const newCart = [...prev, ...newItems];
@@ -272,6 +323,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         }
 
         setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('1');
+        setSelUnitPrice(''); setSelMinPrice(0);
         setResetKey(k => k + 1);
     }
 
@@ -298,6 +350,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setCustomerId(''); setCustomerType('regular'); setNotes('');
         setCart([]); setPayments([]); setDebtPayment(null);
         setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('1');
+        setSelUnitPrice(''); setSelMinPrice(0);
         setSelMethod(''); setSelAmount('');
         setResetKey(k => k + 1);
     }
@@ -450,7 +503,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <>
                                         <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
                                             <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر</span>
-                                            <span className="font-black text-primary text-sm mr-1">{previewPrice}</span>
+                                            <span className="font-black text-primary text-sm mr-1">{previewPrice?.toFixed(2)}</span>
                                         </div>
                                         <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
                                             <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
@@ -460,25 +513,47 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 )}
                             </div>
 
-                            {/* Row 2: sizes (if needed) + add button */}
+                            {/* Row 2: sizes (if needed) */}
                             {needsSize && (
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                                    <div className="w-full">
-                                        <SizeSelect sizes={sizes} selectedSizeId={selSize}
-                                            onSizeSelect={setSelSize} product={selectedProduct} isVip={isVip} />
-                                    </div>
-                                    <button onClick={addToCart} disabled={!canAdd}
-                                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
-                                        <Plus className="w-6 h-6" /> إضافة
-                                    </button>
+                                <div className="w-full">
+                                    <SizeSelect sizes={sizes} selectedSizeId={selSize}
+                                        onSizeSelect={id => { setSelSize(id); setSelUnitPrice(''); }}
+                                        onPriceResolved={(def, min) => { setSelUnitPrice(def.toFixed(2)); setSelMinPrice(min); }}
+                                        product={selectedProduct} isVip={isVip} />
                                 </div>
                             )}
 
-                            {/* Add button for no-size products */}
-                            {!needsSize && selectedProduct && (isTier || selSaleType) && (
-                                <div className="flex justify-end">
-                                    <button onClick={addToCart} disabled={!canAdd}
-                                        className="spatial-button flex items-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 active:scale-[0.95] hover:scale-[1.02]">
+                            {/* Row 3: حقل سعر الوحدة + زر الإضافة — يظهر لجميع أنواع البيع */}
+                            {showPriceField && (
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                    <div className="flex flex-col gap-1.5 flex-1">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">
+                                            سعر الوحدة
+                                            {selMinPrice > 0 && (
+                                                <span className="mr-1 text-slate-400 dark:text-white/30 normal-case font-bold">
+                                                    (حد أدنى: {selMinPrice.toFixed(2)})
+                                                </span>
+                                            )}
+                                        </label>
+                                        <button
+                                            onClick={() => openPad(
+                                                `سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`,
+                                                selUnitPrice,
+                                                v => setSelUnitPrice(v),
+                                            )}
+                                            className={`h-14 rounded-[20px] px-5 text-[18px] font-black w-full sm:w-36 text-center cursor-pointer transition-all spatial-input ${
+                                                selUnitPrice && +selUnitPrice < selMinPrice
+                                                    ? 'border-red-500/60 text-red-500'
+                                                    : 'hover:border-primary/40'
+                                            }`}>
+                                            {selUnitPrice || '0.00'}
+                                        </button>
+                                        {selUnitPrice && +selUnitPrice < selMinPrice && (
+                                            <span className="text-xs font-bold text-red-500">أقل من الحد الأدنى</span>
+                                        )}
+                                    </div>
+                                    <button onClick={addToCart} disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
+                                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
                                         <Plus className="w-6 h-6" /> إضافة
                                     </button>
                                 </div>

@@ -52,7 +52,8 @@ class InvoiceReturnController extends Controller
 
         return Inertia::render('InvoiceReturns/Create', [
             'customers'      => Customer::orderBy('name')->get(['id', 'name']),
-            'products'       => Product::orderBy('name')->get(['id', 'name', 'stock']),
+            'products'       => Product::whereHas('category', fn($q) => $q->where('is_operational', false))
+                ->orderBy('name')->get(['id', 'name', 'stock']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
             'selected_customer_id' => (int) $customerId,
             'selected_invoice_id'  => $invoiceId ? (int) $invoiceId : null,

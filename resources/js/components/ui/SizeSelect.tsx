@@ -8,13 +8,14 @@ interface SizeSelectProps {
   sizes: Size[];
   selectedSizeId: string;
   onSizeSelect: (sizeId: string) => void;
+  onPriceResolved?: (defaultPrice: number, minPrice: number) => void;
   placeholder?: string;
   className?: string;
   product?: any;
   isVip?: boolean;
 }
 
-export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, className = '', product, isVip = false }: SizeSelectProps) {
+export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolved, className = '', product, isVip = false }: SizeSelectProps) {
   const [showNumberPad, setShowNumberPad] = useState(false);
   const [customSizes, setCustomSizes] = useState<Record<string, string>>({});
 
@@ -34,23 +35,44 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, className = ''
   const isCustom = selectedSizeId.startsWith('-custom-');
 
   function getPrice(size: Size): number {
+    const range = getPriceRange(size);
+    return isVip ? range.vip : range.regular;
+  }
+
+  function getPriceRange(size: Size): { regular: number; vip: number } {
     try {
       if (product?.selling_type === 'tier_based') {
         const tp = product.price_tier?.tier_prices?.find((t: any) => t.size_id === size.id);
-        return tp ? +(isVip ? tp.price_vip : tp.price_regular) : 0;
+        return tp ? { regular: +tp.price_regular, vip: +tp.price_vip } : { regular: 0, vip: 0 };
       }
-      const unitPrice = isVip ? product?.product_price?.price_per_unit_vip : product?.product_price?.price_per_unit_regular;
-      return (+unitPrice) * (+size.value);
-    } catch { return 0; }
+      const r = +product?.product_price?.price_per_unit_regular || 0;
+      const v = +product?.product_price?.price_per_unit_vip || 0;
+      return { regular: r * +size.value, vip: v * +size.value };
+    } catch { return { regular: 0, vip: 0 }; }
+  }
+
+  function handleSelect(sizeId: string, size?: Size) {
+    onSizeSelect(sizeId);
+    if (onPriceResolved && size) {
+      const range = getPriceRange(size);
+      const defaultPrice = isVip ? range.vip : range.regular;
+      onPriceResolved(defaultPrice, range.vip);
+    }
   }
 
   function handleCustomSize(val: string) {
     if (!val || val === '0') return;
     const existing = availableSizes.find(s => s.value === val);
-    if (existing) { onSizeSelect(String(existing.id)); return; }
+    if (existing) { handleSelect(String(existing.id), existing); return; }
     const customId = `-custom-${val}`;
     setCustomSizes(prev => ({ ...prev, [customId]: val }));
     onSizeSelect(customId);
+    // للأحجام المخصصة نستخدم سعر الوحدة مباشرة
+    if (onPriceResolved && product?.product_price) {
+      const r = +product.product_price.price_per_unit_regular || 0;
+      const v = +product.product_price.price_per_unit_vip || 0;
+      onPriceResolved(isVip ? v : r, v);
+    }
   }
 
   return (
@@ -63,7 +85,7 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, className = ''
           const price = getPrice(size);
           const isSelected = selectedSizeId === String(size.id);
           return (
-            <button key={size.id} onClick={() => onSizeSelect(String(size.id))}
+            <button key={size.id} onClick={() => handleSelect(String(size.id), size)}
               className={`flex items-center justify-between px-4 h-12 rounded-[14px] border-2 transition-all active:scale-[0.97] sm:flex-col sm:justify-center sm:px-4 sm:h-[72px] sm:min-w-[80px] sm:rounded-[18px] ${
                 isSelected
                   ? 'border-primary bg-primary text-white shadow-md shadow-primary/25'

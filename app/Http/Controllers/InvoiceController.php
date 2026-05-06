@@ -38,7 +38,8 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Create', [
             'customers'      => Customer::orderBy('name')->get(['id', 'name', 'total_debt']),
-            'products'       => Product::with(['category', 'productPrice', 'originalPerfumeDetail', 'priceTier.tierPrices.size'])
+            'products'       => Product::with(['category', 'priceTier.tierPrices.size', 'productPrice', 'originalPerfumeDetail'])
+                ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')->get(),
             'sizes'          => Size::orderBy('label')->get(['id', 'label', 'value', 'unit']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
@@ -48,7 +49,8 @@ class InvoiceController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'customer_id'                    => 'required|exists:customers,id',
+            'customer_id'                    => 'nullable|exists:customers,id',
+            'customer_type'                  => 'nullable|in:regular,vip',
             'notes'                          => 'nullable|string',
             'items'                          => 'required|array|min:1',
             'items.*.product_id'             => 'required|exists:products,id',
@@ -61,7 +63,14 @@ class InvoiceController extends Controller
             'payments.*.payment_method_id'   => 'required|exists:payment_methods,id',
             'payments.*.amount'              => 'required|numeric|min:0.01',
             'payments.*.notes'               => 'nullable|string',
+            'debt_payment'                   => 'nullable|array',
+            'debt_payment.payment_method_id' => 'required_with:debt_payment|exists:payment_methods,id',
+            'debt_payment.amount'            => 'required_with:debt_payment|numeric|min:0.01',
         ]);
+
+        // إذا كان customer_id فارغاً أو null → زبون نقدي (id=1)
+        $customerId = $request->input('customer_id');
+        $data['customer_id'] = ($customerId && $customerId !== 'null') ? (int)$customerId : 1;
 
         $invoice = DB::transaction(function () use ($data) {
             $customer = Customer::findOrFail($data['customer_id']);
@@ -69,7 +78,7 @@ class InvoiceController extends Controller
             $invoice = \App\Models\Invoice::create([
                 'user_id'         => Auth::id() ?? 1,
                 'customer_id'     => $data['customer_id'],
-                'customer_type'   => $customer->id === 1 ? 'regular' : ($customer->total_debt < 0 ? 'vip' : 'regular'),
+                'customer_type'   => $data['customer_type'] ?? ($customer->id === 1 ? 'regular' : ($customer->total_debt < 0 ? 'vip' : 'regular')),
                 'total'           => 0,
                 'paid_amount'     => 0,
                 'due_amount'      => 0,
@@ -101,6 +110,19 @@ class InvoiceController extends Controller
                     'payment_method_id' => $payment['payment_method_id'],
                     'amount'            => $amount,
                     'notes'             => $payment['notes'] ?? null,
+                    'created_at'        => now(),
+                ]);
+            }
+
+            // دفعة سداد الدين المستقلة (غير مرتبطة بالفاتورة)
+            if (!empty($data['debt_payment']) && $invoice->customer_id !== 1) {
+                $dp = $data['debt_payment'];
+                Payment::create([
+                    'customer_id'       => $invoice->customer_id,
+                    'invoice_id'        => null,
+                    'payment_method_id' => $dp['payment_method_id'],
+                    'amount'            => (float) $dp['amount'],
+                    'notes'             => 'سداد دين',
                     'created_at'        => now(),
                 ]);
             }
