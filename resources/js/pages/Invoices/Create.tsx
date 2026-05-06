@@ -7,7 +7,7 @@ import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
-    CreditCard, ChevronLeft, User, AlertCircle,
+    CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause,
 } from 'lucide-react';
 
 interface Customer      { id: number; name: string; total_debt?: string; }
@@ -52,6 +52,20 @@ interface PaymentEntry {
     payment_method_id: string;
     method_name:       string;
     amount:            string;
+}
+
+// Hold Invoice Interface
+interface HoldInvoice {
+    id: string;
+    customerId: string;
+    customerType: 'regular' | 'vip';
+    customerName: string;
+    notes: string;
+    cart: CartItem[];
+    payments: PaymentEntry[];
+    debtPayment: PaymentEntry | null;
+    timestamp: number;
+    total: number;
 }
 
 const saleTypeLabels: Record<string, string> = {
@@ -111,6 +125,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [debtPayment,          setDebtPayment]          = useState<PaymentEntry | null>(null);
     const [processing,           setProcessing]           = useState(false);
     const [paymentManuallySet,   setPaymentManuallySet]   = useState(false);
+    
+    // Hold invoices state
+    const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
+    const [showHoldList, setShowHoldList] = useState(false);
 
     // product selection
     const [selProduct,   setSelProduct]   = useState('');
@@ -136,6 +154,23 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setPadTitle(title); setPadInitial(initial); setPadMax(max);
         setPadCallback(() => cb); setShowPad(true);
     }
+    
+    // Load hold invoices from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('holdInvoices');
+        if (saved) {
+            try {
+                setHoldInvoices(JSON.parse(saved));
+            } catch (e) {
+                console.error('Failed to parse hold invoices:', e);
+            }
+        }
+    }, []);
+    
+    // Save hold invoices to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('holdInvoices', JSON.stringify(holdInvoices));
+    }, [holdInvoices]);
 
     // ── derived ──────────────────────────────────────────────────────────────
     const isVip          = customerType === 'vip';
@@ -382,6 +417,51 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setPaymentManuallySet(false);
         setResetKey(k => k + 1);
     }
+    
+    // Hold invoice functions
+    function holdCurrentInvoice() {
+        if (cart.length === 0) return;
+        
+        const selectedCustomer = customerId 
+            ? customers.find(c => c.id === +customerId)
+            : null;
+        
+        const holdInvoice: HoldInvoice = {
+            id: Date.now().toString(),
+            customerId,
+            customerType,
+            customerName: selectedCustomer?.name ?? 'زبون نقدي',
+            notes,
+            cart: [...cart],
+            payments: [...payments],
+            debtPayment: debtPayment ? { ...debtPayment } : null,
+            timestamp: Date.now(),
+            total,
+        };
+        
+        setHoldInvoices(prev => [...prev, holdInvoice]);
+        clearForm();
+    }
+    
+    function restoreHoldInvoice(holdInvoice: HoldInvoice) {
+        setCustomerId(holdInvoice.customerId);
+        setCustomerType(holdInvoice.customerType);
+        setNotes(holdInvoice.notes);
+        setCart([...holdInvoice.cart]);
+        setPayments([...holdInvoice.payments]);
+        setDebtPayment(holdInvoice.debtPayment ? { ...holdInvoice.debtPayment } : null);
+        
+        // Remove from hold list
+        setHoldInvoices(prev => prev.filter(h => h.id !== holdInvoice.id));
+        setShowHoldList(false);
+        
+        // Reset key to force ModernSelect to update
+        setResetKey(k => k + 1);
+    }
+    
+    function deleteHoldInvoice(holdId: string) {
+        setHoldInvoices(prev => prev.filter(h => h.id !== holdId));
+    }
 
     function submit() {
         if (cart.length === 0 || (isCashCustomer && Math.abs(remaining) > 0.01)) return;
@@ -437,8 +517,61 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <span className="text-slate-300 dark:text-white/10">/</span>
                             <span className="font-black text-slate-800 dark:text-white text-sm">فاتورة جديدة</span>
                         </div>
-                        {flash?.error && <span className="text-xs font-bold text-red-500">{flash.error}</span>}
+                        <div className="flex items-center gap-2">
+                            {/* Hold invoices indicator */}
+                            {holdInvoices.length > 0 && (
+                                <button
+                                    onClick={() => setShowHoldList(!showHoldList)}
+                                    className="relative flex items-center gap-2 px-3 h-8 rounded-[10px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-xs transition-all"
+                                >
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>معلقة ({holdInvoices.length})</span>
+                                </button>
+                            )}
+                            {flash?.error && <span className="text-xs font-bold text-red-500">{flash.error}</span>}
+                        </div>
                     </div>
+                    
+                    {/* Hold invoices dropdown */}
+                    {showHoldList && holdInvoices.length > 0 && (
+                        <div className="absolute top-16 left-5 right-5 z-50 bg-white dark:bg-slate-800 rounded-[20px] border border-black/10 dark:border-white/10 shadow-xl max-h-80 overflow-y-auto">
+                            <div className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="font-black text-slate-800 dark:text-white text-sm">الفواتير المعلقة</span>
+                                    <button onClick={() => setShowHoldList(false)} className="w-6 h-6 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-400 dark:text-white/40">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {holdInvoices.map(hold => (
+                                        <div key={hold.id} className="flex items-center gap-3 p-3 rounded-[14px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5 hover:border-primary/20 transition-all">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-slate-800 dark:text-white text-sm">{hold.customerName}</span>
+                                                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">{hold.cart.length} منتج</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/30">{hold.total.toFixed(2)}</span>
+                                                    <span className="text-xs text-slate-400 dark:text-white/30">•</span>
+                                                    <span className="text-xs text-slate-400 dark:text-white/30">{new Date(hold.timestamp).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <button onClick={() => restoreHoldInvoice(hold)}
+                                                    className="w-8 h-8 rounded-[8px] bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all">
+                                                    <Play className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => deleteHoldInvoice(hold.id)}
+                                                    className="w-8 h-8 rounded-[8px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Customer bar */}
                     <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
@@ -448,8 +581,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <User className="w-4 h-4 text-primary" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <ModernSelect key={resetKey} label="" options={customerOptions}
-                                        defaultValue="زبون نقدي" placeholder="اختر العميل"
+                                    <ModernSelect key={`customer-${resetKey}`} label="" options={customerOptions}
+                                        defaultValue={customerId ? customers.find(c => c.id === +customerId)?.name ?? 'زبون نقدي' : 'زبون نقدي'} placeholder="اختر العميل"
                                         onSelect={val => {
                                             const c = customers.find(c => c.name === val);
                                             setCustomerId(c && c.id !== 1 ? String(c.id) : '');
@@ -830,9 +963,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                     {/* Notes section */}
                     <div className="px-4 pb-3 border-t border-black/5 dark:border-white/5 shrink-0 pt-3">
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                            rows={2} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
-                            className="w-full spatial-input rounded-[16px] px-4 py-3 text-sm font-bold resize-none" />
+                        <div className="flex gap-3 h-24">
+                            <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                                rows={2} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
+                                className="flex-1 spatial-input rounded-[16px] px-4 py-3 text-sm font-bold resize-none" />
+                            {cart.length > 0 && (
+                                <button onClick={holdCurrentInvoice}
+                                    className="flex-1 flex flex-col items-center justify-center gap-1.5 rounded-[16px] bg-gradient-to-br from-amber-400/15 to-amber-600/15 hover:from-amber-400/25 hover:to-amber-600/25 border-2 border-amber-500/30 hover:border-amber-500/50 text-amber-700 dark:text-amber-300 font-black text-sm transition-all duration-200 shrink-0 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] hover:-translate-y-1">
+                                    <Pause className="w-6 h-6" />
+                                    <span className="text-base">تعليق الفاتورة</span>
+                                    <span className="text-xs opacity-70">حفظ مؤقت</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
