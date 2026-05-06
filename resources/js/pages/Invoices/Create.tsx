@@ -266,14 +266,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
     // ── actions ───────────────────────────────────────────────────────────────
 
-    function updatePaymentForTotal(newTotal: number) {
-        if (payments.length === 1 && newTotal > 0) {
-            setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
-        } else if (newTotal === 0) {
-            setPayments([]);
-        }
-    }
-
     function addToCart() {
         if (!selectedProduct || (!isTier && !selSaleType)) return;
 
@@ -293,10 +285,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             };
             setCart(prev => {
                 const newCart = [...prev, newItem];
-                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                if (prev.length === 0 && paymentMethods.length > 0) {
-                    setPayments([{ payment_method_id: String(paymentMethods[0].id), method_name: paymentMethods[0].name, amount: newTotal.toFixed(2) }]);
-                } else { setTimeout(() => updatePaymentForTotal(newTotal), 0); }
                 return newCart;
             });
         } else {
@@ -314,10 +302,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             }));
             setCart(prev => {
                 const newCart = [...prev, ...newItems];
-                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                if (prev.length === 0 && paymentMethods.length > 0) {
-                    setPayments([{ payment_method_id: String(paymentMethods[0].id), method_name: paymentMethods[0].name, amount: newTotal.toFixed(2) }]);
-                } else { setTimeout(() => updatePaymentForTotal(newTotal), 0); }
                 return newCart;
             });
         }
@@ -328,12 +312,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }
 
     function removeGroup(indices: number[]) {
-        setCart(prev => {
-            const newCart = prev.filter((_, i) => !indices.includes(i));
-            const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-            setTimeout(() => updatePaymentForTotal(newTotal), 0);
-            return newCart;
-        });
+        setCart(prev => prev.filter((_, i) => !indices.includes(i)));
     }
 
     function addPayment() {
@@ -342,7 +321,18 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         if (currentPaid + +selAmount > total) return;
         const method = paymentMethods.find(m => m.id === +selMethod);
         if (!method) return;
-        setPayments(prev => [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }]);
+        
+        setPayments(prev => {
+            const existing = prev.findIndex(p => p.payment_method_id === selMethod);
+            if (existing !== -1) {
+                return prev.map((p, i) => i === existing
+                    ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
+                    : p
+                );
+            }
+            return [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }];
+        });
+        
         setSelMethod(''); setSelAmount('');
     }
 
@@ -571,13 +561,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
                     </div>
 
-                    {/* Notes + totals */}
+                    {/* Totals + Payment */}
                     <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                            rows={3} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
-                            className="w-full spatial-input rounded-[16px] px-4 py-3 text-sm font-bold resize-none" />
-
-                        {/* Totals summary */}
+                        {/* Totals */}
                         <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
                             {[
                                 { label: 'الإجمالي', value: grandTotal.toFixed(2), cls: 'text-slate-800 dark:text-white text-lg font-black' },
@@ -590,6 +576,75 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 </div>
                             ))}
                         </div>
+
+                        {/* Payment section */}
+                        {cart.length > 0 && (
+                            <div className="flex gap-3">
+                                {/* يسار — تسجيل دفعة */}
+                                <div className="flex flex-col gap-2 w-1/2">
+                                    <div className="flex flex-wrap gap-2">
+                                        {paymentMethods.map(m => (
+                                            <button key={m.id}
+                                                onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
+                                                className={`flex-1 min-w-[70px] h-16 rounded-[16px] font-bold text-base transition-all border-2 ${
+                                                    selMethod === String(m.id)
+                                                        ? 'bg-primary border-primary text-white'
+                                                        : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
+                                                }`}>
+                                                {m.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
+                                            className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            {selAmount || remaining.toFixed(2)}
+                                        </button>
+                                        <button onClick={addPayment} disabled={!selMethod || !selAmount}
+                                            className="spatial-button flex items-center justify-center w-20 h-16 disabled:opacity-40 shrink-0">
+                                            <Plus className="w-7 h-7" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* يمين — كاردات الدفعات */}
+                                <div className="flex flex-col gap-2 w-1/2">
+                                    {/* Debt payment card */}
+                                    {debtPayment && (
+                                        <div className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
+                                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <span className="font-bold text-red-600 dark:text-red-400 text-xs">سداد الدين — {debtPayment.method_name}</span>
+                                                <span className="font-black text-slate-800 dark:text-white text-lg">{debtPayment.amount}</span>
+                                            </div>
+                                            <button onClick={() => setDebtPayment(null)}
+                                                className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* Regular payments */}
+                                    {payments.length === 0 && !debtPayment ? (
+                                        <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد دفعات</div>
+                                    ) : (
+                                        payments.map((p, idx) => (
+                                            <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                                                <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
+                                                <div className="flex flex-col min-w-0 flex-1">
+                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{p.method_name}</span>
+                                                    <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
+                                                </div>
+                                                <button onClick={() => setPayments(prev => prev.filter((_, i) => i !== idx))}
+                                                    className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Submit */}
@@ -622,14 +677,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 </div>
 
                 {/* ══ RIGHT PANEL ══ */}
-                <div className="w-full lg:w-[650px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0">
+                <div className="w-full lg:w-[600px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0 border-r border-black/5 dark:border-white/5">
 
                     {/* Panel header */}
                     <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
                         <div className="flex items-center gap-2">
                             <ShoppingCart className="w-4 h-4 text-primary" />
                             <span className="font-black text-slate-800 dark:text-white text-sm">
-                                الفاتورة
+                                عناصر الفاتورة
                                 {cart.length > 0 && <span className="mr-2 text-xs font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{cart.length}</span>}
                             </span>
                         </div>
@@ -695,7 +750,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                     }
                                                                 }
                                                                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                                                setTimeout(() => updatePaymentForTotal(newTotal), 0);
                                                                 return newCart;
                                                             });
                                                         }, cartMax);
@@ -736,63 +790,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         })()}
                     </div>
 
-                    {/* Payment section */}
-                    <div className="shrink-0 border-t border-black/5 dark:border-white/5 px-5 py-4 flex flex-col gap-3">
-
-                        {/* Debt payment row */}
-                        {debtPayment && (
-                            <div className="flex items-center justify-between px-3 py-2 rounded-[10px] bg-red-500/5 border border-red-500/15">
-                                <div className="flex items-center gap-2">
-                                    <AlertCircle className="w-3.5 h-3.5 text-red-500" />
-                                    <span className="font-bold text-slate-700 dark:text-white/70 text-sm">سداد الدين — {debtPayment.method_name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => openPad('سداد الدين', debtPayment.amount, v => setDebtPayment(prev => prev ? { ...prev, amount: v } : prev))}
-                                        className="font-black text-red-500 text-sm hover:underline cursor-pointer">{debtPayment.amount}</button>
-                                    <button onClick={() => setDebtPayment(null)} className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Payment entries */}
-                        {payments.map((p, idx) => (
-                            <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-[10px] bg-emerald-500/5 border border-emerald-500/15">
-                                <div className="flex items-center gap-2">
-                                    <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
-                                    <span className="font-bold text-slate-700 dark:text-white/70 text-sm">{p.method_name}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">{p.amount}</span>
-                                    <button onClick={() => setPayments(prev => prev.filter((_, i) => i !== idx))}
-                                        className="w-5 h-5 rounded-[5px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-
-                        {/* Add payment row */}
-                        {cart.length > 0 && (
-                            <div className="flex gap-2">
-                                <div className="flex-1">
-                                    <ModernSelect label="" options={paymentMethods.map(m => ({ label: m.name }))}
-                                        defaultValue={paymentMethods.find(m => m.id === +selMethod)?.name ?? ''}
-                                        placeholder="وسيلة الدفع"
-                                        onSelect={val => setSelMethod(String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-                                    />
-                                </div>
-                                <button onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v))}
-                                    className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-28 text-center cursor-pointer hover:border-primary/40 transition-all">
-                                    {selAmount || remaining.toFixed(2)}
-                                </button>
-                                <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                                    className="spatial-button flex items-center justify-center w-14 h-14 disabled:opacity-40 shrink-0">
-                                    <Plus className="w-5 h-5" />
-                                </button>
-                            </div>
-                        )}
+                    {/* Notes section */}
+                    <div className="px-4 pb-3 border-t border-black/5 dark:border-white/5 shrink-0 pt-3">
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                            rows={2} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
+                            className="w-full spatial-input rounded-[16px] px-4 py-3 text-sm font-bold resize-none" />
                     </div>
                 </div>
             </div>
