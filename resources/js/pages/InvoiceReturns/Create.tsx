@@ -241,7 +241,8 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     const customer    = customers.find(c => String(c.id) === form.data.customer_id);
     const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
     const totalRecovered = settlements.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const debtAfterReturn = customer ? parseFloat(customer.total_debt) - grandTotal : 0;
+    const originalDebt = customer && customer.total_debt ? parseFloat(customer.total_debt) : 0;
+    const debtAfterReturn = customer && !isCash ? originalDebt - grandTotal : 0;
     const showSettlementOption = !isCash && debtAfterReturn <= 0 && grandTotal > 0;
 
     // تحديث قيمة التسوية تلقائياً عند تغيير الإجمالي
@@ -271,7 +272,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     const customerOptions = customers.map(c => ({
         label: c.name,
         badge: c.id === 1 ? 'نقدي' : undefined,
-        meta:  c.id !== 1 ? `دين: ${parseFloat(c.total_debt).toFixed(2)}` : undefined,
+        meta:  c.id !== 1 && c.total_debt ? `دين: ${parseFloat(c.total_debt).toFixed(2)}` : undefined,
     }));
     const productOptions = products.map(p => ({ label: p.name, badge: '', meta: `${p.stock}` }));
     const methodOptions  = paymentMethods.map(m => ({ label: m.name }));
@@ -307,16 +308,12 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     }
 
     function submit() {
-        const shouldCreateSettlement = isCash || (showSettlementOption && createSettlement);
-        const validSettlements = shouldCreateSettlement
-            ? settlements.filter(r => r.payment_method_id && parseFloat(r.amount) > 0)
-            : [];
+        const validSettlements = settlements.filter(r => r.payment_method_id && parseFloat(r.amount) > 0);
 
         form.transform(data => ({
             ...data,
             items,
-            create_settlement: shouldCreateSettlement && validSettlements.length > 0,
-            settlement: validSettlements.length > 0 ? validSettlements[0] : null,
+            settlements: validSettlements,
         }));
         form.post('/invoice-returns', { preserveScroll: true });
     }
@@ -484,7 +481,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                     <span className={cls}>{value}</span>
                                 </div>
                             ))}
-                            {!isCash && grandTotal > 0 && (
+                            {!isCash && grandTotal > 0 && originalDebt > 0 && (
                                 <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                                     <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين بعد الإرجاع</span>
                                     <span className={`font-bold ${debtAfterReturn > 0 ? 'text-amber-500' : debtAfterReturn < 0 ? 'text-purple-500' : 'text-slate-400'}`}>

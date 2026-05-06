@@ -54,7 +54,7 @@ class InvoiceReturnController extends Controller
         }
 
         return Inertia::render('InvoiceReturns/Create', [
-            'customers'      => Customer::orderBy('name')->get(['id', 'name']),
+            'customers'      => Customer::orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => Product::with(['category', 'priceTier.tierPrices', 'productPrice', 'originalPerfumeDetail'])
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')
@@ -99,24 +99,21 @@ class InvoiceReturnController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'customer_id'                  => 'required|exists:customers,id',
-            'invoice_id'                   => 'nullable|exists:invoices,id',
-            'notes'                        => 'nullable|string',
-            'items'                        => 'required|array|min:1',
-            'items.*.product_id'           => 'required|exists:products,id',
-            'items.*.quantity'             => 'required|numeric|min:0.01',
-            'items.*.unit_price'           => 'required|numeric|min:0',
-            'items.*.line_total'           => 'required|numeric|min:0',
-            'create_settlement'            => 'nullable|boolean',
-            'settlement'                   => 'nullable|array',
-            'settlement.payment_method_id' => 'nullable|exists:payment_methods,id',
-            'settlement.amount'            => 'nullable|numeric|min:0.01',
-            'settlement.notes'             => 'nullable|string',
+            'customer_id'                      => 'required|exists:customers,id',
+            'invoice_id'                       => 'nullable|exists:invoices,id',
+            'notes'                            => 'nullable|string',
+            'items'                            => 'required|array|min:1',
+            'items.*.product_id'               => 'required|exists:products,id',
+            'items.*.quantity'                 => 'required|numeric|min:0.01',
+            'items.*.unit_price'               => 'required|numeric|min:0',
+            'items.*.line_total'               => 'required|numeric|min:0',
+            'settlements'                      => 'nullable|array',
+            'settlements.*.payment_method_id'  => 'required|exists:payment_methods,id',
+            'settlements.*.amount'             => 'required|numeric|min:0.01',
+            'settlements.*.notes'              => 'nullable|string',
         ]);
 
         $invoiceReturn = DB::transaction(function () use ($data) {
-            $isCash = (int) $data['customer_id'] === 1;
-
             $ret = InvoiceReturn::create([
                 'customer_id'      => $data['customer_id'],
                 'invoice_id'       => $data['invoice_id'] ?? null,
@@ -139,23 +136,19 @@ class InvoiceReturnController extends Controller
 
             $ret->refresh();
 
-            // تسوية تلقائية للزبون النقدي أو إذا طُلبت
-            $createSettlement = $isCash || ($data['create_settlement'] ?? false);
-
-            if ($createSettlement && isset($data['settlement']['payment_method_id'])) {
-                $s = $data['settlement'];
-                $settlement = Settlement::create([
-                    'customer_id'       => $data['customer_id'],
-                    'invoice_id'        => $data['invoice_id'] ?? null,
-                    'invoice_return_id' => $ret->id,
-                    'payment_method_id' => $s['payment_method_id'],
-                    'amount'            => $s['amount'] ?? $ret->total,
-                    'notes'             => $s['notes'] ?? null,
-                    'created_at'        => now(),
-                ]);
-
-                $ret->settlement_id = $settlement->id;
-                $ret->save();
+            // حفظ جميع التسويات
+            if (!empty($data['settlements'])) {
+                foreach ($data['settlements'] as $s) {
+                    Settlement::create([
+                        'customer_id'       => $data['customer_id'],
+                        'invoice_id'        => $data['invoice_id'] ?? null,
+                        'invoice_return_id' => $ret->id,
+                        'payment_method_id' => $s['payment_method_id'],
+                        'amount'            => $s['amount'],
+                        'notes'             => $s['notes'] ?? null,
+                        'created_at'        => now(),
+                    ]);
+                }
             }
 
             return $ret;
