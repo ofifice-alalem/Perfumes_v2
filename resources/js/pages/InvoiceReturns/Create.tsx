@@ -8,17 +8,39 @@ interface Customer      { id: number; name: string; total_debt: string; }
 interface Product       { id: number; name: string; stock: string; }
 interface PaymentMethod { id: number; name: string; }
 
+interface InvoiceItem {
+    id: number;
+    product_id: number;
+    product_name: string;
+    sale_type: string;
+    size_id: number | null;
+    size_label: string | null;
+    quantity: string;
+    unit_price: string;
+    line_total: string;
+}
+
 interface Props {
     customers:             Customer[];
     products:              Product[];
     paymentMethods:        PaymentMethod[];
     selected_customer_id?: number;
     selected_invoice_id?:  number | null;
-    invoice_items?:        { id: number; product_id: number; product_name: string; quantity: string; unit_price: string; sale_type: string }[];
+    invoice_items?:        InvoiceItem[];
     flash?: { success?: string; error?: string };
 }
 
-interface ItemRow       { product_id: string; quantity: string; unit_price: string; line_total: string; }
+interface ItemRow {
+    invoice_item_id?: number;  // معرف عنصر الفاتورة الأصلي
+    product_id: string;
+    product_name?: string;
+    sale_type?: string;
+    size_label?: string;
+    quantity: string;
+    unit_price: string;
+    line_total: string;
+    max_quantity?: number;  // الحد الأقصى من الفاتورة الأصلية
+}
 interface SettlementRow { payment_method_id: string; amount: string; notes: string; }
 
 const emptyItem       = (): ItemRow       => ({ product_id: '', quantity: '', unit_price: '', line_total: '' });
@@ -38,7 +60,32 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
         invoice_id:  selected_invoice_id ? String(selected_invoice_id) : '',
         notes:       '',
     });
+    
+    // تحويل عناصر الفاتورة إلى صفوف قابلة للتعديل
+    useEffect(() => {
+        if (invoice_items && invoice_items.length > 0) {
+            const invoiceRows: ItemRow[] = invoice_items.map(item => ({
+                invoice_item_id: item.id,
+                product_id: String(item.product_id),
+                product_name: item.product_name,
+                sale_type: item.sale_type,
+                size_label: item.size_label ?? undefined,
+                quantity: '0',
+                unit_price: item.unit_price,
+                line_total: '0',
+                max_quantity: parseFloat(item.quantity),
+            }));
+            setItems(invoiceRows);
+        }
+    }, [invoice_items]);
 
+    const saleTypeLabels: Record<string, string> = {
+        tier_decant: 'زيتي',
+        unit_decant: 'أصلي/تقسيم',
+        full_bottle: 'عبوة كاملة',
+        unit_based: 'بالوحدة',
+    };
+    
     const isCash      = form.data.customer_id === '1';
     const customer    = customers.find(c => String(c.id) === form.data.customer_id);
     const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
@@ -72,9 +119,19 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
         setItems(prev => prev.map((r, i) => {
             if (i !== idx) return r;
             const updated = { ...r, [field]: val };
+            
             if (field === 'quantity' || field === 'unit_price') {
                 const qty   = parseFloat(field === 'quantity' ? val : updated.quantity) || 0;
                 const price = parseFloat(field === 'unit_price' ? val : updated.unit_price) || 0;
+                
+                // فحص الحد الأقصى
+                if (field === 'quantity' && updated.max_quantity !== undefined && qty > updated.max_quantity) {
+                    updated.quantity = updated.max_quantity.toString();
+                    const limitedQty = updated.max_quantity;
+                    updated.line_total = limitedQty > 0 && price > 0 ? (limitedQty * price).toFixed(2) : updated.line_total;
+                    return updated;
+                }
+                
                 updated.line_total = qty > 0 && price > 0 ? (qty * price).toFixed(2) : updated.line_total;
             }
             return updated;
@@ -151,44 +208,113 @@ export default function InvoiceReturnsCreate({ customers, products, paymentMetho
                 {/* المنتجات المرتجعة */}
                 <SpatialCard title="المنتجات المرتجعة" icon={<Plus className="w-4 h-4" />}
                     action={
-                        <button onClick={() => setItems(p => [...p, emptyItem()])}
-                            className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
-                            <Plus className="w-3.5 h-3.5" /> إضافة سطر
-                        </button>
+                        !form.data.invoice_id && (
+                            <button onClick={() => setItems(p => [...p, emptyItem()])}
+                                className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm border border-primary/20">
+                                <Plus className="w-3.5 h-3.5" /> إضافة سطر
+                            </button>
+                        )
                     }
                 >
                     <div className="flex flex-col gap-3">
-                        {items.map((item, idx) => (
-                            <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                <ModernSelect label="المنتج" options={productOptions}
-                                    defaultValue={products.find(p => String(p.id) === item.product_id)?.name ?? ''}
-                                    onSelect={val => setItem(idx, 'product_id', resolveProduct(val))}
-                                    placeholder="اختر منتجاً..." />
-                                <div className="flex flex-col gap-1.5 w-24">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الكمية</label>
-                                    <input type="number" min="0.01" step="0.01" value={item.quantity}
-                                        onChange={e => setItem(idx, 'quantity', e.target.value)}
-                                        placeholder="0" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                </div>
-                                <div className="flex flex-col gap-1.5 w-28">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر الوحدة</label>
-                                    <input type="number" min="0" step="0.01" value={item.unit_price}
-                                        onChange={e => setItem(idx, 'unit_price', e.target.value)}
-                                        placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                </div>
-                                <div className="flex flex-col gap-1.5 w-28">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي</label>
-                                    <input type="number" min="0" step="0.01" value={item.line_total}
-                                        onChange={e => setItem(idx, 'line_total', e.target.value)}
-                                        placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
-                                </div>
-                                <button onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
-                                    disabled={items.length === 1}
-                                    className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                        {form.data.invoice_id && invoice_items && invoice_items.length > 0 ? (
+                            // عرض عناصر الفاتورة الأصلية
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">المنتج</th>
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">النوع</th>
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الحجم</th>
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الكمية</th>
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">سعر الوحدة</th>
+                                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">الإجمالي</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        {items.map((item, idx) => (
+                                            <tr key={idx} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                {/* اسم المنتج */}
+                                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{item.product_name}</td>
+                                                
+                                                {/* نوع البيع */}
+                                                <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 text-xs">
+                                                    {item.sale_type ? saleTypeLabels[item.sale_type] : '—'}
+                                                </td>
+                                                
+                                                {/* الحجم */}
+                                                <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50">
+                                                    {item.size_label ?? '—'}
+                                                </td>
+                                                
+                                                {/* الكمية */}
+                                                <td className="px-4 py-3">
+                                                    <div className="flex flex-col gap-1">
+                                                        <input type="number" min="0" max={item.max_quantity} step="0.01" 
+                                                            value={item.quantity}
+                                                            onChange={e => setItem(idx, 'quantity', e.target.value)}
+                                                            placeholder="0" 
+                                                            className="w-24 px-3 py-1.5 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-bold text-sm text-center focus:border-primary focus:outline-none transition-all" />
+                                                        {item.max_quantity !== undefined && (
+                                                            <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                                                ماكس: {item.max_quantity}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* سعر الوحدة */}
+                                                <td className="px-4 py-3">
+                                                    <input type="number" min="0" step="0.01" 
+                                                        value={item.unit_price}
+                                                        onChange={e => setItem(idx, 'unit_price', e.target.value)}
+                                                        placeholder="0.00" 
+                                                        className="w-28 px-3 py-1.5 rounded-lg border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-white font-bold text-sm text-center focus:border-primary focus:outline-none transition-all" />
+                                                </td>
+                                                
+                                                {/* الإجمالي */}
+                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">
+                                                    {parseFloat(item.line_total || '0').toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        ))}
+                        ) : (
+                            // الوضع العادي - إضافة منتجات يدوياً
+                            items.map((item, idx) => (
+                                <div key={idx} className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-end p-3 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                    <ModernSelect label="المنتج" options={productOptions}
+                                        defaultValue={products.find(p => String(p.id) === item.product_id)?.name ?? ''}
+                                        onSelect={val => setItem(idx, 'product_id', resolveProduct(val))}
+                                        placeholder="اختر منتجاً..." />
+                                    <div className="flex flex-col gap-1.5 w-24">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الكمية</label>
+                                        <input type="number" min="0.01" step="0.01" value={item.quantity}
+                                            onChange={e => setItem(idx, 'quantity', e.target.value)}
+                                            placeholder="0" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5 w-28">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر الوحدة</label>
+                                        <input type="number" min="0" step="0.01" value={item.unit_price}
+                                            onChange={e => setItem(idx, 'unit_price', e.target.value)}
+                                            placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                    </div>
+                                    <div className="flex flex-col gap-1.5 w-28">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي</label>
+                                        <input type="number" min="0" step="0.01" value={item.line_total}
+                                            onChange={e => setItem(idx, 'line_total', e.target.value)}
+                                            placeholder="0.00" className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                    </div>
+                                    <button onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
+                                        disabled={items.length === 1}
+                                        className="w-14 h-14 rounded-[20px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
                         {form.errors.items && <p className="text-xs text-red-500 font-bold">{form.errors.items}</p>}
                         <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
                             <span className="font-bold text-slate-500 dark:text-white/50">إجمالي المرتجع</span>

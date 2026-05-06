@@ -37,15 +37,18 @@ class InvoiceReturnController extends Controller
 
         $invoiceItems = [];
         if ($invoiceId) {
-            $invoice = \App\Models\Invoice::with('items.product')->find($invoiceId);
+            $invoice = \App\Models\Invoice::with(['items.product', 'items.size'])->find($invoiceId);
             if ($invoice) {
                 $invoiceItems = $invoice->items->map(fn($i) => [
                     'id'           => $i->id,
                     'product_id'   => $i->product_id,
                     'product_name' => $i->product->name,
+                    'sale_type'    => $i->sale_type,
+                    'size_id'      => $i->size_id,
+                    'size_label'   => $i->size?->label,
                     'quantity'     => $i->quantity,
                     'unit_price'   => $i->unit_price,
-                    'sale_type'    => $i->sale_type,
+                    'line_total'   => $i->line_total,
                 ]);
             }
         }
