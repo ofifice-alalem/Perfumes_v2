@@ -921,6 +921,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                     }
                                                                 }
                                                                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                                                
+                                                                // تحديث الدفع تلقائياً
+                                                                if (!paymentManuallySet && payments.length === 1) {
+                                                                    setTimeout(() => {
+                                                                        setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+                                                                    }, 0);
+                                                                }
+                                                                
                                                                 return newCart;
                                                             });
                                                         }, cartMax);
