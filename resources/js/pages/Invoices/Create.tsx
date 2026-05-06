@@ -108,8 +108,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [notes,         setNotes]         = useState('');
     const [cart,          setCart]          = useState<CartItem[]>([]);
     const [payments,      setPayments]      = useState<PaymentEntry[]>([]);
-    const [debtPayment,   setDebtPayment]   = useState<PaymentEntry | null>(null);
-    const [processing,    setProcessing]    = useState(false);
+    const [debtPayment,          setDebtPayment]          = useState<PaymentEntry | null>(null);
+    const [processing,           setProcessing]           = useState(false);
+    const [paymentManuallySet,   setPaymentManuallySet]   = useState(false);
 
     // product selection
     const [selProduct,   setSelProduct]   = useState('');
@@ -285,6 +286,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             };
             setCart(prev => {
                 const newCart = [...prev, newItem];
+                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                
+                if (!paymentManuallySet) {
+                    if (prev.length === 0 && paymentMethods.length > 0) {
+                        const def = paymentMethods[0];
+                        setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
+                    } else if (payments.length === 1) {
+                        setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+                    }
+                }
+                
                 return newCart;
             });
         } else {
@@ -302,6 +314,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             }));
             setCart(prev => {
                 const newCart = [...prev, ...newItems];
+                const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                
+                if (!paymentManuallySet) {
+                    if (prev.length === 0 && paymentMethods.length > 0) {
+                        const def = paymentMethods[0];
+                        setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
+                    } else if (payments.length === 1) {
+                        setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+                    }
+                }
+                
                 return newCart;
             });
         }
@@ -312,7 +335,20 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }
 
     function removeGroup(indices: number[]) {
-        setCart(prev => prev.filter((_, i) => !indices.includes(i)));
+        setCart(prev => {
+            const newCart = prev.filter((_, i) => !indices.includes(i));
+            const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+            
+            if (payments.length === 1) {
+                if (newTotal > 0) {
+                    setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
+                } else {
+                    setPayments([]);
+                }
+            }
+            
+            return newCart;
+        });
     }
 
     function addPayment() {
@@ -333,6 +369,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             return [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }];
         });
         
+        setPaymentManuallySet(true);
         setSelMethod(''); setSelAmount('');
     }
 
@@ -342,6 +379,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('1');
         setSelUnitPrice(''); setSelMinPrice(0);
         setSelMethod(''); setSelAmount('');
+        setPaymentManuallySet(false);
         setResetKey(k => k + 1);
     }
 
@@ -635,7 +673,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{p.method_name}</span>
                                                     <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
                                                 </div>
-                                                <button onClick={() => setPayments(prev => prev.filter((_, i) => i !== idx))}
+                                                <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
                                                     className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
                                                     <Trash2 className="w-5 h-5" />
                                                 </button>
