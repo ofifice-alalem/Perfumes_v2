@@ -26,6 +26,14 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
                 AllowedFilter::callback('amount_from',  fn($q, $v) => $q->where('total', '>=', $v)),
                 AllowedFilter::callback('amount_to',    fn($q, $v) => $q->where('total', '<=', $v)),
                 AllowedFilter::callback('product_id',   fn($q, $v) => $q->whereHas('items', fn($q) => $q->where('product_id', $v))),
+                AllowedFilter::callback('payment_method_id', fn($q, $v) =>
+                    $v === 'hybrid'
+                        ? $q->whereHas('payments', fn($q) => $q->select('purchase_id')
+                            ->groupBy('purchase_id')
+                            ->havingRaw('COUNT(DISTINCT payment_method_id) > 1'))
+                        : $q->whereHas('payments', fn($q) => $q->where('payment_method_id', $v))
+                             ->whereDoesntHave('payments', fn($q) => $q->where('payment_method_id', '!=', $v))
+                ),
             )
             ->allowedSorts('created_at', 'total', 'payment_status')
             ->defaultSort('-created_at')

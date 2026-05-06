@@ -11,6 +11,7 @@ import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Supplier { id: number; name: string; }
 interface Product  { id: number; name: string; }
+interface PaymentMethod { id: number; name: string; }
 interface Purchase {
     id: number;
     supplier: Supplier;
@@ -31,9 +32,10 @@ interface Paginated<T> {
     links: { url: string | null; label: string; active: boolean }[];
 }
 interface Props {
-    purchases: Paginated<Purchase>;
-    suppliers: Supplier[];
-    products:  Product[];
+    purchases:      Paginated<Purchase>;
+    suppliers:      Supplier[];
+    products:       Product[];
+    paymentMethods: PaymentMethod[];
     flash?: { success?: string; error?: string };
 }
 
@@ -177,7 +179,7 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
 }
 
 // ── الصفحة الرئيسية ───────────────────────────────────────────────────────────
-export default function PurchasesIndex({ purchases, suppliers, products, flash }: Props) {
+export default function PurchasesIndex({ purchases, suppliers, products, paymentMethods, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Purchase | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
 
@@ -190,8 +192,9 @@ export default function PurchasesIndex({ purchases, suppliers, products, flash }
     const [fDateTo,      setFDateTo]      = useState(params.get('filter[date_to]') ?? '');
     const [fAmountFrom,  setFAmountFrom]  = useState(params.get('filter[amount_from]') ?? '');
     const [fAmountTo,    setFAmountTo]    = useState(params.get('filter[amount_to]') ?? '');
+    const [fPayMethod,   setFPayMethod]   = useState(params.get('filter[payment_method_id]') ?? '');
 
-    const hasFilter = fSupplier || fStatus || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
+    const hasFilter = fSupplier || fStatus || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo || fPayMethod;
 
     function applyFilter() {
         const f: Record<string, string> = {};
@@ -202,12 +205,13 @@ export default function PurchasesIndex({ purchases, suppliers, products, flash }
         if (fDateTo)     f['filter[date_to]']           = fDateTo;
         if (fAmountFrom) f['filter[amount_from]']       = fAmountFrom;
         if (fAmountTo)   f['filter[amount_to]']         = fAmountTo;
+        if (fPayMethod)  f['filter[payment_method_id]'] = fPayMethod;
         router.get('/purchases', f, { preserveScroll: true });
     }
 
     function resetFilter() {
         setFSupplier(''); setFStatus(''); setFProduct('');
-        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo('');
+        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo(''); setFPayMethod('');
         router.get('/purchases', {}, { preserveScroll: true });
     }
 
@@ -230,6 +234,28 @@ export default function PurchasesIndex({ purchases, suppliers, products, flash }
                 options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
                 defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
                 onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+            />
+
+            {/* طريقة الدفع */}
+            <ModernSelect
+                label="طريقة الدفع"
+                placeholder="الكل"
+                options={[
+                    { label: 'الكل' },
+                    { label: 'هجين', badge: '🔀' },
+                    ...paymentMethods.map(m => ({ label: m.name })),
+                ]}
+                defaultValue={
+                    fPayMethod === 'hybrid' ? 'هجين' :
+                    fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'
+                }
+                onSelect={val =>
+                    setFPayMethod(
+                        val === 'الكل'  ? '' :
+                        val === 'هجين' ? 'hybrid' :
+                        String(paymentMethods.find(m => m.name === val)?.id ?? '')
+                    )
+                }
             />
 
             {/* حالة الدفع */}
