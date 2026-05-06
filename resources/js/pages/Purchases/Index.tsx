@@ -6,6 +6,8 @@ import { Link } from '@inertiajs/react';
 import { Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
+import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Supplier { id: number; name: string; }
 interface Product  { id: number; name: string; }
@@ -213,47 +215,51 @@ export default function PurchasesIndex({ purchases, suppliers, products, flash }
         <div className="flex flex-col gap-4">
 
             {/* المورد */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
-                <select value={fSupplier} onChange={e => setFSupplier(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-                </select>
-            </div>
+            <ModernSelect
+                label="المورد"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...suppliers.map(s => ({ label: s.name }))]}
+                defaultValue={fSupplier ? (suppliers.find(s => String(s.id) === fSupplier)?.name ?? '') : 'الكل'}
+                onSelect={val => setFSupplier(val === 'الكل' ? '' : String(suppliers.find(s => s.name === val)?.id ?? ''))}
+            />
 
             {/* المنتج */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المنتج</label>
-                <select value={fProduct} onChange={e => setFProduct(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    {products.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                </select>
-            </div>
+            <ModernSelect
+                label="المنتج"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
+                onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+            />
 
             {/* حالة الدفع */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حالة الدفع</label>
-                <select value={fStatus} onChange={e => setFStatus(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    <option value="unpaid">غير مدفوع</option>
-                    <option value="partial">جزئي</option>
-                    <option value="paid">مدفوع</option>
-                </select>
-            </div>
+            <ModernSelect
+                label="حالة الدفع"
+                placeholder="الكل"
+                options={[
+                    { label: 'الكل' },
+                    { label: 'غير مدفوع' },
+                    { label: 'جزئي' },
+                    { label: 'مدفوع' },
+                ]}
+                defaultValue={
+                    fStatus === 'unpaid' ? 'غير مدفوع' :
+                    fStatus === 'partial' ? 'جزئي' :
+                    fStatus === 'paid'   ? 'مدفوع' : 'الكل'
+                }
+                onSelect={val => setFStatus(
+                    val === 'غير مدفوع' ? 'unpaid' :
+                    val === 'جزئي'      ? 'partial' :
+                    val === 'مدفوع'     ? 'paid' : ''
+                )}
+            />
 
-            {/* مجال السعر */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الإجمالي (من — إلى)</label>
-                <div className="flex gap-2">
-                    <input type="number" min="0" value={fAmountFrom} onChange={e => setFAmountFrom(e.target.value)}
-                        placeholder="من" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                    <input type="number" min="0" value={fAmountTo} onChange={e => setFAmountTo(e.target.value)}
-                        placeholder="إلى" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                </div>
-            </div>
+            <AmountRangeInput
+                label="الإجمالي (من — إلى)"
+                valueFrom={fAmountFrom}
+                valueTo={fAmountTo}
+                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }}
+            />
 
             {/* التاريخ */}
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
@@ -449,7 +455,7 @@ export default function PurchasesIndex({ purchases, suppliers, products, flash }
                     </div>
 
                     {/* Desktop Filter */}
-                    <div className="hidden lg:block w-[260px] shrink-0">
+                    <div className="hidden lg:block w-[360px] shrink-0">
                         <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
                             <FilterPanel />
                         </SpatialCard>

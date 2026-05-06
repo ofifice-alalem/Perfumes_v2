@@ -6,6 +6,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
 interface Supplier      { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
@@ -103,35 +104,29 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
         <div className="flex flex-col gap-4">
 
             {/* المورد */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
-                <select value={fSupplier} onChange={e => setFSupplier(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-                </select>
-            </div>
+            <ModernSelect
+                label="المورد"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...suppliers.map(s => ({ label: s.name }))]}
+                defaultValue={fSupplier ? (suppliers.find(s => String(s.id) === fSupplier)?.name ?? '') : 'الكل'}
+                onSelect={val => setFSupplier(val === 'الكل' ? '' : String(suppliers.find(s => s.name === val)?.id ?? ''))}
+            />
 
             {/* وسيلة الدفع */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">وسيلة الدفع</label>
-                <select value={fMethod} onChange={e => setFMethod(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    {paymentMethods.map(m => <option key={m.id} value={String(m.id)}>{m.name}</option>)}
-                </select>
-            </div>
+            <ModernSelect
+                label="وسيلة الدفع"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...paymentMethods.map(m => ({ label: m.name }))]}
+                defaultValue={fMethod ? (paymentMethods.find(m => String(m.id) === fMethod)?.name ?? '') : 'الكل'}
+                onSelect={val => setFMethod(val === 'الكل' ? '' : String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+            />
 
-            {/* مجال المبلغ */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ (من — إلى)</label>
-                <div className="flex gap-2">
-                    <input type="number" min="0" value={fAmountFrom} onChange={e => setFAmountFrom(e.target.value)}
-                        placeholder="من" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                    <input type="number" min="0" value={fAmountTo} onChange={e => setFAmountTo(e.target.value)}
-                        placeholder="إلى" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                </div>
-            </div>
+            <AmountRangeInput
+                label="المبلغ (من — إلى)"
+                valueFrom={fAmountFrom}
+                valueTo={fAmountTo}
+                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }}
+            />
 
             {/* التاريخ */}
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
@@ -329,7 +324,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                     </div>
 
                     {/* Desktop Filter */}
-                    <div className="hidden lg:block w-[260px] shrink-0">
+                    <div className="hidden lg:block w-[360px] shrink-0">
                         <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
                             <FilterPanel />
                         </SpatialCard>

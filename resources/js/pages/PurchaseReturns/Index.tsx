@@ -5,6 +5,8 @@ import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { Plus, RotateCcw, Eye, Trash2, AlertTriangle, X, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
+import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Supplier { id: number; name: string; }
 interface PurchaseReturn {
@@ -184,37 +186,42 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
         <div className="flex flex-col gap-4">
 
             {/* المورد */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المورد</label>
-                <select value={fSupplier} onChange={e => setFSupplier(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    {suppliers.map(s => <option key={s.id} value={String(s.id)}>{s.name}</option>)}
-                </select>
-            </div>
+            <ModernSelect
+                label="المورد"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...suppliers.map(s => ({ label: s.name }))]}
+                defaultValue={fSupplier ? (suppliers.find(s => String(s.id) === fSupplier)?.name ?? '') : 'الكل'}
+                onSelect={val => setFSupplier(val === 'الكل' ? '' : String(suppliers.find(s => s.name === val)?.id ?? ''))}
+            />
 
             {/* حالة الاسترداد */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">حالة الاسترداد</label>
-                <select value={fStatus} onChange={e => setFStatus(e.target.value)}
-                    className="spatial-input h-11 rounded-[14px] px-4 text-[14px] font-bold">
-                    <option value="">الكل</option>
-                    <option value="unpaid">لم يُسترد</option>
-                    <option value="partial">جزئي</option>
-                    <option value="paid">مسترد</option>
-                </select>
-            </div>
+            <ModernSelect
+                label="حالة الاسترداد"
+                placeholder="الكل"
+                options={[
+                    { label: 'الكل' },
+                    { label: 'لم يُسترد' },
+                    { label: 'جزئي' },
+                    { label: 'مسترد' },
+                ]}
+                defaultValue={
+                    fStatus === 'unpaid'  ? 'لم يُسترد' :
+                    fStatus === 'partial' ? 'جزئي' :
+                    fStatus === 'paid'    ? 'مسترد' : 'الكل'
+                }
+                onSelect={val => setFStatus(
+                    val === 'لم يُسترد' ? 'unpaid' :
+                    val === 'جزئي'       ? 'partial' :
+                    val === 'مسترد'      ? 'paid' : ''
+                )}
+            />
 
-            {/* مجال المبلغ */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الإجمالي (من — إلى)</label>
-                <div className="flex gap-2">
-                    <input type="number" min="0" value={fAmountFrom} onChange={e => setFAmountFrom(e.target.value)}
-                        placeholder="من" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                    <input type="number" min="0" value={fAmountTo} onChange={e => setFAmountTo(e.target.value)}
-                        placeholder="إلى" className="spatial-input h-11 rounded-[14px] px-3 text-[14px] font-bold flex-1 min-w-0" />
-                </div>
-            </div>
+            <AmountRangeInput
+                label="الإجمالي (من — إلى)"
+                valueFrom={fAmountFrom}
+                valueTo={fAmountTo}
+                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }}
+            />
 
             {/* التاريخ */}
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
@@ -397,7 +404,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                     </div>
 
                     {/* Desktop Filter */}
-                    <div className="hidden lg:block w-[260px] shrink-0">
+                    <div className="hidden lg:block w-[360px] shrink-0">
                         <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
                             <FilterPanel />
                         </SpatialCard>
