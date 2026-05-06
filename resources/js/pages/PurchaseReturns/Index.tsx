@@ -9,6 +9,8 @@ import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Supplier { id: number; name: string; }
+interface Product       { id: number; name: string; }
+interface PaymentMethod { id: number; name: string; }
 interface PurchaseReturn {
     id: number;
     supplier: Supplier;
@@ -28,8 +30,10 @@ interface Paginated<T> {
     links: { url: string | null; label: string; active: boolean }[];
 }
 interface Props {
-    returns:   Paginated<PurchaseReturn>;
-    suppliers: Supplier[];
+    returns:        Paginated<PurchaseReturn>;
+    suppliers:      Supplier[];
+    products:       Product[];
+    paymentMethods: PaymentMethod[];
     flash?: { success?: string; error?: string };
 }
 
@@ -150,7 +154,7 @@ function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () 
     );
 }
 
-export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }: Props) {
+export default function PurchaseReturnsIndex({ returns: data, suppliers, products, paymentMethods, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<PurchaseReturn | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
 
@@ -162,8 +166,10 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
     const [fDateTo,     setFDateTo]     = useState(params.get('filter[date_to]') ?? '');
     const [fAmountFrom, setFAmountFrom] = useState(params.get('filter[amount_from]') ?? '');
     const [fAmountTo,   setFAmountTo]   = useState(params.get('filter[amount_to]') ?? '');
+    const [fProduct,    setFProduct]    = useState(params.get('filter[product_id]') ?? '');
+    const [fPayMethod,  setFPayMethod]  = useState(params.get('filter[payment_method_id]') ?? '');
 
-    const hasFilter = fSupplier || fStatus || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
+    const hasFilter = fSupplier || fStatus || fDateFrom || fDateTo || fAmountFrom || fAmountTo || fProduct || fPayMethod;
 
     function applyFilter() {
         const f: Record<string, string> = {};
@@ -171,14 +177,16 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
         if (fStatus)     f['filter[recovery_status]'] = fStatus;
         if (fDateFrom)   f['filter[date_from]']       = fDateFrom;
         if (fDateTo)     f['filter[date_to]']         = fDateTo;
-        if (fAmountFrom) f['filter[amount_from]']     = fAmountFrom;
-        if (fAmountTo)   f['filter[amount_to]']       = fAmountTo;
+        if (fAmountFrom) f['filter[amount_from]']       = fAmountFrom;
+        if (fAmountTo)   f['filter[amount_to]']         = fAmountTo;
+        if (fProduct)    f['filter[product_id]']        = fProduct;
+        if (fPayMethod)  f['filter[payment_method_id]'] = fPayMethod;
         router.get('/purchase-returns', f, { preserveScroll: true });
     }
 
     function resetFilter() {
         setFSupplier(''); setFStatus('');
-        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo('');
+        setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo(''); setFProduct(''); setFPayMethod('');
         router.get('/purchase-returns', {}, { preserveScroll: true });
     }
 
@@ -192,6 +200,37 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, flash }
                 options={[{ label: 'الكل' }, ...suppliers.map(s => ({ label: s.name }))]}
                 defaultValue={fSupplier ? (suppliers.find(s => String(s.id) === fSupplier)?.name ?? '') : 'الكل'}
                 onSelect={val => setFSupplier(val === 'الكل' ? '' : String(suppliers.find(s => s.name === val)?.id ?? ''))}
+            />
+
+            {/* المنتج */}
+            <ModernSelect
+                label="المنتج"
+                placeholder="الكل"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
+                onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+            />
+
+            {/* طريقة الدفع */}
+            <ModernSelect
+                label="طريقة الاسترداد"
+                placeholder="الكل"
+                options={[
+                    { label: 'الكل' },
+                    { label: 'هجين', badge: '🔀' },
+                    ...paymentMethods.map(m => ({ label: m.name })),
+                ]}
+                defaultValue={
+                    fPayMethod === 'hybrid' ? 'هجين' :
+                    fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'
+                }
+                onSelect={val =>
+                    setFPayMethod(
+                        val === 'الكل'  ? '' :
+                        val === 'هجين' ? 'hybrid' :
+                        String(paymentMethods.find(m => m.name === val)?.id ?? '')
+                    )
+                }
             />
 
             {/* حالة الاسترداد */}

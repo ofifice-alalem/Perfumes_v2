@@ -25,6 +25,16 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
                 AllowedFilter::callback('date_to',     fn($q, $v) => $q->whereDate('created_at', '<=', $v)),
                 AllowedFilter::callback('amount_from', fn($q, $v) => $q->where('total', '>=', $v)),
                 AllowedFilter::callback('amount_to',   fn($q, $v) => $q->where('total', '<=', $v)),
+                AllowedFilter::exact('recovery_status'),
+                AllowedFilter::callback('product_id',        fn($q, $v) => $q->whereHas('items', fn($q) => $q->where('product_id', $v))),
+                AllowedFilter::callback('payment_method_id', fn($q, $v) =>
+                    $v === 'hybrid'
+                        ? $q->whereHas('settlements', fn($q) => $q->select('purchase_return_id')
+                            ->groupBy('purchase_return_id')
+                            ->havingRaw('COUNT(DISTINCT payment_method_id) > 1'))
+                        : $q->whereHas('settlements', fn($q) => $q->where('payment_method_id', $v))
+                             ->whereDoesntHave('settlements', fn($q) => $q->where('payment_method_id', '!=', $v))
+                ),
             )
             ->allowedSorts('created_at', 'total')
             ->defaultSort('-created_at')
