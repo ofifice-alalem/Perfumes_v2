@@ -242,7 +242,8 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
     const totalRecovered = settlements.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const originalDebt = customer && customer.total_debt ? parseFloat(customer.total_debt) : 0;
-    const debtAfterReturn = customer && !isCash ? originalDebt - grandTotal : 0;
+    // الدين بعد الإرجاع = الدين الأصلي - المرتجع + التسوية
+    const debtAfterReturn = customer && !isCash ? originalDebt - grandTotal + totalRecovered : 0;
     const showSettlementOption = !isCash && debtAfterReturn <= 0 && grandTotal > 0;
 
     // تحديث قيمة التسوية تلقائياً عند تغيير الإجمالي
@@ -483,8 +484,16 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                             ))}
                             {!isCash && grandTotal > 0 && originalDebt > 0 && (
                                 <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+                                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين الأصلي</span>
+                                    <span className="font-bold text-slate-600 dark:text-white/60">
+                                        {originalDebt.toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
+                            {!isCash && grandTotal > 0 && originalDebt > 0 && (
+                                <div className="flex items-center justify-between">
                                     <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين بعد الإرجاع</span>
-                                    <span className={`font-bold ${debtAfterReturn > 0 ? 'text-amber-500' : debtAfterReturn < 0 ? 'text-purple-500' : 'text-slate-400'}`}>
+                                    <span className={`font-bold ${debtAfterReturn > originalDebt ? 'text-red-500' : debtAfterReturn < originalDebt ? 'text-emerald-500' : 'text-slate-600'}`}>
                                         {debtAfterReturn.toFixed(2)}
                                     </span>
                                 </div>
