@@ -244,16 +244,29 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     const debtAfterReturn = customer ? parseFloat(customer.total_debt) - grandTotal : 0;
     const showSettlementOption = !isCash && debtAfterReturn <= 0 && grandTotal > 0;
 
+    // تحديث قيمة التسوية تلقائياً عند تغيير الإجمالي
     useEffect(() => {
-        if (isCash || showSettlementOption) {
+        if (grandTotal > 0) {
             setSettlements(prev => {
-                if (prev.length === 1 && prev[0].payment_method_id === '') {
-                    return [{ ...prev[0], amount: grandTotal > 0 ? fmt(grandTotal) : '' }];
+                // إذا لم يكن هناك تسويات أو التسوية الأولى فارغة
+                if (prev.length === 0 || !prev[0].payment_method_id) {
+                    const defaultMethod = paymentMethods[0];
+                    if (defaultMethod) {
+                        return [{ payment_method_id: String(defaultMethod.id), amount: grandTotal.toFixed(2), notes: '' }];
+                    }
                 }
-                return prev;
+                // تحديث التسوية الأولى فقط
+                return prev.map((s, idx) => {
+                    if (idx === 0) {
+                        return { ...s, amount: grandTotal.toFixed(2) };
+                    }
+                    return s;
+                });
             });
+        } else if (grandTotal === 0) {
+            setSettlements([{ payment_method_id: '', amount: '', notes: '' }]);
         }
-    }, [grandTotal, isCash, showSettlementOption]);
+    }, [grandTotal]);
 
     const customerOptions = customers.map(c => ({
         label: c.name,
@@ -461,10 +474,16 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                     <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
                         {/* Totals */}
                         <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold text-slate-500 dark:text-white/40">إجمالي المرتجع</span>
-                                <span className="text-lg font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</span>
-                            </div>
+                            {[
+                                { label: 'إجمالي المرتجع', value: grandTotal.toFixed(2), cls: 'text-slate-800 dark:text-white text-lg font-black' },
+                                { label: 'التسوية', value: totalRecovered.toFixed(2), cls: 'text-emerald-600 dark:text-emerald-400 font-bold' },
+                                { label: 'المتبقي', value: (grandTotal - totalRecovered).toFixed(2), cls: (grandTotal - totalRecovered) > 0.01 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold' },
+                            ].map(({ label, value, cls }) => (
+                                <div key={label} className="flex items-center justify-between">
+                                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">{label}</span>
+                                    <span className={cls}>{value}</span>
+                                </div>
+                            ))}
                             {!isCash && grandTotal > 0 && (
                                 <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
                                     <span className="text-sm font-bold text-slate-500 dark:text-white/40">الدين بعد الإرجاع</span>
@@ -476,7 +495,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                         </div>
                         
                         {/* Payment section */}
-                        {(isCash || showSettlementOption) && (
+                        {grandTotal > 0 && (
                             <div className="flex gap-3">
                                 {/* يسار — تسجيل دفعة */}
                                 <div className="flex flex-col gap-2 w-1/2">
@@ -495,13 +514,21 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => openPad('المبلغ', selAmount || grandTotal.toFixed(2), v => setSelAmount(v), grandTotal)}
+                                            onClick={() => {
+                                                const remaining = grandTotal - totalRecovered;
+                                                openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining);
+                                            }}
                                             className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                            {selAmount || grandTotal.toFixed(2)}
+                                            {selAmount || (grandTotal - totalRecovered).toFixed(2)}
                                         </button>
                                         <button
                                             onClick={() => {
                                                 if (!selMethod || !selAmount || +selAmount <= 0) return;
+                                                const remaining = grandTotal - totalRecovered;
+                                                if (+selAmount > remaining) {
+                                                    alert(`المبلغ يتجاوز المتبقي (${remaining.toFixed(2)})`);
+                                                    return;
+                                                }
                                                 const method = paymentMethods.find(m => m.id === +selMethod);
                                                 if (!method) return;
                                                 setSettlements(prev => {
@@ -526,11 +553,12 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                 
                                 {/* يمين — كاردات الدفعات */}
                                 <div className="flex flex-col gap-2 w-1/2">
-                                    {settlements.filter(s => s.payment_method_id).length === 0 ? (
+                                    {settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).length === 0 ? (
                                         <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد تسويات</div>
                                     ) : (
-                                        settlements.filter(s => s.payment_method_id).map((p, idx) => {
+                                        settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).map((p, idx) => {
                                             const method = paymentMethods.find(m => String(m.id) === p.payment_method_id);
+                                            const originalIndex = settlements.findIndex(s => s === p);
                                             return (
                                                 <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
                                                     <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -539,7 +567,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                                         <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
                                                     </div>
                                                     <button
-                                                        onClick={() => setSettlements(prev => prev.filter((_, i) => i !== idx))}
+                                                        onClick={() => setSettlements(prev => prev.filter((_, i) => i !== originalIndex))}
                                                         className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
                                                         <Trash2 className="w-5 h-5" />
                                                     </button>
