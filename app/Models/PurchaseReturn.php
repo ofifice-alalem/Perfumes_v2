@@ -13,7 +13,7 @@ class PurchaseReturn extends Model implements Auditable
 {
     use AuditableTrait, SoftDeletes;
 
-    protected $fillable = ['supplier_id', 'purchase_id', 'settlement_id', 'total', 'recovered_amount', 'due_recovery', 'recovery_status', 'notes'];
+    protected $fillable = ['supplier_id', 'user_id', 'purchase_id', 'settlement_id', 'total', 'recovered_amount', 'due_recovery', 'recovery_status', 'notes'];
 
     protected $casts = [
         'total'            => 'decimal:2',
@@ -38,6 +38,11 @@ class PurchaseReturn extends Model implements Auditable
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function purchase(): BelongsTo

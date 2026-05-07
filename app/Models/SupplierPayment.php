@@ -14,7 +14,7 @@ class SupplierPayment extends Model implements Auditable
 
     public $timestamps = false;
 
-    protected $fillable = ['supplier_id', 'purchase_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
+    protected $fillable = ['supplier_id', 'user_id', 'purchase_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
 
     protected $casts = [
         'amount'     => 'decimal:2',
@@ -24,6 +24,11 @@ class SupplierPayment extends Model implements Auditable
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function purchase(): BelongsTo

@@ -14,7 +14,7 @@ class Purchase extends Model implements Auditable
     use AuditableTrait, SoftDeletes;
 
     protected $fillable = [
-        'supplier_id', 'total', 'paid_amount',
+        'supplier_id', 'user_id', 'total', 'paid_amount',
         'due_amount', 'payment_status', 'notes',
     ];
 
@@ -27,6 +27,11 @@ class Purchase extends Model implements Auditable
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function items(): HasMany

@@ -12,7 +12,7 @@ use OwenIt\Auditing\Auditable as AuditableTrait;
 class InvoiceReturn extends Model implements Auditable
 {
     use AuditableTrait, SoftDeletes;
-    protected $fillable = ['customer_id', 'invoice_id', 'settlement_id', 'total', 'recovered_amount', 'due_recovery', 'recovery_status', 'notes'];
+    protected $fillable = ['customer_id', 'user_id', 'invoice_id', 'settlement_id', 'total', 'recovered_amount', 'due_recovery', 'recovery_status', 'notes'];
 
     protected $casts = [
         'total'            => 'decimal:2',
@@ -37,6 +37,11 @@ class InvoiceReturn extends Model implements Auditable
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function invoice(): BelongsTo
