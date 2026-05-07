@@ -23,7 +23,7 @@ class SupplierSettlementController extends Controller
     public function index(): Response
     {
         return Inertia::render('SupplierSettlements/Index', [
-            'settlements'    => $this->settlements->paginated(5),
+            'settlements'    => $this->settlements->paginated(30),
             'suppliers'      => $this->suppliers->forSelectList(),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);

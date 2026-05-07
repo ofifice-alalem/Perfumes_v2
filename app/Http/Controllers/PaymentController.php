@@ -19,7 +19,7 @@ class PaymentController extends Controller
     public function index(): Response
     {
         return Inertia::render('Payments/Index', [
-            'payments'       => $this->payments->paginated(5),
+            'payments'       => $this->payments->paginated(30),
             'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'total_debt']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),

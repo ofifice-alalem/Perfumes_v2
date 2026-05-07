@@ -26,7 +26,7 @@ class InvoiceController extends Controller
     public function index(): Response
     {
         return Inertia::render('Invoices/Index', [
-            'invoices'       => $this->invoices->paginated(5),
+            'invoices'       => $this->invoices->paginated(30),
             'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name']),
             'users'          => User::orderBy('name')->get(['id', 'name']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),

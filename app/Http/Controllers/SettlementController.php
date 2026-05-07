@@ -18,7 +18,7 @@ class SettlementController extends Controller
     public function index(): Response
     {
         return Inertia::render('Settlements/Index', [
-            'settlements'    => $this->settlements->paginated(5),
+            'settlements'    => $this->settlements->paginated(30),
             'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'total_debt']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);
