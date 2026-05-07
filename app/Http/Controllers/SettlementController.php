@@ -26,7 +26,7 @@ class SettlementController extends Controller
 
     public function show(int $id): Response
     {
-        $settlement = Settlement::with(['customer', 'invoice', 'invoiceReturn', 'paymentMethod'])->findOrFail($id);
+        $settlement = Settlement::with(['customer', 'invoice', 'invoiceReturn', 'paymentMethod', 'user'])->findOrFail($id);
 
         return Inertia::render('Settlements/Show', [
             'settlement' => $settlement,

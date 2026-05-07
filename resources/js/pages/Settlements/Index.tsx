@@ -5,7 +5,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
-import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye } from 'lucide-react';
 
 interface Customer { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
@@ -240,8 +240,14 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                         <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
                                                         <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{fmtDate(s.created_at)}</td>
                                                         <td className="px-4 py-3">
-                                                            <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                                trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">حذف</button>} />
+                                                            <div className="flex items-center gap-2">
+                                                                <Link href={`/settlements/${s.id}`}
+                                                                    className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
+                                                                    <Eye className="w-3 h-3" /> عرض
+                                                                </Link>
+                                                                <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                                    trigger={<button className="flex items-center gap-1 px-2.5 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}
@@ -288,6 +294,10 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
+                                                    <Link href={`/settlements/${s.id}`}
+                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                                                        <Eye className="w-4 h-4" /> عرض
+                                                    </Link>
                                                     <button onClick={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
                                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
                                                         <Trash2 className="w-4 h-4" /> حذف

@@ -28,7 +28,7 @@ class PaymentController extends Controller
 
     public function show(int $id): Response
     {
-        $payment = Payment::with(['customer', 'invoice', 'paymentMethod'])->findOrFail($id);
+        $payment = Payment::with(['customer', 'invoice', 'paymentMethod', 'user'])->findOrFail($id);
 
         return Inertia::render('Payments/Show', [
             'payment' => $payment,
