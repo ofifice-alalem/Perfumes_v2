@@ -215,6 +215,14 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
                                                     <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
+                                                        {ret.invoice ? (
+                                                            <Link href={`/invoices/${ret.invoice.id}`} className="font-bold text-primary hover:underline">#{ret.invoice.id}</Link>
+                                                        ) : (
+                                                            <span className="font-bold text-slate-400 dark:text-white/40">—</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
                                                         <span className="font-black text-orange-500">{fmt(ret.total)}</span>
                                                     </div>
