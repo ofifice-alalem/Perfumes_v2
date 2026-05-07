@@ -51,6 +51,7 @@ class PurchaseController extends Controller
 
             $purchase = $this->purchases->create([
                 'supplier_id'    => $data['supplier_id'],
+                'user_id'        => auth()->id(),
                 'notes'          => $data['notes'] ?? null,
                 'total'          => 0,
                 'paid_amount'    => 0,
@@ -81,6 +82,7 @@ class PurchaseController extends Controller
 
                 SupplierPayment::create([
                     'supplier_id'       => $purchase->supplier_id,
+                    'user_id'           => auth()->id(),
                     'purchase_id'       => $purchase->id,
                     'payment_method_id' => $payment['payment_method_id'],
                     'amount'            => $amount,

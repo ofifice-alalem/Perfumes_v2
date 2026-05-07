@@ -45,6 +45,7 @@ class SupplierPaymentController extends Controller
 
         SupplierPayment::create([
             'supplier_id'       => $data['supplier_id'],
+            'user_id'           => auth()->id(),
             'purchase_id'       => $data['purchase_id'] ?? null,
             'payment_method_id' => $data['payment_method_id'],
             'amount'            => $data['amount'],

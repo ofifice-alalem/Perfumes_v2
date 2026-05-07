@@ -67,6 +67,7 @@ class PurchaseReturnController extends Controller
         $purchaseReturn = DB::transaction(function () use ($data, $isCash) {
             $purchaseReturn = PurchaseReturn::create([
                 'supplier_id'      => $data['supplier_id'],
+                'user_id'          => auth()->id(),
                 'purchase_id'      => $data['purchase_id'] ?? null,
                 'notes'            => $data['notes'] ?? null,
                 'total'            => 0,
@@ -113,13 +114,14 @@ class PurchaseReturnController extends Controller
                 if ($amount <= 0) continue;
 
                 SupplierSettlement::create([
-                    'supplier_id'       => $purchaseReturn->supplier_id,
-                    'purchase_id'       => $purchaseReturn->purchase_id,
+                    'supplier_id'        => $purchaseReturn->supplier_id,
+                    'user_id'            => auth()->id(),
+                    'purchase_id'        => $purchaseReturn->purchase_id,
                     'purchase_return_id' => $purchaseReturn->id,
-                    'payment_method_id' => $settlement['payment_method_id'],
-                    'amount'            => $amount,
-                    'notes'             => $settlement['notes'] ?? null,
-                    'created_at'        => now(),
+                    'payment_method_id'  => $settlement['payment_method_id'],
+                    'amount'             => $amount,
+                    'notes'              => $settlement['notes'] ?? null,
+                    'created_at'         => now(),
                 ]);
             }
 

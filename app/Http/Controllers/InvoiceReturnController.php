@@ -116,6 +116,7 @@ class InvoiceReturnController extends Controller
         $invoiceReturn = DB::transaction(function () use ($data) {
             $ret = InvoiceReturn::create([
                 'customer_id'      => $data['customer_id'],
+                'user_id'          => auth()->id(),
                 'invoice_id'       => $data['invoice_id'] ?? null,
                 'total'            => 0,
                 'recovered_amount' => 0,
@@ -141,6 +142,7 @@ class InvoiceReturnController extends Controller
                 foreach ($data['settlements'] as $s) {
                     Settlement::create([
                         'customer_id'       => $data['customer_id'],
+                        'user_id'           => auth()->id(),
                         'invoice_id'        => $data['invoice_id'] ?? null,
                         'invoice_return_id' => $ret->id,
                         'payment_method_id' => $s['payment_method_id'],
