@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
+import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye } from 'lucide-react';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
@@ -270,7 +270,8 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                 </div>
                             ) : (
                                 <>
-                                    <div className="overflow-x-auto">
+                                    {/* Desktop Table */}
+                                    <div className="hidden lg:block overflow-x-auto">
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
@@ -314,6 +315,56 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                 ))}
                                             </tbody>
                                         </table>
+                                    </div>
+
+                                    {/* Mobile Cards */}
+                                    <div className="flex flex-col gap-4 lg:hidden">
+                                        {payments.data.map(p => (
+                                            <div key={p.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                                <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-black text-slate-800 dark:text-white">{p.supplier.name}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{p.id}</span>
+                                                        <span className="text-slate-300 dark:text-white/20">•</span>
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">{p.payment_method.name}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
+                                                    {p.purchase && (
+                                                        <div className="flex items-center justify-between py-3">
+                                                            <span className="text-sm font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
+                                                            <Link href={`/purchases/${p.purchase.id}`} className="font-bold text-primary hover:underline">#{p.purchase.id}</Link>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المبلغ</span>
+                                                        <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(p.amount)}</span>
+                                                    </div>
+                                                    {p.notes && (
+                                                        <div className="flex items-center justify-between py-3">
+                                                            <span className="text-sm font-bold text-slate-400 dark:text-white/40">ملاحظة</span>
+                                                            <span className="font-bold text-slate-500 dark:text-white/60 text-sm">{p.notes}</span>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(p.created_at)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
+                                                    <Link href={`/supplier-payments/${p.id}`}
+                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
+                                                        <Eye className="w-4 h-4" /> عرض
+                                                    </Link>
+                                                    <button onClick={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                        <Trash2 className="w-4 h-4" /> حذف
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
 
                                     {payments.last_page > 1 && (
