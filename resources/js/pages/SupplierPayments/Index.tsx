@@ -327,8 +327,6 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{p.id}</span>
-                                                        <span className="text-slate-300 dark:text-white/20">•</span>
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">{p.payment_method.name}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
@@ -348,6 +346,10 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                             <span className="font-bold text-slate-500 dark:text-white/60 text-sm">{p.notes}</span>
                                                         </div>
                                                     )}
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">طريقة الدفع</span>
+                                                        <span className="font-bold text-slate-600 dark:text-white/70">{p.payment_method.name}</span>
+                                                    </div>
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
                                                         <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(p.created_at)}</span>
