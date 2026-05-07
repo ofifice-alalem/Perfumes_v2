@@ -870,23 +870,23 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 ⚠️ زبون نقدي — يجب الدفع الكامل قبل التأكيد
                             </div>
                         )}
-                        <div className="flex flex-col sm:flex-row gap-2">
-                            <div className="flex gap-2 order-2 sm:order-1 sm:w-1/4">
-                                <Link href="/invoices" className="flex-1 h-14 sm:h-[68px] flex items-center justify-center gap-1.5 sm:gap-2 rounded-[14px] sm:rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-xs sm:text-sm transition-all border border-black/10 dark:border-white/20 active:scale-95">
-                                    <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> إلغاء
+                        <div className="flex gap-2">
+                            <div className="flex flex-col gap-2 w-1/4">
+                                <Link href="/invoices" className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
+                                    <X className="w-4 h-4" /> إلغاء
                                 </Link>
                                 {cart.length > 0 && (
-                                    <button onClick={clearForm} className="flex-1 h-14 sm:h-[68px] flex items-center justify-center gap-1.5 sm:gap-2 rounded-[14px] sm:rounded-[16px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-xs sm:text-sm transition-all active:scale-95">
-                                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> مسح
+                                    <button onClick={clearForm} className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-sm transition-all">
+                                        <Trash2 className="w-4 h-4" /> مسح
                                     </button>
                                 )}
                             </div>
                             <button onClick={submit}
                                 disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                                className="spatial-button order-1 sm:order-2 flex-1 flex items-center justify-center gap-2 text-base sm:text-lg font-black disabled:opacity-40 active:scale-95 transition-transform"
-                                style={{ height: cart.length > 0 ? '120px' : '56px' }}>
-                                <Check className="w-5 h-5 sm:w-6 sm:h-6" />
-                                <span className="truncate">{cart.length > 0 ? `تأكيد البيع — ${grandTotal.toFixed(2)}` : 'تأكيد البيع'}</span>
+                                className="spatial-button flex-1 flex items-center justify-center gap-2 text-lg font-black disabled:opacity-40"
+                                style={{ height: cart.length > 0 ? '144px' : '68px' }}>
+                                <Check className="w-6 h-6" />
+                                {cart.length > 0 ? `تأكيد البيع — ${grandTotal.toFixed(2)}` : 'تأكيد البيع'}
                             </button>
                         </div>
                     </div>
