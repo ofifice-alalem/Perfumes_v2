@@ -18,6 +18,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\InvoiceReturnController;
+use App\Http\Controllers\WasteLogController;
 
 Route::get('/', function () {
     return Inertia::render('Dashboard');
@@ -83,3 +84,6 @@ Route::post('invoice-returns', [InvoiceReturnController::class, 'store'])->name(
 Route::get('invoice-returns/{id}', [InvoiceReturnController::class, 'show'])->name('invoice-returns.show');
 Route::delete('invoice-returns/{id}', [InvoiceReturnController::class, 'destroy'])->name('invoice-returns.destroy');
 Route::post('invoice-returns/{id}/restore', [InvoiceReturnController::class, 'restore'])->name('invoice-returns.restore');
+
+// Waste Logs
+Route::resource('waste-logs', WasteLogController::class)->except(['edit', 'update']);
