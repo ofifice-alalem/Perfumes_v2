@@ -115,7 +115,7 @@ class InvoiceController extends Controller
             }
 
             // دفعة سداد الدين المستقلة (غير مرتبطة بالفاتورة)
-            if (!empty($data['debt_payment']) && $invoice->customer_id !== 1) {
+            if (!empty($data['debt_payment']) && $invoice->customer_id) {
                 $dp = $data['debt_payment'];
                 Payment::create([
                     'customer_id'       => $invoice->customer_id,
@@ -183,7 +183,7 @@ class InvoiceController extends Controller
 
             $invoice->delete();
 
-            if ($invoice->customer_id && $invoice->customer_id !== 1) {
+            if ($invoice->customer_id && $invoice->customer_id) {
                 InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
             }
         });
@@ -212,7 +212,7 @@ class InvoiceController extends Controller
                 Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
             }
 
-            if ($invoice->customer_id && $invoice->customer_id !== 1) {
+            if ($invoice->customer_id && $invoice->customer_id) {
                 InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
             }
         });

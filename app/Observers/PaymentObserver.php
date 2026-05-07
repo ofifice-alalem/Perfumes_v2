@@ -45,7 +45,7 @@ class PaymentObserver
 
     private function syncCustomer(Payment $payment): void
     {
-        if (!$payment->customer_id || $payment->customer_id === 1) return;
+        if (!$payment->customer_id) return;
 
         InvoiceItemObserver::recalculateCustomer($payment->customer_id);
     }

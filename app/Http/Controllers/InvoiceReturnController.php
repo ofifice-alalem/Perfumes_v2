@@ -184,7 +184,7 @@ class InvoiceReturnController extends Controller
 
             $ret->delete();
 
-            if ($ret->customer_id && $ret->customer_id !== 1) {
+            if ($ret->customer_id && $ret->customer_id) {
                 InvoiceItemObserver::recalculateCustomer($ret->customer_id);
             }
         });
@@ -208,7 +208,7 @@ class InvoiceReturnController extends Controller
                 Product::where('id', $item->product_id)->increment('stock', $item->quantity);
             }
 
-            if ($ret->customer_id && $ret->customer_id !== 1) {
+            if ($ret->customer_id && $ret->customer_id) {
                 InvoiceItemObserver::recalculateCustomer($ret->customer_id);
             }
         });

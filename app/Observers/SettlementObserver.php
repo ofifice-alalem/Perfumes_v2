@@ -45,7 +45,7 @@ class SettlementObserver
 
     private function syncCustomer(Settlement $settlement): void
     {
-        if (!$settlement->customer_id || $settlement->customer_id === 1) return;
+        if (!$settlement->customer_id) return;
 
         InvoiceItemObserver::recalculateCustomer($settlement->customer_id);
     }

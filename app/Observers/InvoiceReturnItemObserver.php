@@ -44,7 +44,7 @@ class InvoiceReturnItemObserver
     private function syncCustomer(InvoiceReturnItem $item): void
     {
         $return = $item->invoiceReturn ?? \App\Models\InvoiceReturn::find($item->invoice_return_id);
-        if (!$return || !$return->customer_id || $return->customer_id === 1) return;
+        if (!$return || !$return->customer_id) return;
 
         InvoiceItemObserver::recalculateCustomer($return->customer_id);
     }

@@ -63,7 +63,7 @@ class InvoiceItemObserver
     private function syncCustomer(InvoiceItem $item): void
     {
         $invoice = $item->invoice ?? \App\Models\Invoice::find($item->invoice_id);
-        if (!$invoice || !$invoice->customer_id || $invoice->customer_id === 1) return;
+        if (!$invoice || !$invoice->customer_id) return;
 
         $this->recalculateCustomer($invoice->customer_id);
     }
@@ -71,7 +71,7 @@ class InvoiceItemObserver
     public static function recalculateCustomer(int $customerId): void
     {
         $customer = \App\Models\Customer::find($customerId);
-        if (!$customer || $customer->id === 1) return;
+        if (!$customer) return;
 
         $customer->total_purchases  = \App\Models\Invoice::where('customer_id', $customerId)->sum('total');
         $customer->total_paid       = \App\Models\Payment::where('customer_id', $customerId)->sum('amount');
