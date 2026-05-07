@@ -161,8 +161,9 @@ class InvoiceController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         $invoice           = $this->invoices->findWithRelations($id);
-        $deletePayments    = request()->boolean('delete_payments', false);
-        $deleteSettlements = request()->boolean('delete_settlements', false);
+        $isCash            = $invoice->customer_id === 1;
+        $deletePayments    = $isCash ? true : request()->boolean('delete_payments', false);
+        $deleteSettlements = $isCash ? true : request()->boolean('delete_settlements', false);
 
         DB::transaction(function () use ($invoice, $deletePayments, $deleteSettlements) {
             foreach ($invoice->items as $item) {
@@ -183,7 +184,7 @@ class InvoiceController extends Controller
 
             $invoice->delete();
 
-            if ($invoice->customer_id && $invoice->customer_id) {
+            if ($invoice->customer_id) {
                 InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
             }
         });

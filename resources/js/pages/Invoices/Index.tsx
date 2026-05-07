@@ -26,6 +26,7 @@ interface Invoice {
     created_at: string;
     deleted_at: string | null;
     settlements_total: string | null;
+    customer_id: number | null;
 }
 interface Paginated<T> {
     data: T[];
@@ -64,14 +65,18 @@ function CancelInvoiceModal({ invoice, onClose }: { invoice: Invoice; onClose: (
     const [deletePayments,    setDeletePayments]    = useState(false);
     const [deleteSettlements, setDeleteSettlements] = useState(false);
 
+    const isCash           = invoice.customer_id === 1;
     const paidAmount       = parseFloat(invoice.paid_amount);
     const settlementsTotal = parseFloat(invoice.settlements_total ?? '0');
-    const hasPayments      = paidAmount > 0;
-    const hasSettlements   = settlementsTotal > 0;
+    const hasPayments      = !isCash && paidAmount > 0;
+    const hasSettlements   = !isCash && settlementsTotal > 0;
 
     function confirm() {
         router.delete(`/invoices/${invoice.id}`, {
-            data: { delete_payments: deletePayments, delete_settlements: deleteSettlements },
+            data: {
+                delete_payments:    isCash ? true : deletePayments,
+                delete_settlements: isCash ? true : deleteSettlements,
+            },
             onSuccess: onClose,
         });
     }

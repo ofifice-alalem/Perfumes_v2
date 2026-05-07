@@ -151,7 +151,7 @@ class PurchaseController extends Controller
             $purchase->delete();
 
             // 5. Recalculate supplier totals
-            if ($purchase->supplier_id && $purchase->supplier_id !== 1) {
+            if ($purchase->supplier_id) {
                 PurchaseItemObserver::recalculateSupplier($purchase->supplier_id);
             }
         });
@@ -180,7 +180,7 @@ class PurchaseController extends Controller
             }
 
             // 5. Recalculate supplier totals
-            if ($purchase->supplier_id && $purchase->supplier_id !== 1) {
+            if ($purchase->supplier_id) {
                 PurchaseItemObserver::recalculateSupplier($purchase->supplier_id);
             }
         });
