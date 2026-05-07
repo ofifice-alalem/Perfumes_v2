@@ -398,9 +398,14 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                             }
                                                         </div>
                                                     </div>
-                                                    <span className="font-black text-lg text-orange-500">{fmt(r.total)}</span>
                                                 </div>
-                                                <div className="flex items-center gap-3 px-5 py-4">
+                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
+                                                        <span className="font-black text-orange-500">{fmt(r.total)}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
                                                     <Link href={`/purchase-returns/${r.id}`}
                                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                         <Eye className="w-4 h-4" /> عرض
