@@ -14,6 +14,8 @@ interface InvoiceReturn {
     customer: Customer | null;
     invoice: { id: number } | null;
     total: string;
+    recovered_amount: string;
+    due_recovery: string;
     recovery_status: 'unpaid' | 'partial' | 'paid';
     created_at: string;
     deleted_at: string | null;
@@ -148,7 +150,7 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'العميل', 'الفاتورة', 'الإجمالي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
+                                                    {['#', 'العميل', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
                                                         <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -162,6 +164,8 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                                             {ret.invoice ? <Link href={`/invoices/${ret.invoice.id}`} className="hover:text-primary transition-colors">#{ret.invoice.id}</Link> : '—'}
                                                         </td>
                                                         <td className="px-4 py-3 font-black text-orange-500 whitespace-nowrap">{fmt(ret.total)}</td>
+                                                        <td className="px-4 py-3 font-black text-purple-500 whitespace-nowrap">{fmt(ret.recovered_amount)}</td>
+                                                        <td className="px-4 py-3 font-black text-amber-500 whitespace-nowrap">{fmt(ret.due_recovery)}</td>
                                                         <td className="px-4 py-3">
                                                             {ret.deleted_at ? (
                                                                 <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
@@ -213,6 +217,14 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
                                                         <span className="font-black text-orange-500">{fmt(ret.total)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التسوية</span>
+                                                        <span className="font-black text-purple-500">{fmt(ret.recovered_amount)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
+                                                        <span className="font-black text-amber-500">{fmt(ret.due_recovery)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">

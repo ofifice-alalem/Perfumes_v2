@@ -17,6 +17,7 @@ interface PurchaseReturn {
     purchase: { id: number } | null;
     total: string;
     recovered_amount: string;
+    due_recovery: string;
     recovery_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null;
     created_at: string;
@@ -329,7 +330,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'المورد', 'الفاتورة', 'الإجمالي', 'المسترد', 'الحالة', 'التاريخ', ''].map(h => (
+                                                    {['#', 'المورد', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', ''].map(h => (
                                                         <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -346,6 +347,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                         </td>
                                                         <td className="px-4 py-3 font-black text-orange-500">{fmt(r.total)}</td>
                                                         <td className="px-4 py-3 font-black text-purple-500">{fmt(r.recovered_amount)}</td>
+                                                        <td className="px-4 py-3 font-black text-amber-500">{fmt(r.due_recovery)}</td>
                                                         <td className="px-4 py-3">
                                                             {r.deleted_at ? (
                                                                 <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
@@ -403,6 +405,14 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
                                                         <span className="font-black text-orange-500">{fmt(r.total)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التسوية</span>
+                                                        <span className="font-black text-purple-500">{fmt(r.recovered_amount)}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
+                                                        <span className="font-black text-amber-500">{fmt(r.due_recovery)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
