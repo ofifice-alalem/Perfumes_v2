@@ -41,12 +41,12 @@ class Invoice extends Model implements Auditable
 
     public function payments(): HasMany
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasMany(Payment::class)->withTrashed();
     }
 
     public function settlements(): HasMany
     {
-        return $this->hasMany(Settlement::class);
+        return $this->hasMany(Settlement::class)->withTrashed();
     }
 
     public function returns(): HasMany

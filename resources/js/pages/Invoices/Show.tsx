@@ -333,8 +333,10 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
                                                 <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(pay.created_at).toLocaleDateString('en-GB')}</td>
                                                 <td className="px-4 py-3">
-                                                    <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
-                                                        trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                    {!isCancelled && (
+                                                        <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
+                                                            trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
@@ -419,8 +421,10 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
                                                 <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
                                                 <td className="px-4 py-3">
-                                                    <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                        trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                    {!isCancelled && (
+                                                        <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                            trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
