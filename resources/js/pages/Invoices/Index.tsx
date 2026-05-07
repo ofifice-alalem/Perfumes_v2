@@ -359,9 +359,12 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <span className="font-black text-lg text-slate-800 dark:text-white">{fmt(inv.total)}</span>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
+                                                        <span className="font-black text-slate-700 dark:text-white/80">{fmt(inv.total)}</span>
+                                                    </div>
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المدفوع</span>
                                                         <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(inv.paid_amount)}</span>
