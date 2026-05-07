@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { RestoreModal } from '@/components/ui/RestoreModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit } from 'lucide-react';
 
@@ -180,9 +181,16 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                             </Link>
                         )}
                         {isCancelled ? (
-                            <button onClick={() => router.post(`/invoices/${invoice.id}/restore`)} className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                <RotateCcw className="w-4 h-4" /> استعادة
-                            </button>
+                            <RestoreModal
+                                title="استعادة الفاتورة"
+                                description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                onConfirm={() => router.post(`/invoices/${invoice.id}/restore`)}
+                                trigger={
+                                    <button className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                        <RotateCcw className="w-4 h-4" /> استعادة
+                                    </button>
+                                }
+                            />
                         ) : (
                             <Link href={`/invoice-returns/create?customer_id=${invoice.customer?.id ?? 1}&invoice_id=${invoice.id}`} className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
                                 <RotateCcw className="w-4 h-4" /> مرتجع

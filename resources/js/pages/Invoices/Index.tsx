@@ -9,6 +9,7 @@ import {
     Plus, Eye, Trash2, RotateCcw, AlertTriangle, X,
     SlidersHorizontal, ChevronDown, Search, FileText,
 } from 'lucide-react';
+import { RestoreModal } from '@/components/ui/RestoreModal';
 
 interface Customer { id: number; name: string; }
 interface User     { id: number; name: string; }
@@ -361,9 +362,16 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                                     <Eye className="w-3 h-3" /> عرض
                                                                 </Link>
                                                                 {inv.deleted_at ? (
-                                                                    <button onClick={() => router.post(`/invoices/${inv.id}/restore`)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
-                                                                        <RotateCcw className="w-3 h-3" /> استعادة
-                                                                    </button>
+                                                                    <RestoreModal
+                                                                        title="استعادة الفاتورة"
+                                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                                        onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                                        trigger={
+                                                                            <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
+                                                                                <RotateCcw className="w-3 h-3" /> استعادة
+                                                                            </button>
+                                                                        }
+                                                                    />
                                                                 ) : (
                                                                     <button onClick={() => setCancelTarget(inv)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
                                                                         <Trash2 className="w-3 h-3" /> إلغاء
@@ -417,9 +425,16 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                         <Eye className="w-4 h-4" /> عرض
                                                     </Link>
                                                     {inv.deleted_at ? (
-                                                        <button onClick={() => router.post(`/invoices/${inv.id}/restore`)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                                            <RotateCcw className="w-4 h-4" /> استعادة
-                                                        </button>
+                                                        <RestoreModal
+                                                            title="استعادة الفاتورة"
+                                                            description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                            onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                            trigger={
+                                                                <button className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                                                    <RotateCcw className="w-4 h-4" /> استعادة
+                                                                </button>
+                                                            }
+                                                        />
                                                     ) : (
                                                         <button onClick={() => setCancelTarget(inv)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
                                                             <Trash2 className="w-4 h-4" /> إلغاء
