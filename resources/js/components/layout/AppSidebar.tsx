@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
-  PanelRightClose, PanelRightOpen,
+  PanelRightClose, PanelRightOpen, AlertTriangle,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -42,6 +42,12 @@ const navSections: NavSection[] = [
       { icon: <RefreshCw className="w-5 h-5" />, label: 'تسويات الموردين', href: '/supplier-settlements' },
       { icon: <RotateCcw className="w-5 h-5" />, label: 'مرتجعات الموردين', href: '/purchase-returns' },
       { icon: <Truck className="w-5 h-5" />, label: 'قائمة الموردين', href: '/suppliers' },
+    ],
+  },
+  {
+    title: 'المخزون',
+    items: [
+      { icon: <AlertTriangle className="w-5 h-5" />, label: 'التالف والخسائر', href: '/waste-logs' },
     ],
   },
   {
