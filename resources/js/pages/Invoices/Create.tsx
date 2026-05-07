@@ -736,16 +736,37 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
                         {/* Totals */}
                         <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                            {[
-                                { label: 'الإجمالي', value: grandTotal.toFixed(2), cls: 'text-slate-800 dark:text-white text-lg font-black' },
-                                { label: 'المدفوع',  value: totalPaid.toFixed(2),  cls: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-                                { label: 'المتبقي',  value: remaining.toFixed(2),  cls: remaining > 0.01 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold' },
-                            ].map(({ label, value, cls }) => (
-                                <div key={label} className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">{label}</span>
-                                    <span className={cls}>{value}</span>
+                            {/* الفاتورة */}
+                            <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
+                                <span className="text-xs font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">الفاتورة</span>
+                                <span className="text-base font-black text-slate-700 dark:text-white/80">{total.toFixed(2)}</span>
+                            </div>
+                            
+                            {/* الدين (إذا كان موجوداً) */}
+                            {debtPayment && (
+                                <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
+                                    <span className="text-xs font-bold text-red-500 uppercase tracking-widest">الدين السابق</span>
+                                    <span className="text-base font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
                                 </div>
-                            ))}
+                            )}
+                            
+                            {/* الإجمالي */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-500 dark:text-white/40">الإجمالي</span>
+                                <span className="text-slate-800 dark:text-white text-lg font-black">{grandTotal.toFixed(2)}</span>
+                            </div>
+                            
+                            {/* المدفوع */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-500 dark:text-white/40">المدفوع</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{totalPaid.toFixed(2)}</span>
+                            </div>
+                            
+                            {/* المتبقي */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-slate-500 dark:text-white/40">المتبقي</span>
+                                <span className={remaining > 0.01 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold'}>{remaining.toFixed(2)}</span>
+                            </div>
                         </div>
 
                         {/* Payment section */}
@@ -783,15 +804,21 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <div className="flex flex-col gap-2 w-1/2">
                                     {/* Debt payment card */}
                                     {debtPayment && (
-                                        <div className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
-                                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                                        <div className="flex items-center gap-2 px-3 h-[70px] rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
+                                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                                             <div className="flex flex-col min-w-0 flex-1">
                                                 <span className="font-bold text-red-600 dark:text-red-400 text-xs">سداد الدين — {debtPayment.method_name}</span>
-                                                <span className="font-black text-slate-800 dark:text-white text-lg">{debtPayment.amount}</span>
+                                                <button
+                                                    onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                                        setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                                    }, originalDebt)}
+                                                    className="font-black text-slate-800 dark:text-white text-lg text-left hover:text-primary transition-colors cursor-pointer">
+                                                    {debtPayment.amount}
+                                                </button>
                                             </div>
                                             <button onClick={() => setDebtPayment(null)}
-                                                className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
-                                                <Trash2 className="w-5 h-5" />
+                                                className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     )}
