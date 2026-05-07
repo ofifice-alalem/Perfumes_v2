@@ -169,10 +169,17 @@ class InvoiceReturnController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         $ret = $this->returns->findWithRelations($id);
+        $deleteSettlements = request()->boolean('delete_settlements', false);
 
-        DB::transaction(function () use ($ret) {
+        DB::transaction(function () use ($ret, $deleteSettlements) {
             foreach ($ret->items as $item) {
                 Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+            }
+
+            if ($deleteSettlements) {
+                Settlement::where('invoice_return_id', $ret->id)->delete();
+            } else {
+                Settlement::where('invoice_return_id', $ret->id)->update(['invoice_return_id' => null]);
             }
 
             $ret->delete();
@@ -191,6 +198,11 @@ class InvoiceReturnController extends Controller
 
         DB::transaction(function () use ($ret) {
             $ret->restore();
+
+            // استعادة التسويات المحذوفة المرتبطة بالمرتجع
+            Settlement::onlyTrashed()
+                ->where('invoice_return_id', $ret->id)
+                ->restore();
 
             foreach ($ret->items as $item) {
                 Product::where('id', $item->product_id)->increment('stock', $item->quantity);

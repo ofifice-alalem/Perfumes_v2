@@ -198,6 +198,16 @@ class InvoiceController extends Controller
         DB::transaction(function () use ($invoice) {
             $invoice->restore();
 
+            // استعادة الدفعات المحذوفة المرتبطة بالفاتورة
+            Payment::onlyTrashed()
+                ->where('invoice_id', $invoice->id)
+                ->restore();
+
+            // استعادة التسويات المحذوفة المرتبطة بالفاتورة
+            Settlement::onlyTrashed()
+                ->where('invoice_id', $invoice->id)
+                ->restore();
+
             foreach ($invoice->items as $item) {
                 Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
             }
