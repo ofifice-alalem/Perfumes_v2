@@ -19,10 +19,12 @@ interface InvoiceItem {
 interface Payment {
     id: number; payment_method: { name: string };
     amount: string; notes: string | null; created_at: string;
+    user: { name: string } | null;
 }
 interface Settlement {
     id: number; payment_method: { name: string };
     amount: string; notes: string | null; created_at: string;
+    user: { name: string } | null;
 }
 interface ReturnItem { id: number; product: Product; quantity: string; line_total: string; }
 interface InvoiceReturn {
@@ -158,25 +160,25 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
                 {/* Header */}
-                <div className="flex items-center gap-3">
-                    <Link href="/invoices" className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Link href="/invoices" className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all shrink-0">
                         <ArrowRight className="w-5 h-5" />
                     </Link>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">فاتورة #{invoice.id}</h1>
-                            <span className={`text-sm font-bold px-3 py-1 rounded-[10px] ${statusClass[invoice.payment_status]}`}>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">فاتورة #{invoice.id}</h1>
+                            <span className={`text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 rounded-[10px] ${statusClass[invoice.payment_status]}`}>
                                 {statusLabel[invoice.payment_status]}
                             </span>
-                            {isCancelled && <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">ملغية</span>}
+                            {isCancelled && <span className="text-xs sm:text-sm font-bold px-2.5 sm:px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">ملغية</span>}
                         </div>
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">
+                        <p className="text-xs sm:text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5 truncate">
                             {invoice.customer?.name ?? 'زبون نقدي'} — {invoice.user?.name ?? '—'}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         {!isCancelled && (
-                            <Link href={`/invoices/${invoice.id}/edit`} className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-slate-300/50 dark:border-white/15 bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-black/10 transition-all font-bold text-sm">
+                            <Link href={`/invoices/${invoice.id}/edit`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 h-10 rounded-[14px] border border-slate-300/50 dark:border-white/15 bg-black/5 dark:bg-white/5 text-slate-600 dark:text-white/60 hover:bg-black/10 transition-all font-bold text-sm">
                                 <Edit className="w-4 h-4" /> تعديل
                             </Link>
                         )}
@@ -186,13 +188,13 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                 description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
                                 onConfirm={() => router.post(`/invoices/${invoice.id}/restore`)}
                                 trigger={
-                                    <button className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                    <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 h-10 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
                                         <RotateCcw className="w-4 h-4" /> استعادة
                                     </button>
                                 }
                             />
                         ) : (
-                            <Link href={`/invoice-returns/create?customer_id=${invoice.customer?.id ?? 1}&invoice_id=${invoice.id}`} className="flex items-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
+                            <Link href={`/invoice-returns/create?customer_id=${invoice.customer?.id ?? 1}&invoice_id=${invoice.id}`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
                                 <RotateCcw className="w-4 h-4" /> مرتجع
                             </Link>
                         )}
@@ -230,7 +232,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                 {/* Tab: Items */}
                 {activeTab === 'items' && (
                     <SpatialCard title={`الأصناف (${invoice.items.length})`} icon={<Package className="w-4 h-4" />}>
-                        <div className="overflow-x-auto">
+                        {/* Desktop Table */}
+                        <div className="hidden lg:block overflow-x-auto">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
@@ -252,6 +255,37 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="flex flex-col gap-3 lg:hidden">
+                            {invoice.items.map(item => (
+                                <div key={item.id} className="p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                    <div className="font-bold text-slate-800 dark:text-white mb-3">{item.product.name}</div>
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">النوع</span>
+                                            <div className="font-bold text-slate-600 dark:text-white/70">{saleTypeLabel[item.sale_type] ?? item.sale_type}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">الحجم</span>
+                                            <div className="font-bold text-slate-600 dark:text-white/70">{item.size?.label ?? '—'}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">الكمية</span>
+                                            <div className="font-bold text-slate-600 dark:text-white/70">{parseFloat(item.quantity).toLocaleString('en-US')}</div>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">سعر الوحدة</span>
+                                            <div className="font-bold text-slate-600 dark:text-white/70">{fmt(item.unit_price)}</div>
+                                        </div>
+                                        <div className="col-span-2 pt-2 border-t border-black/5 dark:border-white/5">
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">الإجمالي</span>
+                                            <div className="font-black text-slate-800 dark:text-white">{fmt(item.line_total)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </SpatialCard>
                 )}
@@ -324,33 +358,69 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                         {invoice.payments.length === 0 ? (
                             <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">لا توجد دفعات مسجلة</p>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {invoice.payments.map(pay => (
-                                            <tr key={pay.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{pay.payment_method.name}</td>
-                                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
-                                                <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(pay.created_at).toLocaleDateString('en-GB')}</td>
-                                                <td className="px-4 py-3">
-                                                    {!isCancelled && (
-                                                        <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
-                                                            trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
-                                                    )}
-                                                </td>
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                {['وسيلة الدفع', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', ''].map(h => (
+                                                    <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                ))}
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {invoice.payments.map(pay => (
+                                                <tr key={pay.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{pay.payment_method.name}</td>
+                                                    <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</td>
+                                                    <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-white/60 font-bold text-sm">{pay.user?.name ?? '—'}</td>
+                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(pay.created_at).toLocaleDateString('en-GB')}</td>
+                                                    <td className="px-4 py-3">
+                                                        {!isCancelled && (
+                                                            <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
+                                                                trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards */}
+                                <div className="flex flex-col gap-3 lg:hidden">
+                                    {invoice.payments.map(pay => (
+                                        <div key={pay.id} className="p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="font-bold text-slate-700 dark:text-white/80">{pay.payment_method.name}</span>
+                                                <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</span>
+                                            </div>
+                                            <div className="space-y-2 text-sm">
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">ملاحظة</span>
+                                                    <div className="font-bold text-slate-500 dark:text-white/50">{pay.notes ?? '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">الموظف</span>
+                                                    <div className="font-bold text-slate-600 dark:text-white/60">{pay.user?.name ?? '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(pay.created_at).toLocaleDateString('en-GB')}</div>
+                                                </div>
+                                            </div>
+                                            {!isCancelled && (
+                                                <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5">
+                                                    <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
+                                                        trigger={<button className="w-full flex items-center justify-center gap-2 h-9 rounded-[12px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm"><Trash2 className="w-3.5 h-3.5" /> حذف</button>} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </SpatialCard>
                 )}
@@ -412,33 +482,69 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                         {!invoice.settlements || invoice.settlements.length === 0 ? (
                             <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">لا توجد تسويات مسجلة</p>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {invoice.settlements?.map(s => (
-                                            <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
-                                                <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
-                                                <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
-                                                <td className="px-4 py-3">
-                                                    {!isCancelled && (
-                                                        <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                            trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
-                                                    )}
-                                                </td>
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', ''].map(h => (
+                                                    <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                ))}
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {invoice.settlements?.map(s => (
+                                                <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
+                                                    <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
+                                                    <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
+                                                    <td className="px-4 py-3 text-slate-600 dark:text-white/60 font-bold text-sm">{s.user?.name ?? '—'}</td>
+                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
+                                                    <td className="px-4 py-3">
+                                                        {!isCancelled && (
+                                                            <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                                trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards */}
+                                <div className="flex flex-col gap-3 lg:hidden">
+                                    {invoice.settlements?.map(s => (
+                                        <div key={s.id} className="p-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <span className="font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</span>
+                                                <span className="font-black text-purple-500">{fmt(s.amount)}</span>
+                                            </div>
+                                            <div className="space-y-2 text-sm">
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">ملاحظة</span>
+                                                    <div className="font-bold text-slate-500 dark:text-white/50">{s.notes ?? '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">الموظف</span>
+                                                    <div className="font-bold text-slate-600 dark:text-white/60">{s.user?.name ?? '—'}</div>
+                                                </div>
+                                                <div>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(s.created_at).toLocaleDateString('en-GB')}</div>
+                                                </div>
+                                            </div>
+                                            {!isCancelled && (
+                                                <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5">
+                                                    <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                        trigger={<button className="w-full flex items-center justify-center gap-2 h-9 rounded-[12px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm"><Trash2 className="w-3.5 h-3.5" /> حذف</button>} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </SpatialCard>
                 )}

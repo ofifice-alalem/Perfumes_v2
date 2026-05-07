@@ -47,6 +47,7 @@ class PaymentController extends Controller
 
         Payment::create([
             'customer_id'       => $data['customer_id'],
+            'user_id'           => auth()->id(),
             'invoice_id'        => $data['invoice_id'] ?? null,
             'payment_method_id' => $data['payment_method_id'],
             'amount'            => $data['amount'],

@@ -14,7 +14,7 @@ class Settlement extends Model implements Auditable
     use AuditableTrait, SoftDeletes;
     public $timestamps = false;
 
-    protected $fillable = ['customer_id', 'invoice_id', 'invoice_return_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
+    protected $fillable = ['customer_id', 'user_id', 'invoice_id', 'invoice_return_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
 
     protected $casts = [
         'amount'     => 'decimal:2',
@@ -24,6 +24,11 @@ class Settlement extends Model implements Auditable
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function invoice(): BelongsTo

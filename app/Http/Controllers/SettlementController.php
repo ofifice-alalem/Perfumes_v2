@@ -46,6 +46,7 @@ class SettlementController extends Controller
 
         Settlement::create([
             'customer_id'       => $data['customer_id'],
+            'user_id'           => auth()->id(),
             'invoice_id'        => $data['invoice_id'] ?? null,
             'invoice_return_id' => $data['invoice_return_id'] ?? null,
             'payment_method_id' => $data['payment_method_id'],

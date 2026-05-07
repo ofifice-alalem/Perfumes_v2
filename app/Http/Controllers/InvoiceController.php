@@ -106,6 +106,7 @@ class InvoiceController extends Controller
 
                 Payment::create([
                     'customer_id'       => $invoice->customer_id,
+                    'user_id'           => Auth::id(),
                     'invoice_id'        => $invoice->id,
                     'payment_method_id' => $payment['payment_method_id'],
                     'amount'            => $amount,
@@ -119,6 +120,7 @@ class InvoiceController extends Controller
                 $dp = $data['debt_payment'];
                 Payment::create([
                     'customer_id'       => $invoice->customer_id,
+                    'user_id'           => Auth::id(),
                     'invoice_id'        => null,
                     'payment_method_id' => $dp['payment_method_id'],
                     'amount'            => (float) $dp['amount'],

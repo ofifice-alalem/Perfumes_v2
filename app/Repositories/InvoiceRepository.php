@@ -52,7 +52,9 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
                 'items.product',
                 'items.size',
                 'payments.paymentMethod',
+                'payments.user',
                 'settlements.paymentMethod',
+                'settlements.user',
                 'returns.items.product',
                 'returns.settlement',
             ])
