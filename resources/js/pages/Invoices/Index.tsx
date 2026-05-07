@@ -373,6 +373,10 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
                                                         <span className="font-black text-amber-500">{fmt(inv.due_amount)}</span>
                                                     </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(inv.created_at)}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
                                                     <Link href={`/invoices/${inv.id}`} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">

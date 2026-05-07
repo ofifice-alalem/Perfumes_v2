@@ -439,6 +439,10 @@ export default function PurchasesIndex({ purchases, suppliers, products, payment
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
                                                         <span className="font-black text-amber-500">{fmt(p.due_amount)}</span>
                                                     </div>
+                                                    <div className="flex items-center justify-between py-3">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(p.created_at)}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
                                                     <Link href={`/purchases/${p.id}`}
