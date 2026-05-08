@@ -37,6 +37,8 @@ use App\Repositories\Contracts\InvoiceReturnRepositoryInterface;
 use App\Repositories\InvoiceReturnRepository;
 use App\Repositories\Contracts\WasteLogRepositoryInterface;
 use App\Repositories\WasteLogRepository;
+use App\Repositories\Contracts\ReportRepositoryInterface;
+use App\Repositories\ReportRepository;
 use App\Models\Category;
 use App\Models\Size;
 use App\Models\PriceTier;
@@ -76,5 +78,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(SettlementRepositoryInterface::class, fn() => new SettlementRepository(new Settlement()));
         $this->app->bind(InvoiceReturnRepositoryInterface::class, fn() => new InvoiceReturnRepository(new InvoiceReturn()));
         $this->app->bind(WasteLogRepositoryInterface::class, fn() => new WasteLogRepository(new WasteLog()));
+        $this->app->bind(ReportRepositoryInterface::class, fn() => new ReportRepository());
     }
 }

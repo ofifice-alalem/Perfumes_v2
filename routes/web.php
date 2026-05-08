@@ -20,6 +20,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\InvoiceReturnController;
 use App\Http\Controllers\WasteLogController;
+use App\Http\Controllers\ReportController;
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -48,6 +49,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('products', ProductController::class)->except(['create', 'edit', 'show']);
         Route::resource('payment-methods', PaymentMethodController::class)->except(['create', 'edit', 'show']);
         Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
+
+        // Reports
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/product-movement', [ReportController::class, 'productMovement'])->name('reports.product-movement');
     });
 
     // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────

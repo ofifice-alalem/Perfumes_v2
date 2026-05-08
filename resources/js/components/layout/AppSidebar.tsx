@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
-  PanelRightClose, PanelRightOpen, AlertTriangle,
+  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -58,6 +58,7 @@ const navSections: NavSection[] = [
     title: 'الإعدادات العامة',
     roles: ['super-admin', 'admin'],
     items: [
+      { icon: <BarChart2 className="w-5 h-5" />, label: 'التقارير', href: '/reports' },
       { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
       { icon: <Layers className="w-5 h-5" />, label: 'التصنيفات', href: '/categories' },
       { icon: <Tags className="w-5 h-5" />, label: 'التيرات والأسعار', href: '/price-tiers' },
@@ -98,7 +99,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       relative z-[999] shrink-0 self-stretch
     `}>
       {/* Logo & Toggle */}
-      <div className={`flex items-center w-full mb-8 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
+      <div className={`flex items-center w-full mb-4 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
         {isOpen && (
           <div className="flex items-center gap-3 animate-in fade-in">
             <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-bold text-lg text-primary">
@@ -113,6 +114,31 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
           {isOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
         </button>
       </div>
+
+      {/* User Info */}
+      {isOpen && (
+        <div className="px-5 mb-6">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8">
+            <div className="w-9 h-9 rounded-[12px] bg-primary/15 flex items-center justify-center shrink-0">
+              <span className="font-black text-primary text-sm">
+                {(props.auth?.user?.name as string)?.[0] ?? '؟'}
+              </span>
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-black text-slate-800 dark:text-white text-sm truncate">
+                {(props.auth?.user?.name as string) ?? ''}
+              </span>
+              <span className="text-xs font-bold text-slate-400 dark:text-white/40 truncate">
+                {userRoles[0] === 'super-admin' ? 'مدير عام'
+                  : userRoles[0] === 'admin'   ? 'مدير'
+                  : userRoles[0] === 'saler'   ? 'بائع'
+                  : userRoles[0] === 'cashier' ? 'أمين صندوق'
+                  : ''}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-2 w-full px-4 overflow-y-auto custom-scroll pb-14">
