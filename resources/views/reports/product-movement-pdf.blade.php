@@ -80,22 +80,22 @@
             <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['filter_info'] }} &#x2014;</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">{{ $labels['product_name'] }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_product'] }}</td>
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; text-align: right;">{{ $labels['product_name'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $labels['label_product'] }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; text-align: right;">
                 @if($labels['date_from'])
                     {{ $labels['date_from'] }} &rarr; {{ $labels['date_to'] }}
                 @else
                     {{ $labels['all_dates'] }}
                 @endif
             </td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_period'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_period'] }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">{{ $labels['movement_type_label'] }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_type'] }}</td>
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; text-align: right;">{{ $labels['movement_type_label'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_type'] }}</td>
         </tr>
     </table>
 
