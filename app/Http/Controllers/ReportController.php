@@ -104,4 +104,32 @@ class ReportController extends Controller
             $request->boolean('show_wasted'),
         );
     }
+
+    public function customerAging(Request $request): Response
+    {
+        $customerId = $request->integer('customer_id') ?: null;
+        $dateTo     = $request->input('date_to');
+
+        return Inertia::render('Reports/CustomerAging', [
+            'customers' => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'filters'   => compact('customerId', 'dateTo'),
+            'data'      => $this->reports->customerAging($customerId, $dateTo),
+        ]);
+    }
+
+    public function customerAgingExcel(Request $request)
+    {
+        $this->reports->exportCustomerAgingExcel(
+            $request->integer('customer_id') ?: null,
+            $request->input('date_to'),
+        );
+    }
+
+    public function customerAgingPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportCustomerAgingPdf(
+            $request->integer('customer_id') ?: null,
+            $request->input('date_to'),
+        );
+    }
 }

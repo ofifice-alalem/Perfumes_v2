@@ -574,4 +574,204 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('stock-status-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Customer Aging ────────────────────────────────────────────────────────
+
+    public function customerAging(?int $customerId, ?string $dateTo): array
+    {
+        $dateTo = $dateTo ? $dateTo . ' 23:59:59' : now()->toDateTimeString();
+        $dateToCarbon = \Carbon\Carbon::parse($dateTo);
+
+        $query = DB::table('invoices')
+            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereIn('invoices.payment_status', ['unpaid', 'partial'])
+            ->where('invoices.created_at', '<=', $dateTo)
+            ->when($customerId, fn($q) => $q->where('invoices.customer_id', $customerId))
+            ->select(
+                'customers.id as customer_id',
+                'customers.name as customer_name',
+                'invoices.id as invoice_id',
+                'invoices.total',
+                'invoices.paid_amount',
+                'invoices.created_at',
+            )
+            ->orderBy('customers.name')
+            ->orderBy('invoices.created_at')
+            ->get();
+
+        $grouped = $query->groupBy('customer_id');
+
+        return $grouped->map(function ($invoices) use ($dateToCarbon) {
+            $totalDebt    = 0;
+            $current      = 0;
+            $days30_60    = 0;
+            $days60_90    = 0;
+            $over90       = 0;
+            $invoicesList = [];
+
+            foreach ($invoices as $inv) {
+                $due  = (float)$inv->total - (float)$inv->paid_amount;
+                $days = (int) \Carbon\Carbon::parse($inv->created_at)->diffInDays($dateToCarbon);
+
+                $totalDebt += $due;
+
+                if      ($days < 30)  $current   += $due;
+                elseif  ($days < 60)  $days30_60 += $due;
+                elseif  ($days < 90)  $days60_90 += $due;
+                else                  $over90    += $due;
+
+                $invoicesList[] = [
+                    'invoice_id'  => $inv->invoice_id,
+                    'date'        => $inv->created_at,
+                    'total'       => (float)$inv->total,
+                    'paid'        => (float)$inv->paid_amount,
+                    'due'         => round($due, 2),
+                    'days_old'    => $days,
+                ];
+            }
+
+            return [
+                'customer_id'   => $invoices->first()->customer_id,
+                'customer_name' => $invoices->first()->customer_name,
+                'total_debt'    => round($totalDebt, 2),
+                'current'       => round($current, 2),
+                'days_30_60'    => round($days30_60, 2),
+                'days_60_90'    => round($days60_90, 2),
+                'over_90'       => round($over90, 2),
+                'invoices'      => $invoicesList,
+            ];
+        })->values()->toArray();
+    }
+
+    public function exportCustomerAgingExcel(?int $customerId, ?string $dateTo): void
+    {
+        $data = $this->customerAging($customerId, $dateTo);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('ديون العملاء');
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $row = 1;
+        $headers = ['#', 'العميل', 'إجمالي الدين', 'أقل من 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر من 90 يوم'];
+        $lastCol = chr(ord('A') + count($headers) - 1);
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        foreach ($data as $i => $c) {
+            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+            $sheet->fromArray([
+                $i + 1,
+                $c['customer_name'],
+                $fmtN($c['total_debt']),
+                $fmtN($c['current']),
+                $fmtN($c['days_30_60']),
+                $fmtN($c['days_60_90']),
+                $fmtN($c['over_90']),
+            ], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            // لون الديون القديمة
+            if ($c['over_90'] > 0) {
+                $sheet->getStyle('G' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']]]);
+            }
+            $row++;
+
+            // تفاصيل الفواتير
+            foreach ($c['invoices'] as $inv) {
+                $sheet->fromArray([
+                    '',
+                    '  INV#' . $inv['invoice_id'],
+                    $fmtN($inv['due']),
+                    \Carbon\Carbon::parse($inv['date'])->format('Y-m-d'),
+                    $inv['days_old'] . ' يوم',
+                    '',
+                    '',
+                ], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['color' => ['rgb' => '64748B'], 'size' => 9],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+            }
+        }
+
+        // صف الإجمالي
+        $totalDebt   = array_sum(array_column($data, 'total_debt'));
+        $totalOver90 = array_sum(array_column($data, 'over_90'));
+        $sheet->fromArray(['', 'الإجمالي', $fmtN($totalDebt), '', '', '', $fmtN($totalOver90)], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+            'font'    => ['bold' => true, 'size' => 11],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'customer-aging-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportCustomerAgingPdf(?int $customerId, ?string $dateTo): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data    = $this->customerAging($customerId, $dateTo);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $totalDebt   = array_sum(array_column($data, 'total_debt'));
+        $totalOver90 = array_sum(array_column($data, 'over_90'));
+
+        $labels = [
+            'title'          => $g('تقرير ديون العملاء'),
+            'generated_at'   => now()->format('Y-m-d H:i'),
+            'filter_info'    => $g('معلومات التقرير'),
+            'summary_label'  => $g('ملخص'),
+            'date_to_label'  => $g('تاريخ المرجع'),
+            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
+            'customers_count'=> count($data),
+            'total_debt'     => $fmtN($totalDebt),
+            'total_over90'   => $fmtN($totalOver90),
+            'col_customer'   => $g('العميل'),
+            'col_total'      => $g('إجمالي الدين'),
+            'col_current'    => $g('أقل 30 يوم'),
+            'col_30_60'      => $g('30-60 يوم'),
+            'col_60_90'      => $g('60-90 يوم'),
+            'col_over90'     => $g('أكثر 90 يوم'),
+            'col_invoices'   => $g('الفواتير'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.customer-aging-pdf', [
+            'labels' => $labels,
+            'data'   => $data,
+            'g'      => $g,
+            'fmtN'   => $fmtN,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('customer-aging-' . now()->format('Y-m-d') . '.pdf');
+    }
 }
