@@ -582,94 +582,141 @@ class ReportRepository implements ReportRepositoryInterface
         $dateTo = $dateTo ? $dateTo . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
-        // جلب العملاء المعنيين
         $customersQuery = DB::table('customers')
             ->when($customerId, fn($q) => $q->where('id', $customerId))
-            ->where('id', '!=', 1) // استثناء الزبون النقدي
+            ->where('id', '!=', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
 
         return $customersQuery->map(function ($customer) use ($dateTo, $dateToCarbon) {
 
-            // إجمالي الفواتير حتى تاريخ المرجع
             $totalInvoiced = (float) DB::table('invoices')
-                ->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
-                ->sum('total');
+                ->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)->sum('total');
 
-            // إجمالي الدفعات حتى تاريخ المرجع
             $totalPaid = (float) DB::table('payments')
-                ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
-                ->sum('amount');
-
-            // إجمالي التسويات حتى تاريخ المرجع
-            $totalSettled = (float) DB::table('settlements')
-                ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
-                ->sum('amount');
-
-            // إجمالي المرتجعات حتى تاريخ المرجع
-            $totalReturned = (float) DB::table('invoice_returns')
                 ->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
-                ->sum('total');
+                ->where('created_at', '<=', $dateTo)->sum('amount');
+
+            $totalSettled = (float) DB::table('settlements')
+                ->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)->sum('amount');
+
+            $totalReturned = (float) DB::table('invoice_returns')
+                ->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)->sum('total');
 
             $totalDebt = $totalInvoiced - $totalPaid - $totalSettled - $totalReturned;
 
             if ($totalDebt <= 0) return null;
 
-            // تفاصيل الفواتير غير المسددة لتصنيف العمر
-            $invoices = DB::table('invoices')
-                ->whereNull('deleted_at')
+            // جمع كل الحركات
+            $movements = collect();
+
+            // فواتير (+)
+            DB::table('invoices')->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'total as amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'   => 'invoice',
+                    'ref'    => 'INV#' . $r->ref_id,
+                    'ref_id' => $r->ref_id,
+                    'amount' => (float)$r->amount,
+                    'date'   => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            // دفعات (-)
+            DB::table('payments')->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'   => 'payment',
+                    'ref'    => 'PAY#' . $r->ref_id,
+                    'ref_id' => $r->ref_id,
+                    'amount' => -(float)$r->amount,
+                    'date'   => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            // تسويات (-)
+            DB::table('settlements')->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'   => 'settlement',
+                    'ref'    => 'SET#' . $r->ref_id,
+                    'ref_id' => $r->ref_id,
+                    'amount' => -(float)$r->amount,
+                    'date'   => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            // مرتجعات (-)
+            DB::table('invoice_returns')->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'total as amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'   => 'return',
+                    'ref'    => 'RET#' . $r->ref_id,
+                    'ref_id' => $r->ref_id,
+                    'amount' => -(float)$r->amount,
+                    'date'   => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            // ترتيب زمني + رصيد متحرك
+            $sorted  = $movements->sortBy('date')->values();
+            $balance = 0.0;
+            $movementsList = $sorted->map(function ($m) use (&$balance) {
+                $balance += $m['amount'];
+                return array_merge($m, ['balance' => round($balance, 2)]);
+            })->values()->toArray();
+
+            // تصنيف عمر الدين — توزيع الدين الحقيقي على الفواتير من الأقدم للأحدث
+            $unpaidInvoices = DB::table('invoices')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
                 ->whereIn('payment_status', ['unpaid', 'partial'])
                 ->where('created_at', '<=', $dateTo)
-                ->select('id as invoice_id', 'total', 'paid_amount', 'created_at')
                 ->orderBy('created_at')
-                ->get();
+                ->get(['total', 'paid_amount', 'created_at']);
 
-            $current   = 0;
-            $days30_60 = 0;
-            $days60_90 = 0;
-            $over90    = 0;
-            $invoicesList = [];
+            $current = $days30_60 = $days60_90 = $over90 = 0.0;
+            $remainingDebt = $totalDebt; // الدين الحقيقي للتوزيع
 
-            foreach ($invoices as $inv) {
-                $due  = (float)$inv->total - (float)$inv->paid_amount;
+            foreach ($unpaidInvoices as $inv) {
+                if ($remainingDebt <= 0) break;
+                $due  = min((float)$inv->total - (float)$inv->paid_amount, $remainingDebt);
                 if ($due <= 0) continue;
                 $days = (int) \Carbon\Carbon::parse($inv->created_at)->diffInDays($dateToCarbon);
-
                 if      ($days < 30) $current   += $due;
                 elseif  ($days < 60) $days30_60 += $due;
                 elseif  ($days < 90) $days60_90 += $due;
                 else                 $over90    += $due;
-
-                $invoicesList[] = [
-                    'invoice_id' => $inv->invoice_id,
-                    'date'       => $inv->created_at,
-                    'total'      => (float)$inv->total,
-                    'paid'       => (float)$inv->paid_amount,
-                    'due'        => round($due, 2),
-                    'days_old'   => $days,
-                ];
+                $remainingDebt -= $due;
             }
+            // أي رصيد متبقي لم يُغطَّ بفاتورة unpaid يُضاف لـ current
+            if ($remainingDebt > 0) $current += $remainingDebt;
 
             return [
-                'customer_id'   => $customer->id,
-                'customer_name' => $customer->name,
-                'total_debt'    => round($totalDebt, 2),
-                'total_invoiced'=> round($totalInvoiced, 2),
-                'total_paid'    => round($totalPaid, 2),
-                'total_settled' => round($totalSettled, 2),
-                'total_returned'=> round($totalReturned, 2),
-                'current'       => round($current, 2),
-                'days_30_60'    => round($days30_60, 2),
-                'days_60_90'    => round($days60_90, 2),
-                'over_90'       => round($over90, 2),
-                'invoices'      => $invoicesList,
+                'customer_id'    => $customer->id,
+                'customer_name'  => $customer->name,
+                'total_debt'     => round($totalDebt, 2),
+                'total_invoiced' => round($totalInvoiced, 2),
+                'total_paid'     => round($totalPaid, 2),
+                'total_settled'  => round($totalSettled, 2),
+                'total_returned' => round($totalReturned, 2),
+                'current'        => round($current, 2),
+                'days_30_60'     => round($days30_60, 2),
+                'days_60_90'     => round($days60_90, 2),
+                'over_90'        => round($over90, 2),
+                'movements'      => $movementsList,
             ];
         })->filter()->values()->toArray();
     }
