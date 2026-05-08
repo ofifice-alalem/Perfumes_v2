@@ -39,4 +39,30 @@ class ReportController extends Controller
             'data'     => $data,
         ]);
     }
+
+    public function productMovementExcel(Request $request)
+    {
+        $productId = $request->integer('product_id');
+        if (!$productId) abort(400);
+
+        $this->reports->exportProductMovementExcel(
+            $productId,
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->input('type'),
+        );
+    }
+
+    public function productMovementPdf(Request $request): \Illuminate\Http\Response
+    {
+        $productId = $request->integer('product_id');
+        if (!$productId) abort(400);
+
+        return $this->reports->exportProductMovementPdf(
+            $productId,
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->input('type'),
+        );
+    }
 }

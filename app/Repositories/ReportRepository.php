@@ -4,6 +4,11 @@ namespace App\Repositories;
 
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportRepository implements ReportRepositoryInterface
 {
@@ -179,5 +184,178 @@ class ReportRepository implements ReportRepositoryInterface
             'movements'     => $result->values(),
             'closing_stock' => round($balance, 2),
         ];
+    }
+
+    // ─── Excel ───────────────────────────────────────────────────────────────
+
+    public function exportProductMovementExcel(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): void
+    {
+        $product = DB::table('products')
+            ->join('categories', 'categories.id', '=', 'products.category_id')
+            ->where('products.id', $productId)
+            ->select('products.name', 'categories.unit')
+            ->first();
+
+        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type);
+
+        $typeLabels = [
+            'purchase'   => 'شراء',
+            'sale'       => 'بيع',
+            'return_in'  => 'مرتجع عميل',
+            'return_out' => 'مرتجع مورد',
+            'waste'      => 'تالف',
+        ];
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('حركة المنتج');
+
+        $row = 1;
+
+        // معلومات التقرير
+        $infoRows = [
+            ['تقرير حركة المنتج', ''],
+            ['المنتج',    $product->name ?? ''],
+            ['من تاريخ', $dateFrom ?? 'الكل'],
+            ['إلى تاريخ', $dateTo  ?? 'الكل'],
+            ['رصيد أول الفترة', $data['opening_stock'] . ' ' . ($product->unit ?? '')],
+            ['رصيد آخر الفترة', $data['closing_stock'] . ' ' . ($product->unit ?? '')],
+        ];
+
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        // رأس الجدول
+        $headers = ['#', 'التاريخ', 'النوع', 'الكمية', 'السعر', 'المرجع', 'الرصيد'];
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        // البيانات
+        foreach ($data['movements'] as $i => $m) {
+            $isIn = $m['quantity'] > 0;
+            $qty  = ($isIn ? '+' : '') . $m['quantity'];
+            $bg   = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+
+            $sheet->fromArray([
+                $i + 1,
+                \Carbon\Carbon::parse($m['date'])->format('Y-m-d'),
+                $typeLabels[$m['type']] ?? $m['type'],
+                $qty,
+                $m['unit_price'] ?? '—',
+                $m['reference'],
+                $m['balance'],
+            ], null, 'A' . $row);
+
+            $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+
+            // لون الكمية
+            $sheet->getStyle('D' . $row)->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => $isIn ? '16A34A' : 'DC2626']],
+            ]);
+
+            $row++;
+        }
+
+        // صف الإجمالي
+        $sheet->setCellValue('A' . $row, 'رصيد آخر الفترة');
+        $sheet->setCellValue('G' . $row, $data['closing_stock'] . ' ' . ($product->unit ?? ''));
+        $sheet->mergeCells('A' . $row . ':F' . $row);
+        $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+            'font'    => ['bold' => true, 'size' => 11],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+
+        foreach (range('A', 'G') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'product-movement-' . ($product->name ?? $productId) . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    // ─── PDF ─────────────────────────────────────────────────────────────────
+
+    public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $product = DB::table('products')
+            ->join('categories', 'categories.id', '=', 'products.category_id')
+            ->where('products.id', $productId)
+            ->select('products.name', 'categories.unit')
+            ->first();
+
+        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type);
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $typeLabels = [
+            'purchase'   => 'شراء',
+            'sale'       => 'بيع',
+            'return_in'  => 'مرتجع عميل',
+            'return_out' => 'مرتجع مورد',
+            'waste'      => 'تالف',
+        ];
+
+        $labels = [
+            'title'           => $g('تقرير حركة المنتج'),
+            'product_name'    => $g($product->name ?? ''),
+            'unit'            => $product->unit ?? '',
+            'date_from'       => $dateFrom,
+            'date_to'         => $dateTo,
+            'all_dates'       => $g('جميع التواريخ'),
+            'opening_stock'   => $g('رصيد أول الفترة'),
+            'closing_stock'   => $g('رصيد آخر الفترة'),
+            'movements_count' => $g('عدد الحركات'),
+            'opening_val'     => $fmtN($data['opening_stock']),
+            'closing_val'     => $fmtN($data['closing_stock']),
+            'movements_val'   => count($data['movements']),
+            'col_date'        => $g('التاريخ'),
+            'col_type'        => $g('النوع'),
+            'col_qty'         => $g('الكمية'),
+            'col_price'       => $g('السعر'),
+            'col_ref'         => $g('المرجع'),
+            'col_balance'     => $g('الرصيد'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.product-movement-pdf', [
+            'labels'     => $labels,
+            'movements'  => $data['movements'],
+            'typeLabels' => $typeLabels,
+            'g'          => $g,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('product-movement-' . now()->format('Y-m-d') . '.pdf');
     }
 }

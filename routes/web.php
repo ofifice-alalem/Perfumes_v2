@@ -53,6 +53,8 @@ Route::middleware('auth')->group(function () {
         // Reports
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/product-movement', [ReportController::class, 'productMovement'])->name('reports.product-movement');
+        Route::get('reports/product-movement/excel', [ReportController::class, 'productMovementExcel'])->name('reports.product-movement.excel');
+        Route::get('reports/product-movement/pdf', [ReportController::class, 'productMovementPdf'])->name('reports.product-movement.pdf');
     });
 
     // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────

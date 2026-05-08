@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { ArrowUp, ArrowDown, Package, SlidersHorizontal, ChevronDown, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Package, SlidersHorizontal, ChevronDown, Search, TrendingUp, TrendingDown, FileSpreadsheet, FileText } from 'lucide-react';
 
 interface Category { id: number; name: string; unit: string; }
 interface Product   { id: number; name: string; stock: string; category: Category; }
@@ -90,6 +90,15 @@ export default function ProductMovement({ products, product, filters, data }: Pr
         ? `${products.find(p => p.id === +productId)!.name} (${products.find(p => p.id === +productId)!.stock} ${products.find(p => p.id === +productId)!.category.unit})`
         : '';
 
+    function buildExportUrl(format: 'excel' | 'pdf') {
+        const params = new URLSearchParams();
+        if (productId) params.set('product_id', productId);
+        if (dateFrom)  params.set('date_from', dateFrom);
+        if (dateTo)    params.set('date_to', dateTo);
+        if (type)      params.set('type', type);
+        return `/reports/product-movement/${format}?${params.toString()}`;
+    }
+
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
             <ModernSelect
@@ -155,9 +164,20 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                     {/* Main Content */}
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
 
-                        {/* Summary Cards */}
+                        {/* Export + Summary Cards */}
                         {data && product && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <>
+                                <div className="flex items-center gap-2">
+                                    <a href={buildExportUrl('excel')} target="_blank"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                        <FileSpreadsheet className="w-4 h-4" /> Excel
+                                    </a>
+                                    <a href={buildExportUrl('pdf')} target="_blank"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                        <FileText className="w-4 h-4" /> PDF
+                                    </a>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="spatial-card p-5 flex flex-col gap-1">
                                     <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">رصيد أول الفترة</p>
                                     <p className="text-2xl font-black text-slate-800 dark:text-white">
@@ -182,7 +202,8 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                                </div>
+                            </>
                         )}
 
                         {/* Movements Table */}
