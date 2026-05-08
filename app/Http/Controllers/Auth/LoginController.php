@@ -24,11 +24,7 @@ class LoginController extends Controller
 
         $user = Auth::user();
 
-        if ($user->hasRole('super-admin')) {
-            return redirect()->intended('/');
-        }
-
-        return redirect()->intended('/invoices');
+        return redirect()->route('invoices.create');
     }
 
     public function destroy(Request $request): RedirectResponse

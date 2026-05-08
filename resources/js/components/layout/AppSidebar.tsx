@@ -118,24 +118,17 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       {/* User Info */}
       {isOpen && (
         <div className="px-5 mb-6">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8">
-            <div className="w-9 h-9 rounded-[12px] bg-primary/15 flex items-center justify-center shrink-0">
-              <span className="font-black text-primary text-sm">
-                {(props.auth?.user?.name as string)?.[0] ?? '؟'}
-              </span>
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-black text-slate-800 dark:text-white text-sm truncate">
-                {(props.auth?.user?.name as string) ?? ''}
-              </span>
-              <span className="text-xs font-bold text-slate-400 dark:text-white/40 truncate">
-                {userRoles[0] === 'super-admin' ? 'مدير عام'
-                  : userRoles[0] === 'admin'   ? 'مدير'
-                  : userRoles[0] === 'saler'   ? 'بائع'
-                  : userRoles[0] === 'cashier' ? 'أمين صندوق'
-                  : ''}
-              </span>
-            </div>
+          <div className="flex flex-col px-4 py-3 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8">
+            <span className="font-black text-slate-800 dark:text-white text-sm truncate">
+              {(props.auth?.user?.name as string) ?? ''}
+            </span>
+            <span className="text-xs font-bold text-slate-400 dark:text-white/40 truncate mt-0.5">
+              {userRoles[0] === 'super-admin' ? 'مدير عام'
+                : userRoles[0] === 'admin'   ? 'مدير'
+                : userRoles[0] === 'saler'   ? 'بائع'
+                : userRoles[0] === 'cashier' ? 'أمين صندوق'
+                : ''}
+            </span>
           </div>
         </div>
       )}
