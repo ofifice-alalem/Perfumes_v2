@@ -47,7 +47,7 @@
 <div id="page-header">
     <div class="ph-tbl">
         <div class="ph-l">
-            <div style="font-size:11px; font-weight:bold; color:#0f172a;">P<span style="color:#94a3b8;">+</span></div>
+            <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 40px; max-width: 80px;">
         </div>
         <div class="ph-r">
             <div class="ph-title">{{ $labels['title'] }}</div>
@@ -67,8 +67,9 @@
 {{-- Cover Page --}}
 <div style="page-break-after: always; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; text-align: center;">
 
-    <div style="font-size: 48px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">P<span style="color:#94a3b8;">+</span></div>
-    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 40px; letter-spacing: 2px;">نظام العطور</div>
+    <div style="margin-bottom: 20px;">
+        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 300px; max-width: 550px;">
+    </div>
 
     <div style="border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 32px; width: 100%;">
         <div style="font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">{{ $labels['title'] }}</div>
