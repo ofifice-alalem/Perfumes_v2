@@ -14,6 +14,7 @@ interface AppSidebarProps {
 
 interface NavSection {
   title: string;
+  roles?: string[];
   items: NavItem[];
 }
 
@@ -21,6 +22,7 @@ interface NavItem {
   icon: JSX.Element;
   label: string;
   href: string;
+  roles?: string[];
 }
 
 const navSections: NavSection[] = [
@@ -52,6 +54,7 @@ const navSections: NavSection[] = [
   },
   {
     title: 'الإعدادات العامة',
+    roles: ['super-admin', 'admin'],
     items: [
       { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
       { icon: <Layers className="w-5 h-5" />, label: 'التصنيفات', href: '/categories' },
@@ -64,7 +67,12 @@ const navSections: NavSection[] = [
 ];
 
 export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
-  const { url } = usePage();
+  const { url, props } = usePage<{ auth: { user: { roles: string[] } } }>();
+  const userRoles: string[] = (props.auth?.user?.roles as string[]) ?? [];
+
+  const canAccess = (roles?: string[]) =>
+    !roles || roles.some(r => userRoles.includes(r));
+
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(
     navSections.reduce((acc, section) => ({ ...acc, [section.title]: true }), {})
   );
@@ -73,6 +81,8 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
     if (!isOpen) return;
     setExpandedSections(prev => ({ ...prev, [title]: !prev[title] }));
   };
+
+  const isSuperAdmin = userRoles.includes('super-admin');
 
   return (
     <aside className={`
@@ -104,24 +114,26 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-2 w-full px-4 overflow-y-auto custom-scroll pb-14">
-        {/* الرئيسية */}
-        <Link href="/"
-          className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-        >
-          <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
-            <LayoutDashboard className="w-5 h-5" />
-          </div>
-          {isOpen && (
-            <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${url === '/' ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-              الرئيسية
-            </span>
-          )}
-        </Link>
+        {/* الرئيسية — super-admin فقط */}
+        {isSuperAdmin && (
+          <Link href="/"
+            className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+          >
+            <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+              <LayoutDashboard className="w-5 h-5" />
+            </div>
+            {isOpen && (
+              <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${url === '/' ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                الرئيسية
+              </span>
+            )}
+          </Link>
+        )}
 
-        <div className="h-px bg-black/10 dark:bg-white/10 my-2 mx-3" />
+        {isSuperAdmin && <div className="h-px bg-black/10 dark:bg-white/10 my-2 mx-3" />}
 
         {/* الأقسام */}
-        {navSections.map((section) => (
+        {navSections.filter(s => canAccess(s.roles)).map((section) => (
           <div key={section.title} className="mb-2">
             {/* عنوان القسم */}
             {isOpen && (
