@@ -22,9 +22,11 @@ class UserController extends Controller
     public function store(UserRequest $request): RedirectResponse
     {
         $data = $request->validated();
-        $data['role'] = $data['role'] ?? 'admin';
+        $role = $data['role'];
+        unset($data['role']);
 
-        $this->users->create($data);
+        $user = $this->users->create($data);
+        $user->syncRoles([$role]);
 
         return back()->with('success', 'تم إضافة المستخدم بنجاح');
     }
@@ -32,12 +34,15 @@ class UserController extends Controller
     public function update(UserRequest $request, int $id): RedirectResponse
     {
         $data = $request->validated();
+        $role = $data['role'];
+        unset($data['role']);
 
         if (empty($data['password'])) {
             unset($data['password']);
         }
 
         $this->users->update($data, $id);
+        $this->users->find($id)->syncRoles([$role]);
 
         return back()->with('success', 'تم تحديث المستخدم بنجاح');
     }

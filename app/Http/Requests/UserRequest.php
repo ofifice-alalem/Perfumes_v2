@@ -10,7 +10,7 @@ class UserRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->route('user');
+        $userId   = $this->route('user');
         $isUpdate = $this->isMethod('PUT') || $this->isMethod('PATCH');
 
         return [
@@ -18,7 +18,7 @@ class UserRequest extends FormRequest
             'username' => 'required|string|max:255|unique:users,username,' . ($userId ?? 'NULL'),
             'email'    => 'nullable|email|max:255|unique:users,email,' . ($userId ?? 'NULL'),
             'password' => $isUpdate ? 'nullable|string|min:6' : 'required|string|min:6',
-            'role'     => 'sometimes|string|in:admin',
+            'role'     => 'required|string|in:super-admin,admin,saler',
         ];
     }
 

@@ -6,7 +6,7 @@
 هذه المرحلة تُضيف:
 - **تسجيل الدخول** عبر Laravel Sanctum (Session-based)
 - **حماية جميع المسارات** بـ middleware
-- **نظام أدوار** مبني على عمود `role` الموجود في جدول `users`
+- **نظام أدوار** عبر `spatie/laravel-permission` (حذف عمود `role` من `users`)
 - **API Token** للاستخدام المستقبلي
 
 ---
@@ -25,35 +25,46 @@
 
 ```
 Backend:
-   app/Http/Middleware/RoleMiddleware.php       → التحقق من الدور
+   database/migrations/2026_05_08_092604_create_permission_tables.php  → جداول Spatie
+   database/migrations/2026_05_08_092612_drop_role_column_from_users_table.php → حذف عمود role
+   database/seeders/RolesAndAdminSeeder.php     → إنشاء الأدوار ومستخدم super-admin
+   app/Models/User.php                          → إضافة HasRoles trait
    app/Http/Controllers/Auth/LoginController.php → تسجيل الدخول
-   app/Http/Requests/LoginRequest.php           → validation تسجيل الدخول
-   routes/web.php                               → تغليف المسارات بـ auth
-   bootstrap/app.php                            → تسجيل RoleMiddleware
+   app/Http/Requests/Auth/LoginRequest.php      → validation تسجيل الدخول
+   app/Http/Middleware/HandleInertiaRequests.php → تمرير بيانات المستخدم والأدوار
+   routes/web.php                               → تغليف المسارات بـ auth + role
 
 Frontend:
    resources/js/pages/Auth/Login.tsx            → صفحة تسجيل الدخول
-   resources/js/Layouts/AuthenticatedLayout.tsx → تحديث لعرض بيانات المستخدم
 ```
 
 ---
 
-## 1️⃣ RoleMiddleware
+## 1️⃣ spatie/laravel-permission
 
-**الوظيفة:** يتحقق أن المستخدم المسجّل دخوله يملك الدور المطلوب.
+**الوظيفة:** نظام أدوار وصلاحيات كامل عبر جداول منفصلة.
 
 ```
-الاستخدام في routes:
-   ->middleware('role:super-admin')
-   ->middleware('role:super-admin,admin')
-   ->middleware('role:super-admin,admin,saler')
+الجداول المُنشأة:
+   roles                → الأدوار (super-admin, admin, saler)
+   permissions          → الصلاحيات (غير مستخدمة حالياً)
+   model_has_roles      → ربط المستخدمين بالأدوار
+   model_has_permissions → ربط المستخدمين بالصلاحيات
+   role_has_permissions  → ربط الأدوار بالصلاحيات
+```
+
+**الاستخدام في routes:**
+```
+->middleware('role:super-admin')
+->middleware('role:super-admin,admin')
+->middleware('role:super-admin,admin,saler')
 ```
 
 **قواعد:**
 ```
 - إذا لم يكن للمستخدم الدور المطلوب → abort(403)
 - super-admin يملك صلاحية كل شيء
-- saler لا يستطيع الوصول لصفحات الإدارة (categories, sizes, price-tiers, products, users)
+- saler لا يستطيع الوصول لصفحات الإدارة
 ```
 
 ---
@@ -77,7 +88,25 @@ POST /logout → تسجيل الخروج
 
 ---
 
-## 3️⃣ حماية المسارات
+## 3️⃣ RolesAndAdminSeeder
+
+**الوظيفة:** إنشاء الأدوار الثلاثة ومستخدم super-admin افتراضي.
+
+```
+البيانات المُنشأة:
+   Role: super-admin
+   Role: admin
+   Role: saler
+   
+   User:
+      username: admin
+      password: password
+      role: super-admin
+```
+
+---
+
+## 4️⃣ حماية المسارات
 
 **التقسيم حسب الدور:**
 
@@ -100,7 +129,7 @@ POST /logout → تسجيل الخروج
 
 ---
 
-## 4️⃣ صفحة Login
+## 5️⃣ صفحة Login
 
 **التصميم:** نفس نظام Spatial UI المستخدم في المشروع.
 
@@ -140,8 +169,9 @@ middleware auth يتحقق من الجلسة
 ## ⚠️ قواعد العمل المهمة
 
 ```
-1. ✅ جميع المسارات محمية بـ middleware('auth') بدون استثناء
-2. ✅ تسجيل الدخول بـ username وليس email
+1. ✅ جميع المسارات محمية بـ middleware('auth') + middleware('role:...')
+2. ✅ عمود `role` محذوف من جدول `users` — الأدوار في جداول Spatie
+3. ✅ تسجيل الدخول بـ username وليس email
 3. ✅ لا يوجد تسجيل حساب جديد من الواجهة
 4. ✅ saler لا يرى صفحات الإدارة في الـ Sidebar (categories, sizes, price-tiers, products, payment-methods, users)
 5. ✅ user_id في invoices/purchases يأخذ من Auth::id() دائماً (لا fallback)

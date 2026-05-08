@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { Plus, Pencil, Trash2, X, Check, Users, Eye, EyeOff } from 'lucide-react';
 
@@ -18,7 +18,21 @@ interface Props {
     flash?: { success?: string; error?: string };
 }
 
-const emptyForm = { name: '', username: '', email: '', password: '', role: 'admin' };
+const roleOptions = [
+    { value: 'super-admin', label: 'مدير عام' },
+    { value: 'admin',       label: 'مدير' },
+    { value: 'saler',       label: 'بائع' },
+];
+
+function roleLabelToValue(label: string): string {
+    return roleOptions.find(r => r.label === label)?.value ?? label;
+}
+
+function roleValueToLabel(value: string): string {
+    return roleOptions.find(r => r.value === value)?.label ?? value;
+}
+
+const emptyForm = { name: '', username: '', email: '', password: '', role: 'saler' };
 
 export default function UsersIndex({ users, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
@@ -27,7 +41,7 @@ export default function UsersIndex({ users, flash }: Props) {
     const [showEditPass, setShowEditPass] = useState(false);
 
     const createForm = useForm({ ...emptyForm });
-    const editForm   = useForm({ name: '', username: '', email: '', password: '', role: 'admin' });
+    const editForm   = useForm({ name: '', username: '', email: '', password: '', role: 'saler' });
 
     function startEdit(u: User) {
         setEditingId(u.id);
@@ -110,6 +124,12 @@ export default function UsersIndex({ users, flash }: Props) {
                                     </div>
                                     {createForm.errors.password && <p className="text-xs text-red-500 font-bold">{createForm.errors.password}</p>}
                                 </div>
+                                <ModernSelect
+                                    label="الدور"
+                                    options={roleOptions.map(r => ({ label: r.label }))}
+                                    defaultValue={roleValueToLabel(createForm.data.role)}
+                                    onSelect={val => createForm.setData('role', roleLabelToValue(val))}
+                                />
                             </div>
                             <div className="flex items-center gap-2 pt-2">
                                 <button onClick={submitCreate} disabled={createForm.processing}
@@ -169,6 +189,12 @@ export default function UsersIndex({ users, flash }: Props) {
                                                         </button>
                                                     </div>
                                                 </div>
+                                                <ModernSelect
+                                                    label="الدور"
+                                                    options={roleOptions.map(r => ({ label: r.label }))}
+                                                    defaultValue={roleValueToLabel(editForm.data.role)}
+                                                    onSelect={val => editForm.setData('role', roleLabelToValue(val))}
+                                                />
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => submitEdit(user.id)}
@@ -192,7 +218,9 @@ export default function UsersIndex({ users, flash }: Props) {
                                                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">@{user.username}</span>
                                                         {user.email && <span className="text-xs font-bold text-slate-400 dark:text-white/40">{user.email}</span>}
-                                                        <span className="text-xs font-bold px-2 py-0.5 rounded-[6px] bg-primary/10 text-primary">{user.role}</span>
+                                                        <span className="text-xs font-bold px-2 py-0.5 rounded-[6px] bg-primary/10 text-primary">
+                                                            {roleOptions.find(r => r.value === user.role)?.label ?? user.role}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </div>
