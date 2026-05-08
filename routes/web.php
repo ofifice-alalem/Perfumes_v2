@@ -55,6 +55,9 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/product-movement', [ReportController::class, 'productMovement'])->name('reports.product-movement');
         Route::get('reports/product-movement/excel', [ReportController::class, 'productMovementExcel'])->name('reports.product-movement.excel');
         Route::get('reports/product-movement/pdf', [ReportController::class, 'productMovementPdf'])->name('reports.product-movement.pdf');
+        Route::get('reports/stock-status', [ReportController::class, 'stockStatus'])->name('reports.stock-status');
+        Route::get('reports/stock-status/excel', [ReportController::class, 'stockStatusExcel'])->name('reports.stock-status.excel');
+        Route::get('reports/stock-status/pdf', [ReportController::class, 'stockStatusPdf'])->name('reports.stock-status.pdf');
     });
 
     // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────

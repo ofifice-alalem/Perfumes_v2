@@ -364,4 +364,189 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('product-movement-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Stock Status ──────────────────────────────────────────────────────────
+
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly): array
+    {
+        $query = DB::table('products')
+            ->join('categories', 'categories.id', '=', 'products.category_id')
+            ->leftJoin('price_tiers', 'price_tiers.id', '=', 'products.price_tier_id')
+            ->when($categoryId,   fn($q) => $q->where('products.category_id', $categoryId))
+            ->when($sellingType,  fn($q) => $q->where('products.selling_type', $sellingType))
+            ->when($lowStockOnly, fn($q) => $q->whereRaw('products.stock <= products.min_stock'))
+            ->select(
+                'products.id',
+                'products.name',
+                'products.stock',
+                'products.min_stock',
+                'products.selling_type',
+                'categories.name as category_name',
+                'categories.unit',
+                'price_tiers.name as tier_name',
+            )
+            ->orderBy('products.name')
+            ->get();
+
+        return $query->map(function ($p) {
+            $lastPurchaseCost = DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->orderByDesc('purchases.created_at')
+                ->value('purchase_items.unit_cost');
+
+            $avgPurchaseCost = DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->avg('purchase_items.unit_cost');
+
+            $lastSalePrice = DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->orderByDesc('invoices.created_at')
+                ->value('invoice_items.unit_price');
+
+            $avgSalePrice = DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->avg('invoice_items.unit_price');
+
+            $status = match(true) {
+                (float)$p->stock <= 0                     => 'critical',
+                (float)$p->stock <= (float)$p->min_stock  => 'warning',
+                default                                   => 'ok',
+            };
+
+            return [
+                'id'                 => $p->id,
+                'name'               => $p->name,
+                'category'           => $p->category_name,
+                'unit'               => $p->unit,
+                'selling_type'       => $p->selling_type,
+                'tier'               => $p->tier_name,
+                'stock'              => (float)$p->stock,
+                'min_stock'          => (float)$p->min_stock,
+                'status'             => $status,
+                'last_purchase_cost' => $lastPurchaseCost ? (float)$lastPurchaseCost : null,
+                'avg_purchase_cost'  => $avgPurchaseCost  ? round((float)$avgPurchaseCost, 2) : null,
+                'last_sale_price'    => $lastSalePrice    ? (float)$lastSalePrice    : null,
+                'avg_sale_price'     => $avgSalePrice     ? round((float)$avgSalePrice, 2)    : null,
+            ];
+        })->values()->toArray();
+    }
+
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
+    {
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('المخزون الحالي');
+
+        $row = 1;
+        $headers = ['#', 'المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع'];
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
+        $statusColors = ['ok' => '16A34A', 'warning' => 'D97706', 'critical' => 'DC2626'];
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        foreach ($data as $i => $p) {
+            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+            $sheet->fromArray([
+                $i + 1,
+                $p['name'],
+                $p['category'],
+                $fmtN($p['stock']) . ' ' . $p['unit'],
+                $fmtN($p['min_stock']) . ' ' . $p['unit'],
+                $statusLabels[$p['status']],
+                $fmtN($p['last_purchase_cost']),
+                $fmtN($p['avg_purchase_cost']),
+                $fmtN($p['last_sale_price']),
+                $fmtN($p['avg_sale_price']),
+            ], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $sheet->getStyle('F' . $row)->applyFromArray([
+                'font' => ['bold' => true, 'color' => ['rgb' => $statusColors[$p['status']]]],
+            ]);
+            $row++;
+        }
+
+        foreach (range('A', 'J') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'stock-status-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
+
+        $labels = [
+            'title'          => $g('تقرير المخزون الحالي'),
+            'generated_at'   => now()->format('Y-m-d H:i'),
+            'filter_info'    => $g('معلومات التقرير'),
+            'label_category' => $g('التصنيف'),
+            'label_type'     => $g('نوع المنتج'),
+            'label_filter'   => $g('الفلتر'),
+            'all_label'      => $g('الكل'),
+            'low_stock_label'=> $g($lowStockOnly ? 'تحت الحد الأدنى فقط' : 'جميع المنتجات'),
+            'summary_label'  => $g('ملخص'),
+            'total_products' => count($data),
+            'ok_count'       => count(array_filter($data, fn($p) => $p['status'] === 'ok')),
+            'warning_count'  => count(array_filter($data, fn($p) => $p['status'] === 'warning')),
+            'critical_count' => count(array_filter($data, fn($p) => $p['status'] === 'critical')),
+            'col_name'       => $g('المنتج'),
+            'col_category'   => $g('التصنيف'),
+            'col_stock'      => $g('المخزون'),
+            'col_min'        => $g('الحد الأدنى'),
+            'col_status'     => $g('الحالة'),
+            'col_cost'       => $g('آخر شراء'),
+            'col_avg_cost'   => $g('متوسط شراء'),
+            'col_price'      => $g('آخر بيع'),
+            'col_avg_price'  => $g('متوسط بيع'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.stock-status-pdf', [
+            'labels'       => $labels,
+            'data'         => $data,
+            'statusLabels' => $statusLabels,
+            'g'            => $g,
+            'fmtN'         => $fmtN,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('stock-status-' . now()->format('Y-m-d') . '.pdf');
+    }
 }

@@ -65,4 +65,37 @@ class ReportController extends Controller
             $request->input('type'),
         );
     }
+
+    public function stockStatus(Request $request): Response
+    {
+        $categoryId   = $request->integer('category_id') ?: null;
+        $sellingType  = $request->input('selling_type');
+        $lowStockOnly = $request->boolean('low_stock_only');
+
+        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly);
+
+        return Inertia::render('Reports/StockStatus', [
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly'),
+            'data'       => $data,
+        ]);
+    }
+
+    public function stockStatusExcel(Request $request)
+    {
+        $this->reports->exportStockStatusExcel(
+            $request->integer('category_id') ?: null,
+            $request->input('selling_type'),
+            $request->boolean('low_stock_only'),
+        );
+    }
+
+    public function stockStatusPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportStockStatusPdf(
+            $request->integer('category_id') ?: null,
+            $request->input('selling_type'),
+            $request->boolean('low_stock_only'),
+        );
+    }
 }
