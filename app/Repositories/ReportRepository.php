@@ -582,66 +582,96 @@ class ReportRepository implements ReportRepositoryInterface
         $dateTo = $dateTo ? $dateTo . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
-        $query = DB::table('invoices')
-            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
-            ->whereNull('invoices.deleted_at')
-            ->whereIn('invoices.payment_status', ['unpaid', 'partial'])
-            ->where('invoices.created_at', '<=', $dateTo)
-            ->when($customerId, fn($q) => $q->where('invoices.customer_id', $customerId))
-            ->select(
-                'customers.id as customer_id',
-                'customers.name as customer_name',
-                'invoices.id as invoice_id',
-                'invoices.total',
-                'invoices.paid_amount',
-                'invoices.created_at',
-            )
-            ->orderBy('customers.name')
-            ->orderBy('invoices.created_at')
-            ->get();
+        // جلب العملاء المعنيين
+        $customersQuery = DB::table('customers')
+            ->when($customerId, fn($q) => $q->where('id', $customerId))
+            ->where('id', '!=', 1) // استثناء الزبون النقدي
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        $grouped = $query->groupBy('customer_id');
+        return $customersQuery->map(function ($customer) use ($dateTo, $dateToCarbon) {
 
-        return $grouped->map(function ($invoices) use ($dateToCarbon) {
-            $totalDebt    = 0;
-            $current      = 0;
-            $days30_60    = 0;
-            $days60_90    = 0;
-            $over90       = 0;
+            // إجمالي الفواتير حتى تاريخ المرجع
+            $totalInvoiced = (float) DB::table('invoices')
+                ->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->sum('total');
+
+            // إجمالي الدفعات حتى تاريخ المرجع
+            $totalPaid = (float) DB::table('payments')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->sum('amount');
+
+            // إجمالي التسويات حتى تاريخ المرجع
+            $totalSettled = (float) DB::table('settlements')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->sum('amount');
+
+            // إجمالي المرتجعات حتى تاريخ المرجع
+            $totalReturned = (float) DB::table('invoice_returns')
+                ->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->where('created_at', '<=', $dateTo)
+                ->sum('total');
+
+            $totalDebt = $totalInvoiced - $totalPaid - $totalSettled - $totalReturned;
+
+            if ($totalDebt <= 0) return null;
+
+            // تفاصيل الفواتير غير المسددة لتصنيف العمر
+            $invoices = DB::table('invoices')
+                ->whereNull('deleted_at')
+                ->where('customer_id', $customer->id)
+                ->whereIn('payment_status', ['unpaid', 'partial'])
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as invoice_id', 'total', 'paid_amount', 'created_at')
+                ->orderBy('created_at')
+                ->get();
+
+            $current   = 0;
+            $days30_60 = 0;
+            $days60_90 = 0;
+            $over90    = 0;
             $invoicesList = [];
 
             foreach ($invoices as $inv) {
                 $due  = (float)$inv->total - (float)$inv->paid_amount;
+                if ($due <= 0) continue;
                 $days = (int) \Carbon\Carbon::parse($inv->created_at)->diffInDays($dateToCarbon);
 
-                $totalDebt += $due;
-
-                if      ($days < 30)  $current   += $due;
-                elseif  ($days < 60)  $days30_60 += $due;
-                elseif  ($days < 90)  $days60_90 += $due;
-                else                  $over90    += $due;
+                if      ($days < 30) $current   += $due;
+                elseif  ($days < 60) $days30_60 += $due;
+                elseif  ($days < 90) $days60_90 += $due;
+                else                 $over90    += $due;
 
                 $invoicesList[] = [
-                    'invoice_id'  => $inv->invoice_id,
-                    'date'        => $inv->created_at,
-                    'total'       => (float)$inv->total,
-                    'paid'        => (float)$inv->paid_amount,
-                    'due'         => round($due, 2),
-                    'days_old'    => $days,
+                    'invoice_id' => $inv->invoice_id,
+                    'date'       => $inv->created_at,
+                    'total'      => (float)$inv->total,
+                    'paid'       => (float)$inv->paid_amount,
+                    'due'        => round($due, 2),
+                    'days_old'   => $days,
                 ];
             }
 
             return [
-                'customer_id'   => $invoices->first()->customer_id,
-                'customer_name' => $invoices->first()->customer_name,
+                'customer_id'   => $customer->id,
+                'customer_name' => $customer->name,
                 'total_debt'    => round($totalDebt, 2),
+                'total_invoiced'=> round($totalInvoiced, 2),
+                'total_paid'    => round($totalPaid, 2),
+                'total_settled' => round($totalSettled, 2),
+                'total_returned'=> round($totalReturned, 2),
                 'current'       => round($current, 2),
                 'days_30_60'    => round($days30_60, 2),
                 'days_60_90'    => round($days60_90, 2),
                 'over_90'       => round($over90, 2),
                 'invoices'      => $invoicesList,
             ];
-        })->values()->toArray();
+        })->filter()->values()->toArray();
     }
 
     public function exportCustomerAgingExcel(?int $customerId, ?string $dateTo): void
@@ -755,6 +785,7 @@ class ReportRepository implements ReportRepositoryInterface
             'total_over90'   => $fmtN($totalOver90),
             'col_customer'   => $g('العميل'),
             'col_total'      => $g('إجمالي الدين'),
+            'col_breakdown'  => $g('فواتير/دفعات/مرتجعات'),
             'col_current'    => $g('أقل 30 يوم'),
             'col_30_60'      => $g('30-60 يوم'),
             'col_60_90'      => $g('60-90 يوم'),

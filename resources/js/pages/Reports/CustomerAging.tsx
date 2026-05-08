@@ -19,6 +19,10 @@ interface CustomerAging {
     customer_id: number;
     customer_name: string;
     total_debt: number;
+    total_invoiced: number;
+    total_paid: number;
+    total_settled: number;
+    total_returned: number;
     current: number;
     days_30_60: number;
     days_60_90: number;
@@ -192,7 +196,7 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['العميل', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم', 'الفواتير', ''].map(h => (
+                                                    {['العميل', 'إجمالي الدين', 'التفاصيل', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم', 'الفواتير', ''].map(h => (
                                                         <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -203,6 +207,12 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                         <tr key={c.customer_id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
                                                             <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{c.customer_name}</td>
                                                             <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(c.total_debt)}</td>
+                                                            <td className="px-4 py-3 text-xs text-slate-400 dark:text-white/30 whitespace-nowrap">
+                                                                <span className="text-slate-600 dark:text-white/60">{fmt(c.total_invoiced)}</span>
+                                                                {c.total_paid > 0 && <span className="text-emerald-600 dark:text-emerald-400"> -{fmt(c.total_paid)}</span>}
+                                                                {c.total_returned > 0 && <span className="text-amber-500"> -{fmt(c.total_returned)}</span>}
+                                                                {c.total_settled > 0 && <span className="text-blue-500"> -{fmt(c.total_settled)}</span>}
+                                                            </td>
                                                             <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
                                                             <td className={`px-4 py-3 whitespace-nowrap ${c.days_30_60 > 0 ? 'text-amber-500 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_30_60)}</td>
                                                             <td className={`px-4 py-3 whitespace-nowrap ${c.days_60_90 > 0 ? 'text-amber-600 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_60_90)}</td>
