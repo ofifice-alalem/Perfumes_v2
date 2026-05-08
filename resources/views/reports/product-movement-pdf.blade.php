@@ -64,6 +64,64 @@
     </div>
 </div>
 
+{{-- Cover Page --}}
+<div style="page-break-after: always; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; text-align: center;">
+
+    <div style="font-size: 48px; font-weight: bold; color: #0f172a; margin-bottom: 6px;">P<span style="color:#94a3b8;">+</span></div>
+    <div style="font-size: 11px; color: #94a3b8; margin-bottom: 40px; letter-spacing: 2px;">نظام العطور</div>
+
+    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 32px; width: 100%;">
+        <div style="font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">{{ $labels['title'] }}</div>
+        <div style="font-size: 13px; color: #64748b;">{{ $labels['product_name'] }}</div>
+    </div>
+
+    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0f172a;">
+        <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
+            <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['filter_info'] }} &#x2014;</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">{{ $labels['product_name'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_product'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">
+                @if($labels['date_from'])
+                    {{ $labels['date_from'] }} &rarr; {{ $labels['date_to'] }}
+                @else
+                    {{ $labels['all_dates'] }}
+                @endif
+            </td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_period'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-left: 2px solid #0f172a;">{{ $labels['movement_type_label'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none;">{{ $labels['label_type'] }}</td>
+        </tr>
+    </table>
+
+    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 24px auto 0; border: 2px solid #0f172a;">
+        <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
+            <td colspan="3" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
+        </tr>
+        <tr>
+            <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
+                <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $labels['closing_stock'] }}</div>
+                <div style="font-size: 20px; font-weight: bold; color: #0f172a;">{{ $labels['closing_val'] }} <span style="font-size:11px; color:#94a3b8;">{{ $labels['unit'] }}</span></div>
+            </td>
+            <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
+                <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $labels['movements_count'] }}</div>
+                <div style="font-size: 20px; font-weight: bold; color: #0f172a;">{{ $labels['movements_val'] }}</div>
+            </td>
+            <td style="padding: 16px 8px; text-align: center; background: #f8fafc;">
+                <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $labels['opening_stock'] }}</div>
+                <div style="font-size: 20px; font-weight: bold; color: #0f172a;">{{ $labels['opening_val'] }} <span style="font-size:11px; color:#94a3b8;">{{ $labels['unit'] }}</span></div>
+            </td>
+        </tr>
+    </table>
+
+    <div style="margin-top: 40px; font-size: 9px; color: #94a3b8;">{{ now()->format('Y-m-d H:i') }}</div>
+</div>
+
 {{-- ملخص --}}
 <div class="summary-tbl">
     <div class="summary-cell">
