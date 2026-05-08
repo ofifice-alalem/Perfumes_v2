@@ -1,0 +1,506 @@
+================================================================================
+                    المرحلة 10: التقارير (Reports)
+================================================================================
+
+📋 نظرة عامة:
+--------------
+هذه المرحلة تُضيف نظام تقارير شامل للمتجر.
+جميع التقارير تعتمد على البيانات الموجودة في الجداول الحالية — لا جداول جديدة.
+التقارير للقراءة فقط (read-only) — لا تُعدِّل أي بيانات.
+
+الوصول: super-admin + admin فقط.
+
+================================================================================
+                    🗂️ الجداول المستخدمة في هذه المرحلة
+================================================================================
+
+   جميع الجداول الموجودة — لا جداول جديدة:
+   invoice_items, invoices, payments, settlements
+   purchase_items, purchases, supplier_payments
+   invoice_returns, invoice_return_items
+   purchase_returns, purchase_return_items
+   waste_items, waste_logs
+   products, categories, users, customers, suppliers
+
+
+================================================================================
+                    🖥️ الصفحات
+================================================================================
+
+   /reports                          → صفحة رئيسية تعرض قائمة التقارير
+   /reports/product-movement         → تقرير حركة المنتج
+   /reports/stock-status             → تقرير المخزون الحالي
+   /reports/customer-aging           → تقرير ديون العملاء
+   /reports/supplier-aging           → تقرير ديون الموردين
+   /reports/sales                    → تقرير المبيعات
+   /reports/purchases                → تقرير المشتريات
+   /reports/returns                  → تقرير المرتجعات
+   /reports/waste                    → تقرير التالف والخسائر
+   /reports/seller-performance       → تقرير أداء البائعين
+   /reports/unpaid-invoices          → تقرير الفواتير غير المسددة
+   /reports/payments-log             → تقرير حركة الدفعات والتسويات
+   /reports/top-products             → تقرير المنتجات الأكثر والأقل مبيعاً
+   /reports/gross-profit             → تقرير إجمالي الربح الإجمالي
+   /reports/daily-summary            → تقرير الملخص اليومي
+
+
+================================================================================
+                    1️⃣  تقرير حركة المنتج (Product Movement)
+================================================================================
+
+📌 الوظيفة:
+   تتبع كل حركة مخزون لمنتج معين خلال فترة زمنية محددة.
+   يُظهر رصيد أول الفترة، كل الحركات مرتبة زمنياً، ورصيد آخر الفترة.
+
+📌 المدخلات (فلاتر):
+   product_id   → المنتج (إجباري)
+   date_from    → تاريخ البداية
+   date_to      → تاريخ النهاية
+   type         → نوع الحركة (all / purchase / sale / return_in / return_out / waste)
+
+📌 المخرجات:
+   opening_stock  → رصيد أول الفترة (stock قبل date_from)
+   movements[]    → قائمة الحركات:
+      date        → التاريخ
+      type        → نوع العملية (شراء / بيع / مرتجع عميل / مرتجع مورد / تالف)
+      quantity    → الكمية (موجبة = دخول، سالبة = خروج)
+      unit_price  → السعر (unit_cost أو unit_price حسب النوع)
+      reference   → المرجع (رقم الفاتورة أو السجل)
+      balance     → الرصيد التراكمي بعد كل حركة
+   closing_stock  → رصيد آخر الفترة
+
+📌 مصادر الحركات:
+```
+purchase_items      → دخول مخزون  (+quantity)
+invoice_items       → خروج مخزون  (-quantity)
+invoice_return_items → دخول مخزون (+quantity)
+purchase_return_items → خروج مخزون (-quantity)
+waste_items         → خروج مخزون  (-quantity)
+```
+
+📌 حساب رصيد أول الفترة:
+```
+opening_stock = products.stock الحالي
+              - SUM(purchase_items.quantity WHERE date >= date_from)
+              + SUM(invoice_items.quantity WHERE date >= date_from)
+              - SUM(invoice_return_items.quantity WHERE date >= date_from)
+              + SUM(purchase_return_items.quantity WHERE date >= date_from)
+              + SUM(waste_items.quantity WHERE date >= date_from)
+```
+
+
+================================================================================
+                    2️⃣  تقرير المخزون الحالي (Stock Status)
+================================================================================
+
+📌 الوظيفة:
+   لقطة فورية لحالة مخزون جميع المنتجات.
+   يُبرز المنتجات التي وصلت للحد الأدنى أو تجاوزته.
+
+📌 المدخلات (فلاتر):
+   category_id  → التصنيف
+   selling_type → نوع المنتج (tier_based / unit_priced)
+   low_stock    → منتجات تحت الحد الأدنى فقط (boolean)
+
+📌 المخرجات لكل منتج:
+   name              → اسم المنتج
+   category          → التصنيف
+   stock             → الكمية الحالية
+   min_stock         → الحد الأدنى
+   status            → حالة التنبيه (ok / warning / critical)
+   last_purchase_cost → آخر سعر شراء (من آخر purchase_item)
+   last_sale_price   → آخر سعر بيع (من آخر invoice_item)
+
+📌 قواعد حالة التنبيه:
+```
+stock > min_stock      → ok       (أخضر)
+stock = min_stock      → warning  (برتقالي)
+stock < min_stock      → critical (أحمر)
+```
+
+
+================================================================================
+                    3️⃣  تقرير ديون العملاء (Customer Aging)
+================================================================================
+
+📌 الوظيفة:
+   تحليل ديون العملاء وتصنيفها حسب عمر الدين.
+   يساعد في تحديد العملاء الذين تأخروا في السداد.
+
+📌 المدخلات (فلاتر):
+   customer_id  → عميل محدد (اختياري — الكل إذا فارغ)
+   date_to      → تاريخ المرجع للحساب (افتراضي: اليوم)
+
+📌 المخرجات لكل عميل:
+   name          → اسم العميل
+   total_debt    → إجمالي الدين الحالي
+   aging buckets → تصنيف الفواتير غير المسددة:
+      current    → أقل من 30 يوم
+      days_30_60 → من 30 إلى 60 يوم
+      days_60_90 → من 60 إلى 90 يوم
+      over_90    → أكثر من 90 يوم
+   invoices[]    → تفاصيل الفواتير غير المسددة (unpaid / partial)
+
+📌 قاعدة الحساب:
+```
+عمر الفاتورة = date_to - invoices.created_at
+الفواتير المشمولة: payment_status IN ('unpaid', 'partial')
+```
+
+
+================================================================================
+                    4️⃣  تقرير ديون الموردين (Supplier Aging)
+================================================================================
+
+📌 الوظيفة:
+   نفس منطق تقرير ديون العملاء لكن من جهة الموردين.
+   يُظهر كم تدين لكل مورد وعمر الدين.
+
+📌 المدخلات (فلاتر):
+   supplier_id  → مورد محدد (اختياري)
+   date_to      → تاريخ المرجع
+
+📌 المخرجات:
+   نفس هيكل تقرير العملاء لكن من جداول:
+   purchases (بدلاً من invoices)
+   supplier_payments (بدلاً من payments)
+
+
+================================================================================
+                    5️⃣  تقرير المبيعات (Sales Report)
+================================================================================
+
+📌 الوظيفة:
+   تحليل شامل لأداء المبيعات خلال فترة زمنية.
+   يدعم المقارنة بين فترتين.
+
+📌 المدخلات (فلاتر):
+   date_from         → تاريخ البداية
+   date_to           → تاريخ النهاية
+   user_id           → البائع
+   customer_id       → العميل
+   payment_method_id → وسيلة الدفع
+   category_id       → فئة المنتج
+   compare           → مقارنة مع الفترة السابقة (boolean)
+
+📌 المخرجات:
+   total_sales        → إجمالي المبيعات
+   invoices_count     → عدد الفواتير
+   avg_invoice_value  → متوسط قيمة الفاتورة
+   total_paid         → إجمالي المدفوعات
+   total_due          → إجمالي المتبقي
+   daily_breakdown[]  → تفصيل يومي (التاريخ، المبيعات، عدد الفواتير)
+   comparison         → مقارنة مع الفترة السابقة (إذا compare = true)
+
+
+================================================================================
+                    6️⃣  تقرير المشتريات (Purchases Report)
+================================================================================
+
+📌 الوظيفة:
+   تحليل شامل لعمليات الشراء خلال فترة زمنية.
+
+📌 المدخلات (فلاتر):
+   date_from         → تاريخ البداية
+   date_to           → تاريخ النهاية
+   supplier_id       → المورد
+   product_id        → المنتج
+   payment_method_id → وسيلة الدفع
+
+📌 المخرجات:
+   total_purchases    → إجمالي المشتريات
+   purchases_count    → عدد فواتير الشراء
+   total_paid         → إجمالي المدفوع للموردين
+   total_due          → إجمالي المتبقي للموردين
+   daily_breakdown[]  → تفصيل يومي
+
+
+================================================================================
+                    7️⃣  تقرير المرتجعات (Returns Report)
+================================================================================
+
+📌 الوظيفة:
+   تحليل المرتجعات من العملاء وللموردين.
+
+📌 المدخلات (فلاتر):
+   date_from    → تاريخ البداية
+   date_to      → تاريخ النهاية
+   direction    → الاتجاه (customer / supplier / all)
+   product_id   → منتج محدد
+
+📌 المخرجات — مرتجعات العملاء:
+   total_customer_returns   → إجمالي قيمة المرتجع من العملاء
+   returns_count            → عدد سجلات المرتجع
+   top_returned_products[]  → أكثر المنتجات إرجاعاً (المنتج، الكمية، القيمة)
+   returns_vs_sales_ratio   → نسبة المرتجع من المبيعات
+
+📌 المخرجات — مرتجعات الموردين:
+   total_supplier_returns   → إجمالي ما أُعيد للموردين
+   returns_count            → عدد سجلات المرتجع
+   linked_settlements       → إجمالي التسويات المرتبطة
+
+
+================================================================================
+                    8️⃣  تقرير التالف والخسائر (Waste & Loss)
+================================================================================
+
+📌 الوظيفة:
+   تحليل التالف وتوزيعه حسب السبب والمنتج والفترة.
+
+📌 المدخلات (فلاتر):
+   date_from  → تاريخ البداية
+   date_to    → تاريخ النهاية
+   reason     → سبب التلف (broken / spilled / expired / lost / other)
+   product_id → منتج محدد
+
+📌 المخرجات:
+   total_waste_quantity  → إجمالي الكمية التالفة
+   total_waste_value     → إجمالي القيمة التقديرية (بآخر سعر شراء)
+   by_reason[]           → توزيع حسب السبب (السبب، الكمية، النسبة)
+   top_wasted_products[] → أكثر المنتجات تلفاً (المنتج، الكمية، القيمة)
+   daily_breakdown[]     → تفصيل يومي
+
+
+================================================================================
+                    9️⃣  تقرير أداء البائعين (Seller Performance)
+================================================================================
+
+📌 الوظيفة:
+   مقارنة أداء البائعين خلال فترة زمنية.
+
+📌 المدخلات (فلاتر):
+   date_from  → تاريخ البداية
+   date_to    → تاريخ النهاية
+   user_id    → بائع محدد (اختياري)
+
+📌 المخرجات لكل بائع:
+   name               → اسم البائع
+   invoices_count     → عدد الفواتير
+   total_sales        → إجمالي المبيعات
+   avg_invoice_value  → متوسط قيمة الفاتورة
+   returns_count      → عدد المرتجعات التي قام بها
+   returns_value      → قيمة المرتجعات
+
+
+================================================================================
+                    🔟  تقرير الفواتير غير المسددة (Unpaid Invoices)
+================================================================================
+
+📌 الوظيفة:
+   قائمة بجميع الفواتير التي لم تُسدَّد بالكامل.
+   مفيد لشاشة التحصيل اليومي.
+
+📌 المدخلات (فلاتر):
+   customer_id      → عميل محدد
+   payment_status   → الحالة (unpaid / partial / all)
+   date_from        → تاريخ البداية
+   date_to          → تاريخ النهاية
+
+📌 المخرجات:
+   invoices[]  → قائمة الفواتير:
+      id           → رقم الفاتورة
+      customer     → العميل
+      date         → التاريخ
+      total        → الإجمالي
+      paid_amount  → المدفوع
+      due_amount   → المتبقي
+      days_old     → عمر الفاتورة بالأيام
+   summary:
+      total_due    → إجمالي المتبقي الكلي
+      count        → عدد الفواتير
+
+
+================================================================================
+                    1️⃣1️⃣  تقرير حركة الدفعات والتسويات (Payments Log)
+================================================================================
+
+📌 الوظيفة:
+   سجل كامل لجميع المدفوعات والتسويات خلال فترة.
+
+📌 المدخلات (فلاتر):
+   date_from         → تاريخ البداية
+   date_to           → تاريخ النهاية
+   direction         → الجهة (customer / supplier / all)
+   payment_method_id → وسيلة الدفع
+   type              → نوع العملية (payment / settlement / all)
+
+📌 المخرجات:
+   entries[]  → قائمة الحركات:
+      date             → التاريخ
+      type             → نوع العملية (دفعة / تسوية)
+      direction        → الجهة (عميل / مورد)
+      party_name       → اسم العميل أو المورد
+      payment_method   → وسيلة الدفع
+      amount           → المبلغ
+      reference        → المرجع (رقم الفاتورة إن وجد)
+   summary:
+      total_received   → إجمالي المقبوض من العملاء
+      total_paid_out   → إجمالي المدفوع للموردين
+      net              → الصافي
+
+
+================================================================================
+                    1️⃣2️⃣  تقرير المنتجات الأكثر والأقل مبيعاً (Top/Bottom Products)
+================================================================================
+
+📌 الوظيفة:
+   ترتيب المنتجات حسب أداء المبيعات خلال فترة.
+
+📌 المدخلات (فلاتر):
+   date_from    → تاريخ البداية
+   date_to      → تاريخ النهاية
+   category_id  → التصنيف
+   sort_by      → معيار الترتيب (quantity / value)
+   limit        → عدد النتائج (افتراضي: 10)
+
+📌 المخرجات:
+   top_products[]    → الأكثر مبيعاً:
+      product_name   → اسم المنتج
+      category       → التصنيف
+      total_quantity → إجمالي الكمية المباعة
+      total_value    → إجمالي قيمة المبيعات
+      avg_cost       → متوسط تكلفة الشراء (من purchase_items)
+      gross_margin   → هامش الربح التقريبي = total_value - (avg_cost × total_quantity)
+   bottom_products[] → الأقل مبيعاً (نفس الهيكل)
+
+
+================================================================================
+                    1️⃣3️⃣  تقرير إجمالي الربح الإجمالي (Gross Profit)
+================================================================================
+
+📌 الوظيفة:
+   حساب الربح الإجمالي خلال فترة.
+   يعتمد على متوسط تكلفة الشراء لكل منتج (Weighted Average Cost).
+
+📌 المدخلات (فلاتر):
+   date_from    → تاريخ البداية
+   date_to      → تاريخ النهاية
+   category_id  → التصنيف
+
+📌 المخرجات:
+   total_revenue      → إجمالي المبيعات
+   total_cogs         → إجمالي تكلفة البضاعة المباعة
+   gross_profit       → الربح الإجمالي = total_revenue - total_cogs
+   gross_margin_pct   → نسبة هامش الربح = (gross_profit / total_revenue) × 100
+   by_product[]       → تفصيل لكل منتج
+
+📌 طريقة حساب COGS:
+```
+لكل منتج:
+   avg_cost = SUM(purchase_items.line_total) / SUM(purchase_items.quantity)
+   cogs     = avg_cost × الكمية المباعة في الفترة
+```
+
+📌 ملاحظة:
+   هذا تقدير مبسط يعتمد على المتوسط المتحرك (Weighted Average).
+   لا يدعم FIFO في هذه المرحلة.
+
+
+================================================================================
+                    1️⃣4️⃣  تقرير الملخص اليومي (Daily Summary)
+================================================================================
+
+📌 الوظيفة:
+   صفحة سريعة تعرض ملخص عمليات اليوم لمدير المتجر.
+   تُحدَّث تلقائياً — لا فلاتر.
+
+📌 المخرجات:
+   today_sales          → مبيعات اليوم (SUM invoices.total WHERE date = today)
+   today_purchases      → مشتريات اليوم
+   today_waste_value    → قيمة التالف اليوم (تقديرية)
+   today_cash_received  → المدفوعات النقدية المقبوضة اليوم
+   today_cash_paid      → المدفوعات النقدية المدفوعة للموردين اليوم
+   stock_change         → تغير المخزون الكلي اليوم (دخول - خروج)
+   invoices_count       → عدد الفواتير اليوم
+   new_customers        → عملاء جدد اليوم
+
+
+================================================================================
+                    🔄 هيكل الـ Backend
+================================================================================
+
+📌 Controller:
+   ReportController → controller واحد يخدم جميع التقارير
+
+📌 Repository:
+   ReportRepository → يحتوي على جميع queries التقارير
+
+📌 المسارات:
+```
+Route::prefix('reports')->middleware('role:super-admin|admin')->group(function () {
+    Route::get('/',                  [ReportController::class, 'index']);
+    Route::get('/product-movement',  [ReportController::class, 'productMovement']);
+    Route::get('/stock-status',      [ReportController::class, 'stockStatus']);
+    Route::get('/customer-aging',    [ReportController::class, 'customerAging']);
+    Route::get('/supplier-aging',    [ReportController::class, 'supplierAging']);
+    Route::get('/sales',             [ReportController::class, 'sales']);
+    Route::get('/purchases',         [ReportController::class, 'purchases']);
+    Route::get('/returns',           [ReportController::class, 'returns']);
+    Route::get('/waste',             [ReportController::class, 'waste']);
+    Route::get('/seller-performance',[ReportController::class, 'sellerPerformance']);
+    Route::get('/unpaid-invoices',   [ReportController::class, 'unpaidInvoices']);
+    Route::get('/payments-log',      [ReportController::class, 'paymentsLog']);
+    Route::get('/top-products',      [ReportController::class, 'topProducts']);
+    Route::get('/gross-profit',      [ReportController::class, 'grossProfit']);
+    Route::get('/daily-summary',     [ReportController::class, 'dailySummary']);
+});
+```
+
+📌 الملفات:
+```
+app/Http/Controllers/ReportController.php
+app/Repositories/ReportRepository.php
+app/Repositories/Contracts/ReportRepositoryInterface.php
+
+resources/js/pages/Reports/Index.tsx          → الصفحة الرئيسية
+resources/js/pages/Reports/ProductMovement.tsx
+resources/js/pages/Reports/StockStatus.tsx
+resources/js/pages/Reports/CustomerAging.tsx
+resources/js/pages/Reports/SupplierAging.tsx
+resources/js/pages/Reports/Sales.tsx
+resources/js/pages/Reports/Purchases.tsx
+resources/js/pages/Reports/Returns.tsx
+resources/js/pages/Reports/Waste.tsx
+resources/js/pages/Reports/SellerPerformance.tsx
+resources/js/pages/Reports/UnpaidInvoices.tsx
+resources/js/pages/Reports/PaymentsLog.tsx
+resources/js/pages/Reports/TopProducts.tsx
+resources/js/pages/Reports/GrossProfit.tsx
+resources/js/pages/Reports/DailySummary.tsx
+```
+
+
+================================================================================
+                        ⚠️ قواعد العمل المهمة
+================================================================================
+
+1.  ✅ جميع التقارير للقراءة فقط — لا تُعدِّل أي بيانات
+2.  ✅ الوصول: super-admin + admin فقط
+3.  ✅ جميع الفلاتر اختيارية ما لم يُذكر خلاف ذلك
+4.  ✅ التواريخ تعتمد على created_at للسجلات
+5.  ✅ السجلات المحذوفة (soft deleted) لا تُشمل في التقارير
+6.  ✅ الزبون النقدي (id=1) يُشمل في تقارير المبيعات
+7.  ✅ المورد النقدي (id=1) يُشمل في تقارير المشتريات
+8.  ✅ قيمة التالف تقديرية — تعتمد على آخر سعر شراء للمنتج
+9.  ✅ حساب COGS يعتمد على Weighted Average وليس FIFO
+10. ✅ تقرير الملخص اليومي لا يحتاج فلاتر — يعرض بيانات اليوم دائماً
+
+
+================================================================================
+                        🎯 ما اكتمل بعد هذه المرحلة
+================================================================================
+
+✅ 14 تقرير شامل يغطي جميع جوانب المتجر
+✅ تحليل المخزون والحركة والديون والمبيعات والمشتريات
+✅ تقارير الأداء والربحية
+✅ ملخص يومي سريع للمدير
+
+❌ لم يُضف بعد:
+   - تصدير التقارير إلى PDF / Excel
+   - جدولة إرسال التقارير بالبريد الإلكتروني
+   - رسوم بيانية (Charts) — مرحلة مستقبلية
+
+
+================================================================================
+                                    انتهى
+================================================================================
