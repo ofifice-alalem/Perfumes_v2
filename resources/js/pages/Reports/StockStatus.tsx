@@ -20,11 +20,13 @@ interface ProductStock {
     avg_purchase_cost: number | null;
     last_sale_price: number | null;
     avg_sale_price: number | null;
+    total_sold: number | null;
+    total_wasted: number | null;
 }
 
 interface Props {
     categories: Category[];
-    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean };
+    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean };
     data: ProductStock[];
 }
 
@@ -53,19 +55,23 @@ export default function StockStatus({ categories, filters, data }: Props) {
     const [categoryId,    setCategoryId]    = useState(filters.categoryId ? String(filters.categoryId) : '');
     const [sellingType,   setSellingType]   = useState(filters.sellingType ?? '');
     const [lowStockOnly,  setLowStockOnly]  = useState(filters.lowStockOnly ?? false);
+    const [showSold,      setShowSold]      = useState(filters.showSold ?? false);
+    const [showWasted,    setShowWasted]    = useState(filters.showWasted ?? false);
 
-    const hasFilter = categoryId || sellingType || lowStockOnly;
+    const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted;
 
     function search() {
         router.get('/reports/stock-status', {
             category_id:    categoryId    || undefined,
             selling_type:   sellingType   || undefined,
             low_stock_only: lowStockOnly  || undefined,
+            show_sold:      showSold      || undefined,
+            show_wasted:    showWasted    || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setCategoryId(''); setSellingType(''); setLowStockOnly(false);
+        setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false);
         router.get('/reports/stock-status', {}, { preserveScroll: true });
     }
 
@@ -74,6 +80,8 @@ export default function StockStatus({ categories, filters, data }: Props) {
         if (categoryId)   params.set('category_id', categoryId);
         if (sellingType)  params.set('selling_type', sellingType);
         if (lowStockOnly) params.set('low_stock_only', '1');
+        if (showSold)     params.set('show_sold', '1');
+        if (showWasted)   params.set('show_wasted', '1');
         return `/reports/stock-status/${format}?${params.toString()}`;
     }
 
@@ -103,6 +111,20 @@ export default function StockStatus({ categories, filters, data }: Props) {
                     <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${lowStockOnly ? 'left-0.5 translate-x-5' : 'left-0.5'}`} />
                 </button>
                 <span className="text-sm font-bold text-slate-600 dark:text-white/70">تحت الحد الأدنى فقط</span>
+            </div>
+            <div className="flex items-center gap-3 px-1">
+                <button onClick={() => setShowSold(p => !p)}
+                    className={`w-11 h-6 rounded-full transition-all relative ${showSold ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${showSold ? 'left-0.5 translate-x-5' : 'left-0.5'}`} />
+                </button>
+                <span className="text-sm font-bold text-slate-600 dark:text-white/70">إظهار إجمالي المبيع</span>
+            </div>
+            <div className="flex items-center gap-3 px-1">
+                <button onClick={() => setShowWasted(p => !p)}
+                    className={`w-11 h-6 rounded-full transition-all relative ${showWasted ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${showWasted ? 'left-0.5 translate-x-5' : 'left-0.5'}`} />
+                </button>
+                <span className="text-sm font-bold text-slate-600 dark:text-white/70">إظهار إجمالي التالف</span>
             </div>
             <button onClick={search}
                 className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
@@ -192,7 +214,7 @@ export default function StockStatus({ categories, filters, data }: Props) {
                                         <table className="w-full text-sm">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع'].map(h => (
+                                                    {['المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع', ...(showSold ? ['إجمالي المبيع'] : []), ...(showWasted ? ['إجمالي التالف'] : [])].map(h => (
                                                         <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -214,6 +236,8 @@ export default function StockStatus({ categories, filters, data }: Props) {
                                                         <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.last_sale_price)}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                        {showSold   && <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>}
+                                                        {showWasted && <td className="px-4 py-3 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>}
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -256,6 +280,18 @@ export default function StockStatus({ categories, filters, data }: Props) {
                                                         <span className="font-bold text-slate-400 dark:text-white/40">متوسط بيع</span>
                                                         <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_sale_price)}</span>
                                                     </div>
+                                                    {showSold && (
+                                                        <div className="flex justify-between">
+                                                            <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المبيع</span>
+                                                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(p.total_sold)} {p.unit}</span>
+                                                        </div>
+                                                    )}
+                                                    {showWasted && (
+                                                        <div className="flex justify-between">
+                                                            <span className="font-bold text-slate-400 dark:text-white/40">إجمالي التالف</span>
+                                                            <span className="font-bold text-red-500">{fmt(p.total_wasted)} {p.unit}</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

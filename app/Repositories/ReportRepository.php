@@ -367,7 +367,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Stock Status ──────────────────────────────────────────────────────────
 
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly): array
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): array
     {
         $query = DB::table('products')
             ->join('categories', 'categories.id', '=', 'products.category_id')
@@ -388,7 +388,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('products.name')
             ->get();
 
-        return $query->map(function ($p) {
+        return $query->map(function ($p) use ($showSold, $showWasted) {
             $lastPurchaseCost = DB::table('purchase_items')
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
                 ->whereNull('purchases.deleted_at')
@@ -421,6 +421,17 @@ class ReportRepository implements ReportRepositoryInterface
                 default                                   => 'ok',
             };
 
+            $totalSold = $showSold ? (float) DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->sum('invoice_items.quantity') : null;
+
+            $totalWasted = $showWasted ? (float) DB::table('waste_items')
+                ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
+                ->where('waste_items.product_id', $p->id)
+                ->sum('waste_items.quantity') : null;
+
             return [
                 'id'                 => $p->id,
                 'name'               => $p->name,
@@ -435,13 +446,15 @@ class ReportRepository implements ReportRepositoryInterface
                 'avg_purchase_cost'  => $avgPurchaseCost  ? round((float)$avgPurchaseCost, 2) : null,
                 'last_sale_price'    => $lastSalePrice    ? (float)$lastSalePrice    : null,
                 'avg_sale_price'     => $avgSalePrice     ? round((float)$avgSalePrice, 2)    : null,
+                'total_sold'         => $totalSold,
+                'total_wasted'       => $totalWasted,
             ];
         })->values()->toArray();
     }
 
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -450,8 +463,12 @@ class ReportRepository implements ReportRepositoryInterface
 
         $row = 1;
         $headers = ['#', 'المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع'];
+        if ($showSold)   $headers[] = 'إجمالي المبيع';
+        if ($showWasted) $headers[] = 'إجمالي التالف';
+
+        $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray([
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
             'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -466,7 +483,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         foreach ($data as $i => $p) {
             $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-            $sheet->fromArray([
+            $rowData = [
                 $i + 1,
                 $p['name'],
                 $p['category'],
@@ -477,8 +494,12 @@ class ReportRepository implements ReportRepositoryInterface
                 $fmtN($p['avg_purchase_cost']),
                 $fmtN($p['last_sale_price']),
                 $fmtN($p['avg_sale_price']),
-            ], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':J' . $row)->applyFromArray([
+            ];
+            if ($showSold)   $rowData[] = $fmtN($p['total_sold'])   . ' ' . $p['unit'];
+            if ($showWasted) $rowData[] = $fmtN($p['total_wasted']) . ' ' . $p['unit'];
+
+            $sheet->fromArray($rowData, null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
@@ -488,7 +509,7 @@ class ReportRepository implements ReportRepositoryInterface
             $row++;
         }
 
-        foreach (range('A', 'J') as $col) {
+        foreach (range('A', $lastCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
@@ -500,12 +521,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
@@ -534,6 +555,10 @@ class ReportRepository implements ReportRepositoryInterface
             'col_avg_cost'   => $g('متوسط شراء'),
             'col_price'      => $g('آخر بيع'),
             'col_avg_price'  => $g('متوسط بيع'),
+            'col_sold'       => $g('إجمالي المبيع'),
+            'col_wasted'     => $g('إجمالي التالف'),
+            'show_sold'      => $showSold,
+            'show_wasted'    => $showWasted,
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.stock-status-pdf', [

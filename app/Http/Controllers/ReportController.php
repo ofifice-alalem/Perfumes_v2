@@ -71,12 +71,14 @@ class ReportController extends Controller
         $categoryId   = $request->integer('category_id') ?: null;
         $sellingType  = $request->input('selling_type');
         $lowStockOnly = $request->boolean('low_stock_only');
+        $showSold     = $request->boolean('show_sold');
+        $showWasted   = $request->boolean('show_wasted');
 
-        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly);
+        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
 
         return Inertia::render('Reports/StockStatus', [
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly'),
+            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted'),
             'data'       => $data,
         ]);
     }
@@ -87,6 +89,8 @@ class ReportController extends Controller
             $request->integer('category_id') ?: null,
             $request->input('selling_type'),
             $request->boolean('low_stock_only'),
+            $request->boolean('show_sold'),
+            $request->boolean('show_wasted'),
         );
     }
 
@@ -96,6 +100,8 @@ class ReportController extends Controller
             $request->integer('category_id') ?: null,
             $request->input('selling_type'),
             $request->boolean('low_stock_only'),
+            $request->boolean('show_sold'),
+            $request->boolean('show_wasted'),
         );
     }
 }

@@ -25,12 +25,12 @@
 
         table.main { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; }
         table.main thead tr { background: #dce4ee; }
-        table.main th { color: #0f172a; text-align: right; padding: 7px 6px; font-size: 12px; font-weight: bold; border: 1px solid #64748b; }
-        table.main td { padding: 6px 6px; font-size: 12px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; }
+        table.main th { color: #0f172a; text-align: right; padding: 7px 6px; font-size: 11px; font-weight: bold; border: 1px solid #64748b; }
+        table.main td { padding: 6px 6px; font-size: 11px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; }
         table.main tr.row-even td { background: #f8fafc; }
         table.main td.num  { font-weight: bold; color: #0f172a; }
         table.main td.idx  { color: #64748b; font-size: 11px; text-align: center; }
-        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 12px; padding: 7px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; }
+        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 11px; padding: 7px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; }
 
         .status-ok       { font-weight: bold; color: #16a34a; }
         .status-warning  { font-weight: bold; color: #d97706; }
@@ -132,10 +132,12 @@
             <th style="width:9%">{{ $labels['col_avg_price'] }}</th>
             <th style="width:9%">{{ $labels['col_cost'] }}</th>
             <th style="width:9%">{{ $labels['col_avg_cost'] }}</th>
+            @if($labels['show_sold'])<th style="width:9%">{{ $labels['col_sold'] }}</th>@endif
+            @if($labels['show_wasted'])<th style="width:9%">{{ $labels['col_wasted'] }}</th>@endif
             <th style="width:10%">{{ $labels['col_min'] }}</th>
             <th style="width:10%">{{ $labels['col_stock'] }}</th>
             <th style="width:15%">{{ $labels['col_category'] }}</th>
-            <th style="width:27%">{{ $labels['col_name'] }}</th>
+            <th>{{ $labels['col_name'] }}</th>
             <th style="width:5%; text-align:center">#</th>
         </tr>
     </thead>
@@ -151,6 +153,8 @@
             <td class="num">{{ $fmtN($p['avg_sale_price']) }}</td>
             <td class="num">{{ $fmtN($p['last_purchase_cost']) }}</td>
             <td class="num">{{ $fmtN($p['avg_purchase_cost']) }}</td>
+            @if($labels['show_sold'])<td class="num">{{ $fmtN($p['total_sold']) }}</td>@endif
+            @if($labels['show_wasted'])<td class="num" style="color:#dc2626">{{ $fmtN($p['total_wasted']) }}</td>@endif
             <td class="num">{{ $fmtN($p['min_stock']) }}</td>
             <td class="num">{{ $fmtN($p['stock']) }}</td>
             <td>{{ $g($p['category']) }}</td>
