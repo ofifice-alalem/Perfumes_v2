@@ -17,7 +17,7 @@ class InvoiceReturnRepository extends Repository implements InvoiceReturnReposit
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->with(['customer', 'invoice'])->withSum('settlements as settlements_total', 'amount'))
+        return QueryBuilder::for($this->model->withTrashed()->with(['customer', 'invoice'])->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('invoice_id'),

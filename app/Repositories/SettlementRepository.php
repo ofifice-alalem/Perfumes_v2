@@ -17,7 +17,7 @@ class SettlementRepository extends Repository implements SettlementRepositoryInt
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->with(['customer', 'invoice', 'invoiceReturn', 'paymentMethod']))
+        return QueryBuilder::for($this->model->withTrashed()->with(['customer', 'invoice', 'invoiceReturn', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('invoice_id'),

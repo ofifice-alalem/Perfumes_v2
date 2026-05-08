@@ -115,12 +115,14 @@ Route::middleware('auth')->group(function () {
         Route::get('payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
         Route::post('payments', [PaymentController::class, 'store'])->name('payments.store');
         Route::delete('payments/{id}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+        Route::post('payments/{id}/restore', [PaymentController::class, 'restore'])->name('payments.restore');
 
         // Settlements (Customer)
         Route::get('settlements', [SettlementController::class, 'index'])->name('settlements.index');
         Route::get('settlements/{id}', [SettlementController::class, 'show'])->name('settlements.show');
         Route::post('settlements', [SettlementController::class, 'store'])->name('settlements.store');
         Route::delete('settlements/{id}', [SettlementController::class, 'destroy'])->name('settlements.destroy');
+        Route::post('settlements/{id}/restore', [SettlementController::class, 'restore'])->name('settlements.restore');
 
         // Invoice Returns
         Route::get('invoice-returns', [InvoiceReturnController::class, 'index'])->name('invoice-returns.index');

@@ -3,9 +3,10 @@ import { router, Link, useForm } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { RestoreModal } from '@/components/ui/RestoreModal';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
-import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye } from 'lucide-react';
+import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 
 interface Customer { id: number; name: string; total_debt: string; }
 interface PaymentMethod { id: number; name: string; }
@@ -17,6 +18,7 @@ interface Settlement {
     amount: string;
     notes: string | null;
     created_at: string;
+    deleted_at: string | null;
 }
 interface Paginated<T> {
     data: T[]; current_page: number; last_page: number; total: number;
@@ -42,6 +44,12 @@ function fmtDate(v: string | null) {
 export default function SettlementsIndex({ settlements, customers, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
+    const [activeTab,  setActiveTab]  = useState<'active' | 'deleted'>('active');
+
+    const activeSettlements  = settlements.data.filter(s => !s.deleted_at);
+    const deletedSettlements = settlements.data.filter(s => s.deleted_at);
+    const displaySettlements = activeTab === 'active' ? activeSettlements : deletedSettlements;
+
     const params = new URLSearchParams(window.location.search);
     const [fCustomer,   setFCustomer]   = useState(params.get('filter[customer_id]') ?? '');
     const [fMethod,     setFMethod]     = useState(params.get('filter[payment_method_id]') ?? '');
@@ -68,7 +76,6 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
         router.get('/settlements', {}, { preserveScroll: true });
     }
 
-    // نموذج الإنشاء
     const form = useForm({
         customer_id: '', invoice_id: '', payment_method_id: '', amount: '', notes: '',
     });
@@ -136,7 +143,6 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                 {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
                 {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
-                {/* نموذج الإنشاء */}
                 {showCreate && (
                     <SpatialCard title="تسوية جديدة" icon={<Plus className="w-4 h-4" />}>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -209,11 +215,21 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`التسويات (${settlements.total})`} icon={<RefreshCw className="w-4 h-4" />}>
-                            {settlements.data.length === 0 ? (
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                التسويات النشطة ({activeSettlements.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                التسويات المحذوفة ({deletedSettlements.length})
+                            </button>
+                        </div>
+
+                        <SpatialCard title={`التسويات (${displaySettlements.length})`} icon={<RefreshCw className="w-4 h-4" />}>
+                            {displaySettlements.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">🔄</span>
-                                    <span className="font-bold">لا توجد تسويات</span>
+                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد تسويات' : 'لا توجد تسويات محذوفة'}</span>
                                 </div>
                             ) : (
                                 <>
@@ -228,8 +244,8 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {settlements.data.map(s => (
-                                                    <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                {displaySettlements.map(s => (
+                                                    <tr key={s.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${s.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{s.id}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{s.customer?.name ?? '—'}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60">
@@ -245,8 +261,17 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                                     className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                                     <Eye className="w-3 h-3" /> عرض
                                                                 </Link>
-                                                                <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                                    trigger={<button className="flex items-center gap-1 px-2.5 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                                {s.deleted_at ? (
+                                                                    <RestoreModal
+                                                                        title="استعادة التسوية"
+                                                                        description="هل أنت متأكد من استعادة هذه التسوية؟"
+                                                                        onConfirm={() => router.post(`/settlements/${s.id}/restore`, {}, { preserveScroll: true })}
+                                                                        trigger={<button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs"><RotateCcw className="w-3 h-3" /> استعادة</button>}
+                                                                    />
+                                                                ) : (
+                                                                    <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                                        trigger={<button className="flex items-center gap-1 px-2.5 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -257,14 +282,15 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {settlements.data.map(s => (
-                                            <div key={s.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                        {displaySettlements.map(s => (
+                                            <div key={s.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${s.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-black text-slate-800 dark:text-white">{s.customer?.name ?? '—'}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{s.id}</span>
+                                                        {s.deleted_at && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">محذوف</span>}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
@@ -298,10 +324,19 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                         <Eye className="w-4 h-4" /> عرض
                                                     </Link>
-                                                    <button onClick={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                        <Trash2 className="w-4 h-4" /> حذف
-                                                    </button>
+                                                    {s.deleted_at ? (
+                                                        <RestoreModal
+                                                            title="استعادة التسوية"
+                                                            description="هل أنت متأكد من استعادة هذه التسوية؟"
+                                                            onConfirm={() => router.post(`/settlements/${s.id}/restore`, {}, { preserveScroll: true })}
+                                                            trigger={<button className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm"><RotateCcw className="w-4 h-4" /> استعادة</button>}
+                                                        />
+                                                    ) : (
+                                                        <button onClick={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> حذف
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

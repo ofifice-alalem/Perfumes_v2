@@ -71,4 +71,10 @@ class PaymentController extends Controller
         return ($invoiceId ? redirect()->route('invoices.show', $invoiceId) : back())
             ->with('success', 'تم حذف الدفعة بنجاح');
     }
+
+    public function restore(int $id): RedirectResponse
+    {
+        Payment::withTrashed()->findOrFail($id)->restore();
+        return back()->with('success', 'تم استعادة الدفعة بنجاح');
+    }
 }

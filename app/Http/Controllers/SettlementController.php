@@ -71,4 +71,10 @@ class SettlementController extends Controller
         return ($invoiceId ? redirect()->route('invoices.show', $invoiceId) : back())
             ->with('success', 'تم حذف التسوية بنجاح');
     }
+
+    public function restore(int $id): RedirectResponse
+    {
+        Settlement::withTrashed()->findOrFail($id)->restore();
+        return back()->with('success', 'تم استعادة التسوية بنجاح');
+    }
 }
