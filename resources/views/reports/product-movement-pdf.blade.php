@@ -27,12 +27,12 @@
 
         table.main { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; }
         table.main thead tr { background: #dce4ee; }
-        table.main th { color: #0f172a; text-align: right; padding: 6px 5px; font-size: 10px; font-weight: bold; border: 1px solid #64748b; }
-        table.main td { padding: 5px 5px; font-size: 10.5px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; }
+        table.main th { color: #0f172a; text-align: right; padding: 7px 6px; font-size: 12px; font-weight: bold; border: 1px solid #64748b; }
+        table.main td { padding: 6px 6px; font-size: 12px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; }
         table.main tr.row-even td { background: #f8fafc; }
         table.main td.num  { font-weight: bold; color: #0f172a; }
-        table.main td.idx  { color: #64748b; font-size: 9px; text-align: center; }
-        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 10.5px; padding: 6px 5px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; }
+        table.main td.idx  { color: #64748b; font-size: 11px; text-align: center; }
+        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 12px; padding: 7px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; }
 
         .in  { color: #16a34a; font-weight: bold; }
         .out { color: #dc2626; font-weight: bold; }
@@ -103,11 +103,11 @@
         @endphp
         <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
             <td class="num">{{ $fmtN($m['balance']) }}</td>
-            <td style="font-size:7.5px; color:#3b82f6; font-weight:bold;">{{ $m['reference'] }}</td>
+            <td style="color:#3b82f6; font-weight:bold;">{{ $m['reference'] }}</td>
             <td class="num">{{ $m['unit_price'] !== null ? $fmtN($m['unit_price']) : '—' }}</td>
             <td class="num {{ $isIn ? 'in' : 'out' }}">{{ ($isIn ? '+' : '-') . $fmtN($qty) }}</td>
-            <td class="{{ $isIn ? 'in' : 'out' }}" style="font-size:7.5px;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
-            <td style="font-size:7.5px;">{{ \Carbon\Carbon::parse($m['date'])->format('Y-m-d') }}</td>
+            <td class="{{ $isIn ? 'in' : 'out' }}">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
+            <td>{{ \Carbon\Carbon::parse($m['date'])->format('Y-m-d') }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
         @endforeach
