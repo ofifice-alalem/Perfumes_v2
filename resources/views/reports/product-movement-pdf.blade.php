@@ -65,13 +65,13 @@
 </div>
 
 {{-- Cover Page --}}
-<div style="page-break-after: always; min-height: 700px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 40px; text-align: center;">
+<div style="page-break-after: always; padding: 20px 40px; text-align: center;">
 
     <div style="margin-bottom: 20px;">
         <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 300px; max-width: 550px;">
     </div>
 
-    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 32px; width: 100%;">
+    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px; width: 100%;">
         <div style="font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">{{ $labels['title'] }}</div>
         <div style="font-size: 13px; color: #64748b;">{{ $labels['product_name'] }}</div>
     </div>
@@ -100,7 +100,7 @@
         </tr>
     </table>
 
-    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 24px auto 0; border: 2px solid #0f172a;">
+    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 12px auto 0; border: 2px solid #0f172a;">
         <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
             <td colspan="3" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
         </tr>
@@ -120,7 +120,7 @@
         </tr>
     </table>
 
-    <div style="margin-top: 40px; font-size: 9px; color: #94a3b8;">{{ now()->format('Y-m-d H:i') }}</div>
+    <div style="margin-top: 16px; font-size: 9px; color: #94a3b8;">{{ now()->format('Y-m-d H:i') }}</div>
 </div>
 
 {{-- ملخص --}}
