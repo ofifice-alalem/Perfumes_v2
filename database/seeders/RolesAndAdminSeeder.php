@@ -14,7 +14,7 @@ class RolesAndAdminSeeder extends Seeder
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         // الترتيب مهم — super-admin يجب أن يكون أولاً
-        foreach (['super-admin', 'admin', 'saler'] as $role) {
+        foreach (['super-admin', 'admin', 'saler', 'cashier'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 

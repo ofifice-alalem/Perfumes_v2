@@ -18,7 +18,7 @@ class UserRequest extends FormRequest
             'username' => 'required|string|max:255|unique:users,username,' . ($userId ?? 'NULL'),
             'email'    => 'nullable|email|max:255|unique:users,email,' . ($userId ?? 'NULL'),
             'password' => $isUpdate ? 'nullable|string|min:6' : 'required|string|min:6',
-            'role'     => 'required|string|in:super-admin,admin,saler',
+            'role'     => 'required|string|in:super-admin,admin,saler,cashier',
         ];
     }
 

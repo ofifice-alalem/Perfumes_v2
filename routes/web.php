@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
     });
 
-    // ── العمليات اليومية — جميع الأدوار ─────────────────────────────────────
+    // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────
     Route::middleware('role:super-admin|admin|saler')->group(function () {
 
         // Customers & Suppliers
@@ -82,6 +82,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->name('purchase-returns.destroy');
         Route::post('purchase-returns/{id}/restore', [PurchaseReturnController::class, 'restore'])->name('purchase-returns.restore');
 
+        // Waste Logs
+        Route::resource('waste-logs', WasteLogController::class)->except(['edit', 'update']);
+    });
+
+    // ── عمليات العملاء — super-admin + admin + saler + cashier ────────────────────
+    Route::middleware('role:super-admin|admin|saler|cashier')->group(function () {
+
+        // Customers
+        Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show']);
+
         // Invoices
         Route::resource('invoices', InvoiceController::class)->except(['edit']);
         Route::get('invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
@@ -106,8 +116,5 @@ Route::middleware('auth')->group(function () {
         Route::get('invoice-returns/{id}', [InvoiceReturnController::class, 'show'])->name('invoice-returns.show');
         Route::delete('invoice-returns/{id}', [InvoiceReturnController::class, 'destroy'])->name('invoice-returns.destroy');
         Route::post('invoice-returns/{id}/restore', [InvoiceReturnController::class, 'restore'])->name('invoice-returns.restore');
-
-        // Waste Logs
-        Route::resource('waste-logs', WasteLogController::class)->except(['edit', 'update']);
     });
 });

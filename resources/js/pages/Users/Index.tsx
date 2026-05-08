@@ -22,6 +22,7 @@ const roleOptions = [
     { value: 'super-admin', label: 'مدير عام' },
     { value: 'admin',       label: 'مدير' },
     { value: 'saler',       label: 'بائع' },
+    { value: 'cashier',     label: 'أمين صندوق' },
 ];
 
 function roleLabelToValue(label: string): string {

@@ -33,11 +33,12 @@ const navSections: NavSection[] = [
       { icon: <CreditCard className="w-5 h-5" />, label: 'دفعات العملاء', href: '/payments' },
       { icon: <RefreshCw className="w-5 h-5" />, label: 'تسويات العملاء', href: '/settlements' },
       { icon: <RotateCcw className="w-5 h-5" />, label: 'مرتجعات العملاء', href: '/invoice-returns' },
-      { icon: <Users className="w-5 h-5" />, label: 'قائمة العملاء', href: '/customers' },
+      { icon: <Users className="w-5 h-5" />, label: 'قائمة العملاء', href: '/customers', roles: ['super-admin', 'admin', 'saler'] },
     ],
   },
   {
     title: 'الموردون',
+    roles: ['super-admin', 'admin', 'saler'],
     items: [
       { icon: <Truck className="w-5 h-5" />, label: 'المشتريات', href: '/purchases' },
       { icon: <CreditCard className="w-5 h-5" />, label: 'مدفوعات الموردين', href: '/supplier-payments' },
@@ -48,6 +49,7 @@ const navSections: NavSection[] = [
   },
   {
     title: 'المخزون',
+    roles: ['super-admin', 'admin', 'saler'],
     items: [
       { icon: <AlertTriangle className="w-5 h-5" />, label: 'التالف والخسائر', href: '/waste-logs' },
     ],
@@ -149,7 +151,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
             {/* عناصر القسم */}
             {(isOpen ? expandedSections[section.title] : true) && (
               <div className="flex flex-col gap-1">
-                {section.items.map((item) => {
+                {section.items.filter(item => canAccess(item.roles)).map((item) => {
                   const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                   return (
                     <Link key={item.href} href={item.href}
