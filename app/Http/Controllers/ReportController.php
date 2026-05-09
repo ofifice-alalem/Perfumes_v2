@@ -108,12 +108,13 @@ class ReportController extends Controller
     public function customerAging(Request $request): Response
     {
         $customerId = $request->integer('customer_id') ?: null;
+        $dateFrom   = $request->input('date_from');
         $dateTo     = $request->input('date_to');
 
         return Inertia::render('Reports/CustomerAging', [
             'customers' => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
-            'filters'   => compact('customerId', 'dateTo'),
-            'data'      => $this->reports->customerAging($customerId, $dateTo),
+            'filters'   => compact('customerId', 'dateFrom', 'dateTo'),
+            'data'      => $this->reports->customerAging($customerId, $dateFrom, $dateTo),
         ]);
     }
 
@@ -121,6 +122,7 @@ class ReportController extends Controller
     {
         $this->reports->exportCustomerAgingExcel(
             $request->integer('customer_id') ?: null,
+            $request->input('date_from'),
             $request->input('date_to'),
         );
     }
@@ -129,6 +131,7 @@ class ReportController extends Controller
     {
         return $this->reports->exportCustomerAgingPdf(
             $request->integer('customer_id') ?: null,
+            $request->input('date_from'),
             $request->input('date_to'),
         );
     }

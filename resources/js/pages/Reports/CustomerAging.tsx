@@ -2,6 +2,7 @@ import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { Users, SlidersHorizontal, ChevronDown, Search, FileSpreadsheet, FileText, ChevronRight } from 'lucide-react';
 
 interface Customer { id: number; name: string; }
@@ -33,7 +34,7 @@ interface CustomerAging {
 
 interface Props {
     customers: Customer[];
-    filters: { customerId: number | null; dateTo: string | null };
+    filters: { customerId: number | null; dateFrom: string | null; dateTo: string | null };
     data: CustomerAging[];
 }
 
@@ -61,26 +62,29 @@ const typeConfig = {
 export default function CustomerAging({ customers, filters, data }: Props) {
     const [filterOpen, setFilterOpen] = useState(false);
     const [customerId, setCustomerId] = useState(filters.customerId ? String(filters.customerId) : '');
+    const [dateFrom,   setDateFrom]   = useState(filters.dateFrom ?? '');
     const [dateTo,     setDateTo]     = useState(filters.dateTo ?? '');
     const [expanded,   setExpanded]   = useState<Set<number>>(new Set());
 
-    const hasFilter = customerId || dateTo;
+    const hasFilter = customerId || dateFrom || dateTo;
 
     function search() {
         router.get('/reports/customer-aging', {
             customer_id: customerId || undefined,
+            date_from:   dateFrom   || undefined,
             date_to:     dateTo     || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setCustomerId(''); setDateTo('');
+        setCustomerId(''); setDateFrom(''); setDateTo('');
         router.get('/reports/customer-aging', {}, { preserveScroll: true });
     }
 
     function buildExportUrl(format: 'excel' | 'pdf') {
         const params = new URLSearchParams();
         if (customerId) params.set('customer_id', customerId);
+        if (dateFrom)   params.set('date_from', dateFrom);
         if (dateTo)     params.set('date_to', dateTo);
         return `/reports/customer-aging/${format}?${params.toString()}`;
     }
@@ -107,11 +111,8 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                 defaultValue={customerId ? (customers.find(c => String(c.id) === customerId)?.name ?? '') : 'الكل'}
                 onSelect={val => setCustomerId(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
             />
-            <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">تاريخ المرجع</label>
-                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-                    className="h-11 rounded-[14px] spatial-input px-4 text-sm font-bold text-slate-700 dark:text-white/80" />
-            </div>
+            <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+            <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
             <button onClick={search}
                 className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                 <Search className="w-4 h-4" /> عرض التقرير

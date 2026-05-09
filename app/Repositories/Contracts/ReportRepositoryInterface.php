@@ -10,7 +10,7 @@ interface ReportRepositoryInterface
     public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): array;
     public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): void;
     public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): \Illuminate\Http\Response;
-    public function customerAging(?int $customerId, ?string $dateTo): array;
-    public function exportCustomerAgingExcel(?int $customerId, ?string $dateTo): void;
-    public function exportCustomerAgingPdf(?int $customerId, ?string $dateTo): \Illuminate\Http\Response;
+    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array;
+    public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo): void;
+    public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response;
 }

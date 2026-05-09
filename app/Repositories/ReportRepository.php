@@ -577,9 +577,10 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Customer Aging ────────────────────────────────────────────────────────
 
-    public function customerAging(?int $customerId, ?string $dateTo): array
+    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array
     {
-        $dateTo = $dateTo ? $dateTo . ' 23:59:59' : now()->toDateTimeString();
+        $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
         $customersQuery = DB::table('customers')
@@ -587,26 +588,30 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return $customersQuery->map(function ($customer) use ($dateTo, $dateToCarbon) {
+        return $customersQuery->map(function ($customer) use ($dateFrom, $dateTo, $dateToCarbon) {
 
             $totalInvoiced = (float) DB::table('invoices')
                 ->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
             $totalPaid = (float) DB::table('payments')
                 ->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->sum('amount');
 
             $totalSettled = (float) DB::table('settlements')
                 ->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->sum('amount');
 
             $totalReturned = (float) DB::table('invoice_returns')
                 ->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
             $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned);
@@ -617,6 +622,7 @@ class ReportRepository implements ReportRepositoryInterface
             // فواتير (+)
             DB::table('invoices')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
@@ -631,6 +637,7 @@ class ReportRepository implements ReportRepositoryInterface
             // دفعات (-)
             DB::table('payments')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
@@ -645,6 +652,7 @@ class ReportRepository implements ReportRepositoryInterface
             // تسويات (+)
             DB::table('settlements')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
@@ -659,6 +667,7 @@ class ReportRepository implements ReportRepositoryInterface
             // مرتجعات (-)
             DB::table('invoice_returns')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
@@ -682,6 +691,7 @@ class ReportRepository implements ReportRepositoryInterface
             $unpaidInvoices = DB::table('invoices')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
                 ->whereIn('payment_status', ['unpaid', 'partial'])
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)
                 ->orderBy('created_at')
                 ->get(['total', 'paid_amount', 'created_at']);
@@ -720,9 +730,9 @@ class ReportRepository implements ReportRepositoryInterface
         })->filter()->values()->toArray();
     }
 
-    public function exportCustomerAgingExcel(?int $customerId, ?string $dateTo): void
+    public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo): void
     {
-        $data = $this->customerAging($customerId, $dateTo);
+        $data = $this->customerAging($customerId, $dateFrom, $dateTo);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -825,25 +835,33 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportCustomerAgingPdf(?int $customerId, ?string $dateTo): \Illuminate\Http\Response
+    public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->customerAging($customerId, $dateTo);
+        $data    = $this->customerAging($customerId, $dateFrom, $dateTo);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         $totalDebt   = array_sum(array_column($data, 'total_debt'));
         $totalOver90 = array_sum(array_column($data, 'over_90'));
 
+        $customerName = $customerId
+            ? DB::table('customers')->where('id', $customerId)->value('name')
+            : null;
+
         $labels = [
             'title'          => $g('تقرير ديون العملاء'),
             'generated_at'   => now()->format('Y-m-d H:i'),
             'filter_info'    => $g('معلومات التقرير'),
             'summary_label'  => $g('ملخص'),
-            'date_to_label'  => $g('تاريخ المرجع'),
-            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
+            'label_customer' => $g('العميل'),
+            'customer_val'   => $customerName ? $g($customerName) : $g('جميع العملاء'),
+            'label_date_from'=> $g('من تاريخ'),
+            'date_from_val'  => $dateFrom ? substr($dateFrom, 0, 10) : $g('البداية'),
+            'date_to_label'  => $g('إلى تاريخ'),
+            'date_to_val'    => $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'),
             'customers_count'=> count($data),
             'total_debt'     => $fmtN($totalDebt),
             'total_over90'   => $fmtN($totalOver90),
