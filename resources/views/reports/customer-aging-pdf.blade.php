@@ -136,7 +136,7 @@
     <tbody>
         @foreach($data as $i => $c)
         <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
-            <td class="idx">{{ count($c['invoices']) }}</td>
+            <td class="idx">{{ count($c['movements']) }}</td>
             <td class="num {{ $c['over_90'] > 0 ? 'over90-val' : '' }}">{{ $fmtN($c['over_90']) }}</td>
             <td class="num {{ $c['days_60_90'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_60_90']) }}</td>
             <td class="num {{ $c['days_30_60'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_30_60']) }}</td>
@@ -151,18 +151,33 @@
             <td style="font-weight: bold; color: #0f172a;">{{ $g($c['customer_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
-        {{-- تفاصيل الفواتير --}}
-        @if(count($c['invoices']) > 0)
+        {{-- تفاصيل الحركات --}}
+        @if(count($c['movements']) > 0)
         <tr>
             <td colspan="8" style="padding: 0; border: none; background: #fff;">
                 <table class="invoices">
-                    @foreach($c['invoices'] as $inv)
+                    <tr style="background: #eff6ff;">
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
+                        <td style="width:12%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
+                        <td style="width:18%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('التاريخ') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المبلغ') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('العمر') }}</td>
+                        <td style="width:25%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('الرصيد') }}</td>
+                    </tr>
+                    @php
+                        $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
+                        $typeColors = ['invoice' => '#334155', 'payment' => '#16a34a', 'settlement' => '#3b82f6', 'return' => '#d97706'];
+                    @endphp
+                    @foreach($c['movements'] as $m)
                     <tr>
-                        <td style="width:37%; color:#94a3b8;">{{ $g('إجمالي') }}: {{ $fmtN($inv['total']) }} | {{ $g('مدفوع') }}: {{ $fmtN($inv['paid']) }}</td>
-                        <td class="{{ $inv['days_old'] >= 90 ? 'over90' : ($inv['days_old'] >= 30 ? 'warn' : '') }}" style="width:12%">{{ $inv['days_old'] }} {{ $g('يوم') }}</td>
-                        <td class="num-cell" style="width:18%">{{ $fmtN($inv['due']) }}</td>
-                        <td style="width:18%">{{ \Carbon\Carbon::parse($inv['date'])->format('Y-m-d') }}</td>
-                        <td class="inv-ref" style="width:15%">INV#{{ $inv['invoice_id'] }}</td>
+                        <td class="inv-ref">{{ $m['ref'] }}</td>
+                        <td style="color: {{ $typeColors[$m['type']] ?? '#334155' }}; font-weight:bold;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
+                        <td>{{ $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--' }}</td>
+                        <td class="num-cell" style="color: {{ $m['amount'] > 0 ? '#dc2626' : '#16a34a' }};">{{ ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']) }}</td>
+                        <td class="{{ $m['days_old'] !== null && $m['days_old'] >= 90 ? 'over90' : ($m['days_old'] !== null && $m['days_old'] >= 30 ? 'warn' : '') }}">
+                            {{ $m['days_old'] !== null ? $m['days_old'] . ' ' . $g('يوم') : '--' }}
+                        </td>
+                        <td class="num-cell">{{ $fmtN($m['balance']) }}</td>
                     </tr>
                     @endforeach
                 </table>

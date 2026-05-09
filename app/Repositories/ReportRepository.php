@@ -735,8 +735,10 @@ class ReportRepository implements ReportRepositoryInterface
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
+        $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
+
         $row = 1;
-        $headers = ['#', 'العميل', 'إجمالي الدين', 'أقل من 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر من 90 يوم'];
+        $headers = ['#', 'العميل', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم'];
         $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
@@ -760,30 +762,46 @@ class ReportRepository implements ReportRepositoryInterface
             ], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'font'    => ['bold' => true],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
-            // لون الديون القديمة
             if ($c['over_90'] > 0) {
                 $sheet->getStyle('G' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']]]);
             }
             $row++;
 
-            // تفاصيل الفواتير
-            foreach ($c['invoices'] as $inv) {
+            // رأس الحركات
+            $movHeaders = ['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'العمر', 'الرصيد'];
+            $sheet->fromArray($movHeaders, null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '1E3A5F']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+
+            // الحركات
+            foreach ($c['movements'] as $m) {
+                $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
+                $ageFmt    = $m['days_old'] !== null ? $m['days_old'] . ' يوم' : '—';
+                $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
                 $sheet->fromArray([
                     '',
-                    '  INV#' . $inv['invoice_id'],
-                    $fmtN($inv['due']),
-                    \Carbon\Carbon::parse($inv['date'])->format('Y-m-d'),
-                    $inv['days_old'] . ' يوم',
-                    '',
-                    '',
+                    $m['ref'],
+                    $typeLabels[$m['type']] ?? $m['type'],
+                    $dateFmt,
+                    $amountFmt,
+                    $ageFmt,
+                    $fmtN($m['balance']),
                 ], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                $typeColors = ['invoice' => '334155', 'payment' => '16A34A', 'settlement' => '3B82F6', 'return' => 'D97706'];
+                $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['color' => ['rgb' => '64748B'], 'size' => 9],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
+                $sheet->getStyle('B' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => '3B82F6']]]);
+                $sheet->getStyle('E' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => $typeColors[$m['type']] ?? '334155']]]);
                 $row++;
             }
         }
@@ -839,7 +857,7 @@ class ReportRepository implements ReportRepositoryInterface
             'col_30_60'      => $g('30-60 يوم'),
             'col_60_90'      => $g('60-90 يوم'),
             'col_over90'     => $g('أكثر 90 يوم'),
-            'col_invoices'   => $g('الفواتير'),
+            'col_invoices'   => $g('الحركات'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.customer-aging-pdf', [
