@@ -1345,8 +1345,8 @@ class ReportRepository implements ReportRepositoryInterface
         }
         $row++;
 
-        // تفصيل يومي
-        $headers = ['التاريخ', 'عدد الفواتير', 'إجمالي المبيعات'];
+        // تفصيل شهري مع أيامه
+        $headers = ['الشهر', 'عدد الفواتير', 'إجمالي المبيعات'];
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
@@ -1356,14 +1356,26 @@ class ReportRepository implements ReportRepositoryInterface
         ]);
         $row++;
 
-        foreach ($data['daily'] as $i => $d) {
-            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-            $sheet->fromArray([$d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+        foreach ($data['monthly'] as $i => $m) {
+            $bg = $i % 2 === 0 ? 'DCE4EE' : 'EFF6FF';
+            $sheet->fromArray([$m['month'], $m['count'], $fmtN($m['total'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'font'    => ['bold' => true],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
+
+            // تفاصيل الأيام
+            foreach ($m['days'] as $j => $d) {
+                $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+            }
         }
 
         // صف الإجمالي
@@ -1409,6 +1421,7 @@ class ReportRepository implements ReportRepositoryInterface
             'total_paid'     => $fmtN($data['totalPaid']),
             'total_due'      => $fmtN($data['totalDue']),
             'col_date'       => $g('التاريخ'),
+            'col_month'      => $g('الشهر'),
             'col_count'      => $g('عدد الفواتير'),
             'col_total'      => $g('إجمالي المبيعات'),
             'lbl_total'      => $g('إجمالي المبيعات'),

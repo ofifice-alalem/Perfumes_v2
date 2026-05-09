@@ -125,22 +125,29 @@
     </div>
 </div>
 
-{{-- جدول التفصيل اليومي --}}
+{{-- جدول التفصيل الشهري --}}
 <table class="main">
     <thead>
         <tr>
             <th style="width:30%">{{ $labels['col_total'] }}</th>
             <th style="width:30%">{{ $labels['col_count'] }}</th>
-            <th style="width:40%">{{ $labels['col_date'] }}</th>
+            <th style="width:40%">{{ $labels['col_month'] }}</th>
         </tr>
     </thead>
     <tbody>
-        @foreach($data['daily'] as $i => $d)
-        <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
-            <td class="num">{{ $fmtN($d['total']) }}</td>
-            <td class="num">{{ $d['count'] }}</td>
-            <td>{{ $d['date'] }}</td>
+        @foreach($data['monthly'] as $i => $m)
+        <tr style="background: {{ $i % 2 === 0 ? '#dce4ee' : '#eff6ff' }};">
+            <td class="num" style="font-weight:bold; color:#0f172a;">{{ $fmtN($m['total']) }}</td>
+            <td class="num" style="font-weight:bold; color:#0f172a;">{{ $m['count'] }}</td>
+            <td style="font-weight:bold; color:#0f172a;">{{ $m['month'] }}</td>
         </tr>
+        @foreach($m['days'] as $d)
+        <tr>
+            <td class="num" style="font-size:9px; color:#64748b;">{{ $fmtN($d['total']) }}</td>
+            <td class="num" style="font-size:9px; color:#64748b;">{{ $d['count'] }}</td>
+            <td style="font-size:9px; color:#64748b; padding-right:16px;">{{ $d['date'] }}</td>
+        </tr>
+        @endforeach
         @endforeach
     </tbody>
     <tfoot>
