@@ -853,10 +853,10 @@ class ReportRepository implements ReportRepositoryInterface
             'col_customer'   => $g('العميل'),
             'col_total'      => $g('إجمالي الدين'),
             'col_breakdown'  => $g('فواتير/دفعات/مرتجعات'),
-            'col_current'    => $g('أقل 30 يوم'),
-            'col_30_60'      => $g('30-60 يوم'),
-            'col_60_90'      => $g('60-90 يوم'),
-            'col_over90'     => $g('أكثر 90 يوم'),
+            'col_current'    => $g('أقل') . ' 30 ' . $g('يوم'),
+            'col_30_60'      => '30-60 ' . $g('يوم'),
+            'col_60_90'      => '60-90 ' . $g('يوم'),
+            'col_over90'     => $g('أكثر') . ' 90 ' . $g('يوم'),
             'col_invoices'   => $g('الحركات'),
         ];
 

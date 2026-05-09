@@ -23,21 +23,21 @@
         .summary-label { font-size: 8px; font-weight: bold; color: #64748b; margin-bottom: 4px; }
         .summary-value { font-size: 16px; font-weight: bold; color: #0f172a; }
 
-        table.main { width: 100%; border-collapse: collapse; direction: rtl; table-layout: fixed; margin-bottom: 10px; }
+        table.main { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; margin-bottom: 10px; }
         table.main thead tr { background: #dce4ee; }
-        table.main th { color: #0f172a; text-align: right; padding: 7px 6px; font-size: 11px; font-weight: bold; border: 1px solid #64748b; }
-        table.main td { padding: 6px 6px; font-size: 11px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; }
+        table.main th { color: #0f172a; text-align: right; padding: 7px 6px; font-size: 11px; font-weight: bold; border: 1px solid #64748b; direction: rtl; unicode-bidi: bidi-override; }
+        table.main td { padding: 6px 6px; font-size: 11px; color: #334155; text-align: right; border: 1px solid #94a3b8; background: #fff; direction: rtl; unicode-bidi: bidi-override; }
         table.main tr.row-even td { background: #f8fafc; }
-        table.main td.num  { font-weight: bold; color: #0f172a; direction: ltr; text-align: right; unicode-bidi: plaintext; }
-        table.main td.idx  { color: #64748b; font-size: 10px; text-align: center; direction: ltr; }
-        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 11px; padding: 7px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; }
+        table.main td.num  { font-weight: bold; color: #0f172a; direction: ltr; text-align: right; unicode-bidi: bidi-override; }
+        table.main td.idx  { color: #64748b; font-size: 10px; text-align: center; direction: ltr; unicode-bidi: bidi-override; }
+        table.main tfoot td { background: #f1f5f9; font-weight: bold; font-size: 11px; padding: 7px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; direction: rtl; unicode-bidi: bidi-override; }
 
-        table.invoices { width: 92%; border-collapse: collapse; direction: rtl; margin: 0 0 8px 0; }
-        table.invoices td { padding: 4px 6px; font-size: 9.5px; color: #64748b; border: 1px solid #e2e8f0; background: #f8fafc; text-align: right; }
-        table.invoices td.inv-ref { color: #3b82f6; font-weight: bold; direction: ltr; }
-        table.invoices td.num-cell { direction: ltr; unicode-bidi: plaintext; font-weight: bold; color: #0f172a; }
-        table.invoices td.over90  { color: #dc2626; font-weight: bold; direction: ltr; }
-        table.invoices td.warn    { color: #d97706; font-weight: bold; direction: ltr; }
+        table.invoices { width: 92%; border-collapse: collapse; direction: ltr; margin: 0 0 8px 0; }
+        table.invoices td { padding: 4px 6px; font-size: 9.5px; color: #64748b; border: 1px solid #e2e8f0; background: #f8fafc; text-align: right; direction: rtl; unicode-bidi: bidi-override; }
+        table.invoices td.inv-ref { color: #3b82f6; font-weight: bold; direction: ltr; unicode-bidi: bidi-override; }
+        table.invoices td.num-cell { direction: ltr; unicode-bidi: bidi-override; font-weight: bold; color: #0f172a; }
+        table.invoices td.over90  { color: #dc2626; font-weight: bold; direction: ltr; unicode-bidi: bidi-override; }
+        table.invoices td.warn    { color: #d97706; font-weight: bold; direction: ltr; unicode-bidi: bidi-override; }
 
         .over90-val { color: #dc2626; font-weight: bold; }
         .warn-val   { color: #d97706; font-weight: bold; }
@@ -122,12 +122,12 @@
 <table class="main">
     <thead>
         <tr>
-            <th style="width:8%; text-align:center">{{ $labels['col_invoices'] }}</th>
+            <th style="width:7%; text-align:center">{{ $labels['col_invoices'] }}</th>
             <th style="width:13%">{{ $labels['col_over90'] }}</th>
             <th style="width:13%">{{ $labels['col_60_90'] }}</th>
             <th style="width:13%">{{ $labels['col_30_60'] }}</th>
             <th style="width:13%">{{ $labels['col_current'] }}</th>
-            <th style="width:24%">{{ $labels['col_total'] }}</th>
+            <th style="width:14%">{{ $labels['col_total'] }}</th>
             <th style="width:22%">{{ $labels['col_customer'] }}</th>
             <th style="width:5%; text-align:center">#</th>
         </tr>
@@ -141,7 +141,7 @@
             <td class="num {{ $c['days_30_60'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_30_60']) }}</td>
             <td class="num">{{ $fmtN($c['current']) }}</td>
             <td class="num">{{ $fmtN($c['total_debt']) }}</td>
-            <td style="font-weight: bold; color: #0f172a;">{{ $g($c['customer_name']) }}</td>
+            <td style="font-weight: bold; color: #0f172a; direction:rtl;">{{ $g($c['customer_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
         {{-- تفاصيل الحركات --}}
@@ -150,12 +150,12 @@
             <td colspan="8" style="padding: 0; border: none; background: #fff;">
                 <table class="invoices">
                     <tr style="background: #eff6ff;">
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
-                        <td style="width:12%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
-                        <td style="width:18%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('التاريخ') }}</td>
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المبلغ') }}</td>
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('العمر') }}</td>
                         <td style="width:25%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('الرصيد') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('العمر') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المبلغ') }}</td>
+                        <td style="width:18%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('التاريخ') }}</td>
+                        <td style="width:12%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
                     </tr>
                     @php
                         $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
@@ -163,14 +163,14 @@
                     @endphp
                     @foreach($c['movements'] as $m)
                     <tr>
-                        <td class="inv-ref">{{ $m['ref'] }}</td>
-                        <td style="color: {{ $typeColors[$m['type']] ?? '#334155' }}; font-weight:bold;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
-                        <td>{{ $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--' }}</td>
-                        <td class="num-cell" style="color: {{ $m['amount'] > 0 ? '#dc2626' : '#16a34a' }};">{{ ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']) }}</td>
-                        <td class="{{ $m['days_old'] !== null && $m['days_old'] >= 90 ? 'over90' : ($m['days_old'] !== null && $m['days_old'] >= 30 ? 'warn' : '') }}">
+                        <td class="num-cell">{{ $fmtN($m['balance']) }}</td>
+                        <td class="{{ $m['days_old'] !== null && $m['days_old'] >= 90 ? 'over90' : ($m['days_old'] !== null && $m['days_old'] >= 30 ? 'warn' : '') }}" style="direction:ltr;">
                             {{ $m['days_old'] !== null ? $m['days_old'] . ' ' . $g('يوم') : '--' }}
                         </td>
-                        <td class="num-cell">{{ $fmtN($m['balance']) }}</td>
+                        <td class="num-cell" style="color: {{ $m['amount'] > 0 ? '#dc2626' : '#16a34a' }};">{{ ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']) }}</td>
+                        <td>{{ $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--' }}</td>
+                        <td style="color: {{ $typeColors[$m['type']] ?? '#334155' }}; font-weight:bold;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
+                        <td class="inv-ref">{{ $m['ref'] }}</td>
                     </tr>
                     @endforeach
                 </table>
@@ -181,12 +181,14 @@
     </tbody>
     <tfoot>
         <tr>
-            <td></td>
+            <td class="idx">{{ array_sum(array_map(fn($c) => count($c['movements']), $data)) }}</td>
             <td class="num over90-val">{{ $labels['total_over90'] }}</td>
-            <td></td><td></td><td></td>
+            <td class="num">{{ number_format(array_sum(array_column($data, 'days_60_90')), 2) }}</td>
+            <td class="num">{{ number_format(array_sum(array_column($data, 'days_30_60')), 2) }}</td>
+            <td class="num">{{ number_format(array_sum(array_column($data, 'current')), 2) }}</td>
             <td class="num">{{ $labels['total_debt'] }}</td>
-            <td style="text-align: right; color: #64748b;">{{ $g('الإجمالي') }}</td>
-            <td></td>
+            <td style="text-align: right; color: #64748b; font-weight:bold; direction:rtl;">{{ $g('الإجمالي') }}</td>
+            <td class="idx"></td>
         </tr>
     </tfoot>
 </table>
