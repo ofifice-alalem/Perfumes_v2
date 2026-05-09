@@ -11,8 +11,8 @@ interface Movement {
     ref: string;
     ref_id: number;
     amount: number;
-    date: string;
-    days_old: number;
+    date: string | null;
+    days_old: number | null;
     balance: number;
 }
 
@@ -243,12 +243,12 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                                                 <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
                                                                                     <td className="py-2 px-3 font-black text-primary">{m.ref}</td>
                                                                                     <td className={`py-2 px-3 font-bold ${typeConfig[m.type].class}`}>{typeConfig[m.type].label}</td>
-                                                                                    <td className="py-2 px-3 text-slate-500 dark:text-white/50">{m.date.slice(0, 10)}</td>
+                                                                                    <td className="py-2 px-3 text-slate-500 dark:text-white/50">{m.date ? m.date.slice(0, 10) : '--'}</td>
                                                                                     <td className={`py-2 px-3 ${typeConfig[m.type].amountClass}`}>
                                                                                         {m.amount > 0 ? '+' : ''}{fmt(m.amount)}
                                                                                     </td>
-                                                                                    <td className={`py-2 px-3 ${m.type === 'invoice' ? agingClass(m.days_old) : 'text-slate-400 dark:text-white/30'}`}>
-                                                                                        {m.type === 'invoice' ? `${m.days_old} يوم` : '—'}
+                                                                                    <td className={`py-2 px-3 ${m.days_old !== null ? agingClass(m.days_old) : 'text-slate-400 dark:text-white/30'}`}>
+                                                                                        {m.days_old !== null ? `${m.days_old} يوم` : '—'}
                                                                                     </td>
                                                                                     <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(m.balance)}</td>
                                                                                 </tr>

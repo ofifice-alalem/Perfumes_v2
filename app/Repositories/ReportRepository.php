@@ -597,18 +597,20 @@ class ReportRepository implements ReportRepositoryInterface
             $totalPaid = (float) DB::table('payments')
                 ->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)->sum('amount');
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->sum('amount');
 
             $totalSettled = (float) DB::table('settlements')
                 ->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)->sum('amount');
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->sum('amount');
 
             $totalReturned = (float) DB::table('invoice_returns')
                 ->whereNull('deleted_at')->where('customer_id', $customer->id)
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
-            $totalDebt = $totalInvoiced - $totalPaid - $totalSettled - $totalReturned;
+            $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned);
 
             if ($totalDebt <= 0) return null;
 
@@ -621,40 +623,40 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('created_at', '<=', $dateTo)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
-                    'type'   => 'invoice',
-                    'ref'    => 'INV#' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'amount' => (float)$r->amount,
-                    'date'   => $r->created_at,
+                    'type'     => 'invoice',
+                    'ref'      => 'INV#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => (float)$r->amount,
+                    'date'     => $r->created_at,
                     'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
                 ]));
 
             // دفعات (-)
             DB::table('payments')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
-                    'type'   => 'payment',
-                    'ref'    => 'PAY#' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'amount' => -(float)$r->amount,
-                    'date'   => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    'type'     => 'payment',
+                    'ref'      => 'PAY#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => -(float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
                 ]));
 
             // تسويات (-)
             DB::table('settlements')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->where('created_at', '<=', $dateTo)
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
-                    'type'   => 'settlement',
-                    'ref'    => 'SET#' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'amount' => -(float)$r->amount,
-                    'date'   => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    'type'     => 'settlement',
+                    'ref'      => 'SET#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => -(float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
                 ]));
 
             // مرتجعات (-)
