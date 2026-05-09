@@ -119,6 +119,13 @@
 </div>
 
 {{-- جدول العملاء --}}
+@php
+    $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
+    $typeColors = ['invoice' => '#334155', 'payment' => '#16a34a', 'settlement' => '#3b82f6', 'return' => '#d97706'];
+@endphp
+
+@foreach($data as $i => $c)
+<div style="{{ $i > 0 ? 'page-break-before: always;' : '' }}">
 <table class="main">
     <thead>
         <tr>
@@ -133,8 +140,7 @@
         </tr>
     </thead>
     <tbody>
-        @foreach($data as $i => $c)
-        <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
+        <tr>
             <td class="idx">{{ count($c['movements']) }}</td>
             <td class="num {{ $c['over_90'] > 0 ? 'over90-val' : '' }}">{{ $fmtN($c['over_90']) }}</td>
             <td class="num {{ $c['days_60_90'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_60_90']) }}</td>
@@ -144,7 +150,6 @@
             <td style="font-weight: bold; color: #0f172a; direction:rtl;">{{ $g($c['customer_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
-        {{-- تفاصيل الحركات --}}
         @if(count($c['movements']) > 0)
         <tr>
             <td colspan="8" style="padding: 0; border: none; background: #fff;">
@@ -157,10 +162,6 @@
                         <td style="width:12%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
                         <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
                     </tr>
-                    @php
-                        $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
-                        $typeColors = ['invoice' => '#334155', 'payment' => '#16a34a', 'settlement' => '#3b82f6', 'return' => '#d97706'];
-                    @endphp
                     @foreach($c['movements'] as $m)
                     <tr>
                         <td class="num-cell">{{ $fmtN($m['balance']) }}</td>
@@ -177,8 +178,25 @@
             </td>
         </tr>
         @endif
-        @endforeach
     </tbody>
+</table>
+</div>
+@endforeach
+
+{{-- الإجمالي الكلي --}}
+<table class="main" style="margin-top: 10px;">
+    <thead>
+        <tr>
+            <th style="width:7%; text-align:center">{{ $labels['col_invoices'] }}</th>
+            <th style="width:13%">{{ $labels['col_over90'] }}</th>
+            <th style="width:13%">{{ $labels['col_60_90'] }}</th>
+            <th style="width:13%">{{ $labels['col_30_60'] }}</th>
+            <th style="width:13%">{{ $labels['col_current'] }}</th>
+            <th style="width:14%">{{ $labels['col_total'] }}</th>
+            <th style="width:22%">{{ $labels['col_customer'] }}</th>
+            <th style="width:5%; text-align:center">#</th>
+        </tr>
+    </thead>
     <tfoot>
         <tr>
             <td class="idx">{{ array_sum(array_map(fn($c) => count($c['movements']), $data)) }}</td>
