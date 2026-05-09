@@ -936,12 +936,12 @@ class ReportRepository implements ReportRepositoryInterface
             $totalPaid = (float) DB::table('supplier_payments')
                 ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('amount');
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))->sum('amount');
 
             $totalSettled = (float) DB::table('supplier_settlements')
                 ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('amount');
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))->sum('amount');
 
             $totalReturned = (float) DB::table('purchase_returns')
                 ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
@@ -971,7 +971,7 @@ class ReportRepository implements ReportRepositoryInterface
             DB::table('supplier_payments')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'payment',
@@ -986,7 +986,7 @@ class ReportRepository implements ReportRepositoryInterface
             DB::table('supplier_settlements')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'settlement',
