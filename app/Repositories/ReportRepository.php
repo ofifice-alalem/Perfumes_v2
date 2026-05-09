@@ -584,7 +584,6 @@ class ReportRepository implements ReportRepositoryInterface
 
         $customersQuery = DB::table('customers')
             ->when($customerId, fn($q) => $q->where('id', $customerId))
-            ->where('id', '!=', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
 
@@ -611,8 +610,6 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
             $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned);
-
-            if ($totalDebt <= 0) return null;
 
             // جمع كل الحركات
             $movements = collect();
@@ -645,7 +642,7 @@ class ReportRepository implements ReportRepositoryInterface
                     'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
                 ]));
 
-            // تسويات (-)
+            // تسويات (+)
             DB::table('settlements')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
                 ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
@@ -654,7 +651,7 @@ class ReportRepository implements ReportRepositoryInterface
                     'type'     => 'settlement',
                     'ref'      => 'SET#' . $r->ref_id,
                     'ref_id'   => $r->ref_id,
-                    'amount'   => -(float)$r->amount,
+                    'amount'   => +(float)$r->amount,
                     'date'     => $r->created_at,
                     'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
                 ]));
