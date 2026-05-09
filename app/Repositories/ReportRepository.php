@@ -734,6 +734,10 @@ class ReportRepository implements ReportRepositoryInterface
     {
         $data = $this->customerAging($customerId, $dateFrom, $dateTo);
 
+        $customerName = $customerId
+            ? DB::table('customers')->where('id', $customerId)->value('name')
+            : 'جميع العملاء';
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
@@ -741,10 +745,30 @@ class ReportRepository implements ReportRepositoryInterface
 
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
         $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
 
         $row = 1;
+
+        // معلومات التقرير
+        $infoRows = [
+            ['تقرير ديون العملاء', ''],
+            ['العميل',      $customerName],
+            ['من تاريخ',   $dateFrom ? substr($dateFrom, 0, 10) : 'البداية'],
+            ['إلى تاريخ',   $dateTo   ? substr($dateTo, 0, 10)   : now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ];
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
         $headers = ['#', 'العميل', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم'];
         $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
