@@ -1265,14 +1265,26 @@ class ReportRepository implements ReportRepositoryInterface
         $totalDue       = (float) (clone $base)->sum('invoices.due_amount');
         $avgInvoice     = $invoicesCount > 0 ? round($totalSales / $invoicesCount, 2) : 0;
 
-        // تفصيل يومي
-        $daily = (clone $base)
+        // تفصيل يومي مجمّع بالشهر
+        $dailyRows = (clone $base)
             ->select(DB::raw('DATE(invoices.created_at) as date'), DB::raw('SUM(invoices.total) as total'), DB::raw('COUNT(*) as count'))
             ->groupBy(DB::raw('DATE(invoices.created_at)'))
             ->orderBy('date')
-            ->get()
-            ->map(fn($r) => ['date' => $r->date, 'total' => (float)$r->total, 'count' => (int)$r->count])
-            ->toArray();
+            ->get();
+
+        // تجميع الأيام تحت شهورها
+        $monthly = [];
+        foreach ($dailyRows as $row) {
+            $month = substr($row->date, 0, 7); // 2026-05
+            if (!isset($monthly[$month])) {
+                $monthly[$month] = ['month' => $month, 'total' => 0, 'count' => 0, 'days' => []];
+            }
+            $monthly[$month]['total'] += (float)$row->total;
+            $monthly[$month]['count'] += (int)$row->count;
+            $monthly[$month]['days'][] = ['date' => $row->date, 'total' => (float)$row->total, 'count' => (int)$row->count];
+        }
+        $monthly = array_values($monthly);
+        $daily   = $dailyRows->map(fn($r) => ['date' => $r->date, 'total' => (float)$r->total, 'count' => (int)$r->count])->toArray();
 
         // مقارنة مع الفترة السابقة
         $comparison = null;
@@ -1293,7 +1305,7 @@ class ReportRepository implements ReportRepositoryInterface
             ];
         }
 
-        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'comparison');
+        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison');
     }
 
     public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void

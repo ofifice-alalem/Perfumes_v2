@@ -3,14 +3,15 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { TrendingUp, SlidersHorizontal, ChevronDown, Search, FileSpreadsheet, FileText, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface User           { id: number; name: string; }
 interface Customer       { id: number; name: string; }
 interface PaymentMethod  { id: number; name: string; }
 interface Category       { id: number; name: string; }
 
-interface DailyBreakdown { date: string; total: number; count: number; }
+interface DailyBreakdown  { date: string; total: number; count: number; }
+interface MonthlyBreakdown { month: string; total: number; count: number; days: DailyBreakdown[]; }
 
 interface Comparison {
     total_sales: number;
@@ -25,6 +26,7 @@ interface SalesData {
     totalPaid: number;
     totalDue: number;
     daily: DailyBreakdown[];
+    monthly: MonthlyBreakdown[];
     comparison: Comparison | null;
 }
 
@@ -58,6 +60,15 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
     const [paymentMethodId,  setPaymentMethodId]  = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
     const [categoryId,       setCategoryId]       = useState(filters.categoryId ? String(filters.categoryId) : '');
     const [compare,          setCompare]          = useState(filters.compare ?? false);
+    const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
+
+    function toggleExpand(month: string) {
+        setExpanded(prev => {
+            const next = new Set(prev);
+            next.has(month) ? next.delete(month) : next.add(month);
+            return next;
+        });
+    }
 
     const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || compare;
 
@@ -209,8 +220,8 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
                         </div>
 
                         {/* Daily Table */}
-                        <SpatialCard title={`التفصيل اليومي (${data.daily.length} يوم)`} icon={<TrendingUp className="w-4 h-4" />}>
-                            {data.daily.length === 0 ? (
+                        <SpatialCard title={`التفصيل الشهري (${data.monthly.length} شهر)`} icon={<TrendingUp className="w-4 h-4" />}>
+                            {data.monthly.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
                                     <TrendingUp className="w-12 h-12 opacity-30" />
                                     <p className="font-bold">لا توجد بيانات</p>
@@ -220,18 +231,51 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
                                     <table className="w-full text-sm">
                                         <thead>
                                             <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                {['التاريخ', 'عدد الفواتير', 'إجمالي المبيعات'].map(h => (
+                                                {['الشهر', 'عدد الفواتير', 'إجمالي المبيعات', ''].map(h => (
                                                     <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {data.daily.map((d, i) => (
-                                                <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/70">{d.date}</td>
-                                                    <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/60">{d.count}</td>
-                                                    <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(d.total)}</td>
-                                                </tr>
+                                            {data.monthly.map(m => (
+                                                <>
+                                                    <tr key={m.month} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{m.month}</td>
+                                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/60">{m.count}</td>
+                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(m.total)}</td>
+                                                        <td className="px-4 py-3">
+                                                            <button onClick={() => toggleExpand(m.month)}
+                                                                className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
+                                                                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(m.month) ? 'rotate-90' : ''}`} />
+                                                                تفاصيل
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {expanded.has(m.month) && (
+                                                        <tr key={`${m.month}-detail`}>
+                                                            <td colSpan={4} className="px-6 py-2 bg-black/2 dark:bg-white/2">
+                                                                <table className="w-full text-xs">
+                                                                    <thead>
+                                                                        <tr className="border-b border-black/5 dark:border-white/5">
+                                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">التاريخ</th>
+                                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">عدد الفواتير</th>
+                                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">إجمالي المبيعات</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                                        {m.days.map((d, i) => (
+                                                                            <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                                                <td className="py-2 px-3 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
+                                                                                <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{d.count}</td>
+                                                                                <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(d.total)}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </>
                                             ))}
                                         </tbody>
                                         <tfoot>
@@ -239,6 +283,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
                                                 <td className="px-4 py-3 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
                                                 <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{data.invoicesCount}</td>
                                                 <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(data.totalSales)}</td>
+                                                <td></td>
                                             </tr>
                                         </tfoot>
                                     </table>
