@@ -13,4 +13,7 @@ interface ReportRepositoryInterface
     public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array;
     public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo): void;
     public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response;
+    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo): array;
+    public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo): void;
+    public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response;
 }

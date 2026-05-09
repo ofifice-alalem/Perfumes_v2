@@ -911,4 +911,314 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('customer-aging-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Supplier Aging ────────────────────────────────────────────────────
+
+    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo): array
+    {
+        $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
+        $dateToCarbon = \Carbon\Carbon::parse($dateTo);
+
+        $suppliersQuery = DB::table('suppliers')
+            ->when($supplierId, fn($q) => $q->where('id', $supplierId))
+            ->where('id', '!=', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return $suppliersQuery->map(function ($supplier) use ($dateFrom, $dateTo, $dateToCarbon) {
+
+            $totalPurchased = (float) DB::table('purchases')
+                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)->sum('total');
+
+            $totalPaid = (float) DB::table('supplier_payments')
+                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)->sum('amount');
+
+            $totalSettled = (float) DB::table('supplier_settlements')
+                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)->sum('amount');
+
+            $totalReturned = (float) DB::table('purchase_returns')
+                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)->sum('total');
+
+            $totalDebt = ($totalPurchased + $totalSettled) - ($totalPaid + $totalReturned);
+
+            $movements = collect();
+
+            // مشتريات (+)
+            DB::table('purchases')->whereNull('deleted_at')
+                ->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'total as amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'     => 'purchase',
+                    'ref'      => 'PO#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => (float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            // دفعات (-)
+            DB::table('supplier_payments')->whereNull('deleted_at')
+                ->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'     => 'payment',
+                    'ref'      => 'PAY#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => -(float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                ]));
+
+            // تسويات (+)
+            DB::table('supplier_settlements')->whereNull('deleted_at')
+                ->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'     => 'settlement',
+                    'ref'      => 'SET#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => +(float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                ]));
+
+            // مرتجعات (-)
+            DB::table('purchase_returns')->whereNull('deleted_at')
+                ->where('supplier_id', $supplier->id)
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)
+                ->select('id as ref_id', 'total as amount', 'created_at')
+                ->get()->each(fn($r) => $movements->push([
+                    'type'     => 'return',
+                    'ref'      => 'RET#' . $r->ref_id,
+                    'ref_id'   => $r->ref_id,
+                    'amount'   => -(float)$r->amount,
+                    'date'     => $r->created_at,
+                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                ]));
+
+            $sorted  = $movements->sortBy('date')->values();
+            $balance = 0.0;
+            $movementsList = $sorted->map(function ($m) use (&$balance) {
+                $balance += $m['amount'];
+                return array_merge($m, ['balance' => round($balance, 2)]);
+            })->values()->toArray();
+
+            $unpaidPurchases = DB::table('purchases')->whereNull('deleted_at')
+                ->where('supplier_id', $supplier->id)
+                ->whereIn('payment_status', ['unpaid', 'partial'])
+                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
+                ->where('created_at', '<=', $dateTo)
+                ->orderBy('created_at')
+                ->get(['total', 'paid_amount', 'created_at']);
+
+            $current = $days30_60 = $days60_90 = $over90 = 0.0;
+            $remainingDebt = $totalDebt;
+            foreach ($unpaidPurchases as $p) {
+                if ($remainingDebt <= 0) break;
+                $due  = min((float)$p->total - (float)$p->paid_amount, $remainingDebt);
+                if ($due <= 0) continue;
+                $days = (int) \Carbon\Carbon::parse($p->created_at)->diffInDays($dateToCarbon);
+                if      ($days < 30) $current   += $due;
+                elseif  ($days < 60) $days30_60 += $due;
+                elseif  ($days < 90) $days60_90 += $due;
+                else                 $over90    += $due;
+                $remainingDebt -= $due;
+            }
+            if ($remainingDebt > 0) $current += $remainingDebt;
+
+            return [
+                'supplier_id'     => $supplier->id,
+                'supplier_name'   => $supplier->name,
+                'total_debt'      => round($totalDebt, 2),
+                'total_purchased' => round($totalPurchased, 2),
+                'total_paid'      => round($totalPaid, 2),
+                'total_settled'   => round($totalSettled, 2),
+                'total_returned'  => round($totalReturned, 2),
+                'current'         => round($current, 2),
+                'days_30_60'      => round($days30_60, 2),
+                'days_60_90'      => round($days60_90, 2),
+                'over_90'         => round($over90, 2),
+                'movements'       => $movementsList,
+            ];
+        })->filter()->values()->toArray();
+    }
+
+    public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo): void
+    {
+        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo);
+
+        $supplierName = $supplierId
+            ? DB::table('suppliers')->where('id', $supplierId)->value('name')
+            : 'جميع الموردين';
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('ديون الموردين');
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+        $typeLabels = ['purchase' => 'شراء', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
+
+        $row = 1;
+        $infoRows = [
+            ['تقرير ديون الموردين', ''],
+            ['المورد',      $supplierName],
+            ['من تاريخ',   $dateFrom ? substr($dateFrom, 0, 10) : 'البداية'],
+            ['إلى تاريخ',   $dateTo   ? substr($dateTo, 0, 10)   : now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ];
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        $headers = ['#', 'المورد', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم'];
+        $lastCol = chr(ord('A') + count($headers) - 1);
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        foreach ($data as $i => $s) {
+            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+            $sheet->fromArray([
+                $i + 1, $s['supplier_name'], $fmtN($s['total_debt']),
+                $fmtN($s['current']), $fmtN($s['days_30_60']), $fmtN($s['days_60_90']), $fmtN($s['over_90']),
+            ], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'font'    => ['bold' => true],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            if ($s['over_90'] > 0)
+                $sheet->getStyle('G' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']]]);
+            $row++;
+
+            $sheet->fromArray(['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'العمر', 'الرصيد'], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '1E3A5F']],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+
+            foreach ($s['movements'] as $m) {
+                $sheet->fromArray([
+                    '', $m['ref'], $typeLabels[$m['type']] ?? $m['type'],
+                    $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--',
+                    ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']),
+                    $m['days_old'] !== null ? $m['days_old'] . ' يوم' : '—',
+                    $fmtN($m['balance']),
+                ], null, 'A' . $row);
+                $typeColors = ['purchase' => '334155', 'payment' => '16A34A', 'settlement' => '3B82F6', 'return' => 'D97706'];
+                $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $sheet->getStyle('B' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => '3B82F6']]]);
+                $sheet->getStyle('E' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => $typeColors[$m['type']] ?? '334155']]]);
+                $row++;
+            }
+        }
+
+        $totalDebt   = array_sum(array_column($data, 'total_debt'));
+        $totalOver90 = array_sum(array_column($data, 'over_90'));
+        $sheet->fromArray(['', 'الإجمالي', number_format($totalDebt, 2), '', '', '', number_format($totalOver90, 2)], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+            'font'    => ['bold' => true, 'size' => 11],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+
+        foreach (range('A', 'G') as $col)
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        $filename = 'supplier-aging-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $totalDebt   = array_sum(array_column($data, 'total_debt'));
+        $totalOver90 = array_sum(array_column($data, 'over_90'));
+
+        $supplierName = $supplierId
+            ? DB::table('suppliers')->where('id', $supplierId)->value('name')
+            : null;
+
+        $labels = [
+            'title'           => $g('تقرير ديون الموردين'),
+            'generated_at'    => now()->format('Y-m-d H:i'),
+            'filter_info'     => $g('معلومات التقرير'),
+            'summary_label'   => $g('ملخص'),
+            'label_supplier'  => $g('المورد'),
+            'supplier_val'    => $supplierName ? $g($supplierName) : $g('جميع الموردين'),
+            'label_date_from' => $g('من تاريخ'),
+            'date_from_val'   => $dateFrom ? substr($dateFrom, 0, 10) : $g('البداية'),
+            'date_to_label'   => $g('إلى تاريخ'),
+            'date_to_val'     => $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'),
+            'suppliers_count' => count($data),
+            'total_debt'      => $fmtN($totalDebt),
+            'total_over90'    => $fmtN($totalOver90),
+            'col_supplier'    => $g('المورد'),
+            'col_total'       => $g('إجمالي الدين'),
+            'col_current'     => $g('أقل') . ' 30 ' . $g('يوم'),
+            'col_30_60'       => '30-60 ' . $g('يوم'),
+            'col_60_90'       => '60-90 ' . $g('يوم'),
+            'col_over90'      => $g('أكثر') . ' 90 ' . $g('يوم'),
+            'col_invoices'    => $g('الحركات'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.supplier-aging-pdf', [
+            'labels' => $labels,
+            'data'   => $data,
+            'g'      => $g,
+            'fmtN'   => $fmtN,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('supplier-aging-' . now()->format('Y-m-d') . '.pdf');
+    }
 }

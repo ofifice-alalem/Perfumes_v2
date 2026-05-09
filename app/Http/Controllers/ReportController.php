@@ -135,4 +135,35 @@ class ReportController extends Controller
             $request->input('date_to'),
         );
     }
+
+    public function supplierAging(Request $request): Response
+    {
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $dateFrom   = $request->input('date_from');
+        $dateTo     = $request->input('date_to');
+
+        return Inertia::render('Reports/SupplierAging', [
+            'suppliers' => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'filters'   => compact('supplierId', 'dateFrom', 'dateTo'),
+            'data'      => $this->reports->supplierAging($supplierId, $dateFrom, $dateTo),
+        ]);
+    }
+
+    public function supplierAgingExcel(Request $request)
+    {
+        $this->reports->exportSupplierAgingExcel(
+            $request->integer('supplier_id') ?: null,
+            $request->input('date_from'),
+            $request->input('date_to'),
+        );
+    }
+
+    public function supplierAgingPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportSupplierAgingPdf(
+            $request->integer('supplier_id') ?: null,
+            $request->input('date_from'),
+            $request->input('date_to'),
+        );
+    }
 }
