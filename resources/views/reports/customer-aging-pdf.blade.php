@@ -127,8 +127,7 @@
             <th style="width:13%">{{ $labels['col_60_90'] }}</th>
             <th style="width:13%">{{ $labels['col_30_60'] }}</th>
             <th style="width:13%">{{ $labels['col_current'] }}</th>
-            <th style="width:11%">{{ $labels['col_total'] }}</th>
-            <th style="width:11%">{{ $labels['col_breakdown'] }}</th>
+            <th style="width:24%">{{ $labels['col_total'] }}</th>
             <th style="width:22%">{{ $labels['col_customer'] }}</th>
             <th style="width:5%; text-align:center">#</th>
         </tr>
@@ -142,12 +141,6 @@
             <td class="num {{ $c['days_30_60'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_30_60']) }}</td>
             <td class="num">{{ $fmtN($c['current']) }}</td>
             <td class="num">{{ $fmtN($c['total_debt']) }}</td>
-            <td style="font-size:9px; color:#64748b;">
-                {{ $fmtN($c['total_invoiced']) }}
-                @if($c['total_paid'] > 0)<span style="color:#16a34a"> -{{ $fmtN($c['total_paid']) }}</span>@endif
-                @if($c['total_returned'] > 0)<span style="color:#d97706"> -{{ $fmtN($c['total_returned']) }}</span>@endif
-                @if($c['total_settled'] > 0)<span style="color:#3b82f6"> -{{ $fmtN($c['total_settled']) }}</span>@endif
-            </td>
             <td style="font-weight: bold; color: #0f172a;">{{ $g($c['customer_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
@@ -192,7 +185,6 @@
             <td class="num over90-val">{{ $labels['total_over90'] }}</td>
             <td></td><td></td><td></td>
             <td class="num">{{ $labels['total_debt'] }}</td>
-            <td></td>
             <td style="text-align: right; color: #64748b;">{{ $g('الإجمالي') }}</td>
             <td></td>
         </tr>
