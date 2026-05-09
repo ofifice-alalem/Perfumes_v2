@@ -922,7 +922,6 @@ class ReportRepository implements ReportRepositoryInterface
 
         $suppliersQuery = DB::table('suppliers')
             ->when($supplierId, fn($q) => $q->where('id', $supplierId))
-            ->where('id', '!=', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
 
