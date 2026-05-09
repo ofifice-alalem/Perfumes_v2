@@ -16,4 +16,7 @@ interface ReportRepositoryInterface
     public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo): array;
     public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo): void;
     public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response;
+    public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare): array;
+    public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void;
+    public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): \Illuminate\Http\Response;
 }

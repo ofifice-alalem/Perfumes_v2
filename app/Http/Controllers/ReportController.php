@@ -166,4 +166,48 @@ class ReportController extends Controller
             $request->input('date_to'),
         );
     }
+
+    public function sales(Request $request): Response
+    {
+        $dateFrom        = $request->input('date_from');
+        $dateTo          = $request->input('date_to');
+        $userId          = $request->integer('user_id') ?: null;
+        $customerId      = $request->integer('customer_id') ?: null;
+        $paymentMethodId = $request->integer('payment_method_id') ?: null;
+        $categoryId      = $request->integer('category_id') ?: null;
+        $compare         = $request->boolean('compare');
+
+        return Inertia::render('Reports/Sales', [
+            'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'customers'      => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare'),
+            'data'           => $this->reports->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $compare),
+        ]);
+    }
+
+    public function salesExcel(Request $request)
+    {
+        $this->reports->exportSalesExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('payment_method_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
+
+    public function salesPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportSalesPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('payment_method_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
 }

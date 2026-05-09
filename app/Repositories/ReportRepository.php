@@ -1220,4 +1220,202 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('supplier-aging-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Sales ─────────────────────────────────────────────────────────────────
+
+    private function salesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId)
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $query = DB::table('invoices')
+            ->whereNull('invoices.deleted_at')
+            ->when($df,              fn($q) => $q->where('invoices.created_at', '>=', $df))
+            ->when($dt,              fn($q) => $q->where('invoices.created_at', '<=', $dt))
+            ->when($userId,          fn($q) => $q->where('invoices.user_id', $userId))
+            ->when($customerId,      fn($q) => $q->where('invoices.customer_id', $customerId));
+
+        if ($paymentMethodId) {
+            $query->whereExists(fn($q) => $q->from('payments')
+                ->whereColumn('payments.invoice_id', 'invoices.id')
+                ->whereNull('payments.deleted_at')
+                ->where('payments.payment_method_id', $paymentMethodId));
+        }
+
+        if ($categoryId) {
+            $query->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        return $query;
+    }
+
+    public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $base = $this->salesQuery($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+
+        $totalSales     = (float) (clone $base)->sum('invoices.total');
+        $invoicesCount  = (int)   (clone $base)->count();
+        $totalPaid      = (float) (clone $base)->sum('invoices.paid_amount');
+        $totalDue       = (float) (clone $base)->sum('invoices.due_amount');
+        $avgInvoice     = $invoicesCount > 0 ? round($totalSales / $invoicesCount, 2) : 0;
+
+        // تفصيل يومي
+        $daily = (clone $base)
+            ->select(DB::raw('DATE(invoices.created_at) as date'), DB::raw('SUM(invoices.total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw('DATE(invoices.created_at)'))
+            ->orderBy('date')
+            ->get()
+            ->map(fn($r) => ['date' => $r->date, 'total' => (float)$r->total, 'count' => (int)$r->count])
+            ->toArray();
+
+        // مقارنة مع الفترة السابقة
+        $comparison = null;
+        if ($compare && $df && $dt) {
+            $diffDays  = \Carbon\Carbon::parse($df)->diffInDays(\Carbon\Carbon::parse($dt)) + 1;
+            $prevDf    = \Carbon\Carbon::parse($df)->subDays($diffDays)->toDateTimeString();
+            $prevDt    = \Carbon\Carbon::parse($df)->subSecond()->toDateTimeString();
+            $prevBase  = $this->salesQuery(
+                substr($prevDf, 0, 10), substr($prevDt, 0, 10),
+                $userId, $customerId, $paymentMethodId, $categoryId
+            );
+            $prevTotal = (float) (clone $prevBase)->sum('invoices.total');
+            $prevCount = (int)   (clone $prevBase)->count();
+            $comparison = [
+                'total_sales'    => $prevTotal,
+                'invoices_count' => $prevCount,
+                'diff_pct'       => $prevTotal > 0 ? round((($totalSales - $prevTotal) / $prevTotal) * 100, 1) : null,
+            ];
+        }
+
+        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'comparison');
+    }
+
+    public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void
+    {
+        $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('تقرير المبيعات');
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $row = 1;
+        $infoRows = [
+            ['تقرير المبيعات', ''],
+            ['من تاريخ',   $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+            ['', ''],
+            ['إجمالي المبيعات', $fmtN($data['totalSales'])],
+            ['عدد الفواتير',    $data['invoicesCount']],
+            ['متوسط الفاتورة',  $fmtN($data['avgInvoice'])],
+            ['إجمالي المدفوع',  $fmtN($data['totalPaid'])],
+            ['إجمالي المتبقي',  $fmtN($data['totalDue'])],
+        ];
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        // تفصيل يومي
+        $headers = ['التاريخ', 'عدد الفواتير', 'إجمالي المبيعات'];
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        foreach ($data['daily'] as $i => $d) {
+            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+            $sheet->fromArray([$d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+
+        // صف الإجمالي
+        $sheet->fromArray(['الإجمالي', $data['invoicesCount'], $fmtN($data['totalSales'])], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+            'font'    => ['bold' => true, 'size' => 11],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+
+        foreach (range('A', 'C') as $col)
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        $filename = 'sales-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data    = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $labels = [
+            'title'          => $g('تقرير المبيعات'),
+            'generated_at'   => now()->format('Y-m-d H:i'),
+            'filter_info'    => $g('معلومات التقرير'),
+            'summary_label'  => $g('ملخص'),
+            'label_date_from'=> $g('من تاريخ'),
+            'date_from_val'  => $dateFrom ?? $g('البداية'),
+            'date_to_label'  => $g('إلى تاريخ'),
+            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
+            'total_sales'    => $fmtN($data['totalSales']),
+            'invoices_count' => $data['invoicesCount'],
+            'avg_invoice'    => $fmtN($data['avgInvoice']),
+            'total_paid'     => $fmtN($data['totalPaid']),
+            'total_due'      => $fmtN($data['totalDue']),
+            'col_date'       => $g('التاريخ'),
+            'col_count'      => $g('عدد الفواتير'),
+            'col_total'      => $g('إجمالي المبيعات'),
+            'lbl_total'      => $g('إجمالي المبيعات'),
+            'lbl_count'      => $g('عدد الفواتير'),
+            'lbl_avg'        => $g('متوسط الفاتورة'),
+            'lbl_paid'       => $g('إجمالي المدفوع'),
+            'lbl_due'        => $g('إجمالي المتبقي'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-pdf', [
+            'labels' => $labels,
+            'data'   => $data,
+            'g'      => $g,
+            'fmtN'   => $fmtN,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('sales-' . now()->format('Y-m-d') . '.pdf');
+    }
 }
