@@ -104,24 +104,24 @@
 {{-- Summary Cards --}}
 <div class="summary-tbl">
     <div class="summary-cell">
-        <div class="summary-label">{{ $labels['lbl_total'] }}</div>
-        <div class="summary-value">{{ $labels['total_sales'] }}</div>
-    </div>
-    <div class="summary-cell" style="border-right: none;">
-        <div class="summary-label">{{ $labels['lbl_count'] }}</div>
-        <div class="summary-value">{{ $labels['invoices_count'] }}</div>
-    </div>
-    <div class="summary-cell" style="border-right: none;">
-        <div class="summary-label">{{ $labels['lbl_avg'] }}</div>
-        <div class="summary-value">{{ $labels['avg_invoice'] }}</div>
+        <div class="summary-label">{{ $labels['lbl_due'] }}</div>
+        <div class="summary-value" style="color:#dc2626;">{{ $labels['total_due'] }}</div>
     </div>
     <div class="summary-cell" style="border-right: none;">
         <div class="summary-label">{{ $labels['lbl_paid'] }}</div>
         <div class="summary-value" style="color:#16a34a;">{{ $labels['total_paid'] }}</div>
     </div>
     <div class="summary-cell" style="border-right: none;">
-        <div class="summary-label">{{ $labels['lbl_due'] }}</div>
-        <div class="summary-value" style="color:#dc2626;">{{ $labels['total_due'] }}</div>
+        <div class="summary-label">{{ $labels['lbl_avg'] }}</div>
+        <div class="summary-value">{{ $labels['avg_invoice'] }}</div>
+    </div>
+    <div class="summary-cell" style="border-right: none;">
+        <div class="summary-label">{{ $labels['lbl_count'] }}</div>
+        <div class="summary-value">{{ $labels['invoices_count'] }}</div>
+    </div>
+    <div class="summary-cell" style="border-right: none;">
+        <div class="summary-label">{{ $labels['lbl_total'] }}</div>
+        <div class="summary-value">{{ $labels['total_sales'] }}</div>
     </div>
 </div>
 
@@ -129,25 +129,25 @@
 <table class="main">
     <thead>
         <tr>
-            <th style="width:40%">{{ $labels['col_date'] }}</th>
-            <th style="width:30%">{{ $labels['col_count'] }}</th>
             <th style="width:30%">{{ $labels['col_total'] }}</th>
+            <th style="width:30%">{{ $labels['col_count'] }}</th>
+            <th style="width:40%">{{ $labels['col_date'] }}</th>
         </tr>
     </thead>
     <tbody>
         @foreach($data['daily'] as $i => $d)
         <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
-            <td>{{ $d['date'] }}</td>
-            <td class="num">{{ $d['count'] }}</td>
             <td class="num">{{ $fmtN($d['total']) }}</td>
+            <td class="num">{{ $d['count'] }}</td>
+            <td>{{ $d['date'] }}</td>
         </tr>
         @endforeach
     </tbody>
     <tfoot>
         <tr>
-            <td style="color:#64748b;">{{ $g('الإجمالي') }}</td>
-            <td class="num">{{ $labels['invoices_count'] }}</td>
             <td class="num">{{ $labels['total_sales'] }}</td>
+            <td class="num">{{ $labels['invoices_count'] }}</td>
+            <td style="color:#64748b;">{{ $g('الإجمالي') }}</td>
         </tr>
     </tfoot>
 </table>
