@@ -5,32 +5,52 @@
 📋 نظرة عامة:
 --------------
 نظام التدوير يتيح إغلاق فترة محاسبية وفتح فترة جديدة نظيفة.
-عند التدوير يتم:
-   1. حفظ Snapshot كامل للأرصدة النهائية
-   2. نقل الأرصدة الافتتاحية للفترة الجديدة
-   3. مسح الجداول اليومية (فواتير، مشتريات، دفعات، ...)
+التصميم يعتمد على إضافة period_id لكل الجداول اليومية بدل جداول Archive منفصلة.
 
 📌 المبدأ الأساسي:
-   الـ Snapshot = الحقيقة المالية النهائية لكل فترة
-   الجداول اليومية = تفاصيل قابلة للمسح بعد التدوير
-   المخزون = لا يُمسح، يبقى كما هو وينتقل تلقائياً
+   كل سجل يأخذ period_id من لحظة إنشائه تلقائياً
+   البيانات القديمة تبقى في نفس الجداول بـ period_id القديم
+   الفترة الجديدة تعمل على period_id جديد — لا نقل ولا مسح
+   Snapshot = الأرصدة النهائية + الملخص الإحصائي لكل فترة
 
 
 ================================================================================
-                    🗂️ الجداول الجديدة
+                    🗂️ التغييرات على الجداول
 ================================================================================
 
-   1. accounting_periods     → إدارة الفترات المحاسبية
-   2. period_snapshots       → الأرصدة النهائية لكل فترة
-   3. period_snapshot_items  → تفاصيل الـ Snapshot (عميل / مورد / منتج / خزينة)
+📌 جداول جديدة (3 فقط):
+   1. accounting_periods      → إدارة الفترات المحاسبية
+   2. period_snapshots        → رأس الـ Snapshot لكل فترة
+   3. period_snapshot_items   → تفاصيل الـ Snapshot
 
+📌 حقل period_id يُضاف لكل الجداول اليومية:
+   invoices.period_id
+   invoice_items.period_id
+   payments.period_id
+   settlements.period_id
+   purchases.period_id
+   purchase_items.period_id
+   supplier_payments.period_id
+   supplier_settlements.period_id
+   invoice_returns.period_id
+   invoice_return_items.period_id
+   purchase_returns.period_id
+   purchase_return_items.period_id
+   waste_logs.period_id
+   waste_items.period_id
+
+📌 حقل يُضاف لجداول العملاء والموردين:
+   customers.opening_balance   DECIMAL(15,2)   DEFAULT 0
+   suppliers.opening_balance   DECIMAL(15,2)   DEFAULT 0
+
+
+================================================================================
+                    🗂️ تفاصيل الجداول الجديدة
+================================================================================
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1️⃣  accounting_periods                                                      │
 └─────────────────────────────────────────────────────────────────────────────┘
-
-📌 الوظيفة:
-   يحفظ معلومات كل فترة محاسبية (اسمها، تاريخ الفتح والإغلاق، حالتها).
 
 الحقل          النوع           القيمة الافتراضية    الوصف
 ──────────────────────────────────────────────────────────────────────────────
@@ -57,9 +77,6 @@ Constraints:
 │ 2️⃣  period_snapshots                                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-📌 الوظيفة:
-   رأس الـ Snapshot — يربط الأرصدة النهائية بفترة محددة.
-
 الحقل          النوع           القيمة الافتراضية    الوصف
 ──────────────────────────────────────────────────────────────────────────────
 id             BIGINT          AUTO_INCREMENT        المعرف
@@ -70,7 +87,7 @@ notes          TEXT            NULL                  ملاحظات
 created_at     TIMESTAMP       CURRENT_TIMESTAMP     —
 
 Constraints:
-   UNIQUE (period_id)   → snapshot واحد لكل فترة
+   UNIQUE (period_id)
    INDEX (period_id)
 
 
@@ -78,46 +95,71 @@ Constraints:
 │ 3️⃣  period_snapshot_items                                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-📌 الوظيفة:
-   تفاصيل الـ Snapshot — رصيد كل عميل / مورد / منتج / وسيلة دفع.
-
 الحقل          النوع           القيمة الافتراضية    الوصف
 ──────────────────────────────────────────────────────────────────────────────
 id             BIGINT          AUTO_INCREMENT        المعرف
 snapshot_id    BIGINT          FK → period_snapshots.id     الـ Snapshot
-type           ENUM            —                     نوع الرصيد
-entity_id      BIGINT          —                     معرف العميل / المورد / المنتج / وسيلة الدفع
-entity_name    VARCHAR(255)    —                     الاسم (محفوظ للأرشفة)
-balance        DECIMAL(15,2)   0                     الرصيد النهائي
+type           ENUM            —                     نوع البيانات
+entity_id      BIGINT          NULL                  معرف العميل/المورد/المنتج/وسيلة الدفع
+entity_name    VARCHAR(255)    NULL                  الاسم (محفوظ للأرشفة)
+balance        DECIMAL(15,2)   0                     الرصيد أو القيمة الإحصائية
 created_at     TIMESTAMP       CURRENT_TIMESTAMP     —
 
-ENUM type:
-   'customer'        → دين العميل
-   'supplier'        → دين المورد
-   'product_stock'   → مخزون المنتج
-   'payment_method'  → رصيد وسيلة الدفع (الخزينة)
+ENUM type — أرصدة انتقالية (تنتقل للفترة الجديدة):
+   'customer'            → دين العميل          (entity_id = customer.id)
+   'supplier'            → دين المورد          (entity_id = supplier.id)
+   'product_stock'       → مخزون المنتج        (entity_id = product.id)
+   'payment_method'      → رصيد وسيلة الدفع    (entity_id = payment_method.id)
+
+ENUM type — ملخص إحصائي (يبقى بعد Purge):
+   'total_sales'         → إجمالي المبيعات     (entity_id = NULL)
+   'total_purchases'     → إجمالي المشتريات    (entity_id = NULL)
+   'total_returns_in'    → إجمالي مرتجعات العملاء
+   'total_returns_out'   → إجمالي مرتجعات الموردين
+   'total_waste'         → إجمالي التالف بالقيمة
+   'total_paid_in'       → إجمالي الدفعات المقبوضة
+   'total_paid_out'      → إجمالي الدفعات للموردين
+   'invoices_count'      → عدد الفواتير
+   'purchases_count'     → عدد فواتير الشراء
+   'new_customers'       → عدد العملاء الجدد في الفترة
+
+📌 للأنواع الإحصائية: entity_id = NULL، entity_name = NULL، balance = القيمة
 
 Constraints:
    FOREIGN KEY (snapshot_id) ON DELETE CASCADE
-   INDEX (snapshot_id)
-   INDEX (type)
+   INDEX (snapshot_id, type)
    INDEX (entity_id)
 
 
 ================================================================================
-                    📌 حقل opening_balance في العملاء والموردين
+                    🔄 كيف يعمل period_id
 ================================================================================
 
-📌 يُضاف حقل جديد لجدولي customers و suppliers:
+📌 كل سجل يأخذ period_id من لحظة إنشائه:
 
-   opening_balance   DECIMAL(15,2)   DEFAULT 0
+   // عند إنشاء أي سجل
+   $invoice = Invoice::create([
+       'period_id' => getCurrentPeriodId(), // الفترة المفتوحة حالياً
+       'total'     => ...,
+   ]);
 
-📌 الوظيفة:
-   يحفظ الرصيد الافتتاحي المنقول من الفترة السابقة.
-   يُضاف إلى حساب الدين الحالي في كل التقارير.
+   getCurrentPeriodId() = AccountingPeriod::where('status', 'open')->value('id')
 
-📌 معادلة الدين الحقيقي بعد التدوير:
-   الدين = opening_balance + (فواتير الفترة الحالية + تسويات) - (دفعات + مرتجعات)
+📌 لا يوجد أي تحديث أو نقل عند التدوير — كل سجل يحمل period_id منذ إنشائه.
+
+📌 الاستعلام حسب الفترة:
+
+   -- بيانات الفترة الحالية فقط
+   WHERE period_id = 2
+
+   -- بيانات فترة قديمة
+   WHERE period_id = 1
+
+   -- كل البيانات (كل الفترات)
+   WHERE created_at BETWEEN ? AND ?
+
+   -- فترات متعددة
+   WHERE period_id IN (1, 2, 3)
 
 
 ================================================================================
@@ -125,50 +167,107 @@ Constraints:
 ================================================================================
 
 الخطوة 1: التحقق
-   - لا توجد فترة مفتوحة أخرى
+   - فترة واحدة فقط بحالة 'open'
    - المستخدم لديه صلاحية super-admin
 
 الخطوة 2: إنشاء Snapshot
-   - حفظ دين كل عميل (opening_balance الحالي + حركات الفترة)
-   - حفظ دين كل مورد
-   - حفظ مخزون كل منتج
-   - حفظ رصيد كل وسيلة دفع
+   أ) أرصدة انتقالية:
+      - حفظ دين كل عميل  (opening_balance + حركات الفترة الحالية)
+      - حفظ دين كل مورد
+      - حفظ مخزون كل منتج
+      - حفظ رصيد كل وسيلة دفع
 
-الخطوة 3: نقل الأرصدة الافتتاحية
-   - customers.opening_balance = الدين النهائي من الـ Snapshot
-   - suppliers.opening_balance = الدين النهائي من الـ Snapshot
+   ب) ملخص إحصائي للفترة:
+      - total_sales      = SUM(invoices.total WHERE period_id = current)
+      - total_purchases  = SUM(purchases.total WHERE period_id = current)
+      - total_returns_in = SUM(invoice_returns.total WHERE period_id = current)
+      - total_returns_out= SUM(purchase_returns.total WHERE period_id = current)
+      - total_waste      = SUM(waste_items.quantity * آخر سعر شراء)
+      - total_paid_in    = SUM(payments.amount WHERE period_id = current)
+      - total_paid_out   = SUM(supplier_payments.amount WHERE period_id = current)
+      - invoices_count   = COUNT(invoices WHERE period_id = current)
+      - purchases_count  = COUNT(purchases WHERE period_id = current)
+      - new_customers    = COUNT(customers WHERE created_at في الفترة)
 
-الخطوة 4: مسح الجداول اليومية
-   - invoice_items       → مسح
-   - invoices            → مسح
-   - payments            → مسح
-   - settlements         → مسح
-   - purchase_items      → مسح
-   - purchases           → مسح
-   - supplier_payments   → مسح
-   - supplier_settlements→ مسح
-   - invoice_return_items→ مسح
-   - invoice_returns     → مسح
-   - purchase_return_items→ مسح
-   - purchase_returns    → مسح
-   - waste_items         → مسح
-   - waste_logs          → مسح
+الخطوة 3: تحديث الأرصدة الافتتاحية
+   customers.opening_balance = الدين النهائي من الـ Snapshot
+   suppliers.opening_balance = الدين النهائي من الـ Snapshot
 
-الخطوة 5: إغلاق الفترة الحالية
-   - accounting_periods.status = 'closed'
-   - accounting_periods.closed_at = now()
+الخطوة 4: إغلاق الفترة الحالية
+   accounting_periods.status    = 'closed'
+   accounting_periods.closed_at = now()
 
-الخطوة 6: فتح فترة جديدة
-   - إنشاء سجل جديد في accounting_periods بـ status = 'open'
+الخطوة 5: فتح فترة جديدة
+   INSERT INTO accounting_periods (name, started_at, status, created_by)
+
+⚠️ كل هذه الخطوات تتم داخل DB Transaction واحدة — إما كل شيء أو لا شيء.
+⚠️ لا يوجد نقل بيانات ولا مسح — فقط Snapshot + إغلاق + فتح.
+
+
+================================================================================
+                    🗑️ Purge (اختياري)
+================================================================================
+
+📌 حذف بيانات فترة قديمة (بعد التأكد من وجود Snapshot):
+
+   DELETE FROM invoices          WHERE period_id = {id}
+   DELETE FROM invoice_items     WHERE period_id = {id}
+   DELETE FROM payments          WHERE period_id = {id}
+   DELETE FROM settlements       WHERE period_id = {id}
+   DELETE FROM purchases         WHERE period_id = {id}
+   DELETE FROM purchase_items    WHERE period_id = {id}
+   DELETE FROM supplier_payments WHERE period_id = {id}
+   DELETE FROM supplier_settlements WHERE period_id = {id}
+   DELETE FROM invoice_returns   WHERE period_id = {id}
+   DELETE FROM invoice_return_items WHERE period_id = {id}
+   DELETE FROM purchase_returns  WHERE period_id = {id}
+   DELETE FROM purchase_return_items WHERE period_id = {id}
+   DELETE FROM waste_logs        WHERE period_id = {id}
+   DELETE FROM waste_items       WHERE period_id = {id}
+
+📌 Auto-Purge للفترات الأقدم من X سنة:
+   $old = AccountingPeriod::where('closed_at', '<', now()->subYears(2))->get();
+   // حذف بيانات كل فترة قديمة — الـ Snapshot يبقى دائماً
+
+📌 قاعدة ذهبية:
+   الـ Snapshot لا يُحذف أبداً — حتى بعد Purge.
+   الـ Snapshot = السجل المالي الدائم للفترة.
+
+
+================================================================================
+                    📊 التقارير
+================================================================================
+
+📌 التقارير تعمل على نفس الجداول — فقط تتغير الفلترة:
+
+   -- الفترة الحالية فقط (الافتراضي)
+   Invoice::where('period_id', getCurrentPeriodId())->...
+
+   -- فترة محددة
+   Invoice::where('period_id', $periodId)->...
+
+   -- نطاق تاريخي (يشمل كل الفترات تلقائياً)
+   Invoice::whereBetween('created_at', [$from, $to])->...
+
+   -- كل الفترات
+   Invoice::all()->...
+
+📌 لا UNION ALL — نفس الجدول، نفس الـ Query، فقط period_id يتغير.
+
+📌 تقارير ديون العملاء بعد التدوير:
+   الدين = customers.opening_balance
+         + (فواتير الفترة الحالية + تسويات)
+         - (دفعات + مرتجعات)
 
 
 ================================================================================
                     🖥️ الصفحات
 ================================================================================
 
-   /periods              → قائمة الفترات المحاسبية
-   /periods/rollover     → صفحة تنفيذ التدوير (تأكيد + معاينة)
-   /periods/{id}/snapshot→ عرض تفاصيل Snapshot لفترة محددة
+   /periods                → قائمة الفترات مع Snapshot لكل فترة
+   /periods/rollover       → معاينة الـ Snapshot + تأكيد التدوير
+   /periods/{id}/snapshot  → تفاصيل Snapshot لفترة محددة
+   /periods/{id}/purge     → حذف بيانات فترة محددة (اختياري)
 
 
 ================================================================================
@@ -176,25 +275,24 @@ Constraints:
 ================================================================================
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ معاينة ما سيتم حفظه في الـ Snapshot                                        │
+│ معاينة الـ Snapshot (قبل التنفيذ)                                          │
 └─────────────────────────────────────────────────────────────────────────────┘
-
-   - جدول ديون العملاء (الاسم + الرصيد النهائي)
-   - جدول ديون الموردين (الاسم + الرصيد النهائي)
-   - جدول المخزون (المنتج + الكمية)
-   - جدول الخزينة (وسيلة الدفع + الرصيد)
+   - جدول ديون العملاء    (الاسم + الرصيد النهائي)
+   - جدول ديون الموردين   (الاسم + الرصيد النهائي)
+   - جدول المخزون         (المنتج + الكمية)
+   - جدول الخزينة         (وسيلة الدفع + الرصيد)
+   - ملخص الفترة          (مبيعات + مشتريات + ... )
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ تأكيد التدوير                                                               │
 └─────────────────────────────────────────────────────────────────────────────┘
-
    - اسم الفترة الجديدة (input)
    - ملاحظات (textarea)
    - زر "تنفيذ التدوير" (يطلب تأكيد مزدوج)
 
 ⚠️ تحذير واضح:
-   "سيتم مسح جميع الفواتير والمشتريات والدفعات للفترة الحالية بشكل نهائي.
-    تأكد من حفظ التقارير قبل المتابعة."
+   "سيتم إغلاق الفترة الحالية وفتح فترة جديدة.
+    البيانات القديمة ستبقى محفوظة ويمكن الرجوع إليها في التقارير."
 
 
 ================================================================================
@@ -208,6 +306,7 @@ Constraints:
 php artisan make:migration create_accounting_periods_table
 php artisan make:migration create_period_snapshots_table
 php artisan make:migration create_period_snapshot_items_table
+php artisan make:migration add_period_id_to_daily_tables        ← period_id لكل الجداول
 php artisan make:migration add_opening_balance_to_customers_table
 php artisan make:migration add_opening_balance_to_suppliers_table
 
@@ -215,47 +314,65 @@ php artisan make:migration add_opening_balance_to_suppliers_table
 │ الخطوة 2: Models                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-AccountingPeriod   → fillable + علاقات (snapshots, createdBy)
-PeriodSnapshot     → fillable + علاقات (period, items, createdBy)
-PeriodSnapshotItem → fillable + علاقات (snapshot)
+AccountingPeriod    → fillable + علاقات (snapshot, createdBy)
+PeriodSnapshot      → fillable + علاقات (period, items, createdBy)
+PeriodSnapshotItem  → fillable + علاقات (snapshot)
+
+تعديل Models الموجودة:
+   Invoice, Payment, Purchase, ... → إضافة period_id للـ fillable
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ الخطوة 3: Repository + Service                                              │
+│ الخطوة 3: RolloverService                                                   │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 RolloverService:
-   - previewSnapshot()     → يحسب الأرصدة بدون حفظ (للمعاينة)
-   - executeRollover(data) → ينفذ كل خطوات التدوير في Transaction واحدة
-   - getSnapshotDetails(periodId) → يجلب تفاصيل Snapshot فترة محددة
+   - getCurrentPeriodId()       → جلب id الفترة المفتوحة حالياً
+   - previewSnapshot()          → حساب الأرصدة والإحصائيات بدون حفظ
+   - executeRollover(data)      → تنفيذ كل الخطوات في Transaction واحدة
+   - purgePeriod(periodId)      → حذف بيانات فترة محددة
+   - autoPurge(yearsOld)        → حذف بيانات الفترات الأقدم من X سنة
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ الخطوة 4: Controller                                                        │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 PeriodController:
-   - index()    → قائمة الفترات
-   - rollover() → صفحة التدوير مع المعاينة
-   - execute()  → تنفيذ التدوير
-   - snapshot() → عرض تفاصيل Snapshot
+   - index()           → قائمة الفترات
+   - rollover()        → صفحة التدوير مع المعاينة
+   - execute()         → تنفيذ التدوير
+   - snapshot(id)      → عرض تفاصيل Snapshot
+   - purge(id)         → حذف بيانات فترة محددة
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ الخطوة 5: Routes                                                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 Route::middleware('role:super-admin')->group(function () {
-    Route::get('periods',                [PeriodController::class, 'index']);
-    Route::get('periods/rollover',       [PeriodController::class, 'rollover']);
+    Route::get ('periods',               [PeriodController::class, 'index']);
+    Route::get ('periods/rollover',      [PeriodController::class, 'rollover']);
     Route::post('periods/execute',       [PeriodController::class, 'execute']);
-    Route::get('periods/{id}/snapshot',  [PeriodController::class, 'snapshot']);
+    Route::get ('periods/{id}/snapshot', [PeriodController::class, 'snapshot']);
+    Route::delete('periods/{id}/purge',  [PeriodController::class, 'purge']);
 });
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ الخطوة 6: Frontend                                                          │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-Periods/Index.tsx    → قائمة الفترات مع حالتها
-Periods/Rollover.tsx → معاينة + تأكيد التدوير
-Periods/Snapshot.tsx → عرض تفاصيل Snapshot
+Periods/Index.tsx    → قائمة الفترات مع حالتها وزر Purge
+Periods/Rollover.tsx → معاينة الـ Snapshot + تأكيد التدوير
+Periods/Snapshot.tsx → تفاصيل Snapshot لفترة محددة
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ الخطوة 7: تحديث باقي النظام                                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+- كل Controller يُضيف period_id عند إنشاء أي سجل:
+     'period_id' => app(RolloverService::class)->getCurrentPeriodId()
+
+- تقارير ديون العملاء/الموردين تأخذ opening_balance بعين الاعتبار
+
+- التقارير الأخرى تفلتر بـ period_id أو created_at حسب الحاجة
 
 
 ================================================================================
@@ -263,41 +380,65 @@ Periods/Snapshot.tsx → عرض تفاصيل Snapshot
 ================================================================================
 
 1.  ✅ فترة واحدة فقط بحالة 'open' في أي وقت
-2.  ✅ التدوير يتم داخل DB Transaction — إما كل شيء أو لا شيء
-3.  ✅ الـ Snapshot يُحفظ قبل أي مسح
-4.  ✅ opening_balance يُحدَّث بعد حفظ الـ Snapshot مباشرة
-5.  ✅ المسح يتم بعد التأكد من نجاح الـ Snapshot والـ opening_balance
-6.  ✅ المخزون لا يُمسح — يبقى كما هو في products.stock
+2.  ✅ كل سجل يأخذ period_id من لحظة إنشائه تلقائياً
+3.  ✅ التدوير يتم داخل DB Transaction — إما كل شيء أو لا شيء
+4.  ✅ الـ Snapshot يُحفظ أولاً قبل أي شيء
+5.  ✅ opening_balance يُحدَّث بعد حفظ الـ Snapshot مباشرة
+6.  ✅ المخزون لا يُصفَّر — يبقى كما هو في products.stock
 7.  ✅ الصلاحية: super-admin فقط
 8.  ✅ لا يمكن التراجع عن التدوير بعد تنفيذه
-9.  ✅ التقارير تأخذ opening_balance بعين الاعتبار في حساب الديون
-10. ✅ entity_name يُحفظ في الـ Snapshot لضمان بقاء الاسم حتى لو تغيّر لاحقاً
+9.  ✅ الـ Snapshot لا يُحذف أبداً حتى بعد Purge
+10. ✅ entity_name يُحفظ في الـ Snapshot لضمان بقاء الاسم حتى لو تغيّر
+11. ✅ Purge يشترط وجود Snapshot محفوظ للفترة المراد حذفها
+12. ✅ لا archive tables — نفس الجداول، period_id يفصل الفترات
 
 
 ================================================================================
                     📊 مثال تدوير كامل
 ================================================================================
 
-الفترة: 2025
+الفترة: 2025 (period_id = 1)
 التاريخ: 2025-12-31
 
-Snapshot المحفوظ:
-┌──────────────────┬──────────────┬──────────────┐
-│ النوع            │ الاسم        │ الرصيد       │
-├──────────────────┼──────────────┼──────────────┤
-│ customer         │ عميل نفخ     │ 270.00       │
-│ supplier         │ مورد العطور  │ 1500.00      │
-│ product_stock    │ Dior Sauvage │ 45 (وحدة)    │
-│ payment_method   │ نقدي         │ 8500.00      │
-│ payment_method   │ بطاقة        │ 3200.00      │
-└──────────────────┴──────────────┴──────────────┘
+Snapshot المحفوظ — أرصدة انتقالية:
+┌──────────────────┬──────────────────┬──────────────┐
+│ النوع            │ الاسم            │ الرصيد       │
+├──────────────────┼──────────────────┼──────────────┤
+│ customer         │ عميل نفخ         │ 270.00       │
+│ supplier         │ مورد العطور      │ 1500.00      │
+│ product_stock    │ Dior Sauvage     │ 45           │
+│ payment_method   │ نقدي             │ 8500.00      │
+│ payment_method   │ بطاقة            │ 3200.00      │
+└──────────────────┴──────────────────┴──────────────┘
+
+Snapshot المحفوظ — ملخص إحصائي:
+┌──────────────────────┬────────┬──────────────┐
+│ النوع                │ الاسم  │ القيمة       │
+├──────────────────────┼────────┼──────────────┤
+│ total_sales          │ NULL   │ 155000.00    │
+│ total_purchases      │ NULL   │ 82000.00     │
+│ total_returns_in     │ NULL   │ 4500.00      │
+│ total_returns_out    │ NULL   │ 2000.00      │
+│ total_waste          │ NULL   │ 1200.00      │
+│ total_paid_in        │ NULL   │ 148000.00    │
+│ total_paid_out       │ NULL   │ 79000.00     │
+│ invoices_count       │ NULL   │ 320          │
+│ purchases_count      │ NULL   │ 45           │
+│ new_customers        │ NULL   │ 28           │
+└──────────────────────┴────────┴──────────────┘
 
 بعد التدوير:
-   - customers.opening_balance (عميل نفخ) = 270.00
-   - suppliers.opening_balance (مورد العطور) = 1500.00
-   - products.stock (Dior Sauvage) = 45 (لم يتغير)
-   - جميع الفواتير والمشتريات والدفعات → محذوفة
-   - فترة جديدة 2026 → مفتوحة
+   ✅ invoices WHERE period_id = 1  → تبقى في نفس الجدول
+   ✅ customers.opening_balance (عميل نفخ) = 270.00
+   ✅ suppliers.opening_balance (مورد العطور) = 1500.00
+   ✅ products.stock (Dior Sauvage) = 45 (لم يتغير)
+   ✅ فترة جديدة 2026 (period_id = 2) → مفتوحة
+   ✅ كل الفواتير الجديدة تأخذ period_id = 2 تلقائياً
+
+بعد سنتين (Purge اختياري):
+   🗑️ DELETE FROM invoices WHERE period_id = 1
+   🗑️ DELETE FROM purchases WHERE period_id = 1
+   ✅ period_snapshot_items (2025) → محفوظة للأبد
 
 
 ================================================================================
@@ -305,11 +446,15 @@ Snapshot المحفوظ:
 ================================================================================
 
 ✅ إدارة الفترات المحاسبية
-✅ Snapshot كامل لكل فترة (عملاء + موردين + مخزون + خزينة)
+✅ period_id على كل الجداول اليومية
+✅ Snapshot كامل لكل فترة (أرصدة انتقالية + ملخص إحصائي)
 ✅ نقل الأرصدة الافتتاحية تلقائياً
-✅ مسح الجداول اليومية بأمان
-✅ التقارير تدعم opening_balance في حساب الديون
-✅ عرض تفاصيل أي Snapshot تاريخي
+✅ لا archive tables — نفس الجداول، أبسط صيانة
+✅ التقارير تدعم الفلترة بالفترة أو التاريخ بدون UNION ALL
+✅ Purge انتقائي لفترات محددة (اختياري)
+✅ Auto-Purge للبيانات القديمة (اختياري)
+✅ الـ Snapshot يبقى محفوظاً دائماً بغض النظر عن Purge
+✅ تقارير الديون تأخذ opening_balance بعين الاعتبار
 
 
 ================================================================================
