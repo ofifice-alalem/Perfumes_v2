@@ -378,7 +378,7 @@ export default function BackupsIndex({ backups, flash }: Props) {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['اسم الملف', 'التاريخ', 'الحجم', 'ملاحظة', 'إجراءات'].map(h => (
+                                            {['اسم الملف', 'التاريخ', 'الحجم', 'إجراءات', 'ملاحظة'].map(h => (
                                                 <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
@@ -386,40 +386,49 @@ export default function BackupsIndex({ backups, flash }: Props) {
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {backups.map(backup => (
                                             <tr key={backup.filename} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-3 min-w-[260px]">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-8 h-8 rounded-[10px] bg-primary/10 flex items-center justify-center shrink-0">
                                                             <Database className="w-4 h-4 text-primary" />
                                                         </div>
-                                                        <span className="font-bold text-slate-700 dark:text-white/80 text-xs break-all">{backup.filename}</span>
+                                                        <span className="font-bold text-slate-700 dark:text-white/80 text-xs">{backup.filename}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">{fmtDate(backup.date)}</td>
                                                 <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{backup.size}</td>
-                                                <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs max-w-[200px] truncate">
-                                                    {backup.note ?? '—'}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <a href={`/backups/download/${backup.filename}`}
-                                                            className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                            <Download className="w-3 h-3" /> تحميل
-                                                        </a>
-                                                        <button onClick={() => setRestoreTarget(backup)}
-                                                            className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition-all font-bold text-xs">
-                                                            <RotateCcw className="w-3 h-3" /> استعادة
-                                                        </button>
-                                                        <DeleteModal
-                                                            title="حذف النسخة الاحتياطية"
-                                                            description={`سيتم حذف الملف "${backup.filename}" نهائياً.`}
-                                                            onConfirm={() => router.delete(`/backups/${backup.filename}`)}
-                                                            trigger={
-                                                                <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                    <Trash2 className="w-3 h-3" /> حذف
-                                                                </button>
-                                                            }
-                                                        />
+                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="relative group/tip">
+                                                            <a href={`/backups/download/${backup.filename}`}
+                                                                className="w-8 h-8 flex items-center justify-center rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                                                                <Download className="w-3.5 h-3.5" />
+                                                            </a>
+                                                            <span className="pointer-events-none absolute bottom-full mb-2 right-1/2 translate-x-1/2 whitespace-nowrap rounded-[8px] bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2.5 py-1 opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">تحميل</span>
+                                                        </div>
+                                                        <div className="relative group/tip">
+                                                            <button onClick={() => setRestoreTarget(backup)}
+                                                                className="w-8 h-8 flex items-center justify-center rounded-[10px] border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white transition-all">
+                                                                <RotateCcw className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <span className="pointer-events-none absolute bottom-full mb-2 right-1/2 translate-x-1/2 whitespace-nowrap rounded-[8px] bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2.5 py-1 opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">استعادة</span>
+                                                        </div>
+                                                        <div className="relative group/tip">
+                                                            <DeleteModal
+                                                                title="حذف النسخة الاحتياطية"
+                                                                description={`سيتم حذف الملف "${backup.filename}" نهائياً.`}
+                                                                onConfirm={() => router.delete(`/backups/${backup.filename}`)}
+                                                                trigger={
+                                                                    <button className="w-8 h-8 flex items-center justify-center rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all">
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                }
+                                                            />
+                                                            <span className="pointer-events-none absolute bottom-full mb-2 right-1/2 translate-x-1/2 whitespace-nowrap rounded-[8px] bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2.5 py-1 opacity-0 group-hover/tip:opacity-100 transition-opacity duration-150 z-50">حذف</span>
+                                                        </div>
                                                     </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs w-[35%] min-w-[200px]">
+                                                    {backup.note ?? '—'}
                                                 </td>
                                             </tr>
                                         ))}
