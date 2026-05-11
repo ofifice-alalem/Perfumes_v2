@@ -22,6 +22,7 @@ use App\Http\Controllers\InvoiceReturnController;
 use App\Http\Controllers\WasteLogController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\PeriodController;
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -49,6 +50,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/restore/{filename}', [BackupController::class, 'restore'])->name('restore');
         Route::get('/download/{filename}', [BackupController::class, 'download'])->name('download');
         Route::delete('/{filename}',       [BackupController::class, 'delete']) ->name('delete');
+    });
+
+    // ── الفترات المحاسبية — super-admin فقط ─────────────────────────────────
+    Route::middleware('role:super-admin')->prefix('periods')->name('periods.')->group(function () {
+        Route::get('/',              [PeriodController::class, 'index'])    ->name('index');
+        Route::get('/rollover',      [PeriodController::class, 'rollover']) ->name('rollover');
+        Route::post('/execute',      [PeriodController::class, 'execute'])  ->name('execute');
+        Route::get('/{id}/snapshot', [PeriodController::class, 'snapshot']) ->name('snapshot');
+        Route::delete('/{id}/purge', [PeriodController::class, 'purge'])    ->name('purge');
     });
 
     // ── إدارة النظام — super-admin + admin ──────────────────────────────────

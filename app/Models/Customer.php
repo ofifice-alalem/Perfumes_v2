@@ -15,7 +15,7 @@ class Customer extends Model implements Auditable
     protected $fillable = [
         'name', 'phone', 'email', 'address', 'is_active',
         'total_purchases', 'total_paid', 'total_returns',
-        'total_settlements', 'total_debt',
+        'total_settlements', 'total_debt', 'opening_balance',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class Customer extends Model implements Auditable
         'total_returns'     => 'decimal:2',
         'total_settlements' => 'decimal:2',
         'total_debt'        => 'decimal:2',
+        'opening_balance'   => 'decimal:2',
         'is_active'         => 'boolean',
     ];
 

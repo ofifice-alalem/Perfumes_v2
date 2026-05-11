@@ -15,7 +15,7 @@ class SupplierSettlement extends Model implements Auditable
 
     public $timestamps = false;
 
-    protected $fillable = ['supplier_id', 'user_id', 'purchase_id', 'purchase_return_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
+    protected $fillable = ['period_id', 'supplier_id', 'user_id', 'purchase_id', 'purchase_return_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
 
     protected $casts = [
         'amount'     => 'decimal:2',

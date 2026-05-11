@@ -13,7 +13,7 @@ class Payment extends Model implements Auditable
     use AuditableTrait, SoftDeletes;
     public $timestamps = false;
 
-    protected $fillable = ['customer_id', 'user_id', 'invoice_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
+    protected $fillable = ['period_id', 'customer_id', 'user_id', 'invoice_id', 'payment_method_id', 'amount', 'notes', 'created_at'];
 
     protected $casts = [
         'amount'     => 'decimal:2',

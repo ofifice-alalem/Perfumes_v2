@@ -13,7 +13,7 @@ class Invoice extends Model implements Auditable
 {
     use AuditableTrait, SoftDeletes;
     protected $fillable = [
-        'user_id', 'customer_id', 'customer_type',
+        'period_id', 'user_id', 'customer_id', 'customer_type',
         'total', 'paid_amount', 'due_amount',
         'payment_status', 'notes',
     ];

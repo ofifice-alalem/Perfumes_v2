@@ -14,7 +14,7 @@ class Purchase extends Model implements Auditable
     use AuditableTrait, SoftDeletes;
 
     protected $fillable = [
-        'supplier_id', 'user_id', 'total', 'paid_amount',
+        'period_id', 'supplier_id', 'user_id', 'total', 'paid_amount',
         'due_amount', 'payment_status', 'notes',
     ];
 

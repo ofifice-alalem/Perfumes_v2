@@ -13,6 +13,7 @@ class WasteLog extends Model implements Auditable
     use AuditableTrait;
 
     protected $fillable = [
+        'period_id',
         'user_id',
         'notes',
     ];

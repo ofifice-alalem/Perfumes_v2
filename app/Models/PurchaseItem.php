@@ -14,7 +14,7 @@ class PurchaseItem extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        'purchase_id', 'product_id',
+        'period_id', 'purchase_id', 'product_id',
         'quantity', 'unit_cost', 'line_total', 'created_at',
     ];
 

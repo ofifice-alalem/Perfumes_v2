@@ -13,7 +13,7 @@ class InvoiceItem extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
-        'invoice_id', 'product_id', 'size_id',
+        'period_id', 'invoice_id', 'product_id', 'size_id',
         'sale_type', 'quantity', 'unit_price', 'line_total',
     ];
 

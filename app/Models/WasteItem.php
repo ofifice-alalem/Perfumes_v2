@@ -14,6 +14,7 @@ class WasteItem extends Model implements Auditable
     public $timestamps = false;
 
     protected $fillable = [
+        'period_id',
         'waste_log_id',
         'product_id',
         'quantity',

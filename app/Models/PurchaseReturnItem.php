@@ -13,7 +13,7 @@ class PurchaseReturnItem extends Model implements Auditable
 
     public $timestamps = false;
 
-    protected $fillable = ['purchase_return_id', 'product_id', 'quantity', 'unit_cost', 'line_total', 'created_at'];
+    protected $fillable = ['period_id', 'purchase_return_id', 'product_id', 'quantity', 'unit_cost', 'line_total', 'created_at'];
 
     protected $casts = [
         'quantity'   => 'decimal:2',
