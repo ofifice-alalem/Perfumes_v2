@@ -155,7 +155,7 @@ class RolloverService
 
     private function buildCustomerBalances(?int $periodId): array
     {
-        return Customer::select('id', 'name', 'total_debt as balance')
+        return Customer::select('id', 'name', 'total_debt')
             ->get()
             ->map(fn($c) => ['id' => $c->id, 'name' => $c->name, 'balance' => (float) $c->total_debt])
             ->toArray();
@@ -163,7 +163,7 @@ class RolloverService
 
     private function buildSupplierBalances(?int $periodId): array
     {
-        return Supplier::select('id', 'name', 'total_debt as balance')
+        return Supplier::select('id', 'name', 'total_debt')
             ->get()
             ->map(fn($s) => ['id' => $s->id, 'name' => $s->name, 'balance' => (float) $s->total_debt])
             ->toArray();
@@ -179,12 +179,12 @@ class RolloverService
 
     private function buildPaymentMethodBalances(?int $periodId): array
     {
-        $paid_in  = Payment::when($periodId, fn($q) => $q->where('period_id', $periodId))
+        $paid_in  = Payment::where(fn($q) => $this->scopePeriod($q, $periodId))
             ->select('payment_method_id', DB::raw('SUM(amount) as total'))
             ->groupBy('payment_method_id')
             ->pluck('total', 'payment_method_id');
 
-        $paid_out = SupplierPayment::when($periodId, fn($q) => $q->where('period_id', $periodId))
+        $paid_out = SupplierPayment::where(fn($q) => $this->scopePeriod($q, $periodId))
             ->select('payment_method_id', DB::raw('SUM(amount) as total'))
             ->groupBy('payment_method_id')
             ->pluck('total', 'payment_method_id');
@@ -200,12 +200,12 @@ class RolloverService
 
     private function buildStats(?int $periodId): array
     {
-        $q = fn($model) => $model::when($periodId, fn($q) => $q->where('period_id', $periodId));
+        $q = fn($model) => $model::where(fn($q) => $this->scopePeriod($q, $periodId));
 
-        $totalWaste = WasteItem::when($periodId, fn($q) => $q->where('period_id', $periodId))
+        $totalWaste = WasteItem::where(fn($q) => $this->scopePeriod($q, $periodId))
             ->join('products', 'waste_items.product_id', '=', 'products.id')
             ->leftJoin(
-                \Illuminate\Support\Facades\DB::raw('(SELECT product_id, MAX(unit_cost) as unit_cost FROM purchase_items GROUP BY product_id) as last_cost'),
+                DB::raw('(SELECT product_id, MAX(unit_cost) as unit_cost FROM purchase_items GROUP BY product_id) as last_cost'),
                 'waste_items.product_id', '=', 'last_cost.product_id'
             )
             ->selectRaw('SUM(waste_items.quantity * COALESCE(last_cost.unit_cost, 0)) as total')
@@ -221,10 +221,27 @@ class RolloverService
             'total_paid_out'   => (float) $q(SupplierPayment::class)->sum('amount'),
             'invoices_count'   => $q(Invoice::class)->count(),
             'purchases_count'  => $q(Purchase::class)->count(),
-            'new_customers'    => Customer::when(
-                $periodId,
-                fn($q) => $q->whereHas('invoices', fn($q2) => $q2->where('period_id', $periodId))
+            'new_customers'    => Customer::whereHas(
+                'invoices',
+                fn($q) => $this->scopePeriod($q, $periodId)
             )->count(),
         ];
+    }
+
+    /**
+     * Scope a query to the given period:
+     * - includes records with period_id = $periodId
+     * - also includes legacy records with period_id = NULL (pre-Step-11 data)
+     */
+    private function scopePeriod($query, ?int $periodId): void
+    {
+        if ($periodId === null) {
+            return; // no period at all → return everything
+        }
+
+        $query->where(fn($q) => $q
+            ->where('period_id', $periodId)
+            ->orWhereNull('period_id')
+        );
     }
 }
