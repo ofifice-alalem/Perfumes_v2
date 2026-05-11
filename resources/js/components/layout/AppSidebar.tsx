@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
-  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2,
+  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive,
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -65,6 +65,7 @@ const navSections: NavSection[] = [
       { icon: <Ruler className="w-5 h-5" />, label: 'الأحجام', href: '/sizes' },
       { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods' },
       { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users' },
+      { icon: <HardDrive className="w-5 h-5" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
     ],
   },
 ];

@@ -21,6 +21,7 @@ use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\InvoiceReturnController;
 use App\Http\Controllers\WasteLogController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\BackupController;
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -39,6 +40,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function () {
         return Inertia::render('Dashboard');
     })->middleware('role:super-admin');
+
+    // ── النسخ الاحتياطية — super-admin فقط ──────────────────────────────────
+    Route::middleware('role:super-admin')->prefix('backups')->name('backups.')->group(function () {
+        Route::get('/',                    [BackupController::class, 'index'])  ->name('index');
+        Route::post('/create',             [BackupController::class, 'create']) ->name('create');
+        Route::post('/upload',             [BackupController::class, 'upload']) ->name('upload');
+        Route::post('/restore/{filename}', [BackupController::class, 'restore'])->name('restore');
+        Route::get('/download/{filename}', [BackupController::class, 'download'])->name('download');
+        Route::delete('/{filename}',       [BackupController::class, 'delete']) ->name('delete');
+    });
 
     // ── إدارة النظام — super-admin + admin ──────────────────────────────────
     Route::middleware('role:super-admin|admin')->group(function () {
