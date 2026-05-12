@@ -252,34 +252,59 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                         </tr>
                                                                         {expandedInvoices.has(inv.id) && (
                                                                             <tr key={`${inv.id}-items`}>
-                                                                                <td colSpan={4} className="px-6 py-2 bg-black/2 dark:bg-white/2">
-                                                                                    <table className="w-full text-xs">
-                                                                                        <thead>
-                                                                                            <tr className="border-b border-black/5 dark:border-white/5">
-                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المنتج</th>
-                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">الكمية</th>
-                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">العدد</th>
-                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">السعر</th>
-                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المبلغ</th>
-                                                                                            </tr>
-                                                                                        </thead>
-                                                                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                                                            {inv.items.map((item, i) => (
-                                                                                                <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
-                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-700 dark:text-white/70">{item.product_name}</td>
-                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.quantity)}</td>
-                                                                                                    <td className="py-1.5 px-2">
-                                                                                                        {item.count > 1
-                                                                                                            ? <span className="font-black text-blue-600 dark:text-blue-400">{item.count}</span>
-                                                                                                            : <span className="text-slate-300 dark:text-white/20">—</span>
-                                                                                                        }
-                                                                                                    </td>
-                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.unit_price)}</td>
-                                                                                                    <td className="py-1.5 px-2 font-black text-slate-800 dark:text-white">{fmt(item.quantity * item.unit_price)}</td>
-                                                                                                </tr>
-                                                                                            ))}
-                                                                                        </tbody>
-                                                                                    </table>
+                                                                                <td colSpan={4} className="px-4 pt-1 pb-3 bg-black/2 dark:bg-white/2">
+                                                                                    {/* header */}
+                                                                                    <div className="hidden sm:grid grid-cols-[50px_2fr_70px_80px_90px] gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[10px] border border-slate-200/50 dark:border-slate-700/50 mb-1.5">
+                                                                                        <span className="text-center">عدد</span>
+                                                                                        <span>المنتج</span>
+                                                                                        <span className="text-center">الحجم</span>
+                                                                                        <span className="text-center">سعر</span>
+                                                                                        <span className="text-center">الإجمالي</span>
+                                                                                    </div>
+                                                                                    <div className="flex flex-col gap-1.5">
+                                                                                        {inv.items.map((item, i) => (
+                                                                                            <div key={i}>
+                                                                                                {/* Desktop grid row */}
+                                                                                                <div className="hidden sm:grid grid-cols-[50px_2fr_70px_80px_90px] gap-2 px-3 py-2.5 rounded-[12px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
+                                                                                                    <div className="flex items-center justify-center">
+                                                                                                        <span className={`w-9 h-8 rounded-[8px] flex items-center justify-center font-black text-sm ${
+                                                                                                            item.count > 1
+                                                                                                                ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400'
+                                                                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-white/50'
+                                                                                                        }`}>{item.count}</span>
+                                                                                                    </div>
+                                                                                                    <div className="flex flex-col justify-center min-w-0">
+                                                                                                        <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product_name}</span>
+                                                                                                    </div>
+                                                                                                    <div className="flex items-center justify-center">
+                                                                                                        <span className="text-xs font-black text-white bg-primary px-2 py-1 rounded-full">{fmt(item.quantity)}</span>
+                                                                                                    </div>
+                                                                                                    <div className="flex items-center justify-center">
+                                                                                                        <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{fmt(item.unit_price)}</span>
+                                                                                                    </div>
+                                                                                                    <div className="flex items-center justify-center">
+                                                                                                        <span className="font-black text-slate-800 dark:text-white text-sm">{fmt(item.quantity * item.unit_price)}</span>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                {/* Mobile card row */}
+                                                                                                <div className="sm:hidden flex items-center gap-2 p-2.5 rounded-[12px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                                                                                    <span className={`w-9 h-9 rounded-[8px] flex items-center justify-center font-black text-sm shrink-0 ${
+                                                                                                        item.count > 1
+                                                                                                            ? 'bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400'
+                                                                                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-white/50'
+                                                                                                    }`}>{item.count}</span>
+                                                                                                    <div className="flex-1 min-w-0">
+                                                                                                        <p className="font-bold text-slate-800 dark:text-white text-xs truncate">{item.product_name}</p>
+                                                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                                                            <span className="text-[10px] font-black text-white bg-primary px-1.5 py-0.5 rounded-full">{fmt(item.quantity)}</span>
+                                                                                                            <span className="text-[10px] font-bold text-slate-400 dark:text-white/30">× {fmt(item.unit_price)}</span>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                    <span className="font-black text-slate-800 dark:text-white text-sm shrink-0">{fmt(item.quantity * item.unit_price)}</span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
                                                                                 </td>
                                                                             </tr>
                                                                         )}
