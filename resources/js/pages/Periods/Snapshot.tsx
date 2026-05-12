@@ -80,7 +80,7 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
         const stockQty     = getVal(products, id);
         const left  = openingQty + purchasedQty;
         const right = soldQty + wasteQty + stockQty;
-        const diff  = left - right;
+        const diff  = right - left; // negative = missing stock
         return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
     });
 

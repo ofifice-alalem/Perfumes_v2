@@ -78,7 +78,7 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
         const stockQty     = products.find(p => p.id === id)?.stock ?? 0;
         const left  = openingQty + purchasedQty;
         const right = soldQty + wasteQty + stockQty;
-        const diff  = left - right;
+        const diff  = right - left; // negative = missing stock
         return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
     });
 
