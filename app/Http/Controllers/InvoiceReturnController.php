@@ -128,20 +128,14 @@ class InvoiceReturnController extends Controller
             ]);
 
             foreach ($data['items'] as $item) {
-                $count    = max(1, (int) ($item['count'] ?? 1));
-                $quantity = (float) $item['quantity'];
-                $price    = (float) $item['unit_price'];
-
-                for ($i = 0; $i < $count; $i++) {
-                    InvoiceReturnItem::create([
-                        'invoice_return_id' => $ret->id,
-                        'product_id'        => $item['product_id'],
-                        'size_id'           => $item['size_id'] ?? null,
-                        'quantity'          => $quantity,
-                        'unit_price'        => $price,
-                        'line_total'        => $price,
-                    ]);
-                }
+                InvoiceReturnItem::create([
+                    'invoice_return_id' => $ret->id,
+                    'product_id'        => $item['product_id'],
+                    'size_id'           => $item['size_id'] ?? null,
+                    'quantity'          => (float) $item['quantity'],
+                    'unit_price'        => (float) $item['unit_price'],
+                    'line_total'        => (float) $item['line_total'],
+                ]);
             }
 
             $ret->refresh();

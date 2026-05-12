@@ -45,9 +45,10 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
         const tp = product.price_tier?.tier_prices?.find((t: any) => t.size_id === size.id);
         return tp ? { regular: +tp.price_regular, vip: +tp.price_vip } : { regular: 0, vip: 0 };
       }
+      // للعطور الأصلية (unit_decant): السعر هو سعر الوحدة (per ml) وليس × الحجم
       const r = +product?.product_price?.price_per_unit_regular || 0;
       const v = +product?.product_price?.price_per_unit_vip || 0;
-      return { regular: r * +size.value, vip: v * +size.value };
+      return { regular: r, vip: v };
     } catch { return { regular: 0, vip: 0 }; }
   }
 
@@ -83,6 +84,9 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
       <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
         {availableSizes.map(size => {
           const price = getPrice(size);
+          const isTier = product?.selling_type === 'tier_based';
+          // للعطور الأصلية: نعرض السعر الإجمالي للحجم كمعلومة للمستخدم
+          const displayPrice = isTier ? price : price * +size.value;
           const isSelected = selectedSizeId === String(size.id);
           return (
             <button key={size.id} onClick={() => handleSelect(String(size.id), size)}
@@ -95,7 +99,7 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
               <span className={`text-[12px] font-bold sm:mt-0.5 ${
                 isSelected ? 'text-white/80' : 'text-primary/70 dark:text-primary/60'
               }`}>
-                {price > 0 ? `${price.toFixed(2)} د` : '—'}
+                {displayPrice > 0 ? `${displayPrice.toFixed(2)} د` : '—'}
               </span>
             </button>
           );
