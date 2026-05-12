@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { RotateCcw, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText } from 'lucide-react';
+import { RotateCcw, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, List } from 'lucide-react';
 
 interface User     { id: number; name: string; }
 interface Customer { id: number; name: string; }
@@ -238,7 +238,7 @@ export default function Returns({ users, customers, suppliers, categories, filte
                         </div>
 
                         {/* Export */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <a href={buildExportUrl('excel')} target="_blank"
                                 className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
                                 <FileSpreadsheet className="w-4 h-4" /> Excel
@@ -246,6 +246,10 @@ export default function Returns({ users, customers, suppliers, categories, filte
                             <a href={buildExportUrl('pdf')} target="_blank"
                                 className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
                                 <FileText className="w-4 h-4" /> PDF
+                            </a>
+                            <a href={`/reports/returns/details?${new URLSearchParams(buildParams()).toString()}`}
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white transition-all font-bold text-sm">
+                                <List className="w-4 h-4" /> التفاصيل
                             </a>
                         </div>
 

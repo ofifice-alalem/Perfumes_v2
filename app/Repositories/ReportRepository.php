@@ -2390,4 +2390,287 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('returns-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+        $result = [];
+
+        if ($type !== 'supplier') {
+            $customersQuery = DB::table('customers')
+                ->when($customerId, fn($q) => $q->where('id', $customerId))
+                ->orderBy('name')->get(['id', 'name']);
+
+            foreach ($customersQuery as $customer) {
+                $returnsQuery = DB::table('invoice_returns')
+                    ->whereNull('deleted_at')
+                    ->where('customer_id', $customer->id)
+                    ->when($df,     fn($q) => $q->where('created_at', '>=', $df))
+                    ->when($dt,     fn($q) => $q->where('created_at', '<=', $dt))
+                    ->when($userId, fn($q) => $q->where('user_id', $userId));
+                if ($categoryId) {
+                    $returnsQuery->whereExists(fn($q) => $q->from('invoice_return_items')
+                        ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                        ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
+                        ->where('products.category_id', $categoryId));
+                }
+                $returns = $returnsQuery->select('id', 'total', 'created_at')->orderBy('created_at')->get();
+                if ($returns->isEmpty()) continue;
+
+                $returnsList = [];
+                foreach ($returns as $r) {
+                    $items = DB::table('invoice_return_items')
+                        ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                        ->where('invoice_return_items.invoice_return_id', $r->id)
+                        ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                        ->select('products.name as product_name', 'invoice_return_items.unit_price',
+                            DB::raw('MIN(invoice_return_items.quantity) as quantity'),
+                            DB::raw('COUNT(*) as count'))
+                        ->groupBy('products.name', 'invoice_return_items.unit_price')
+                        ->get();
+                    $returnsList[] = ['id' => $r->id, 'total' => (float)$r->total, 'date' => $r->created_at, 'items' => $items->toArray()];
+                }
+
+                $result[] = [
+                    'entity_id'    => $customer->id,
+                    'entity_name'  => $customer->name,
+                    'entity_type'  => 'customer',
+                    'return_count' => count($returnsList),
+                    'total_amount' => round(array_sum(array_column($returnsList, 'total')), 2),
+                    'returns'      => $returnsList,
+                ];
+            }
+        }
+
+        if ($type !== 'customer') {
+            $suppliersQuery = DB::table('suppliers')
+                ->when($supplierId, fn($q) => $q->where('id', $supplierId))
+                ->orderBy('name')->get(['id', 'name']);
+
+            foreach ($suppliersQuery as $supplier) {
+                $returnsQuery = DB::table('purchase_returns')
+                    ->whereNull('deleted_at')
+                    ->where('supplier_id', $supplier->id)
+                    ->when($df,     fn($q) => $q->where('created_at', '>=', $df))
+                    ->when($dt,     fn($q) => $q->where('created_at', '<=', $dt))
+                    ->when($userId, fn($q) => $q->where('user_id', $userId));
+                if ($categoryId) {
+                    $returnsQuery->whereExists(fn($q) => $q->from('purchase_return_items')
+                        ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
+                        ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
+                        ->where('products.category_id', $categoryId));
+                }
+                $returns = $returnsQuery->select('id', 'total', 'created_at')->orderBy('created_at')->get();
+                if ($returns->isEmpty()) continue;
+
+                $returnsList = [];
+                foreach ($returns as $r) {
+                    $items = DB::table('purchase_return_items')
+                        ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
+                        ->where('purchase_return_items.purchase_return_id', $r->id)
+                        ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                        ->select('products.name as product_name', 'purchase_return_items.unit_cost as unit_price',
+                            DB::raw('MIN(purchase_return_items.quantity) as quantity'),
+                            DB::raw('COUNT(*) as count'))
+                        ->groupBy('products.name', 'purchase_return_items.unit_cost')
+                        ->get();
+                    $returnsList[] = ['id' => $r->id, 'total' => (float)$r->total, 'date' => $r->created_at, 'items' => $items->toArray()];
+                }
+
+                $result[] = [
+                    'entity_id'    => $supplier->id,
+                    'entity_name'  => $supplier->name,
+                    'entity_type'  => 'supplier',
+                    'return_count' => count($returnsList),
+                    'total_amount' => round(array_sum(array_column($returnsList, 'total')), 2),
+                    'returns'      => $returnsList,
+                ];
+            }
+        }
+
+        usort($result, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+        return $result;
+    }
+
+    public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): void
+    {
+        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('تفاصيل المرتجعات');
+
+        $row = 1;
+        foreach ([
+            ['تقرير تفاصيل المرتجعات', ''],
+            ['من تاريخ', $dateFrom ?? 'البداية'],
+            ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')],
+            ['النوع', match($type) { 'customer' => 'مرتجعات العملاء', 'supplier' => 'مرتجعات الموردين', default => 'الكل' }],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ] as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF2F2']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        foreach ($data as $entry) {
+            $color = $entry['entity_type'] === 'customer' ? 'DC2626' : 'D97706';
+            $bg    = $entry['entity_type'] === 'customer' ? 'FEE2E2' : 'FEF3C7';
+
+            $sheet->setCellValue('A' . $row, $entry['entity_name'] . ' — ' . $entry['return_count'] . ' مرتجع — ' . $fmtN($entry['total_amount']));
+            $sheet->mergeCells('A' . $row . ':E' . $row);
+            $sheet->getStyle('A' . $row)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $color]],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+            $row++;
+
+            foreach ($entry['returns'] as $r) {
+                $prefix = $entry['entity_type'] === 'customer' ? 'RET#' : 'PRET#';
+                $sheet->fromArray([$prefix . $r['id'], substr($r['date'], 0, 10), $fmtN($r['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                    'font'    => ['bold' => true],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+
+                $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'السعر', 'المبلغ'], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
+                    'font'      => ['bold' => true],
+                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                ]);
+                $row++;
+
+                foreach ($r['items'] as $item) {
+                    $item = (array) $item;
+                    $sheet->fromArray([
+                        $item['count'] > 1 ? $item['count'] : '',
+                        $item['product_name'],
+                        $fmtN($item['quantity']),
+                        $fmtN($item['unit_price']),
+                        $fmtN($item['quantity'] * $item['count'] * $item['unit_price']),
+                    ], null, 'A' . $row);
+                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    ]);
+                    if ($item['count'] > 1) {
+                        $sheet->getStyle('A' . $row)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
+                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
+                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                        ]);
+                    }
+                    $row++;
+                }
+            }
+
+            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row += 2;
+        }
+
+        foreach (range('A', 'E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="تفاصيل_المرتجعات_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g  = fn($text) => $arabic->utf8Glyphs($text);
+        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
+        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $entries = array_map(function ($entry) use ($g, $en) {
+            return [
+                'name'         => $en($g($entry['entity_name'])),
+                'entity_type'  => $entry['entity_type'],
+                'return_count' => $entry['return_count'],
+                'total_amount' => $entry['total_amount'],
+                'returns'      => array_map(fn($r) => [
+                    'id'    => $r['id'],
+                    'date'  => substr($r['date'], 0, 10),
+                    'total' => $r['total'],
+                    'items' => array_map(fn($i) => [
+                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
+                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
+                        'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
+                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
+                    ], $r['items']),
+                ], $entry['returns']),
+            ];
+        }, $data);
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $grandCount  = array_sum(array_column($data, 'return_count'));
+        $typeLabel   = match($type) { 'customer' => $g('مرتجعات العملاء'), 'supplier' => $g('مرتجعات الموردين'), default => $g('جميع المرتجعات') };
+
+        $labels = [
+            'title'          => $g('تفاصيل المرتجعات'),
+            'type_label'     => $typeLabel,
+            'dateFrom'       => $dateFrom ?? $g('البداية'),
+            'dateTo'         => $dateTo ?? now()->format('Y-m-d'),
+            'labelFrom'      => $g('من'),
+            'labelTo'        => $g('إلى'),
+            'generatedAt'    => now()->format('Y-m-d H:i'),
+            'generatedLabel' => $g('تاريخ الإنشاء'),
+            'filterUser'     => $userId     ? $en($g(DB::table('users')->where('id', $userId)->value('name') ?? ''))         : null,
+            'filterCustomer' => $customerId ? $en($g(DB::table('customers')->where('id', $customerId)->value('name') ?? '')) : null,
+            'filterSupplier' => $supplierId ? $en($g(DB::table('suppliers')->where('id', $supplierId)->value('name') ?? '')) : null,
+            'filterCategory' => $categoryId ? $en($g(DB::table('categories')->where('id', $categoryId)->value('name') ?? '')) : null,
+            'labelUser'      => $g('المستخدم'),
+            'labelCustomer'  => $g('العميل'),
+            'labelSupplier'  => $g('المورد'),
+            'labelCategory'  => $g('التصنيف'),
+            'labelType'      => $g('النوع'),
+            'grandAmount'    => $grandAmount,
+            'grandCount'     => $grandCount,
+            'product'        => $g('المنتج'),
+            'qty'            => $g('الحجم'),
+            'count_label'    => $g('العدد'),
+            'price'          => $g('السعر'),
+            'amount'         => $g('المبلغ'),
+            'total'          => $g('الإجمالي'),
+            'returns_label'  => $g('عدد المرتجعات'),
+            'entities_label' => $g('عدد الجهات'),
+            'totalPages'     => 1,
+        ];
+
+        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-details-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+        $pdf->render();
+        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-details-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+
+        return $pdf->stream('returns-details-' . now()->format('Y-m-d') . '.pdf');
+    }
 }

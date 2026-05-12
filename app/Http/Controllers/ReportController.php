@@ -375,4 +375,50 @@ class ReportController extends Controller
             $request->integer('category_id') ?: null,
         );
     }
+
+    public function returnsDetails(Request $request): Response
+    {
+        $dateFrom   = $request->input('date_from');
+        $dateTo     = $request->input('date_to');
+        $userId     = $request->integer('user_id') ?: null;
+        $customerId = $request->integer('customer_id') ?: null;
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
+        $type       = $request->input('type', 'all');
+
+        return Inertia::render('Reports/ReturnsDetails', [
+            'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'customers'  => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId', 'type'),
+            'data'       => $this->reports->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type),
+        ]);
+    }
+
+    public function returnsDetailsExcel(Request $request)
+    {
+        $this->reports->exportReturnsDetailsExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+            $request->input('type', 'all'),
+        );
+    }
+
+    public function returnsDetailsPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportReturnsDetailsPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+            $request->input('type', 'all'),
+        );
+    }
 }
