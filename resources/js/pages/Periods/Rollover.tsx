@@ -294,16 +294,68 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
 
                         {/* Stats */}
                         <SpatialCard title="ملخص الفترة" icon={<BarChart2 className="w-4 h-4" />}>
-                            <div className="grid grid-cols-2 gap-3 p-1">
-                                {Object.entries(preview.stats).map(([key, val]) => (
-                                    <div key={key} className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-black/3 dark:bg-white/3">
-                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">{statLabels[key] ?? key}</span>
-                                        <span className="font-black text-slate-800 dark:text-white">
-                                            {typeof val === 'number' && !['invoices_count', 'purchases_count', 'new_customers'].includes(key)
-                                                ? fmt(val) : val}
-                                        </span>
+                            <div className="flex flex-col gap-4 p-1">
+
+                                {/* المبيعات */}
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المبيعات</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { key: 'total_sales',     label: 'إجمالي المبيعات',   color: 'text-emerald-600 dark:text-emerald-400' },
+                                            { key: 'invoices_count',  label: 'عدد الفواتير',       color: 'text-slate-800 dark:text-white' },
+                                            { key: 'total_returns_in',label: 'مرتجعات العملاء',   color: 'text-amber-600 dark:text-amber-400' },
+                                            { key: 'total_paid_in',   label: 'مقبوضات العملاء',   color: 'text-primary' },
+                                            { key: 'new_customers',   label: 'عملاء جدد',          color: 'text-slate-800 dark:text-white' },
+                                        ].map(({ key, label, color }) => (
+                                            <div key={key} className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-emerald-500/5 border border-emerald-500/10">
+                                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                                                <span className={`font-black text-lg ${color}`}>
+                                                    {['invoices_count','new_customers'].includes(key)
+                                                        ? preview.stats[key as keyof Stats]
+                                                        : fmt(preview.stats[key as keyof Stats] as number)}
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                </div>
+
+                                <div className="h-px bg-black/5 dark:bg-white/8" />
+
+                                {/* المشتريات */}
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المشتريات</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { key: 'total_purchases',  label: 'إجمالي المشتريات',  color: 'text-primary' },
+                                            { key: 'purchases_count',  label: 'عدد المشتريات',     color: 'text-slate-800 dark:text-white' },
+                                            { key: 'total_returns_out',label: 'مرتجعات الموردين',  color: 'text-amber-600 dark:text-amber-400' },
+                                            { key: 'total_paid_out',   label: 'مدفوعات الموردين',  color: 'text-red-500' },
+                                        ].map(({ key, label, color }) => (
+                                            <div key={key} className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-primary/5 border border-primary/10">
+                                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                                                <span className={`font-black text-lg ${color}`}>
+                                                    {key === 'purchases_count'
+                                                        ? preview.stats[key as keyof Stats]
+                                                        : fmt(preview.stats[key as keyof Stats] as number)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-black/5 dark:bg-white/8" />
+
+                                {/* المخزون */}
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المخزون</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-red-500/5 border border-red-500/10">
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">قيمة التالف</span>
+                                            <span className="font-black text-lg text-red-500">{fmt(preview.stats.total_waste)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         </SpatialCard>
                     </div>

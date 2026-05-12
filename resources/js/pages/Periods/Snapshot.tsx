@@ -354,15 +354,74 @@ export default function PeriodsSnapshot({ period }: Props) {
 
                 {/* Stats */}
                 <SpatialCard title="الملخص الإحصائي" icon={<BarChart2 className="w-4 h-4" />}>
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 p-1">
-                        {stats.map(s => (
-                            <div key={s.id} className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-black/3 dark:bg-white/3">
-                                <span className="text-xs font-bold text-slate-400 dark:text-white/40">{statLabels[s.type] ?? s.type}</span>
-                                <span className="font-black text-slate-800 dark:text-white">
-                                    {countTypes.includes(s.type) ? s.balance : fmt(s.balance)}
-                                </span>
+                    <div className="flex flex-col gap-4 p-1">
+
+                        {/* المبيعات */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المبيعات</span>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                {[
+                                    { type: 'total_sales',      label: 'إجمالي المبيعات',   color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                                    { type: 'invoices_count',   label: 'عدد الفواتير',       color: 'text-slate-800 dark:text-white',         bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                                    { type: 'total_returns_in', label: 'مرتجعات العملاء',   color: 'text-amber-600 dark:text-amber-400',     bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                                    { type: 'total_paid_in',    label: 'مقبوضات العملاء',   color: 'text-primary',                           bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                                    { type: 'new_customers',    label: 'عملاء جدد',          color: 'text-slate-800 dark:text-white',         bg: 'bg-emerald-500/5 border-emerald-500/10' },
+                                ].map(({ type, label, color, bg }) => {
+                                    const item = stats.find(s => s.type === type);
+                                    return (
+                                        <div key={type} className={`flex flex-col gap-1 px-4 py-3 rounded-[14px] border ${bg}`}>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                                            <span className={`font-black text-lg ${color}`}>
+                                                {countTypes.includes(type)
+                                                    ? (item?.balance ?? 0)
+                                                    : fmt(item?.balance ?? 0)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        ))}
+                        </div>
+
+                        <div className="h-px bg-black/5 dark:bg-white/8" />
+
+                        {/* المشتريات */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المشتريات</span>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                {[
+                                    { type: 'total_purchases',   label: 'إجمالي المشتريات',  color: 'text-primary',                       bg: 'bg-primary/5 border-primary/10' },
+                                    { type: 'purchases_count',   label: 'عدد المشتريات',     color: 'text-slate-800 dark:text-white',     bg: 'bg-primary/5 border-primary/10' },
+                                    { type: 'total_returns_out', label: 'مرتجعات الموردين',  color: 'text-amber-600 dark:text-amber-400', bg: 'bg-primary/5 border-primary/10' },
+                                    { type: 'total_paid_out',    label: 'مدفوعات الموردين',  color: 'text-red-500',                       bg: 'bg-primary/5 border-primary/10' },
+                                ].map(({ type, label, color, bg }) => {
+                                    const item = stats.find(s => s.type === type);
+                                    return (
+                                        <div key={type} className={`flex flex-col gap-1 px-4 py-3 rounded-[14px] border ${bg}`}>
+                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">{label}</span>
+                                            <span className={`font-black text-lg ${color}`}>
+                                                {countTypes.includes(type)
+                                                    ? (item?.balance ?? 0)
+                                                    : fmt(item?.balance ?? 0)}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-black/5 dark:bg-white/8" />
+
+                        {/* المخزون */}
+                        <div className="flex flex-col gap-2">
+                            <span className="text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest px-1">المخزون</span>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1 px-4 py-3 rounded-[14px] bg-red-500/5 border border-red-500/10">
+                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">قيمة التالف</span>
+                                    <span className="font-black text-lg text-red-500">{fmt(stats.find(s => s.type === 'total_waste')?.balance ?? 0)}</span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </SpatialCard>
             </div>
