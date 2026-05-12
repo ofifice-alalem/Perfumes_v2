@@ -75,28 +75,28 @@
 <table class="items">
     <thead>
         <tr>
-            <th style="width:10%">{{ $labels['count_label'] }}</th>
-            <th style="width:38%">{{ $labels['product'] }}</th>
-            <th style="width:15%">{{ $labels['qty'] }}</th>
-            <th style="width:17%">{{ $labels['price'] }}</th>
             <th style="width:20%">{{ $labels['amount'] }}</th>
+            <th style="width:17%">{{ $labels['price'] }}</th>
+            <th style="width:15%">{{ $labels['qty'] }}</th>
+            <th style="width:38%">{{ $labels['product'] }}</th>
+            <th style="width:10%">{{ $labels['count_label'] }}</th>
         </tr>
     </thead>
     <tbody>
         @foreach($inv['items'] as $i => $item)
         <tr class="{{ $i % 2 === 0 ? '' : 'even' }}">
-            <td class="num" style="color:{{ $item['count'] > 1 ? '#1565C0' : '#94a3b8' }}; font-weight:{{ $item['count'] > 1 ? 'bold' : 'normal' }};">{{ $item['count'] > 1 ? $item['count'] : '—' }}</td>
-            <td>{{ $item['product_name'] }}</td>
-            <td class="num">{{ $fmtN($item['quantity']) }}</td>
-            <td class="num">{{ $fmtN($item['unit_price']) }}</td>
             <td class="num">{{ $fmtN($item['quantity'] * $item['count'] * $item['unit_price']) }}</td>
+            <td class="num">{{ $fmtN($item['unit_price']) }}</td>
+            <td class="num">{{ $fmtN($item['quantity']) }}</td>
+            <td>{{ $item['product_name'] }}</td>
+            <td class="num" style="color:{{ $item['count'] > 1 ? '#1565C0' : '#94a3b8' }}; font-weight:{{ $item['count'] > 1 ? 'bold' : 'normal' }};">{{ $item['count'] > 1 ? $item['count'] : '—' }}</td>
         </tr>
         @endforeach
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="4">{{ $labels['total'] }}</td>
             <td class="num">{{ $fmtN($inv['total']) }}</td>
+            <td colspan="4">{{ $labels['total'] }}</td>
         </tr>
     </tfoot>
 </table>
