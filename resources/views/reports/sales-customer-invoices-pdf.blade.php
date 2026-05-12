@@ -89,7 +89,7 @@
             <td class="num">{{ $fmtN($item['quantity']) }}</td>
             <td class="num" style="color:{{ $item['count'] > 1 ? '#1565C0' : '#94a3b8' }}; font-weight:{{ $item['count'] > 1 ? 'bold' : 'normal' }};">{{ $item['count'] > 1 ? $item['count'] : '—' }}</td>
             <td class="num">{{ $fmtN($item['unit_price']) }}</td>
-            <td class="num">{{ $fmtN($item['quantity'] * $item['unit_price']) }}</td>
+            <td class="num">{{ $fmtN($item['quantity'] * $item['count'] * $item['unit_price']) }}</td>
         </tr>
         @endforeach
     </tbody>

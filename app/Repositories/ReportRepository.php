@@ -1598,11 +1598,18 @@ class ReportRepository implements ReportRepositoryInterface
                         $fmtN($item['quantity']),
                         $item['count'] > 1 ? $item['count'] : '',
                         $fmtN($item['unit_price']),
-                        $fmtN($item['quantity'] * $item['unit_price']),
+                        $fmtN($item['quantity'] * $item['count'] * $item['unit_price']),
                     ], null, 'A' . $row);
                     $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                     ]);
+                    if ($item['count'] > 1) {
+                        $sheet->getStyle('C' . $row)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
+                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
+                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                        ]);
+                    }
                     $row++;
                 }
             }
