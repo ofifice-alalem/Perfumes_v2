@@ -53,14 +53,6 @@
 {{-- Summary Cards --}}
 <div class="summary-tbl">
     <div class="summary-cell">
-        <div class="summary-label">{{ $labels['due'] }}</div>
-        <div class="summary-value" style="color:#dc2626;">{{ $fmtN($labels['grandDue']) }}</div>
-    </div>
-    <div class="summary-cell" style="border-right: none;">
-        <div class="summary-label">{{ $labels['paid'] }}</div>
-        <div class="summary-value" style="color:#16a34a;">{{ $fmtN($labels['grandPaid']) }}</div>
-    </div>
-    <div class="summary-cell" style="border-right: none;">
         <div class="summary-label">{{ $labels['invoices_label'] }}</div>
         <div class="summary-value">{{ $labels['grandCount'] }}</div>
     </div>
@@ -78,15 +70,16 @@
 
 @foreach($entry['invoices'] as $inv)
 <div class="invoice-header">
-    INV#{{ $inv['id'] }} &nbsp;&nbsp; {{ $inv['date'] }} &nbsp;&nbsp; {{ $labels['total'] }}: {{ $fmtN($inv['total']) }} &nbsp;&nbsp; {{ $labels['paid'] }}: {{ $fmtN($inv['paid_amount']) }} &nbsp;&nbsp; {{ $labels['due'] }}: {{ $fmtN($inv['due_amount']) }}
+    INV#{{ $inv['id'] }} &nbsp;&nbsp; {{ $inv['date'] }} &nbsp;&nbsp; {{ $labels['total'] }}: {{ $fmtN($inv['total']) }}
 </div>
 <table class="items">
     <thead>
         <tr>
-            <th style="width:45%">{{ $labels['product'] }}</th>
+            <th style="width:40%">{{ $labels['product'] }}</th>
             <th style="width:15%">{{ $labels['qty'] }}</th>
-            <th style="width:20%">{{ $labels['price'] }}</th>
-            <th style="width:20%">{{ $labels['amount'] }}</th>
+            <th style="width:10%">{{ $labels['count_label'] }}</th>
+            <th style="width:17%">{{ $labels['price'] }}</th>
+            <th style="width:18%">{{ $labels['amount'] }}</th>
         </tr>
     </thead>
     <tbody>
@@ -94,6 +87,7 @@
         <tr class="{{ $i % 2 === 0 ? '' : 'even' }}">
             <td>{{ $item['product_name'] }}</td>
             <td class="num">{{ $fmtN($item['quantity']) }}</td>
+            <td class="num" style="color:{{ $item['count'] > 1 ? '#1565C0' : '#94a3b8' }}; font-weight:{{ $item['count'] > 1 ? 'bold' : 'normal' }};">{{ $item['count'] > 1 ? $item['count'] : '—' }}</td>
             <td class="num">{{ $fmtN($item['unit_price']) }}</td>
             <td class="num">{{ $fmtN($item['quantity'] * $item['unit_price']) }}</td>
         </tr>
@@ -101,7 +95,7 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="3">{{ $labels['total'] }}</td>
+            <td colspan="4">{{ $labels['total'] }}</td>
             <td class="num">{{ $fmtN($inv['total']) }}</td>
         </tr>
     </tfoot>
@@ -109,9 +103,7 @@
 @endforeach
 
 <div style="background:#E8EAF6; padding:5px 10px; font-weight:bold; font-size:10px; margin-bottom:6px; border-top: 2px solid #0f172a;">
-    {{ $labels['total'] }}: {{ $fmtN($entry['total_amount']) }} &nbsp;&nbsp;
-    {{ $labels['paid'] }}: {{ $fmtN($entry['total_paid']) }} &nbsp;&nbsp;
-    {{ $labels['due'] }}: {{ $fmtN($entry['total_due']) }}
+    {{ $labels['total'] }}: {{ $fmtN($entry['total_amount']) }}
 </div>
 @endforeach
 

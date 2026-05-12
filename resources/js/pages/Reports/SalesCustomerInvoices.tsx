@@ -14,13 +14,12 @@ interface InvoiceItem {
     product_name: string;
     quantity: number;
     unit_price: number;
+    count: number;
 }
 
 interface Invoice {
     id: number;
     total: number;
-    paid_amount: number;
-    due_amount: number;
     date: string;
     items: InvoiceItem[];
 }
@@ -30,8 +29,6 @@ interface CustomerEntry {
     customer_name: string;
     invoice_count: number;
     total_amount: number;
-    total_paid: number;
-    total_due: number;
     invoices: Invoice[];
 }
 
@@ -101,8 +98,6 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
     }
 
     const grandTotal = data.reduce((s, c) => s + c.total_amount, 0);
-    const grandPaid  = data.reduce((s, c) => s + c.total_paid, 0);
-    const grandDue   = data.reduce((s, c) => s + c.total_due, 0);
     const grandCount = data.reduce((s, c) => s + c.invoice_count, 0);
 
     const FilterPanel = () => (
@@ -175,7 +170,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
 
                         {/* Summary Cards */}
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                             <div className="spatial-card p-4 flex flex-col gap-1">
                                 <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد العملاء</p>
                                 <p className="text-2xl font-black text-slate-800 dark:text-white">{data.length}</p>
@@ -183,14 +178,6 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                             <div className="spatial-card p-4 flex flex-col gap-1">
                                 <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد الفواتير</p>
                                 <p className="text-2xl font-black text-slate-800 dark:text-white">{grandCount}</p>
-                            </div>
-                            <div className="spatial-card p-4 flex flex-col gap-1">
-                                <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">المدفوع</p>
-                                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(grandPaid)}</p>
-                            </div>
-                            <div className="spatial-card p-4 flex flex-col gap-1">
-                                <p className="text-xs font-black text-red-500 uppercase tracking-widest">المتبقي</p>
-                                <p className="text-2xl font-black text-red-500">{fmt(grandDue)}</p>
                             </div>
                         </div>
 
@@ -229,19 +216,9 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                         <p className="text-xs font-bold text-slate-400 dark:text-white/40">{customer.invoice_count} فاتورة</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-6 text-sm">
-                                                    <div className="text-right hidden sm:block">
-                                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">الإجمالي</p>
-                                                        <p className="font-black text-slate-800 dark:text-white">{fmt(customer.total_amount)}</p>
-                                                    </div>
-                                                    <div className="text-right hidden sm:block">
-                                                        <p className="text-xs font-bold text-emerald-600">مدفوع</p>
-                                                        <p className="font-black text-emerald-600">{fmt(customer.total_paid)}</p>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="text-xs font-bold text-red-500">متبقي</p>
-                                                        <p className="font-black text-red-500">{fmt(customer.total_due)}</p>
-                                                    </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-bold text-slate-400 dark:text-white/40">الإجمالي</p>
+                                                    <p className="font-black text-slate-800 dark:text-white">{fmt(customer.total_amount)}</p>
                                                 </div>
                                             </button>
 
@@ -255,8 +232,6 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                     <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">رقم الفاتورة</th>
                                                                     <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">التاريخ</th>
                                                                     <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">الإجمالي</th>
-                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">مدفوع</th>
-                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">متبقي</th>
                                                                     <th className="py-2 px-3"></th>
                                                                 </tr>
                                                             </thead>
@@ -267,8 +242,6 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                             <td className="py-2 px-3 font-black text-primary">INV#{inv.id}</td>
                                                                             <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{inv.date.substring(0, 10)}</td>
                                                                             <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(inv.total)}</td>
-                                                                            <td className="py-2 px-3 font-bold text-emerald-600">{fmt(inv.paid_amount)}</td>
-                                                                            <td className="py-2 px-3 font-bold text-red-500">{fmt(inv.due_amount)}</td>
                                                                             <td className="py-2 px-3">
                                                                                 <button onClick={() => toggleInvoice(inv.id)}
                                                                                     className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors whitespace-nowrap">
@@ -279,12 +252,13 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                         </tr>
                                                                         {expandedInvoices.has(inv.id) && (
                                                                             <tr key={`${inv.id}-items`}>
-                                                                                <td colSpan={6} className="px-6 py-2 bg-black/2 dark:bg-white/2">
+                                                                                <td colSpan={4} className="px-6 py-2 bg-black/2 dark:bg-white/2">
                                                                                     <table className="w-full text-xs">
                                                                                         <thead>
                                                                                             <tr className="border-b border-black/5 dark:border-white/5">
                                                                                                 <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المنتج</th>
                                                                                                 <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">الكمية</th>
+                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">العدد</th>
                                                                                                 <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">السعر</th>
                                                                                                 <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المبلغ</th>
                                                                                             </tr>
@@ -294,6 +268,12 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                                                 <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
                                                                                                     <td className="py-1.5 px-2 font-bold text-slate-700 dark:text-white/70">{item.product_name}</td>
                                                                                                     <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.quantity)}</td>
+                                                                                                    <td className="py-1.5 px-2">
+                                                                                                        {item.count > 1
+                                                                                                            ? <span className="font-black text-blue-600 dark:text-blue-400">{item.count}</span>
+                                                                                                            : <span className="text-slate-300 dark:text-white/20">—</span>
+                                                                                                        }
+                                                                                                    </td>
                                                                                                     <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.unit_price)}</td>
                                                                                                     <td className="py-1.5 px-2 font-black text-slate-800 dark:text-white">{fmt(item.quantity * item.unit_price)}</td>
                                                                                                 </tr>
@@ -310,8 +290,6 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                 <tr className="border-t-2 border-black/10 dark:border-white/10">
                                                                     <td colSpan={2} className="py-2 px-3 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
                                                                     <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(customer.total_amount)}</td>
-                                                                    <td className="py-2 px-3 font-black text-emerald-600">{fmt(customer.total_paid)}</td>
-                                                                    <td className="py-2 px-3 font-black text-red-500">{fmt(customer.total_due)}</td>
                                                                     <td></td>
                                                                 </tr>
                                                             </tfoot>
@@ -325,17 +303,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                     {/* Grand Total */}
                                     <div className="flex items-center justify-between px-4 py-3 bg-black/3 dark:bg-white/3">
                                         <p className="font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي الكلي</p>
-                                        <div className="flex items-center gap-6 text-sm">
-                                            <div className="text-right hidden sm:block">
-                                                <p className="font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</p>
-                                            </div>
-                                            <div className="text-right hidden sm:block">
-                                                <p className="font-black text-emerald-600">{fmt(grandPaid)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-black text-red-500">{fmt(grandDue)}</p>
-                                            </div>
-                                        </div>
+                                        <p className="font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</p>
                                     </div>
                                 </div>
                             )}

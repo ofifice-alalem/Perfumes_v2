@@ -1493,7 +1493,13 @@ class ReportRepository implements ReportRepositoryInterface
                     ->join('products', 'products.id', '=', 'invoice_items.product_id')
                     ->where('invoice_items.invoice_id', $inv->id)
                     ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                    ->select('products.name as product_name', 'invoice_items.quantity', 'invoice_items.unit_price')
+                    ->select(
+                        'products.name as product_name',
+                        'invoice_items.unit_price',
+                        DB::raw('SUM(invoice_items.quantity) as quantity'),
+                        DB::raw('COUNT(*) as count')
+                    )
+                    ->groupBy('products.name', 'invoice_items.unit_price')
                     ->get();
 
                 $invoicesList[] = [
@@ -1567,8 +1573,8 @@ class ReportRepository implements ReportRepositoryInterface
 
             foreach ($entry['invoices'] as $inv) {
                 // رأس الفاتورة
-                $sheet->fromArray(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total']), 'مدفوع: ' . $fmtN($inv['paid_amount']), 'متبقي: ' . $fmtN($inv['due_amount'])], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                $sheet->fromArray(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
                     'font'    => ['bold' => true],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1576,8 +1582,8 @@ class ReportRepository implements ReportRepositoryInterface
                 $row++;
 
                 // رؤوس أعمدة المنتجات
-                $sheet->fromArray(['المنتج', 'الكمية', 'السعر', 'المبلغ', ''], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray([
+                $sheet->fromArray(['المنتج', 'الكمية', 'العدد', 'السعر', 'المبلغ'], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                     'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
                     'font'      => ['bold' => true],
                     'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1590,11 +1596,11 @@ class ReportRepository implements ReportRepositoryInterface
                     $sheet->fromArray([
                         $item['product_name'],
                         $fmtN($item['quantity']),
+                        $item['count'] > 1 ? $item['count'] : '',
                         $fmtN($item['unit_price']),
                         $fmtN($item['quantity'] * $item['unit_price']),
-                        '',
                     ], null, 'A' . $row);
-                    $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray([
+                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                     ]);
                     $row++;
@@ -1602,7 +1608,7 @@ class ReportRepository implements ReportRepositoryInterface
             }
 
             // إجمالي العميل
-            $sheet->fromArray(['الإجمالي', '', $fmtN($entry['total_amount']), 'مدفوع: ' . $fmtN($entry['total_paid']), 'متبقي: ' . $fmtN($entry['total_due'])], null, 'A' . $row);
+            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
                 'font'    => ['bold' => true, 'size' => 11],
@@ -1637,18 +1643,15 @@ class ReportRepository implements ReportRepositoryInterface
                 'name'          => $en($g($entry['customer_name'])),
                 'invoice_count' => $entry['invoice_count'],
                 'total_amount'  => $entry['total_amount'],
-                'total_paid'    => $entry['total_paid'],
-                'total_due'     => $entry['total_due'],
                 'invoices'      => array_map(fn($inv) => [
-                    'id'          => $inv['id'],
-                    'date'        => substr($inv['date'], 0, 10),
-                    'total'       => $inv['total'],
-                    'paid_amount' => $inv['paid_amount'],
-                    'due_amount'  => $inv['due_amount'],
-                    'items'       => array_map(fn($i) => [
+                    'id'    => $inv['id'],
+                    'date'  => substr($inv['date'], 0, 10),
+                    'total' => $inv['total'],
+                    'items' => array_map(fn($i) => [
                         'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
                         'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
                         'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
+                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
                     ], $inv['items']),
                 ], $entry['invoices']),
             ];
@@ -1656,8 +1659,6 @@ class ReportRepository implements ReportRepositoryInterface
 
         $grandAmount = array_sum(array_column($data, 'total_amount'));
         $grandCount  = array_sum(array_column($data, 'invoice_count'));
-        $grandPaid   = array_sum(array_column($data, 'total_paid'));
-        $grandDue    = array_sum(array_column($data, 'total_due'));
 
         $labels = [
             'title'          => $g('فواتير العملاء التفصيلية'),
@@ -1667,15 +1668,12 @@ class ReportRepository implements ReportRepositoryInterface
             'labelTo'        => $g('إلى'),
             'grandAmount'    => $grandAmount,
             'grandCount'     => $grandCount,
-            'grandPaid'      => $grandPaid,
-            'grandDue'       => $grandDue,
             'product'        => $g('المنتج'),
             'qty'            => $g('الكمية'),
+            'count_label'    => $g('العدد'),
             'price'          => $g('السعر'),
             'amount'         => $g('المبلغ'),
             'total'          => $g('الإجمالي'),
-            'paid'           => $g('المدفوع'),
-            'due'            => $g('المتبقي'),
             'invoices_label' => $g('عدد الفواتير'),
             'date_label'     => $g('التاريخ'),
             'totalPages'     => 1,
