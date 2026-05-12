@@ -2575,7 +2575,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ]);
                 $row++;
 
-                $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'السعر', 'المبلغ'], null, 'A' . $row);
+                $sheet->fromArray(['عدد', 'المنتج', 'حجم', 'سعر', 'الإجمالي'], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                     'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
                     'font'      => ['bold' => true],
@@ -2587,22 +2587,19 @@ class ReportRepository implements ReportRepositoryInterface
                 foreach ($r['items'] as $item) {
                     $item = (array) $item;
                     $sheet->fromArray([
-                        $item['count'] > 1 ? $item['count'] : '',
+                        $item['count'],
                         $item['product_name'],
-                        $fmtN($item['quantity']),
+                        $item['size_label'] ?? '—',
                         $fmtN($item['unit_price']),
-                        $fmtN($item['quantity'] * $item['count'] * $item['unit_price']),
+                        $fmtN($item['line_total']),
                     ], null, 'A' . $row);
                     $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                     ]);
-                    if ($item['count'] > 1) {
-                        $sheet->getStyle('A' . $row)->applyFromArray([
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
-                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                        ]);
-                    }
+                    $sheet->getStyle('A' . $row)->applyFromArray([
+                        'font'      => ['bold' => true, 'color' => ['rgb' => '1565C0']],
+                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                    ]);
                     $row++;
                 }
             }
@@ -2648,7 +2645,9 @@ class ReportRepository implements ReportRepositoryInterface
                         'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
                         'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
                         'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
+                        'size_label'   => is_array($i) ? ($i['size_label'] ?? null) : ($i->size_label ?? null),
                         'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
+                        'line_total'   => is_array($i) ? ($i['line_total'] ?? 0) : ($i->line_total ?? 0),
                     ], $r['items']),
                 ], $entry['returns']),
             ];
