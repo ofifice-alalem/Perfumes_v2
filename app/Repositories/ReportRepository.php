@@ -1496,7 +1496,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->select(
                         'products.name as product_name',
                         'invoice_items.unit_price',
-                        DB::raw('SUM(invoice_items.quantity) as quantity'),
+                        DB::raw('MIN(invoice_items.quantity) as quantity'),
                         DB::raw('COUNT(*) as count')
                     )
                     ->groupBy('products.name', 'invoice_items.unit_price')
