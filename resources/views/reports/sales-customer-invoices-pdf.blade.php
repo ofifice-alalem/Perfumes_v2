@@ -18,10 +18,19 @@
         #page-header .ph-title { font-size: 13px; font-weight: bold; color: #0f172a; }
         #page-header .ph-sub   { font-size: 8.5px; color: #64748b; margin-top: 2px; }
 
-        .summary-tbl  { display: table; width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-        .summary-cell { display: table-cell; width: 25%; padding: 10px 12px; border: 1px solid #e2e8f0; border-top: 3px solid #0f172a; background: #f8fafc; vertical-align: top; }
-        .summary-label { font-size: 8px; font-weight: bold; color: #64748b; margin-bottom: 4px; }
-        .summary-value { font-size: 15px; font-weight: bold; color: #0f172a; }
+        .cover { page-break-after: always; padding: 40px; text-align: center; }
+        .cover-logo { margin-bottom: 24px; }
+        .cover-title { font-size: 20px; font-weight: bold; color: #0a2540; border-bottom: 3px solid #0a2540; padding-bottom: 10px; margin-bottom: 20px; }
+        .cover-table { width: 70%; border-collapse: collapse; direction: rtl; margin: 0 auto 16px; border: 2px solid #0a2540; }
+        .cover-table td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+        .cover-table td.ct-label { color: #64748b; font-weight: bold; text-align: left; width: 35%; border-right: 2px solid #0a2540; }
+        .cover-table td.ct-value { color: #0f172a; font-weight: bold; font-size: 13px; text-align: right; }
+        .cover-table tr:last-child td { border-bottom: none; }
+        .cover-summary { width: 70%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0a2540; }
+        .cover-summary td { padding: 12px 14px; text-align: center; border-left: 1px solid #e2e8f0; }
+        .cover-summary td:last-child { border-left: none; }
+        .cover-summary .cs-label { font-size: 8px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
+        .cover-summary .cs-value { font-size: 16px; font-weight: bold; color: #0a2540; display: block; }
 
         .customer-header { background: #0a2540; color: #fff; font-weight: bold; font-size: 11px; margin-top: 10px; border-radius: 2px; page-break-before: always; }
         .customer-header table { width: 100%; border-collapse: collapse; direction: ltr; }
@@ -61,16 +70,44 @@
     </div>
 </div>
 
-{{-- Summary Cards --}}
-<div class="summary-tbl">
-    <div class="summary-cell">
-        <div class="summary-label">{{ $labels['invoices_label'] }}</div>
-        <div class="summary-value">{{ $labels['grandCount'] }}</div>
+{{-- Cover Page --}}
+<div class="cover">
+    <div class="cover-logo">
+        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 120px; max-width: 260px;">
     </div>
-    <div class="summary-cell" style="border-right: none;">
-        <div class="summary-label">{{ $labels['total'] }}</div>
-        <div class="summary-value">{{ $fmtN($labels['grandAmount']) }}</div>
-    </div>
+    <div class="cover-title">{{ $labels['title'] }}</div>
+
+    <table class="cover-table">
+        <tr>
+            <td class="ct-label">{{ $labels['labelFrom'] }}</td>
+            <td class="ct-value">{{ $labels['dateFrom'] }}</td>
+        </tr>
+        <tr>
+            <td class="ct-label">{{ $labels['labelTo'] }}</td>
+            <td class="ct-value">{{ $labels['dateTo'] }}</td>
+        </tr>
+        <tr>
+            <td class="ct-label">{{ $labels['generatedLabel'] }}</td>
+            <td class="ct-value">{{ $labels['generatedAt'] }}</td>
+        </tr>
+    </table>
+
+    <table class="cover-summary">
+        <tr>
+            <td>
+                <span class="cs-label">{{ $labels['total'] }}</span>
+                <span class="cs-value">{{ $fmtN($labels['grandAmount']) }}</span>
+            </td>
+            <td>
+                <span class="cs-label">{{ $labels['invoices_label'] }}</span>
+                <span class="cs-value">{{ $labels['grandCount'] }}</span>
+            </td>
+            <td>
+                <span class="cs-label">{{ $labels['customers_label'] }}</span>
+                <span class="cs-value">{{ count($entries) }}</span>
+            </td>
+        </tr>
+    </table>
 </div>
 
 {{-- Entries --}}
