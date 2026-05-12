@@ -23,26 +23,26 @@
         .summary-label { font-size: 8px; font-weight: bold; color: #64748b; margin-bottom: 4px; }
         .summary-value { font-size: 15px; font-weight: bold; color: #0f172a; }
 
-        .customer-header { background: #1565C0; color: #fff; font-weight: bold; font-size: 11px; margin-top: 10px; border-radius: 2px; }
+        .customer-header { background: #0a2540; color: #fff; font-weight: bold; font-size: 11px; margin-top: 10px; border-radius: 2px; page-break-before: always; }
         .customer-header table { width: 100%; border-collapse: collapse; direction: ltr; }
-        .customer-header td { padding: 7px 10px; color: #fff; font-weight: bold; direction: rtl; unicode-bidi: bidi-override; }
-        .customer-header td.ch-amount { text-align: left; font-size: 12px; white-space: nowrap; }
-        .customer-header td.ch-count  { text-align: center; font-size: 10px; opacity: 0.85; white-space: nowrap; }
-        .customer-header td.ch-name   { text-align: right; font-size: 12px; }
+        .customer-header td { padding: 5px 8px; color: #fff; font-weight: bold; direction: rtl; unicode-bidi: bidi-override; }
+        .customer-header td.ch-amount { text-align: left; font-size: 11px; white-space: nowrap; }
+        .customer-header td.ch-count  { text-align: center; font-size: 9px; opacity: 0.80; white-space: nowrap; }
+        .customer-header td.ch-name   { text-align: right; font-size: 11px; }
 
-        .invoice-header { background: #BBDEFB; font-weight: bold; font-size: 10px; border-bottom: 1px solid #90CAF9; }
+        .invoice-header { background: #BBDEFB; font-weight: bold; font-size: 10px; border-bottom: 1px solid #90CAF9; margin-top: 6px; }
         .invoice-header table { width: 100%; border-collapse: collapse; direction: ltr; }
-        .invoice-header td { padding: 5px 10px; direction: rtl; unicode-bidi: bidi-override; color: #0f172a; font-weight: bold; white-space: nowrap; }
+        .invoice-header td { padding: 4px 8px; direction: rtl; unicode-bidi: bidi-override; color: #0f172a; font-weight: bold; white-space: nowrap; }
         .invoice-header td.ih-total { text-align: left; color: #1565C0; }
         .invoice-header td.ih-date  { text-align: center; color: #475569; }
         .invoice-header td.ih-num   { text-align: right; color: #1565C0; }
 
-        table.items { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; margin-bottom: 2px; }
-        table.items th { color: #0f172a; text-align: right; padding: 5px 6px; font-size: 9px; font-weight: bold; border: 1px solid #94a3b8; background: #f5f5f5; direction: rtl; unicode-bidi: bidi-override; }
-        table.items td { padding: 4px 6px; font-size: 9px; color: #334155; text-align: right; border: 1px solid #e2e8f0; background: #fff; direction: rtl; unicode-bidi: bidi-override; }
+        table.items { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; margin-bottom: 8px; }
+        table.items th { color: #0f172a; text-align: right; padding: 4px 5px; font-size: 8.5px; font-weight: bold; border: 1px solid #94a3b8; background: #f5f5f5; direction: rtl; unicode-bidi: bidi-override; }
+        table.items td { padding: 3px 5px; font-size: 8.5px; color: #334155; text-align: right; border: 1px solid #e2e8f0; background: #fff; direction: rtl; unicode-bidi: bidi-override; }
         table.items tr.even td { background: #f8fafc; }
         table.items td.num { font-weight: bold; color: #0f172a; direction: ltr; text-align: right; unicode-bidi: bidi-override; }
-        table.items tfoot td { background: #E8EAF6; font-weight: bold; font-size: 10px; padding: 5px 6px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; direction: rtl; }
+        table.items tfoot td { background: #E8EAF6; font-weight: bold; font-size: 9px; padding: 3px 5px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; direction: rtl; }
 
         .footer { display: table; width: 100%; margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
         .footer-r { display: table-cell; text-align: right; font-size: 7.5px; color: #94a3b8; }
@@ -75,7 +75,7 @@
 
 {{-- Entries --}}
 @foreach($entries as $entry)
-<div class="customer-header">
+<div class="customer-header" style="{{ $loop->first ? 'page-break-before: avoid;' : '' }}">
     <table>
         <tr>
             <td class="ch-amount">{{ $fmtN($entry['total_amount']) }}</td>
@@ -116,12 +116,6 @@
         </tr>
         @endforeach
     </tbody>
-    <tfoot>
-        <tr>
-            <td class="num">{{ $fmtN($inv['total']) }}</td>
-            <td colspan="4">{{ $labels['total'] }}</td>
-        </tr>
-    </tfoot>
 </table>
 @endforeach
 
