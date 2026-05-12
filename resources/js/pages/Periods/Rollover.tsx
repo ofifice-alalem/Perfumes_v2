@@ -13,6 +13,7 @@ interface OpeningStockRow  { id: number; name: string; quantity: number; }
 interface WasteProductRow  { id: number; name: string; quantity: number; }
 interface PurchasedRow     { id: number; name: string; quantity: number; }
 interface SoldRow          { id: number; name: string; quantity: number; }
+interface ReturnRow        { id: number; name: string; quantity: number; }
 interface PaymentMethodRow { id: number; name: string; balance: number; }
 
 interface Stats {
@@ -30,6 +31,8 @@ interface Preview {
     waste_products: WasteProductRow[];
     purchased_products: PurchasedRow[];
     sold_products: SoldRow[];
+    customer_return_products: ReturnRow[];
+    supplier_return_products: ReturnRow[];
     payment_methods: PaymentMethodRow[];
     stats: Stats;
 }
@@ -52,12 +55,14 @@ const statLabels: Record<string, string> = {
     purchases_count: 'عدد المشتريات', new_customers: 'عملاء جدد',
 };
 
-function StockEquationTable({ products, opening, purchased, sold, waste }: {
+function StockEquationTable({ products, opening, purchased, sold, waste, customerReturns, supplierReturns }: {
     products: ProductRow[];
     opening: OpeningStockRow[];
     purchased: PurchasedRow[];
     sold: SoldRow[];
     waste: WasteProductRow[];
+    customerReturns: ReturnRow[];
+    supplierReturns: ReturnRow[];
 }) {
     const allIds = Array.from(new Set([
         ...products.map(p => p.id),
@@ -65,21 +70,27 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
         ...purchased.map(p => p.id),
         ...sold.map(p => p.id),
         ...waste.map(p => p.id),
+        ...customerReturns.map(p => p.id),
+        ...supplierReturns.map(p => p.id),
     ]));
 
     const getName = (id: number) =>
-        [...products, ...opening, ...purchased, ...sold, ...waste].find(p => p.id === id)?.name ?? '—';
+        [...products, ...opening, ...purchased, ...sold, ...waste, ...customerReturns, ...supplierReturns]
+            .find(p => p.id === id)?.name ?? '—';
 
     const rows = allIds.map(id => {
-        const openingQty   = opening.find(p => p.id === id)?.quantity ?? 0;
-        const purchasedQty = purchased.find(p => p.id === id)?.quantity ?? 0;
-        const soldQty      = sold.find(p => p.id === id)?.quantity ?? 0;
-        const wasteQty     = waste.find(p => p.id === id)?.quantity ?? 0;
-        const stockQty     = products.find(p => p.id === id)?.stock ?? 0;
-        const left  = openingQty + purchasedQty;
-        const right = soldQty + wasteQty + stockQty;
-        const diff  = right - left; // negative = missing stock
-        return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
+        const openingQty    = opening.find(p => p.id === id)?.quantity ?? 0;
+        const purchasedQty  = purchased.find(p => p.id === id)?.quantity ?? 0;
+        const custRetQty    = customerReturns.find(p => p.id === id)?.quantity ?? 0;
+        const soldQty       = sold.find(p => p.id === id)?.quantity ?? 0;
+        const wasteQty      = waste.find(p => p.id === id)?.quantity ?? 0;
+        const suppRetQty    = supplierReturns.find(p => p.id === id)?.quantity ?? 0;
+        const stockQty      = products.find(p => p.id === id)?.stock ?? 0;
+        // opening + purchased + customer_returns = sold + waste + supplier_returns + closing
+        const left  = openingQty + purchasedQty + custRetQty;
+        const right = soldQty + wasteQty + suppRetQty + stockQty;
+        const diff  = right - left;
+        return { id, name: getName(id), openingQty, purchasedQty, custRetQty, soldQty, wasteQty, suppRetQty, stockQty, diff };
     });
 
     const allBalanced = rows.every(r => r.diff === 0);
@@ -92,16 +103,19 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
                 : <AlertTriangle className="w-4 h-4 text-amber-500" />
             }
         >
-            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40">
-                المعادلة:&nbsp;
+            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40 leading-relaxed">
                 <span className="text-slate-600 dark:text-white/60">مخزون البداية</span>
-                &nbsp;+&nbsp;
+                {' + '}
                 <span className="text-primary">المشتري</span>
-                &nbsp;=&nbsp;
+                {' + '}
+                <span className="text-blue-500">مرتجع عملاء</span>
+                {' = '}
                 <span className="text-emerald-600 dark:text-emerald-400">المباع</span>
-                &nbsp;+&nbsp;
+                {' + '}
                 <span className="text-red-500">التالف</span>
-                &nbsp;+&nbsp;
+                {' + '}
+                <span className="text-orange-500">مرتجع موردين</span>
+                {' + '}
                 <span className="text-slate-700 dark:text-white/80">المخزون النهائي</span>
             </div>
 
@@ -119,25 +133,29 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-blue-500 whitespace-nowrap">مرتجع عملاء</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-orange-500 whitespace-nowrap">مرتجع موردين</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {rows.map(row => (
                             <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-black/3 dark:hover:bg-white/3'}`}>
-                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
-                                <td className="px-4 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
-                                <td className="px-4 py-3 font-black text-primary">{row.purchasedQty}</td>
-                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
-                                <td className="px-4 py-3 font-black text-red-500">{row.wasteQty}</td>
-                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
+                                <td className="px-3 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
+                                <td className="px-3 py-3 font-black text-primary">{row.purchasedQty}</td>
+                                <td className="px-3 py-3 font-black text-blue-500">{row.custRetQty}</td>
+                                <td className="px-3 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
+                                <td className="px-3 py-3 font-black text-red-500">{row.wasteQty}</td>
+                                <td className="px-3 py-3 font-black text-orange-500">{row.suppRetQty}</td>
+                                <td className="px-3 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
+                                <td className="px-3 py-3">
                                     {row.diff === 0 ? (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓</span>
                                     ) : (
@@ -256,6 +274,8 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                             purchased={preview.purchased_products}
                             sold={preview.sold_products}
                             waste={preview.waste_products}
+                            customerReturns={preview.customer_return_products}
+                            supplierReturns={preview.supplier_return_products}
                         />
 
                         {/* Payment Methods */}

@@ -51,12 +51,14 @@ const statLabels: Record<string, string> = {
 const countTypes = ['invoices_count', 'purchases_count', 'new_customers'];
 
 // ─── Stock Equation Table ────────────────────────────────────────────────────
-function StockEquationTable({ products, opening, purchased, sold, waste }: {
+function StockEquationTable({ products, opening, purchased, sold, waste, customerReturns, supplierReturns }: {
     products: SnapshotItem[];
     opening: SnapshotItem[];
     purchased: SnapshotItem[];
     sold: SnapshotItem[];
     waste: SnapshotItem[];
+    customerReturns: SnapshotItem[];
+    supplierReturns: SnapshotItem[];
 }) {
     const allIds = Array.from(new Set([
         ...products.map(p => p.entity_id),
@@ -64,10 +66,13 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
         ...purchased.map(p => p.entity_id),
         ...sold.map(p => p.entity_id),
         ...waste.map(p => p.entity_id),
+        ...customerReturns.map(p => p.entity_id),
+        ...supplierReturns.map(p => p.entity_id),
     ])).filter(Boolean) as number[];
 
     const getName = (id: number) =>
-        [...products, ...opening, ...purchased, ...sold, ...waste].find(i => i.entity_id === id)?.entity_name ?? '—';
+        [...products, ...opening, ...purchased, ...sold, ...waste, ...customerReturns, ...supplierReturns]
+            .find(i => i.entity_id === id)?.entity_name ?? '—';
 
     const getVal = (arr: SnapshotItem[], id: number) =>
         arr.find(i => i.entity_id === id)?.balance ?? 0;
@@ -75,13 +80,15 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
     const rows = allIds.map(id => {
         const openingQty   = getVal(opening, id);
         const purchasedQty = getVal(purchased, id);
+        const custRetQty   = getVal(customerReturns, id);
         const soldQty      = getVal(sold, id);
         const wasteQty     = getVal(waste, id);
+        const suppRetQty   = getVal(supplierReturns, id);
         const stockQty     = getVal(products, id);
-        const left  = openingQty + purchasedQty;
-        const right = soldQty + wasteQty + stockQty;
-        const diff  = right - left; // negative = missing stock
-        return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
+        const left  = openingQty + purchasedQty + custRetQty;
+        const right = soldQty + wasteQty + suppRetQty + stockQty;
+        const diff  = right - left;
+        return { id, name: getName(id), openingQty, purchasedQty, custRetQty, soldQty, wasteQty, suppRetQty, stockQty, diff };
     });
 
     const allBalanced = rows.every(r => r.diff === 0);
@@ -94,16 +101,19 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
                 : <AlertTriangle className="w-4 h-4 text-amber-500" />
             }
         >
-            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40">
-                المعادلة:&nbsp;
+            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40 leading-relaxed">
                 <span className="text-slate-600 dark:text-white/60">مخزون البداية</span>
-                &nbsp;+&nbsp;
+                {' + '}
                 <span className="text-primary">المشتري</span>
-                &nbsp;=&nbsp;
+                {' + '}
+                <span className="text-blue-500">مرتجع عملاء</span>
+                {' = '}
                 <span className="text-emerald-600 dark:text-emerald-400">المباع</span>
-                &nbsp;+&nbsp;
+                {' + '}
                 <span className="text-red-500">التالف</span>
-                &nbsp;+&nbsp;
+                {' + '}
+                <span className="text-orange-500">مرتجع موردين</span>
+                {' + '}
                 <span className="text-slate-700 dark:text-white/80">المخزون النهائي</span>
             </div>
 
@@ -121,25 +131,29 @@ function StockEquationTable({ products, opening, purchased, sold, waste }: {
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
-                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-blue-500 whitespace-nowrap">مرتجع عملاء</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-orange-500 whitespace-nowrap">مرتجع موردين</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
+                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {rows.map(row => (
                             <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-black/3 dark:hover:bg-white/3'}`}>
-                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
-                                <td className="px-4 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
-                                <td className="px-4 py-3 font-black text-primary">{row.purchasedQty}</td>
-                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
-                                <td className="px-4 py-3 font-black text-red-500">{row.wasteQty}</td>
-                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
+                                <td className="px-3 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
+                                <td className="px-3 py-3 font-black text-primary">{row.purchasedQty}</td>
+                                <td className="px-3 py-3 font-black text-blue-500">{row.custRetQty}</td>
+                                <td className="px-3 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
+                                <td className="px-3 py-3 font-black text-red-500">{row.wasteQty}</td>
+                                <td className="px-3 py-3 font-black text-orange-500">{row.suppRetQty}</td>
+                                <td className="px-3 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
+                                <td className="px-3 py-3">
                                     {row.diff === 0 ? (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓</span>
                                     ) : (
@@ -162,15 +176,17 @@ export default function PeriodsSnapshot({ period }: Props) {
     const { snapshot } = period;
     const items = snapshot.items;
 
-    const customers         = items.filter(i => i.type === 'customer');
-    const suppliers         = items.filter(i => i.type === 'supplier');
-    const products          = items.filter(i => i.type === 'product_stock');
-    const openingStock      = items.filter(i => i.type === 'opening_stock');
-    const wasteProducts     = items.filter(i => i.type === 'waste_product');
-    const purchasedProducts = items.filter(i => i.type === 'purchased_product');
-    const soldProducts      = items.filter(i => i.type === 'sold_product');
-    const paymentMethods    = items.filter(i => i.type === 'payment_method');
-    const stats             = items.filter(i => !['customer','supplier','product_stock','opening_stock','waste_product','purchased_product','sold_product','payment_method'].includes(i.type));
+    const customers             = items.filter(i => i.type === 'customer');
+    const suppliers             = items.filter(i => i.type === 'supplier');
+    const products              = items.filter(i => i.type === 'product_stock');
+    const openingStock          = items.filter(i => i.type === 'opening_stock');
+    const wasteProducts         = items.filter(i => i.type === 'waste_product');
+    const purchasedProducts     = items.filter(i => i.type === 'purchased_product');
+    const soldProducts          = items.filter(i => i.type === 'sold_product');
+    const customerReturnProducts = items.filter(i => i.type === 'customer_return_product');
+    const supplierReturnProducts = items.filter(i => i.type === 'supplier_return_product');
+    const paymentMethods        = items.filter(i => i.type === 'payment_method');
+    const stats                 = items.filter(i => !['customer','supplier','product_stock','opening_stock','waste_product','purchased_product','sold_product','customer_return_product','supplier_return_product','payment_method'].includes(i.type));
 
     return (
         <AppShell pageTitle={`Snapshot — ${period.name}`}>
@@ -332,6 +348,8 @@ export default function PeriodsSnapshot({ period }: Props) {
                     purchased={purchasedProducts}
                     sold={soldProducts}
                     waste={wasteProducts}
+                    customerReturns={customerReturnProducts}
+                    supplierReturns={supplierReturnProducts}
                 />
 
                 {/* Stats */}

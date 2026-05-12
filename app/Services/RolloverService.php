@@ -40,15 +40,17 @@ class RolloverService
         $periodId = $this->getCurrentPeriodId();
 
         return [
-            'customers'         => $this->buildCustomerBalances($periodId),
-            'suppliers'         => $this->buildSupplierBalances($periodId),
-            'products'          => $this->buildProductStocks(),
-            'opening_stock'     => $this->buildOpeningStock(),
-            'waste_products'    => $this->buildWasteProducts($periodId),
-            'purchased_products'=> $this->buildPurchasedProducts($periodId),
-            'sold_products'     => $this->buildSoldProducts($periodId),
-            'payment_methods'   => $this->buildPaymentMethodBalances($periodId),
-            'stats'             => $this->buildStats($periodId),
+            'customers'              => $this->buildCustomerBalances($periodId),
+            'suppliers'              => $this->buildSupplierBalances($periodId),
+            'products'               => $this->buildProductStocks(),
+            'opening_stock'          => $this->buildOpeningStock(),
+            'waste_products'         => $this->buildWasteProducts($periodId),
+            'purchased_products'     => $this->buildPurchasedProducts($periodId),
+            'sold_products'          => $this->buildSoldProducts($periodId),
+            'customer_return_products' => $this->buildCustomerReturnProducts($periodId),
+            'supplier_return_products' => $this->buildSupplierReturnProducts($periodId),
+            'payment_methods'        => $this->buildPaymentMethodBalances($periodId),
+            'stats'                  => $this->buildStats($periodId),
         ];
     }
 
@@ -63,15 +65,17 @@ class RolloverService
 
             // Step 1: Build snapshot data
             $periodId         = $current->id;
-            $customerBalances  = $this->buildCustomerBalances($periodId);
-            $supplierBalances  = $this->buildSupplierBalances($periodId);
-            $productStocks     = $this->buildProductStocks();
-            $openingStock      = $this->buildOpeningStock();
-            $wasteProducts     = $this->buildWasteProducts($periodId);
-            $purchasedProducts = $this->buildPurchasedProducts($periodId);
-            $soldProducts      = $this->buildSoldProducts($periodId);
-            $pmBalances        = $this->buildPaymentMethodBalances($periodId);
-            $stats             = $this->buildStats($periodId);
+            $customerBalances       = $this->buildCustomerBalances($periodId);
+            $supplierBalances       = $this->buildSupplierBalances($periodId);
+            $productStocks          = $this->buildProductStocks();
+            $openingStock           = $this->buildOpeningStock();
+            $wasteProducts          = $this->buildWasteProducts($periodId);
+            $purchasedProducts      = $this->buildPurchasedProducts($periodId);
+            $soldProducts           = $this->buildSoldProducts($periodId);
+            $customerReturnProducts = $this->buildCustomerReturnProducts($periodId);
+            $supplierReturnProducts = $this->buildSupplierReturnProducts($periodId);
+            $pmBalances             = $this->buildPaymentMethodBalances($periodId);
+            $stats                  = $this->buildStats($periodId);
 
             // Step 2: Save snapshot
             $snapshot = PeriodSnapshot::create([
@@ -104,7 +108,13 @@ class RolloverService
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'purchased_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
             }
             foreach ($soldProducts as $row) {
-                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'sold_product',      'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'sold_product',           'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+            }
+            foreach ($customerReturnProducts as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'customer_return_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+            }
+            foreach ($supplierReturnProducts as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'supplier_return_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
             }
             foreach ($pmBalances as $row) {
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'payment_method', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['balance'], 'created_at' => $now];
@@ -262,6 +272,32 @@ class RolloverService
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
             ->whereNull('invoices.deleted_at')
             ->select('products.id', 'products.name', DB::raw('SUM(invoice_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->get()
+            ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
+            ->toArray();
+    }
+
+    private function buildCustomerReturnProducts(?int $periodId): array
+    {
+        return \App\Models\InvoiceReturnItem::where(fn($q) => $this->scopePeriod($q, $periodId, 'invoice_return_items'))
+            ->join('products', 'invoice_return_items.product_id', '=', 'products.id')
+            ->join('invoice_returns', 'invoice_return_items.invoice_return_id', '=', 'invoice_returns.id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->select('products.id', 'products.name', DB::raw('SUM(invoice_return_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->get()
+            ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
+            ->toArray();
+    }
+
+    private function buildSupplierReturnProducts(?int $periodId): array
+    {
+        return \App\Models\PurchaseReturnItem::where(fn($q) => $this->scopePeriod($q, $periodId, 'purchase_return_items'))
+            ->join('products', 'purchase_return_items.product_id', '=', 'products.id')
+            ->join('purchase_returns', 'purchase_return_items.purchase_return_id', '=', 'purchase_returns.id')
+            ->whereNull('purchase_returns.deleted_at')
+            ->select('products.id', 'products.name', DB::raw('SUM(purchase_return_items.quantity) as total_qty'))
             ->groupBy('products.id', 'products.name')
             ->get()
             ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
