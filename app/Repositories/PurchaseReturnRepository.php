@@ -17,7 +17,9 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->with(['supplier', 'purchase'])->withSum('settlements as settlements_total', 'amount'))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier', 'purchase'])->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),

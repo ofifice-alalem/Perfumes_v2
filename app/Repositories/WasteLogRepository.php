@@ -17,7 +17,9 @@ class WasteLogRepository extends Repository implements WasteLogRepositoryInterfa
 
     public function paginated(int $perPage = 20)
     {
-        return QueryBuilder::for($this->model->with(['user', 'items.product.category']))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['user', 'items.product.category']))
             ->allowedFilters(
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::callback('date_from', fn($q, $v) => $q->whereDate('created_at', '>=', $v)),

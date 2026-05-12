@@ -17,7 +17,9 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->with(['supplier'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('payment_status'),

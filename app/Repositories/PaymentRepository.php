@@ -17,7 +17,9 @@ class PaymentRepository extends Repository implements PaymentRepositoryInterface
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->withTrashed()->with(['customer', 'invoice', 'paymentMethod']))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['customer', 'invoice', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('invoice_id'),

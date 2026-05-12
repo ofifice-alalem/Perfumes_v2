@@ -17,7 +17,9 @@ class SupplierPaymentRepository extends Repository implements SupplierPaymentRep
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->with(['supplier', 'purchase', 'paymentMethod']))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier', 'purchase', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),

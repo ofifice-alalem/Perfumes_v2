@@ -17,7 +17,9 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
 
     public function paginated(int $perPage = 5)
     {
-        return QueryBuilder::for($this->model->withTrashed()->with(['customer', 'user'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+
+        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['customer', 'user'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('user_id'),
