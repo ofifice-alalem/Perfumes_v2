@@ -4,9 +4,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
+import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
-    CreditCard, ChevronLeft, User, AlertCircle, RotateCcw
+    CreditCard, ChevronLeft, User, AlertCircle,
 } from 'lucide-react';
 
 interface Customer      { id: number; name: string; total_debt: string; }
@@ -52,47 +53,70 @@ interface Props {
 }
 
 interface ItemRow {
-    invoice_item_id?: number;  // معرف عنصر الفاتورة الأصلي
     product_id: string;
-    product_name?: string;
-    sale_type?: string;
-    size_id?: number | null;
-    size_label?: string;
-    count: string;
+    product_name: string;
+    sale_type: string;
+    size_id: number | null;
+    size_label: string;
     quantity: string;
     unit_price: string;
     line_total: string;
-    max_quantity?: number;  // الحد الأقصى من الفاتورة الأصلية
 }
 interface SettlementRow { payment_method_id: string; amount: string; notes: string; }
 
-const emptyItem       = (): ItemRow       => ({ product_id: '', count: '1', quantity: '', unit_price: '', line_total: '' });
 const emptySettlement = (): SettlementRow => ({ payment_method_id: '', amount: '', notes: '' });
 
 function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+const saleTypeLabels: Record<string, string> = {
+    tier_decant: 'زيتي',
+    unit_decant: 'أصلي - تقسيم',
+    full_bottle: 'عبوة كاملة',
+    unit_based:  'بالوحدة',
+};
+
+function resolveQuantity(product: Product, saleType: string, sizeId: string, manualQty: string, sizes: Size[]): number {
+    switch (saleType) {
+        case 'tier_decant':
+        case 'unit_decant':
+            if (sizeId.startsWith('-custom-')) return +(sizeId.replace('-custom-', '')) || 0;
+            return +(sizes.find(s => s.id === +sizeId)?.value ?? 0);
+        case 'full_bottle':
+            return product.original_perfume_detail ? +product.original_perfume_detail.bottle_volume : 0;
+        case 'unit_based':
+            return +manualQty || 0;
+        default: return 0;
+    }
+}
+
+function resolveLineTotal(saleType: string, price: number, quantity: number): number {
+    return (saleType === 'full_bottle' || saleType === 'tier_decant') ? price : price * quantity;
+}
+
 export default function InvoiceReturnsCreate({ customers, products, sizes, paymentMethods, selected_customer_id, selected_invoice_id, invoice_items, flash }: Props) {
     const [items,       setItems]       = useState<ItemRow[]>([]);
-    const [settlements, setSettlements] = useState<SettlementRow[]>([emptySettlement()]);
-    const [createSettlement, setCreateSettlement] = useState(false);
-    
-    // Product selection state
-    const [selProduct, setSelProduct] = useState('');
-    const [selSize, setSelSize] = useState('');
-    const [selQty, setSelQty] = useState('1');
+    const [settlements, setSettlements] = useState<SettlementRow[]>([]);
+    const [resetKey,    setResetKey]    = useState(0);
+
+    // product selection state
+    const [selProduct,   setSelProduct]   = useState('');
+    const [selSaleType,  setSelSaleType]  = useState('');
+    const [selSize,      setSelSize]      = useState('');
+    const [selQty,       setSelQty]       = useState('1');
     const [selUnitPrice, setSelUnitPrice] = useState('');
-    const [selMinPrice, setSelMinPrice] = useState(0);
-    
-    // NumberPad state
-    const [showPad, setShowPad] = useState(false);
-    const [padTitle, setPadTitle] = useState('');
-    const [padInitial, setPadInitial] = useState('');
-    const [padMax, setPadMax] = useState<number | undefined>(undefined);
+    const [selMinPrice,  setSelMinPrice]  = useState(0);
+
+    // modals
+    const [showSaleTypeModal, setShowSaleTypeModal] = useState(false);
+    const [showPad,     setShowPad]     = useState(false);
+    const [padTitle,    setPadTitle]    = useState('');
+    const [padInitial,  setPadInitial]  = useState('');
+    const [padMax,      setPadMax]      = useState<number | undefined>(undefined);
     const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
-    
-    // Payment state
+
+    // payment state
     const [selMethod, setSelMethod] = useState('');
     const [selAmount, setSelAmount] = useState('');
 
@@ -101,182 +125,182 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
         invoice_id:  selected_invoice_id ? String(selected_invoice_id) : '',
         notes:       '',
     });
-    
+
     function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
-        setPadTitle(title);
-        setPadInitial(initial);
-        setPadMax(max);
-        setPadCallback(() => cb);
-        setShowPad(true);
+        setPadTitle(title); setPadInitial(initial); setPadMax(max);
+        setPadCallback(() => cb); setShowPad(true);
     }
-    
-    // تحويل عناصر الفاتورة إلى صفوف قابلة للتعديل
+
+    // تحميل عناصر الفاتورة الأصلية عند وجودها
     useEffect(() => {
         if (invoice_items && invoice_items.length > 0) {
-            const invoiceRows: ItemRow[] = invoice_items.map(item => ({
-                invoice_item_id: item.id,
-                product_id: String(item.product_id),
+            const rows: ItemRow[] = invoice_items.map(item => ({
+                product_id:   String(item.product_id),
                 product_name: item.product_name,
-                sale_type: item.sale_type,
-                size_id: item.size_id ?? null,
-                size_label: item.size_label ?? undefined,
-                count: '1',
-                quantity: '0',
-                unit_price: item.unit_price,
-                line_total: '0',
-                max_quantity: parseFloat(item.quantity),
+                sale_type:    item.sale_type,
+                size_id:      item.size_id ?? null,
+                size_label:   item.size_label ?? '',
+                quantity:     item.quantity,
+                unit_price:   item.unit_price,
+                line_total:   item.line_total,
             }));
-            setItems(invoiceRows);
+            setItems(rows);
         }
     }, [invoice_items]);
 
-    const saleTypeLabels: Record<string, string> = {
-        tier_decant: 'زيتي',
-        unit_decant: 'أصلي/تقسيم',
-        full_bottle: 'عبوة كاملة',
-        unit_based: 'بالوحدة',
-    };
-    
-    const selectedProduct = products.find(p => String(p.id) === selProduct);
-    const availableStock = selectedProduct ? parseFloat(selectedProduct.stock) : 0;
-    const isTier = selectedProduct?.selling_type === 'tier_based';
-    const isOriginal = selectedProduct?.category?.unit === 'ml' && !isTier;
-    const needsSize = isTier || isOriginal;
-    
-    // حساب السعر الافتراضي والحد الأدنى
+    // ── derived ──────────────────────────────────────────────────────────────
+    const selectedProduct = products.find(p => p.id === +selProduct);
+    const isTier          = selectedProduct?.selling_type === 'tier_based';
+    const isOriginal      = selectedProduct?.category?.unit === 'ml' && !isTier;
+    const needsSize       = isTier || selSaleType === 'unit_decant';
+    const needsQty        = selSaleType === 'unit_based';
+    const effectiveST     = isTier ? 'tier_decant' : selSaleType;
+
+    function saleTypeOptions() {
+        if (!selectedProduct || isTier) return [];
+        if (isOriginal) return [
+            { label: 'أصلي - تقسيم', badge: 'unit_decant', description: 'بيع بالمليلتر حسب الحجم المطلوب', icon: '📊' },
+            { label: 'عبوة كاملة',   badge: 'full_bottle', description: 'بيع العبوة بالكامل بحجمها الأصلي', icon: '🎁' },
+        ];
+        return [{ label: 'بالوحدة', badge: 'unit_based', description: 'بيع بالقطعة أو بالجرام', icon: '⚖️' }];
+    }
+
+    // auto-select sale type
+    useEffect(() => {
+        if (selectedProduct && !isTier && !selSaleType) {
+            const opts = saleTypeOptions();
+            if (opts.length === 1) {
+                setSelSaleType(opts[0].badge);
+            } else if (isOriginal) {
+                setSelSaleType('unit_decant');
+            } else {
+                setShowSaleTypeModal(true);
+            }
+        }
+    }, [selectedProduct, isTier, selSaleType]);
+
     function resolveDefaultAndMin(): { defaultPrice: number; minPrice: number } {
-        if (!selectedProduct) return { defaultPrice: 0, minPrice: 0 };
-        
+        if (!selectedProduct || !effectiveST) return { defaultPrice: 0, minPrice: 0 };
         const pp = selectedProduct.product_price;
         const pt = selectedProduct.price_tier;
-        
-        if (isTier) {
-            if (!selSize) return { defaultPrice: 0, minPrice: 0 };
-            if (selSize.startsWith('-custom-')) {
-                return {
+        switch (effectiveST) {
+            case 'tier_decant': {
+                if (!selSize) return { defaultPrice: 0, minPrice: 0 };
+                if (selSize.startsWith('-custom-')) return {
                     defaultPrice: pp ? +pp.price_per_unit_regular : 0,
-                    minPrice: pp ? +pp.price_per_unit_vip : 0,
+                    minPrice:     pp ? +pp.price_per_unit_vip : 0,
                 };
+                const tp = pt?.tier_prices?.find(t => t.size_id === +selSize);
+                return tp ? { defaultPrice: +tp.price_regular, minPrice: +tp.price_vip } : { defaultPrice: 0, minPrice: 0 };
             }
-            const tp = pt?.tier_prices?.find(t => t.size_id === +selSize);
-            return tp ? {
-                defaultPrice: +tp.price_regular,
-                minPrice: +tp.price_vip
-            } : { defaultPrice: 0, minPrice: 0 };
+            case 'unit_decant':
+            case 'unit_based':
+                return pp ? { defaultPrice: +pp.price_per_unit_regular, minPrice: +pp.price_per_unit_vip } : { defaultPrice: 0, minPrice: 0 };
+            case 'full_bottle':
+                return pp ? { defaultPrice: +(pp.full_bottle_regular ?? 0), minPrice: +(pp.full_bottle_vip ?? 0) } : { defaultPrice: 0, minPrice: 0 };
+            default: return { defaultPrice: 0, minPrice: 0 };
         }
-        
-        if (isOriginal) {
-            return pp ? {
-                defaultPrice: +pp.price_per_unit_regular,
-                minPrice: +pp.price_per_unit_vip,
-            } : { defaultPrice: 0, minPrice: 0 };
-        }
-        
-        // منتجات عادية
-        return pp ? {
-            defaultPrice: +pp.price_per_unit_regular,
-            minPrice: +pp.price_per_unit_vip,
-        } : { defaultPrice: 0, minPrice: 0 };
     }
-    
-    // تحديث السعر عند تغيير المنتج أو الحجم
+
+    const showPriceField = !!(selectedProduct && effectiveST && (!needsSize || selSize));
+
     useEffect(() => {
-        if (!selectedProduct) {
-            setSelUnitPrice('');
-            setSelMinPrice(0);
-            return;
-        }
-        
-        if (needsSize && !selSize) {
-            setSelUnitPrice('');
-            setSelMinPrice(0);
-            return;
-        }
-        
-        const { defaultPrice, minPrice } = resolveDefaultAndMin();
-        if (defaultPrice > 0) {
-            setSelUnitPrice(defaultPrice.toFixed(2));
+        if (showPriceField) {
+            const { defaultPrice, minPrice } = resolveDefaultAndMin();
+            setSelUnitPrice(defaultPrice > 0 ? defaultPrice.toFixed(2) : '');
             setSelMinPrice(minPrice);
-        } else {
-            setSelUnitPrice('');
-            setSelMinPrice(0);
         }
-    }, [selectedProduct, selSize, needsSize]);
-    
-    // Preview calculations
-    const previewCount = parseInt(selQty) || 1;
-    const previewPrice = parseFloat(selUnitPrice) || 0;
-    const previewTotal = previewPrice > 0 && previewCount > 0 ? previewCount * previewPrice : null;
-    
-    const canAddProduct = !!(selProduct && (!needsSize || selSize) && selQty && parseInt(selQty) > 0 && selUnitPrice && parseFloat(selUnitPrice) >= selMinPrice);
-    
-    function addProductToCart() {
-        if (!selectedProduct || !selUnitPrice) return;
-        if (needsSize && !selSize) return;
-        
-        const count = parseInt(selQty) || 1;
-        const price = parseFloat(selUnitPrice);
-        if (price <= 0) return;
-        
-        const sizeLabel = selSize && !selSize.startsWith('-custom-')
-            ? (sizes.find(s => s.id === +selSize)?.label ?? '')
-            : selSize.startsWith('-custom-') ? `${selSize.replace('-custom-', '')} مل` : '';
-        
-        // كل قطعة = صف مستقل مثل الفواتير
-        const sizeValue = selSize && !selSize.startsWith('-custom-')
-            ? (sizes.find(s => s.id === +selSize)?.value ?? '1')
-            : selSize.startsWith('-custom-') ? selSize.replace('-custom-', '') : '1';
+    }, [selProduct, selSaleType, selSize]);
 
-        const newItems: ItemRow[] = Array.from({ length: count }, () => ({
-            product_id: String(selectedProduct.id),
-            product_name: selectedProduct.name,
-            size_id: selSize && !selSize.startsWith('-custom-') ? +selSize : null,
-            size_label: sizeLabel || undefined,
-            count: '1',
-            quantity: sizeValue,
-            unit_price: price.toFixed(2),
-            line_total: price.toFixed(2),
-        }));
-        
-        setItems(prev => [...prev, ...newItems]);
-        
-        setSelProduct('');
-        setSelSize('');
-        setSelQty('1');
-        setSelUnitPrice('');
+    function getCartConsumed(productId: number) {
+        return items.filter(i => +i.product_id === productId).reduce((s, i) => s + +i.quantity, 0);
+    }
+    const availableStock = selectedProduct ? +selectedProduct.stock + getCartConsumed(selectedProduct.id) : 0;
+
+    const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
+        ? (() => {
+            if (effectiveST === 'unit_based') return undefined;
+            if (needsSize && !selSize) return undefined;
+            const qty = resolveQuantity(selectedProduct, effectiveST, selSize, '1', sizes);
+            return qty > 0 ? Math.floor(availableStock / qty) : 0;
+        })()
+        : undefined;
+
+    const previewQty   = selectedProduct && (isTier ? selSize : selSaleType)
+        ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
+    const previewCount = effectiveST === 'unit_based' ? (+selQty || 1) : (parseInt(selQty) || 1);
+    const previewPrice = selUnitPrice && +selUnitPrice >= selMinPrice ? +selUnitPrice : null;
+    const previewTotal = previewPrice !== null && previewQty !== null && previewQty > 0
+        ? resolveLineTotal(effectiveST, previewPrice, previewQty) * (effectiveST === 'unit_based' ? 1 : previewCount)
+        : null;
+
+    const canAdd = !!(selectedProduct
+        && (isTier ? (!needsSize || selSize) : selSaleType)
+        && (!needsSize || selSize)
+        && (!needsQty || selQty)
+        && selUnitPrice && +selUnitPrice >= selMinPrice
+        && (maxCount === undefined || maxCount > 0));
+
+    function addToCart() {
+        if (!selectedProduct || (!isTier && !selSaleType)) return;
+        const unitPrice = +selUnitPrice;
+        if (!unitPrice) return;
+
+        if (effectiveST === 'unit_based') {
+            const qty = +selQty || 0;
+            if (!qty) return;
+            setItems(prev => [...prev, {
+                product_id:   String(selectedProduct.id),
+                product_name: selectedProduct.name,
+                sale_type:    effectiveST,
+                size_id:      null,
+                size_label:   '',
+                quantity:     String(qty),
+                unit_price:   unitPrice.toFixed(2),
+                line_total:   resolveLineTotal(effectiveST, unitPrice, qty).toFixed(2),
+            }]);
+        } else {
+            const qty = resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes);
+            if (!qty) return;
+            const sizeLabel = selSize.startsWith('-custom-')
+                ? `${selSize.replace('-custom-', '')} مل`
+                : (sizes.find(s => s.id === +selSize)?.label ?? '');
+            const count = parseInt(selQty) || 1;
+            const newRows: ItemRow[] = Array.from({ length: count }, () => ({
+                product_id:   String(selectedProduct.id),
+                product_name: selectedProduct.name,
+                sale_type:    effectiveST,
+                size_id:      selSize && !selSize.startsWith('-custom-') ? +selSize : null,
+                size_label:   sizeLabel,
+                quantity:     String(qty),
+                unit_price:   unitPrice.toFixed(2),
+                line_total:   resolveLineTotal(effectiveST, unitPrice, qty).toFixed(2),
+            }));
+            setItems(prev => [...prev, ...newRows]);
+        }
+
+        setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('1');
+        setSelUnitPrice(''); setSelMinPrice(0);
+        setResetKey(k => k + 1);
     }
     
-    const isCash      = form.data.customer_id === '1';
-    const customer    = customers.find(c => String(c.id) === form.data.customer_id);
-    const grandTotal  = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
+    const isCash        = form.data.customer_id === '1';
+    const customer       = customers.find(c => String(c.id) === form.data.customer_id);
+    const grandTotal     = items.reduce((s, r) => s + (parseFloat(r.line_total) || 0), 0);
     const totalRecovered = settlements.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const originalDebt = customer && customer.total_debt ? parseFloat(customer.total_debt) : 0;
-    // الدين بعد الإرجاع = الدين الأصلي - المرتجع + التسوية
-    const debtAfterReturn = customer && !isCash ? originalDebt - grandTotal + totalRecovered : 0;
-    const showSettlementOption = !isCash && debtAfterReturn <= 0 && grandTotal > 0;
+    const originalDebt   = customer ? parseFloat(customer.total_debt) || 0 : 0;
+    const debtAfterReturn = !isCash ? originalDebt - grandTotal + totalRecovered : 0;
 
-    // تحديث قيمة التسوية تلقائياً عند تغيير الإجمالي
+    // تحديث قيمة التسوية تلقائياً
     useEffect(() => {
-        if (grandTotal > 0) {
-            setSettlements(prev => {
-                // إذا لم يكن هناك تسويات أو التسوية الأولى فارغة
-                if (prev.length === 0 || !prev[0].payment_method_id) {
-                    const defaultMethod = paymentMethods[0];
-                    if (defaultMethod) {
-                        return [{ payment_method_id: String(defaultMethod.id), amount: grandTotal.toFixed(2), notes: '' }];
-                    }
-                }
-                // تحديث التسوية الأولى فقط
-                return prev.map((s, idx) => {
-                    if (idx === 0) {
-                        return { ...s, amount: grandTotal.toFixed(2) };
-                    }
-                    return s;
-                });
-            });
-        } else if (grandTotal === 0) {
-            setSettlements([{ payment_method_id: '', amount: '', notes: '' }]);
-        }
+        if (grandTotal <= 0) { setSettlements([]); return; }
+        setSettlements(prev => {
+            if (prev.length === 0) {
+                const m = paymentMethods[0];
+                return m ? [{ payment_method_id: String(m.id), amount: grandTotal.toFixed(2), notes: '' }] : [];
+            }
+            return prev.map((s, i) => i === 0 ? { ...s, amount: grandTotal.toFixed(2) } : s);
+        });
     }, [grandTotal]);
 
     const customerOptions = customers.map(c => ({
@@ -284,42 +308,10 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
         badge: c.id === 1 ? 'نقدي' : undefined,
         meta:  c.id !== 1 && c.total_debt ? `دين: ${parseFloat(c.total_debt).toFixed(2)}` : undefined,
     }));
-    const productOptions = products.map(p => ({ label: p.name, badge: '', meta: `${p.stock}` }));
-    const methodOptions  = paymentMethods.map(m => ({ label: m.name }));
-
-    function resolveProduct(label: string) { return String(products.find(p => p.name === label)?.id ?? ''); }
-    function resolveMethod(label: string)  { return String(paymentMethods.find(m => m.name === label)?.id ?? ''); }
-
-    function setItem(idx: number, field: keyof ItemRow, val: string) {
-        setItems(prev => prev.map((r, i) => {
-            if (i !== idx) return r;
-            const updated = { ...r, [field]: val };
-            
-            if (field === 'quantity' || field === 'unit_price' || field === 'count') {
-                const count = parseInt(field === 'count' ? val : updated.count) || 1;
-                const qty   = parseFloat(field === 'quantity' ? val : updated.quantity) || 0;
-                const price = parseFloat(field === 'unit_price' ? val : updated.unit_price) || 0;
-                
-                if (field === 'quantity' && updated.max_quantity !== undefined && qty > updated.max_quantity) {
-                    updated.quantity = updated.max_quantity.toString();
-                    const limitedQty = updated.max_quantity;
-                    updated.line_total = limitedQty > 0 && price > 0 ? (limitedQty * count * price).toFixed(2) : updated.line_total;
-                    return updated;
-                }
-                
-                updated.line_total = qty > 0 && price > 0 ? (qty * count * price).toFixed(2) : updated.line_total;
-            }
-            return updated;
-        }));
-    }
-
-    function setSettlement(idx: number, field: keyof SettlementRow, val: string) {
-        setSettlements(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
-    }
+    const productOptions = products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }));
 
     function submit() {
         const validSettlements = settlements.filter(r => r.payment_method_id && parseFloat(r.amount) > 0);
-
         form.transform(data => ({
             ...data,
             items: items.map(item => ({
@@ -396,38 +388,79 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                         </div>
 
                         <div className="flex flex-col gap-3">
-                            {/* Row 1: product + quantity + price + preview */}
+                            {/* Row 1: product + sale type toggle + qty + preview */}
                             <div className="flex flex-wrap gap-3 items-end">
                                 <div className="flex-1 min-w-[180px]">
-                                    <ModernSelect
-                                        label=""
-                                        placeholder="اختر المنتج..."
+                                    <ModernSelect key={`p-${resetKey}`} label="" placeholder="اختر المنتج..."
                                         options={productOptions}
-                                        defaultValue={selectedProduct?.name ?? ''}
+                                        defaultValue=""
                                         onSelect={val => {
                                             const p = products.find(p => p.name === val);
                                             setSelProduct(p ? String(p.id) : '');
-                                            setSelSize('');
-                                            setSelQuantity('1');
+                                            setSelSaleType(''); setSelSize(''); setSelQty('1');
                                         }}
                                     />
                                 </div>
 
-                                {/* qty/count input */}
-                                {selectedProduct && (
-                                    <button
-                                        onClick={() => openPad('العدد', selQty || '1', v => setSelQty(v))}
-                                        className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all">
+                                {/* sale type toggle for non-tier with multiple options */}
+                                {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
+                                    <button onClick={() => setShowSaleTypeModal(true)}
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold w-44 cursor-pointer hover:border-primary/40 transition-all flex items-center justify-between">
+                                        <span className="truncate">{saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}</span>
+                                        <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                )}
+
+                                {/* qty / count input */}
+                                {selectedProduct && (isTier || selSaleType) && (
+                                    <button onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
+                                        className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
                                         {selQty || '1'}
                                     </button>
                                 )}
 
-                                {/* unit price input */}
-                                {selectedProduct && (
-                                    <div className="flex flex-col gap-1">
+                                {/* preview chips */}
+                                {previewTotal !== null && previewQty !== null && previewQty > 0 && (
+                                    <div className="flex gap-2">
+                                        <div className="flex items-center justify-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+                                            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">سعر</span>
+                                            <span className="font-black text-primary text-sm mr-1">{previewPrice?.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center justify-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
+                                            <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
+                                            <span className="font-black text-primary text-sm mr-1">{fmt(previewTotal)}</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Row 2: sizes */}
+                            {needsSize && (
+                                <div className="w-full">
+                                    <SizeSelect sizes={sizes} selectedSizeId={selSize}
+                                        onSizeSelect={id => { setSelSize(id); setSelUnitPrice(''); }}
+                                        onPriceResolved={(def, min) => { setSelUnitPrice(def.toFixed(2)); setSelMinPrice(min); }}
+                                        product={selectedProduct} isVip={false} />
+                                </div>
+                            )}
+
+                            {/* Row 3: unit price + add button */}
+                            {showPriceField && (
+                                <div className="flex flex-wrap gap-3 items-end">
+                                    <div className="flex flex-col gap-1.5 flex-1 min-w-[140px]">
+                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">
+                                            سعر الوحدة
+                                            {selMinPrice > 0 && (
+                                                <span className="mr-1 text-slate-400 dark:text-white/30 normal-case font-bold">
+                                                    (حد أدنى: {selMinPrice.toFixed(2)})
+                                                </span>
+                                            )}
+                                        </label>
                                         <button
                                             onClick={() => openPad(`سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`, selUnitPrice, v => setSelUnitPrice(v))}
-                                            className={`spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-28 text-center cursor-pointer transition-all ${
+                                            className={`h-14 rounded-[20px] px-5 text-[18px] font-black w-full text-center cursor-pointer transition-all spatial-input active:scale-95 ${
                                                 selUnitPrice && +selUnitPrice < selMinPrice
                                                     ? 'border-red-500/60 text-red-500'
                                                     : 'hover:border-primary/40'
@@ -438,47 +471,19 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                             <span className="text-[10px] font-bold text-red-500">أقل من الحد الأدنى</span>
                                         )}
                                     </div>
-                                )}
-
-                                {/* preview chips */}
-                                {previewTotal !== null && (
-                                    <div className="flex items-center gap-1 px-3 h-14 rounded-[16px] bg-primary/5 border border-primary/20">
-                                        <span className="text-[11px] font-bold text-slate-400 dark:text-white/40">إجمالي</span>
-                                        <span className="font-black text-primary text-sm mr-1">{fmt(previewTotal)}</span>
-                                    </div>
-                                )}
-
-                                {/* add button */}
-                                {selectedProduct && (
-                                    <button
-                                        onClick={addProductToCart}
-                                        disabled={!canAddProduct}
-                                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
+                                    <button onClick={addToCart} disabled={!canAdd}
+                                        className="spatial-button flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
                                         <Plus className="w-6 h-6" /> إضافة
                                     </button>
-                                )}
-                            </div>
-
-                            {/* Row 2: sizes (if needed) */}
-                            {selectedProduct && needsSize && (
-                                <div className="w-full">
-                                    <SizeSelect
-                                        sizes={sizes}
-                                        selectedSizeId={selSize}
-                                        onSizeSelect={id => setSelSize(id)}
-                                        onPriceResolved={() => {}}
-                                        product={selectedProduct}
-                                        isVip={false}
-                                    />
                                 </div>
                             )}
 
                             {/* Stock warning */}
-                            {selectedProduct && availableStock === 0 && (
+                            {selectedProduct && maxCount !== undefined && maxCount === 0 && (
                                 <div className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
                                     <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                                     <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                        المخزون غير كافٍ — المتاح: {availableStock}
+                                        المخزون غير كافٍ — المتاح: {availableStock} {selectedProduct.category.unit}
                                     </span>
                                 </div>
                             )}
@@ -651,7 +656,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                             </div>
                         ) : (() => {
                             const groups = items.reduce((acc, item, idx) => {
-                                const key = `${item.product_id}-${item.size_id ?? 'null'}-${item.unit_price}`;
+                                const key = `${item.product_id}-${item.size_id ?? 'null'}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
                                     acc[key] = { ...item, count: 1, totalAmount: parseFloat(item.line_total), indices: [idx] };
                                 } else {
@@ -672,20 +677,28 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                         <span className="text-center">الإجمالي</span>
                                         <span className="text-center">حذف</span>
                                     </div>
-                                    {Object.values(groups).map((g: any, idx) => (
+                                    {Object.values(groups).map((g: any, idx) => {
+                                        const displayCount = g.sale_type === 'unit_based' ? parseFloat(g.quantity) * g.count : g.count;
+                                        return (
                                         <div key={idx} className="grid grid-cols-[60px_2fr_70px_80px_90px_50px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
                                             <div className="flex items-center justify-center">
                                                 <button
                                                     onClick={() => {
-                                                        openPad('العدد', String(g.count), newVal => {
+                                                        const p = products.find(p => p.id === +g.product_id);
+                                                        const cartMax = g.sale_type === 'unit_based' ? undefined
+                                                            : (() => {
+                                                                const consumed = items.filter((_, i) => !g.indices.includes(i)).filter(i => i.product_id === g.product_id).reduce((s, i) => s + +i.quantity, 0);
+                                                                const stock = p ? +p.stock + consumed + (parseFloat(g.quantity) * g.count) : 0;
+                                                                return parseFloat(g.quantity) > 0 ? Math.floor(stock / parseFloat(g.quantity)) : 0;
+                                                            })();
+                                                        openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(g.count), newVal => {
                                                             const newCount = parseInt(newVal) || 1;
                                                             setItems(prev => {
                                                                 const without = prev.filter((_, i) => !g.indices.includes(i));
                                                                 const template = prev[g.indices[0]];
-                                                                const newRows = Array.from({ length: newCount }, () => ({ ...template }));
-                                                                return [...without, ...newRows];
+                                                                return [...without, ...Array.from({ length: newCount }, () => ({ ...template }))];
                                                             });
-                                                        });
+                                                        }, cartMax);
                                                     }}
                                                     className="w-14 h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-base text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95">
                                                     {g.count}
@@ -693,18 +706,26 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                             </div>
                                             <div className="min-w-0 flex flex-col justify-center">
                                                 <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{g.product_name}</span>
+                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{saleTypeLabels[g.sale_type] ?? g.sale_type}</span>
                                             </div>
                                             <div className="flex items-center justify-center">
                                                 {g.size_label
                                                     ? <span className="text-xs font-black text-white bg-primary px-2 py-1 rounded-full">{g.size_label}</span>
-                                                    : <span className="text-slate-400 text-sm">—</span>}
+                                                    : g.sale_type === 'full_bottle'
+                                                        ? <span className="text-xs font-black text-white bg-emerald-500 px-2 py-1 rounded-full">
+                                                            {products.find(p => p.id === +g.product_id)?.original_perfume_detail?.bottle_volume} مل
+                                                          </span>
+                                                        : <span className="text-slate-400 text-sm">—</span>}
                                             </div>
                                             <div className="flex items-center justify-center">
                                                 <button
                                                     onClick={() => openPad('السعر', g.unit_price, newVal => {
+                                                        const p = products.find(p => p.id === +g.product_id);
+                                                        const newPrice = parseFloat(newVal);
+                                                        if (!p || newPrice <= 0) return;
                                                         setItems(prev => prev.map((item, i) =>
                                                             g.indices.includes(i)
-                                                                ? { ...item, unit_price: parseFloat(newVal).toFixed(2), line_total: parseFloat(newVal).toFixed(2) }
+                                                                ? { ...item, unit_price: newPrice.toFixed(2), line_total: resolveLineTotal(item.sale_type, newPrice, parseFloat(item.quantity)).toFixed(2) }
                                                                 : item
                                                         ));
                                                     })}
@@ -723,7 +744,8 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                                 </button>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             );
                         })()}
@@ -742,7 +764,15 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                 </div>
             </div>
         </AppShell>
-        
+
+        <SaleTypeModal
+            isOpen={showSaleTypeModal}
+            onClose={() => setShowSaleTypeModal(false)}
+            onSelect={st => { setSelSaleType(st); setSelSize(''); setSelQty('1'); }}
+            options={saleTypeOptions()}
+            title="اختر نوع البيع"
+        />
+
         <NumberPadModal
             isOpen={showPad}
             title={padTitle}
