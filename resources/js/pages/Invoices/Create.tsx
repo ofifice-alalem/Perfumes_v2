@@ -960,22 +960,22 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                 const product = products.find(p => p.id === g.product_id);
                                                                 if (!product) return;
                                                                 setCart(prev => {
-                                                                    let newCart = prev.filter((_, i) => !g.indices.includes(i));
+                                                                    const without = prev.filter((_, i) => !g.indices.includes(i));
+                                                                    const price = g.unit_price;
+                                                                    if (g.sale_type === 'unit_based') {
+                                                                        // صف واحد بالكمية الجديدة
+                                                                        const newCart = [...without, { ...prev[g.indices[0]], quantity: String(newCount), line_total: resolveLineTotal('unit_based', price, newCount) }];
+                                                                        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                                                        if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
+                                                                        return newCart;
+                                                                    }
+                                                                    let newCart = [...without];
                                                                     for (let i = 0; i < newCount; i++) {
-                                                                        const qty   = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
-                                                                        const price = resolvePrice(product, g.sale_type, g.size_id, isVip);
-                                                                        if (qty && price) {
-                                                                            newCart.push({ product_id: product.id, product_name: product.name, sale_type: g.sale_type, size_id: g.size_id, size_label: g.size_label, quantity: String(qty), unit_price: price, line_total: resolveLineTotal(g.sale_type, price, qty) });
-                                                                        }
+                                                                        const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
+                                                                        if (qty && price) newCart.push({ ...prev[g.indices[0]], quantity: String(qty), line_total: resolveLineTotal(g.sale_type, price, qty) });
                                                                     }
                                                                     const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                                                    
-                                                                    if (!paymentManuallySet && payments.length === 1) {
-                                                                        setTimeout(() => {
-                                                                            setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
-                                                                        }, 0);
-                                                                    }
-                                                                    
+                                                                    if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                     return newCart;
                                                                 });
                                                             }, cartMax);
@@ -1366,18 +1366,21 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                     const product = products.find(p => p.id === g.product_id);
                                                                     if (!product) return;
                                                                     setCart(prev => {
-                                                                        let newCart = prev.filter((_, i) => !g.indices.includes(i));
+                                                                        const without = prev.filter((_, i) => !g.indices.includes(i));
+                                                                        const price = g.unit_price;
+                                                                        if (g.sale_type === 'unit_based') {
+                                                                            const newCart = [...without, { ...prev[g.indices[0]], quantity: String(newCount), line_total: resolveLineTotal('unit_based', price, newCount) }];
+                                                                            const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                                                            if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
+                                                                            return newCart;
+                                                                        }
+                                                                        let newCart = [...without];
                                                                         for (let i = 0; i < newCount; i++) {
                                                                             const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
-                                                                            const price = resolvePrice(product, g.sale_type, g.size_id, isVip);
-                                                                            if (qty && price) {
-                                                                                newCart.push({ product_id: product.id, product_name: product.name, sale_type: g.sale_type, size_id: g.size_id, size_label: g.size_label, quantity: String(qty), unit_price: price, line_total: resolveLineTotal(g.sale_type, price, qty) });
-                                                                            }
+                                                                            if (qty && price) newCart.push({ ...prev[g.indices[0]], quantity: String(qty), line_total: resolveLineTotal(g.sale_type, price, qty) });
                                                                         }
                                                                         const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                                                        if (!paymentManuallySet && payments.length === 1) {
-                                                                            setTimeout(() => { setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]); }, 0);
-                                                                        }
+                                                                        if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                         return newCart;
                                                                     });
                                                                 }, cartMax);

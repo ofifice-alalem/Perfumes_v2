@@ -236,9 +236,10 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                             const groups = invoice.items.reduce((acc, item) => {
                                 const key = `${item.product.id}-${item.size?.label ?? 'null'}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
-                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: item.size?.label ?? null, unit_price: item.unit_price, count: 1, total: parseFloat(item.line_total) };
+                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: item.size?.label ?? null, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
                                 } else {
                                     acc[key].count++;
+                                    acc[key].quantity += parseFloat(item.quantity);
                                     acc[key].total += parseFloat(item.line_total);
                                 }
                                 return acc;
@@ -254,12 +255,14 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         <span className="text-center">سعر</span>
                                         <span className="text-center">الإجمالي</span>
                                     </div>
-                                    {Object.values(groups).map((g: any, idx: number) => (
+                                    {Object.values(groups).map((g: any, idx: number) => {
+                                        const displayCount = g.sale_type === 'unit_based' ? g.quantity : g.count;
+                                        return (
                                         <div key={idx}>
                                             {/* Desktop */}
                                             <div className="hidden sm:grid grid-cols-[60px_2fr_80px_70px_80px_90px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
                                                 <div className="flex items-center justify-center">
-                                                    <span className="w-10 h-9 rounded-[10px] flex items-center justify-center font-black text-sm bg-primary/10 text-primary">{g.count}</span>
+                                                    <span className="w-10 h-9 rounded-[10px] flex items-center justify-center font-black text-sm bg-primary/10 text-primary">{displayCount}</span>
                                                 </div>
                                                 <div className="min-w-0 flex items-center">
                                                     <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{g.name}</span>
@@ -286,14 +289,15 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     <span className="font-black text-slate-800 dark:text-white">{fmt(g.total)}</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] bg-primary/10 text-primary text-xs font-black">× {g.count}</span>
+                                                    <span className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] bg-primary/10 text-primary text-xs font-black">× {displayCount}</span>
                                                     <span className="text-xs font-bold text-slate-500 dark:text-white/50">{saleTypeLabel[g.sale_type] ?? g.sale_type}</span>
                                                     {g.size_label && <span className="text-xs font-black text-white bg-primary px-2 py-0.5 rounded-full">{g.size_label}</span>}
                                                     <span className="text-xs font-bold text-slate-500 dark:text-white/50">سعر: {fmt(g.unit_price)}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             );
                         })()}
