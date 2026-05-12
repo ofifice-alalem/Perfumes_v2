@@ -86,6 +86,30 @@
             <td class="ct-label">{{ $labels['labelTo'] }}</td>
             <td class="ct-value">{{ $labels['dateTo'] }}</td>
         </tr>
+        @if($labels['filterUser'])
+        <tr>
+            <td class="ct-label">{{ $labels['labelUser'] }}</td>
+            <td class="ct-value">{{ $labels['filterUser'] }}</td>
+        </tr>
+        @endif
+        @if($labels['filterCustomer'])
+        <tr>
+            <td class="ct-label">{{ $labels['labelCustomer'] }}</td>
+            <td class="ct-value">{{ $labels['filterCustomer'] }}</td>
+        </tr>
+        @endif
+        @if($labels['filterPayment'])
+        <tr>
+            <td class="ct-label">{{ $labels['labelPayment'] }}</td>
+            <td class="ct-value">{{ $labels['filterPayment'] }}</td>
+        </tr>
+        @endif
+        @if($labels['filterCategory'])
+        <tr>
+            <td class="ct-label">{{ $labels['labelCategory'] }}</td>
+            <td class="ct-value">{{ $labels['filterCategory'] }}</td>
+        </tr>
+        @endif
         <tr>
             <td class="ct-label">{{ $labels['generatedLabel'] }}</td>
             <td class="ct-value">{{ $labels['generatedAt'] }}</td>
