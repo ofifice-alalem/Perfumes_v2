@@ -12,7 +12,7 @@ class InvoiceReturnItem extends Model implements Auditable
     use AuditableTrait;
     public $timestamps = false;
 
-    protected $fillable = ['period_id', 'invoice_return_id', 'product_id', 'quantity', 'unit_price', 'line_total'];
+    protected $fillable = ['period_id', 'invoice_return_id', 'product_id', 'size_id', 'quantity', 'unit_price', 'line_total'];
 
     protected $casts = [
         'quantity'   => 'decimal:2',
@@ -29,5 +29,10 @@ class InvoiceReturnItem extends Model implements Auditable
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function size(): BelongsTo
+    {
+        return $this->belongsTo(Size::class);
     }
 }

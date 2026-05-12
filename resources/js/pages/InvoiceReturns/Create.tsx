@@ -56,6 +56,7 @@ interface ItemRow {
     product_id: string;
     product_name?: string;
     sale_type?: string;
+    size_id?: number | null;
     size_label?: string;
     quantity: string;
     unit_price: string;
@@ -116,6 +117,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                 product_id: String(item.product_id),
                 product_name: item.product_name,
                 sale_type: item.sale_type,
+                size_id: item.size_id ?? null,
                 size_label: item.size_label ?? undefined,
                 quantity: '0',
                 unit_price: item.unit_price,
@@ -222,6 +224,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
         const newItem: ItemRow = {
             product_id: String(selectedProduct.id),
             product_name: selectedProduct.name,
+            size_id: selSize && !selSize.startsWith('-custom-') ? +selSize : null,
             size_label: sizeLabel || undefined,
             quantity: qty.toString(),
             unit_price: price.toFixed(2),

@@ -104,6 +104,7 @@ class InvoiceReturnController extends Controller
             'notes'                            => 'nullable|string',
             'items'                            => 'required|array|min:1',
             'items.*.product_id'               => 'required|exists:products,id',
+            'items.*.size_id'                  => 'nullable|exists:sizes,id',
             'items.*.quantity'                 => 'required|numeric|min:0.01',
             'items.*.unit_price'               => 'required|numeric|min:0',
             'items.*.line_total'               => 'required|numeric|min:0',
@@ -129,6 +130,7 @@ class InvoiceReturnController extends Controller
                 InvoiceReturnItem::create([
                     'invoice_return_id' => $ret->id,
                     'product_id'        => $item['product_id'],
+                    'size_id'           => $item['size_id'] ?? null,
                     'quantity'          => $item['quantity'],
                     'unit_price'        => $item['unit_price'],
                     'line_total'        => $item['line_total'],

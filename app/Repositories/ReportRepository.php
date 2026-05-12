@@ -2422,13 +2422,23 @@ class ReportRepository implements ReportRepositoryInterface
                 foreach ($returns as $r) {
                     $items = DB::table('invoice_return_items')
                         ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                        ->leftJoin('sizes', 'sizes.id', '=', 'invoice_return_items.size_id')
                         ->where('invoice_return_items.invoice_return_id', $r->id)
                         ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                        ->select('products.name as product_name', 'invoice_return_items.unit_price',
-                            DB::raw('MIN(invoice_return_items.quantity) as quantity'),
-                            DB::raw('COUNT(*) as count'))
-                        ->groupBy('products.name', 'invoice_return_items.unit_price')
-                        ->get();
+                        ->select(
+                            'products.name as product_name',
+                            'invoice_return_items.unit_price',
+                            'sizes.label as size_label',
+                            DB::raw('SUM(invoice_return_items.quantity) as quantity')
+                        )
+                        ->groupBy('products.name', 'invoice_return_items.unit_price', 'sizes.label')
+                        ->get()
+                        ->map(fn($i) => (object)[
+                            'product_name' => $i->product_name,
+                            'quantity'     => (float)$i->quantity,
+                            'unit_price'   => (float)$i->unit_price,
+                            'size_label'   => $i->size_label,
+                        ]);
                     $returnsList[] = ['id' => $r->id, 'total' => (float)$r->total, 'date' => $r->created_at, 'items' => $items->toArray()];
                 }
 
@@ -2471,10 +2481,10 @@ class ReportRepository implements ReportRepositoryInterface
                         ->where('purchase_return_items.purchase_return_id', $r->id)
                         ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
                         ->select('products.name as product_name', 'purchase_return_items.unit_cost as unit_price',
-                            DB::raw('MIN(purchase_return_items.quantity) as quantity'),
-                            DB::raw('COUNT(*) as count'))
+                            DB::raw('SUM(purchase_return_items.quantity) as quantity'))
                         ->groupBy('products.name', 'purchase_return_items.unit_cost')
-                        ->get();
+                        ->get()
+                        ->map(fn($i) => (object)['product_name' => $i->product_name, 'quantity' => (float)$i->quantity, 'unit_price' => (float)$i->unit_price]);
                     $returnsList[] = ['id' => $r->id, 'total' => (float)$r->total, 'date' => $r->created_at, 'items' => $items->toArray()];
                 }
 
