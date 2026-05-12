@@ -1709,4 +1709,434 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('sales-customer-invoices-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Purchases ───────────────────────────────────────────────────────────────────────
+
+    private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId)
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $query = DB::table('purchases')
+            ->whereNull('purchases.deleted_at')
+            ->when($df,         fn($q) => $q->where('purchases.created_at', '>=', $df))
+            ->when($dt,         fn($q) => $q->where('purchases.created_at', '<=', $dt))
+            ->when($userId,     fn($q) => $q->where('purchases.user_id', $userId))
+            ->when($supplierId, fn($q) => $q->where('purchases.supplier_id', $supplierId));
+
+        if ($categoryId) {
+            $query->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        return $query;
+    }
+
+    public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, bool $compare = false): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+
+        $totalPurchases  = (float) (clone $base)->sum('purchases.total');
+        $purchasesCount  = (int)   (clone $base)->count();
+        $totalPaid       = (float) (clone $base)->sum('purchases.paid_amount');
+        $totalDue        = (float) (clone $base)->sum('purchases.due_amount');
+        $avgPurchase     = $purchasesCount > 0 ? round($totalPurchases / $purchasesCount, 2) : 0;
+
+        $dailyRows = (clone $base)
+            ->select(DB::raw('DATE(purchases.created_at) as date'), DB::raw('SUM(purchases.total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw('DATE(purchases.created_at)'))
+            ->orderBy('date')
+            ->get();
+
+        $monthly = [];
+        foreach ($dailyRows as $row) {
+            $month = substr($row->date, 0, 7);
+            if (!isset($monthly[$month])) {
+                $monthly[$month] = ['month' => $month, 'total' => 0, 'count' => 0, 'days' => []];
+            }
+            $monthly[$month]['total'] += (float)$row->total;
+            $monthly[$month]['count'] += (int)$row->count;
+            $monthly[$month]['days'][] = ['date' => $row->date, 'total' => (float)$row->total, 'count' => (int)$row->count];
+        }
+        $monthly = array_values($monthly);
+
+        $comparison = null;
+        if ($compare && $df && $dt) {
+            $diffDays = \Carbon\Carbon::parse($df)->diffInDays(\Carbon\Carbon::parse($dt)) + 1;
+            $prevDf   = \Carbon\Carbon::parse($df)->subDays($diffDays)->toDateTimeString();
+            $prevDt   = \Carbon\Carbon::parse($df)->subSecond()->toDateTimeString();
+            $prevBase = $this->purchasesQuery(substr($prevDf, 0, 10), substr($prevDt, 0, 10), $userId, $supplierId, $categoryId);
+            $prevTotal = (float) (clone $prevBase)->sum('purchases.total');
+            $prevCount = (int)   (clone $prevBase)->count();
+            $comparison = [
+                'total_purchases'  => $prevTotal,
+                'purchases_count'  => $prevCount,
+                'diff_pct'         => $prevTotal > 0 ? round((($totalPurchases - $prevTotal) / $prevTotal) * 100, 1) : null,
+            ];
+        }
+
+        return compact('totalPurchases', 'purchasesCount', 'avgPurchase', 'totalPaid', 'totalDue', 'monthly', 'comparison');
+    }
+
+    public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): void
+    {
+        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('تقرير المشتريات');
+
+        $row = 1;
+        $infoRows = [
+            ['تقرير المشتريات', ''],
+            ['من تاريخ',   $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+            ['', ''],
+            ['إجمالي المشتريات', $fmtN($data['totalPurchases'])],
+            ['عدد الفواتير',    $data['purchasesCount']],
+            ['متوسط الفاتورة',  $fmtN($data['avgPurchase'])],
+            ['إجمالي المدفوع',  $fmtN($data['totalPaid'])],
+            ['إجمالي المتبقي',  $fmtN($data['totalDue'])],
+        ];
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        $sheet->fromArray(['الشهر', 'عدد الفواتير', 'إجمالي المشتريات'], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        foreach ($data['monthly'] as $i => $m) {
+            $bg = $i % 2 === 0 ? 'DCE4EE' : 'EFF6FF';
+            $sheet->fromArray([$m['month'], $m['count'], $fmtN($m['total'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'font'    => ['bold' => true],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+            foreach ($m['days'] as $d) {
+                $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+            }
+        }
+
+        $sheet->fromArray(['الإجمالي', $data['purchasesCount'], $fmtN($data['totalPurchases'])], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
+            'font'    => ['bold' => true, 'size' => 11],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+
+        foreach (range('A', 'C') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="purchases-' . now()->format('Y-m-d') . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $labels = [
+            'title'          => $g('تقرير المشتريات'),
+            'generated_at'   => now()->format('Y-m-d H:i'),
+            'label_date_from'=> $g('من تاريخ'),
+            'date_from_val'  => $dateFrom ?? $g('البداية'),
+            'date_to_label'  => $g('إلى تاريخ'),
+            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
+            'total_purchases'=> $fmtN($data['totalPurchases']),
+            'purchases_count'=> $data['purchasesCount'],
+            'avg_purchase'   => $fmtN($data['avgPurchase']),
+            'total_paid'     => $fmtN($data['totalPaid']),
+            'total_due'      => $fmtN($data['totalDue']),
+            'col_month'      => $g('الشهر'),
+            'col_count'      => $g('عدد الفواتير'),
+            'col_total'      => $g('إجمالي المشتريات'),
+            'lbl_total'      => $g('إجمالي المشتريات'),
+            'lbl_count'      => $g('عدد الفواتير'),
+            'lbl_avg'        => $g('متوسط الفاتورة'),
+            'lbl_paid'       => $g('إجمالي المدفوع'),
+            'lbl_due'        => $g('إجمالي المتبقي'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-pdf', [
+            'labels' => $labels, 'data' => $data, 'g' => $g, 'fmtN' => $fmtN,
+        ])->setPaper('a4')
+          ->setOption('isHtml5ParserEnabled', true)
+          ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('purchases-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $suppliersQuery = DB::table('suppliers')
+            ->when($supplierId, fn($q) => $q->where('id', $supplierId))
+            ->orderBy('name')->get(['id', 'name']);
+
+        $result = [];
+        foreach ($suppliersQuery as $supplier) {
+            $purchasesQuery = DB::table('purchases')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchases.supplier_id', $supplier->id)
+                ->when($df,     fn($q) => $q->where('purchases.created_at', '>=', $df))
+                ->when($dt,     fn($q) => $q->where('purchases.created_at', '<=', $dt))
+                ->when($userId, fn($q) => $q->where('purchases.user_id', $userId));
+
+            if ($categoryId) {
+                $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                    ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                    ->where('products.category_id', $categoryId));
+            }
+
+            $purchases = $purchasesQuery
+                ->select('purchases.id', 'purchases.total', 'purchases.created_at')
+                ->orderBy('purchases.created_at')->get();
+
+            if ($purchases->isEmpty()) continue;
+
+            $purchasesList = [];
+            foreach ($purchases as $p) {
+                $items = DB::table('purchase_items')
+                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                    ->where('purchase_items.purchase_id', $p->id)
+                    ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                    ->select(
+                        'products.name as product_name',
+                        'purchase_items.unit_cost',
+                        DB::raw('MIN(purchase_items.quantity) as quantity'),
+                        DB::raw('COUNT(*) as count')
+                    )
+                    ->groupBy('products.name', 'purchase_items.unit_cost')
+                    ->get();
+
+                $purchasesList[] = [
+                    'id'    => $p->id,
+                    'total' => (float) $p->total,
+                    'date'  => $p->created_at,
+                    'items' => $items->toArray(),
+                ];
+            }
+
+            $result[] = [
+                'supplier_id'    => $supplier->id,
+                'supplier_name'  => $supplier->name,
+                'purchase_count' => count($purchasesList),
+                'total_amount'   => round(array_sum(array_column($purchasesList, 'total')), 2),
+                'purchases'      => $purchasesList,
+            ];
+        }
+
+        usort($result, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+        return $result;
+    }
+
+    public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): void
+    {
+        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('فواتير الموردين');
+
+        $row = 1;
+        foreach ([
+            ['تقرير فواتير الموردين', ''],
+            ['من تاريخ', $dateFrom ?? 'البداية'],
+            ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ] as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        foreach ($data as $entry) {
+            $sheet->setCellValue('A' . $row, $entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
+            $sheet->mergeCells('A' . $row . ':E' . $row);
+            $sheet->getStyle('A' . $row)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0a2540']],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+            $row++;
+
+            foreach ($entry['purchases'] as $p) {
+                $sheet->fromArray(['PO#' . $p['id'], substr($p['date'], 0, 10), $fmtN($p['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
+                    'font'    => ['bold' => true],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+
+                $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'التكلفة', 'المبلغ'], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
+                    'font'      => ['bold' => true],
+                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                ]);
+                $row++;
+
+                foreach ($p['items'] as $item) {
+                    $item = (array) $item;
+                    $sheet->fromArray([
+                        $item['count'] > 1 ? $item['count'] : '',
+                        $item['product_name'],
+                        $fmtN($item['quantity']),
+                        $fmtN($item['unit_cost']),
+                        $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
+                    ], null, 'A' . $row);
+                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    ]);
+                    if ($item['count'] > 1) {
+                        $sheet->getStyle('A' . $row)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
+                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
+                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                        ]);
+                    }
+                    $row++;
+                }
+            }
+
+            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row += 2;
+        }
+
+        foreach (range('A', 'E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g  = fn($text) => $arabic->utf8Glyphs($text);
+        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
+        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $entries = array_map(function ($entry) use ($g, $en) {
+            return [
+                'name'           => $en($g($entry['supplier_name'])),
+                'purchase_count' => $entry['purchase_count'],
+                'total_amount'   => $entry['total_amount'],
+                'purchases'      => array_map(fn($p) => [
+                    'id'    => $p['id'],
+                    'date'  => substr($p['date'], 0, 10),
+                    'total' => $p['total'],
+                    'items' => array_map(fn($i) => [
+                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
+                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
+                        'unit_cost'    => is_array($i) ? $i['unit_cost'] : $i->unit_cost,
+                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
+                    ], $p['items']),
+                ], $entry['purchases']),
+            ];
+        }, $data);
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $grandCount  = array_sum(array_column($data, 'purchase_count'));
+
+        $labels = [
+            'title'           => $g('فواتير الموردين التفصيلية'),
+            'dateFrom'        => $dateFrom ?? $g('البداية'),
+            'dateTo'          => $dateTo ?? now()->format('Y-m-d'),
+            'labelFrom'       => $g('من'),
+            'labelTo'         => $g('إلى'),
+            'generatedAt'     => now()->format('Y-m-d H:i'),
+            'generatedLabel'  => $g('تاريخ الإنشاء'),
+            'filterUser'      => $userId     ? $en($g(DB::table('users')->where('id', $userId)->value('name') ?? ''))             : null,
+            'filterSupplier'  => $supplierId ? $en($g(DB::table('suppliers')->where('id', $supplierId)->value('name') ?? ''))     : null,
+            'filterCategory'  => $categoryId ? $en($g(DB::table('categories')->where('id', $categoryId)->value('name') ?? ''))   : null,
+            'labelUser'       => $g('المستخدم'),
+            'labelSupplier'   => $g('المورد'),
+            'labelCategory'   => $g('التصنيف'),
+            'grandAmount'     => $grandAmount,
+            'grandCount'      => $grandCount,
+            'product'         => $g('المنتج'),
+            'qty'             => $g('الحجم'),
+            'count_label'     => $g('العدد'),
+            'cost'            => $g('التكلفة'),
+            'amount'          => $g('المبلغ'),
+            'total'           => $g('الإجمالي'),
+            'purchases_label' => $g('عدد الفواتير'),
+            'suppliers_label' => $g('عدد الموردين'),
+            'totalPages'      => 1,
+        ];
+
+        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+        $pdf->render();
+        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+
+        return $pdf->stream('purchases-supplier-invoices-' . now()->format('Y-m-d') . '.pdf');
+    }
 }

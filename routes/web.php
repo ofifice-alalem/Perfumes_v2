@@ -91,6 +91,12 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/sales/customer-invoices', [ReportController::class, 'salesCustomerInvoices'])->name('reports.sales.customer-invoices');
         Route::get('reports/sales/customer-invoices/excel', [ReportController::class, 'salesCustomerInvoicesExcel'])->name('reports.sales.customer-invoices.excel');
         Route::get('reports/sales/customer-invoices/pdf', [ReportController::class, 'salesCustomerInvoicesPdf'])->name('reports.sales.customer-invoices.pdf');
+        Route::get('reports/purchases', [ReportController::class, 'purchases'])->name('reports.purchases');
+        Route::get('reports/purchases/excel', [ReportController::class, 'purchasesExcel'])->name('reports.purchases.excel');
+        Route::get('reports/purchases/pdf', [ReportController::class, 'purchasesPdf'])->name('reports.purchases.pdf');
+        Route::get('reports/purchases/supplier-invoices', [ReportController::class, 'purchasesSupplierInvoices'])->name('reports.purchases.supplier-invoices');
+        Route::get('reports/purchases/supplier-invoices/excel', [ReportController::class, 'purchasesSupplierInvoicesExcel'])->name('reports.purchases.supplier-invoices.excel');
+        Route::get('reports/purchases/supplier-invoices/pdf', [ReportController::class, 'purchasesSupplierInvoicesPdf'])->name('reports.purchases.supplier-invoices.pdf');
     });
 
     // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────

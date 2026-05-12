@@ -253,4 +253,83 @@ class ReportController extends Controller
             $request->integer('category_id') ?: null,
         );
     }
+
+    public function purchases(Request $request): Response
+    {
+        $dateFrom   = $request->input('date_from');
+        $dateTo     = $request->input('date_to');
+        $userId     = $request->integer('user_id') ?: null;
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
+        $compare    = $request->boolean('compare');
+
+        return Inertia::render('Reports/Purchases', [
+            'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare'),
+            'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare),
+        ]);
+    }
+
+    public function purchasesExcel(Request $request)
+    {
+        $this->reports->exportPurchasesExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
+
+    public function purchasesPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportPurchasesPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
+
+    public function purchasesSupplierInvoices(Request $request): Response
+    {
+        $dateFrom   = $request->input('date_from');
+        $dateTo     = $request->input('date_to');
+        $userId     = $request->integer('user_id') ?: null;
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
+
+        return Inertia::render('Reports/PurchasesSupplierInvoices', [
+            'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId'),
+            'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId),
+        ]);
+    }
+
+    public function purchasesSupplierInvoicesExcel(Request $request)
+    {
+        $this->reports->exportPurchasesSupplierInvoicesExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
+
+    public function purchasesSupplierInvoicesPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportPurchasesSupplierInvoicesPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
 }
