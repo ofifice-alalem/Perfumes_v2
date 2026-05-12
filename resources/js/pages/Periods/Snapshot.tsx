@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { ChevronLeft, Users, Truck, Package, CreditCard, BarChart2, Calendar, User } from 'lucide-react';
+import { ChevronLeft, Users, Truck, Package, CreditCard, BarChart2, Calendar, Trash2 } from 'lucide-react';
 
 interface SnapshotItem {
     id: number;
@@ -59,8 +59,9 @@ export default function PeriodsSnapshot({ period }: Props) {
     const customers      = items.filter(i => i.type === 'customer');
     const suppliers      = items.filter(i => i.type === 'supplier');
     const products       = items.filter(i => i.type === 'product_stock');
+    const wasteProducts  = items.filter(i => i.type === 'waste_product');
     const paymentMethods = items.filter(i => i.type === 'payment_method');
-    const stats          = items.filter(i => !['customer', 'supplier', 'product_stock', 'payment_method'].includes(i.type));
+    const stats          = items.filter(i => !['customer', 'supplier', 'product_stock', 'waste_product', 'payment_method'].includes(i.type));
 
     return (
         <AppShell pageTitle={`Snapshot — ${period.name}`}>
@@ -172,6 +173,32 @@ export default function PeriodsSnapshot({ period }: Props) {
                                 </tbody>
                             </table>
                         </div>
+                    </SpatialCard>
+
+                    {/* Waste Products */}
+                    <SpatialCard title={`التالف (${wasteProducts.length} منتج)`} icon={<Trash2 className="w-4 h-4 text-red-500" />}>
+                        {wasteProducts.length === 0 ? (
+                            <div className="flex items-center justify-center py-8 text-slate-400 dark:text-white/30 font-bold text-sm">لا يوجد تالف في هذه الفترة</div>
+                        ) : (
+                            <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0">
+                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المنتج</th>
+                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الكمية التالفة</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        {wasteProducts.map(p => (
+                                            <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{p.entity_name}</td>
+                                                <td className="px-4 py-2 font-black text-red-500">{p.balance}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </SpatialCard>
 
                     {/* Payment Methods */}

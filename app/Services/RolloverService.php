@@ -43,6 +43,7 @@ class RolloverService
             'customers'       => $this->buildCustomerBalances($periodId),
             'suppliers'       => $this->buildSupplierBalances($periodId),
             'products'        => $this->buildProductStocks(),
+            'waste_products'  => $this->buildWasteProducts($periodId),
             'payment_methods' => $this->buildPaymentMethodBalances($periodId),
             'stats'           => $this->buildStats($periodId),
         ];
@@ -62,6 +63,7 @@ class RolloverService
             $customerBalances = $this->buildCustomerBalances($periodId);
             $supplierBalances = $this->buildSupplierBalances($periodId);
             $productStocks    = $this->buildProductStocks();
+            $wasteProducts    = $this->buildWasteProducts($periodId);
             $pmBalances       = $this->buildPaymentMethodBalances($periodId);
             $stats            = $this->buildStats($periodId);
 
@@ -85,6 +87,9 @@ class RolloverService
             }
             foreach ($productStocks as $row) {
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'product_stock', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['stock'], 'created_at' => $now];
+            }
+            foreach ($wasteProducts as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'waste_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
             }
             foreach ($pmBalances as $row) {
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'payment_method', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['balance'], 'created_at' => $now];
@@ -174,6 +179,17 @@ class RolloverService
         return Product::select('id', 'name', 'stock')
             ->get()
             ->map(fn($p) => ['id' => $p->id, 'name' => $p->name, 'stock' => (float) $p->stock])
+            ->toArray();
+    }
+
+    private function buildWasteProducts(?int $periodId): array
+    {
+        return WasteItem::where(fn($q) => $this->scopePeriod($q, $periodId))
+            ->join('products', 'waste_items.product_id', '=', 'products.id')
+            ->select('products.id', 'products.name', DB::raw('SUM(waste_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->get()
+            ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
             ->toArray();
     }
 

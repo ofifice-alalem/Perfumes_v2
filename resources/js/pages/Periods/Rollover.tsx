@@ -3,13 +3,14 @@ import { router } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, Package, CreditCard, BarChart2 } from 'lucide-react';
+import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, Package, CreditCard, BarChart2, Trash2 } from 'lucide-react';
 
 interface Period { id: number; name: string; started_at: string; }
 
 interface CustomerRow { id: number; name: string; balance: number; }
 interface SupplierRow { id: number; name: string; balance: number; }
 interface ProductRow  { id: number; name: string; stock: number; }
+interface WasteProductRow { id: number; name: string; quantity: number; }
 interface PaymentMethodRow { id: number; name: string; balance: number; }
 interface Stats {
     total_sales: number; total_purchases: number;
@@ -22,6 +23,7 @@ interface Preview {
     customers: CustomerRow[];
     suppliers: SupplierRow[];
     products: ProductRow[];
+    waste_products: WasteProductRow[];
     payment_methods: PaymentMethodRow[];
     stats: Stats;
 }
@@ -164,6 +166,32 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                                     </tbody>
                                 </table>
                             </div>
+                        </SpatialCard>
+
+                        {/* Waste Products */}
+                        <SpatialCard title={`التالف (${preview.waste_products.length} منتج)`} icon={<Trash2 className="w-4 h-4 text-red-500" />}>
+                            {preview.waste_products.length === 0 ? (
+                                <div className="flex items-center justify-center py-8 text-slate-400 dark:text-white/30 font-bold text-sm">لا يوجد تالف في هذه الفترة</div>
+                            ) : (
+                                <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المنتج</th>
+                                                <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الكمية التالفة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {preview.waste_products.map(p => (
+                                                <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                    <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{p.name}</td>
+                                                    <td className="px-4 py-2 font-black text-red-500">{p.quantity}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </SpatialCard>
 
                         {/* Payment Methods */}
