@@ -1,0 +1,356 @@
+import { router } from '@inertiajs/react';
+import { useState } from 'react';
+import { AppShell } from '@/components/layout/AppShell';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { Users, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, ArrowRight } from 'lucide-react';
+
+interface User          { id: number; name: string; }
+interface Customer      { id: number; name: string; }
+interface PaymentMethod { id: number; name: string; }
+interface Category      { id: number; name: string; }
+
+interface InvoiceItem {
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+}
+
+interface Invoice {
+    id: number;
+    total: number;
+    paid_amount: number;
+    due_amount: number;
+    date: string;
+    items: InvoiceItem[];
+}
+
+interface CustomerEntry {
+    customer_id: number;
+    customer_name: string;
+    invoice_count: number;
+    total_amount: number;
+    total_paid: number;
+    total_due: number;
+    invoices: Invoice[];
+}
+
+interface Props {
+    users: User[];
+    customers: Customer[];
+    paymentMethods: PaymentMethod[];
+    categories: Category[];
+    filters: {
+        dateFrom: string | null; dateTo: string | null;
+        userId: number | null; customerId: number | null;
+        paymentMethodId: number | null; categoryId: number | null;
+    };
+    data: CustomerEntry[];
+}
+
+function fmt(n: number): string {
+    return n % 1 === 0
+        ? n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+        : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export default function SalesCustomerInvoices({ users, customers, paymentMethods, categories, filters, data }: Props) {
+    const [filterOpen,      setFilterOpen]      = useState(false);
+    const [dateFrom,        setDateFrom]        = useState(filters.dateFrom ?? '');
+    const [dateTo,          setDateTo]          = useState(filters.dateTo ?? '');
+    const [userId,          setUserId]          = useState(filters.userId ? String(filters.userId) : '');
+    const [customerId,      setCustomerId]      = useState(filters.customerId ? String(filters.customerId) : '');
+    const [paymentMethodId, setPaymentMethodId] = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
+    const [categoryId,      setCategoryId]      = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [expandedCustomers, setExpandedCustomers] = useState<Set<number>>(new Set());
+    const [expandedInvoices,  setExpandedInvoices]  = useState<Set<number>>(new Set());
+
+    function toggleCustomer(id: number) {
+        setExpandedCustomers(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    }
+    function toggleInvoice(id: number) {
+        setExpandedInvoices(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+    }
+
+    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId;
+
+    function buildParams() {
+        const p: Record<string, string> = {};
+        if (dateFrom)        p.date_from          = dateFrom;
+        if (dateTo)          p.date_to            = dateTo;
+        if (userId)          p.user_id            = userId;
+        if (customerId)      p.customer_id        = customerId;
+        if (paymentMethodId) p.payment_method_id  = paymentMethodId;
+        if (categoryId)      p.category_id        = categoryId;
+        return p;
+    }
+
+    function search() {
+        router.get('/reports/sales/customer-invoices', buildParams(), { preserveScroll: true });
+    }
+
+    function reset() {
+        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId('');
+        setPaymentMethodId(''); setCategoryId('');
+        router.get('/reports/sales/customer-invoices', {}, { preserveScroll: true });
+    }
+
+    function buildExportUrl(format: 'excel' | 'pdf') {
+        const params = new URLSearchParams(buildParams());
+        return `/reports/sales/customer-invoices/${format}?${params.toString()}`;
+    }
+
+    const grandTotal = data.reduce((s, c) => s + c.total_amount, 0);
+    const grandPaid  = data.reduce((s, c) => s + c.total_paid, 0);
+    const grandDue   = data.reduce((s, c) => s + c.total_due, 0);
+    const grandCount = data.reduce((s, c) => s + c.invoice_count, 0);
+
+    const FilterPanel = () => (
+        <div className="flex flex-col gap-4">
+            <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+            <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <ModernSelect label="البائع" placeholder="الكل"
+                options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
+                defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}
+                onSelect={val => setUserId(val === 'الكل' ? '' : String(users.find(u => u.name === val)?.id ?? ''))}
+            />
+            <ModernSelect label="العميل" placeholder="الكل"
+                options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
+                defaultValue={customerId ? (customers.find(c => String(c.id) === customerId)?.name ?? '') : 'الكل'}
+                onSelect={val => setCustomerId(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
+            />
+            <ModernSelect label="وسيلة الدفع" placeholder="الكل"
+                options={[{ label: 'الكل' }, ...paymentMethods.map(p => ({ label: p.name }))]}
+                defaultValue={paymentMethodId ? (paymentMethods.find(p => String(p.id) === paymentMethodId)?.name ?? '') : 'الكل'}
+                onSelect={val => setPaymentMethodId(val === 'الكل' ? '' : String(paymentMethods.find(p => p.name === val)?.id ?? ''))}
+            />
+            <ModernSelect label="التصنيف" placeholder="الكل"
+                options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
+                defaultValue={categoryId ? (categories.find(c => String(c.id) === categoryId)?.name ?? '') : 'الكل'}
+                onSelect={val => setCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
+            />
+            <button onClick={search}
+                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" /> عرض التقرير
+            </button>
+            {hasFilter && (
+                <button onClick={reset}
+                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                    إعادة تعيين
+                </button>
+            )}
+        </div>
+    );
+
+    return (
+        <AppShell pageTitle="فواتير العملاء التفصيلية">
+            <div className="flex flex-col gap-6 pb-32 lg:pb-6">
+
+                <div className="flex items-center gap-3">
+                    <a href="/reports/sales" className="flex items-center gap-1 text-sm font-bold text-slate-400 hover:text-primary transition-colors">
+                        <ArrowRight className="w-4 h-4" /> تقرير المبيعات
+                    </a>
+                    <span className="text-slate-300 dark:text-white/20">/</span>
+                    <h1 className="text-2xl font-black text-slate-800 dark:text-white">فواتير العملاء التفصيلية</h1>
+                </div>
+
+                {/* Mobile Filter */}
+                <div className="lg:hidden">
+                    <button onClick={() => setFilterOpen(p => !p)}
+                        className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
+                        <div className="flex items-center gap-2">
+                            <SlidersHorizontal className="w-4 h-4" /> فلترة
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
+                        </div>
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {filterOpen && (
+                        <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <FilterPanel />
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex gap-6">
+                    <div className="flex-1 min-w-0 flex flex-col gap-6">
+
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="spatial-card p-4 flex flex-col gap-1">
+                                <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد العملاء</p>
+                                <p className="text-2xl font-black text-slate-800 dark:text-white">{data.length}</p>
+                            </div>
+                            <div className="spatial-card p-4 flex flex-col gap-1">
+                                <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد الفواتير</p>
+                                <p className="text-2xl font-black text-slate-800 dark:text-white">{grandCount}</p>
+                            </div>
+                            <div className="spatial-card p-4 flex flex-col gap-1">
+                                <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">المدفوع</p>
+                                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(grandPaid)}</p>
+                            </div>
+                            <div className="spatial-card p-4 flex flex-col gap-1">
+                                <p className="text-xs font-black text-red-500 uppercase tracking-widest">المتبقي</p>
+                                <p className="text-2xl font-black text-red-500">{fmt(grandDue)}</p>
+                            </div>
+                        </div>
+
+                        {/* Export */}
+                        <div className="flex items-center gap-2">
+                            <a href={buildExportUrl('excel')} target="_blank"
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                <FileSpreadsheet className="w-4 h-4" /> Excel
+                            </a>
+                            <a href={buildExportUrl('pdf')} target="_blank"
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                <FileText className="w-4 h-4" /> PDF
+                            </a>
+                        </div>
+
+                        {/* Customers Table */}
+                        <SpatialCard title={`العملاء (${data.length})`} icon={<Users className="w-4 h-4" />}>
+                            {data.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
+                                    <Users className="w-12 h-12 opacity-30" />
+                                    <p className="font-bold">لا توجد بيانات</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-black/5 dark:divide-white/5">
+                                    {data.map(customer => (
+                                        <div key={customer.customer_id}>
+                                            {/* Customer Row */}
+                                            <button
+                                                onClick={() => toggleCustomer(customer.customer_id)}
+                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/3 dark:hover:bg-white/3 transition-colors text-right"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <ChevronRight className={`w-4 h-4 text-primary transition-transform shrink-0 ${expandedCustomers.has(customer.customer_id) ? 'rotate-90' : ''}`} />
+                                                    <div>
+                                                        <p className="font-black text-slate-800 dark:text-white">{customer.customer_name}</p>
+                                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">{customer.invoice_count} فاتورة</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-6 text-sm">
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">الإجمالي</p>
+                                                        <p className="font-black text-slate-800 dark:text-white">{fmt(customer.total_amount)}</p>
+                                                    </div>
+                                                    <div className="text-right hidden sm:block">
+                                                        <p className="text-xs font-bold text-emerald-600">مدفوع</p>
+                                                        <p className="font-black text-emerald-600">{fmt(customer.total_paid)}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-xs font-bold text-red-500">متبقي</p>
+                                                        <p className="font-black text-red-500">{fmt(customer.total_due)}</p>
+                                                    </div>
+                                                </div>
+                                            </button>
+
+                                            {/* Customer Invoices */}
+                                            {expandedCustomers.has(customer.customer_id) && (
+                                                <div className="bg-black/2 dark:bg-white/2 px-4 pb-3">
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                <tr className="border-b border-black/5 dark:border-white/5">
+                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">رقم الفاتورة</th>
+                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">التاريخ</th>
+                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">الإجمالي</th>
+                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">مدفوع</th>
+                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">متبقي</th>
+                                                                    <th className="py-2 px-3"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                                {customer.invoices.map(inv => (
+                                                                    <>
+                                                                        <tr key={inv.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                                            <td className="py-2 px-3 font-black text-primary">INV#{inv.id}</td>
+                                                                            <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{inv.date.substring(0, 10)}</td>
+                                                                            <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(inv.total)}</td>
+                                                                            <td className="py-2 px-3 font-bold text-emerald-600">{fmt(inv.paid_amount)}</td>
+                                                                            <td className="py-2 px-3 font-bold text-red-500">{fmt(inv.due_amount)}</td>
+                                                                            <td className="py-2 px-3">
+                                                                                <button onClick={() => toggleInvoice(inv.id)}
+                                                                                    className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors whitespace-nowrap">
+                                                                                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expandedInvoices.has(inv.id) ? 'rotate-90' : ''}`} />
+                                                                                    تفاصيل
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                        {expandedInvoices.has(inv.id) && (
+                                                                            <tr key={`${inv.id}-items`}>
+                                                                                <td colSpan={6} className="px-6 py-2 bg-black/2 dark:bg-white/2">
+                                                                                    <table className="w-full text-xs">
+                                                                                        <thead>
+                                                                                            <tr className="border-b border-black/5 dark:border-white/5">
+                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المنتج</th>
+                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">الكمية</th>
+                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">السعر</th>
+                                                                                                <th className="text-right py-1.5 px-2 font-black text-slate-400 dark:text-white/30">المبلغ</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                                                            {inv.items.map((item, i) => (
+                                                                                                <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-700 dark:text-white/70">{item.product_name}</td>
+                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.quantity)}</td>
+                                                                                                    <td className="py-1.5 px-2 font-bold text-slate-500 dark:text-white/50">{fmt(item.unit_price)}</td>
+                                                                                                    <td className="py-1.5 px-2 font-black text-slate-800 dark:text-white">{fmt(item.quantity * item.unit_price)}</td>
+                                                                                                </tr>
+                                                                                            ))}
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </>
+                                                                ))}
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr className="border-t-2 border-black/10 dark:border-white/10">
+                                                                    <td colSpan={2} className="py-2 px-3 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
+                                                                    <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(customer.total_amount)}</td>
+                                                                    <td className="py-2 px-3 font-black text-emerald-600">{fmt(customer.total_paid)}</td>
+                                                                    <td className="py-2 px-3 font-black text-red-500">{fmt(customer.total_due)}</td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+
+                                    {/* Grand Total */}
+                                    <div className="flex items-center justify-between px-4 py-3 bg-black/3 dark:bg-white/3">
+                                        <p className="font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي الكلي</p>
+                                        <div className="flex items-center gap-6 text-sm">
+                                            <div className="text-right hidden sm:block">
+                                                <p className="font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</p>
+                                            </div>
+                                            <div className="text-right hidden sm:block">
+                                                <p className="font-black text-emerald-600">{fmt(grandPaid)}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-red-500">{fmt(grandDue)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </SpatialCard>
+                    </div>
+
+                    {/* Desktop Filter */}
+                    <div className="hidden lg:block w-[360px] shrink-0">
+                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
+                            <FilterPanel />
+                        </SpatialCard>
+                    </div>
+                </div>
+
+            </div>
+        </AppShell>
+    );
+}

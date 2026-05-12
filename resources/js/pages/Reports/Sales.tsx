@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { TrendingUp, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, ArrowUp, ArrowDown } from 'lucide-react';
+import { TrendingUp, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, ArrowUp, ArrowDown, Users } from 'lucide-react';
 
 interface User           { id: number; name: string; }
 interface Customer       { id: number; name: string; }
@@ -99,6 +99,18 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
         if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
         if (categoryId)      params.set('category_id', categoryId);
         return `/reports/sales/${format}?${params.toString()}`;
+    }
+
+    function buildCustomerInvoicesUrl(format?: 'excel' | 'pdf') {
+        const params = new URLSearchParams();
+        if (dateFrom)        params.set('date_from', dateFrom);
+        if (dateTo)          params.set('date_to', dateTo);
+        if (userId)          params.set('user_id', userId);
+        if (customerId)      params.set('customer_id', customerId);
+        if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
+        if (categoryId)      params.set('category_id', categoryId);
+        if (format) return `/reports/sales/customer-invoices/${format}?${params.toString()}`;
+        return `/reports/sales/customer-invoices?${params.toString()}`;
     }
 
     const FilterPanel = () => (
@@ -208,7 +220,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
                         </div>
 
                         {/* Export */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <a href={buildExportUrl('excel')} target="_blank"
                                 className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
                                 <FileSpreadsheet className="w-4 h-4" /> Excel
@@ -216,6 +228,10 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
                             <a href={buildExportUrl('pdf')} target="_blank"
                                 className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
                                 <FileText className="w-4 h-4" /> PDF
+                            </a>
+                            <a href={buildCustomerInvoicesUrl()}
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 hover:bg-blue-500 hover:text-white transition-all font-bold text-sm">
+                                <Users className="w-4 h-4" /> فواتير العملاء
                             </a>
                         </div>
 

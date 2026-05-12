@@ -1443,4 +1443,254 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('sales-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Sales Customer Invoices ───────────────────────────────────────────────
+
+    public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $customersQuery = DB::table('customers')
+            ->when($customerId, fn($q) => $q->where('id', $customerId))
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $result = [];
+
+        foreach ($customersQuery as $customer) {
+            $invoicesQuery = DB::table('invoices')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoices.customer_id', $customer->id)
+                ->when($df,     fn($q) => $q->where('invoices.created_at', '>=', $df))
+                ->when($dt,     fn($q) => $q->where('invoices.created_at', '<=', $dt))
+                ->when($userId, fn($q) => $q->where('invoices.user_id', $userId));
+
+            if ($paymentMethodId) {
+                $invoicesQuery->whereExists(fn($q) => $q->from('payments')
+                    ->whereColumn('payments.invoice_id', 'invoices.id')
+                    ->whereNull('payments.deleted_at')
+                    ->where('payments.payment_method_id', $paymentMethodId));
+            }
+
+            if ($categoryId) {
+                $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                    ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                    ->where('products.category_id', $categoryId));
+            }
+
+            $invoices = $invoicesQuery
+                ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at')
+                ->orderBy('invoices.created_at')
+                ->get();
+
+            if ($invoices->isEmpty()) continue;
+
+            $invoicesList = [];
+            foreach ($invoices as $inv) {
+                $items = DB::table('invoice_items')
+                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                    ->where('invoice_items.invoice_id', $inv->id)
+                    ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                    ->select('products.name as product_name', 'invoice_items.quantity', 'invoice_items.unit_price')
+                    ->get();
+
+                $invoicesList[] = [
+                    'id'          => $inv->id,
+                    'total'       => (float) $inv->total,
+                    'paid_amount' => (float) $inv->paid_amount,
+                    'due_amount'  => (float) $inv->due_amount,
+                    'date'        => $inv->created_at,
+                    'items'       => $items->toArray(),
+                ];
+            }
+
+            $result[] = [
+                'customer_id'   => $customer->id,
+                'customer_name' => $customer->name,
+                'invoice_count' => count($invoicesList),
+                'total_amount'  => round(array_sum(array_column($invoicesList, 'total')), 2),
+                'total_paid'    => round(array_sum(array_column($invoicesList, 'paid_amount')), 2),
+                'total_due'     => round(array_sum(array_column($invoicesList, 'due_amount')), 2),
+                'invoices'      => $invoicesList,
+            ];
+        }
+
+        usort($result, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+
+        return $result;
+    }
+
+    public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void
+    {
+        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('فواتير العملاء');
+
+        $row = 1;
+        $infoRows = [
+            ['تقرير فواتير العملاء', ''],
+            ['من تاريخ',    $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ];
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        foreach ($data as $entry) {
+            // رأس العميل
+            $sheet->setCellValue('A' . $row, $entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
+            $sheet->mergeCells('A' . $row . ':E' . $row);
+            $sheet->getStyle('A' . $row)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+            $row++;
+
+            foreach ($entry['invoices'] as $inv) {
+                // رأس الفاتورة
+                $sheet->fromArray(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total']), 'مدفوع: ' . $fmtN($inv['paid_amount']), 'متبقي: ' . $fmtN($inv['due_amount'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
+                    'font'    => ['bold' => true],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+
+                // رؤوس أعمدة المنتجات
+                $sheet->fromArray(['المنتج', 'الكمية', 'السعر', 'المبلغ', ''], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray([
+                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
+                    'font'      => ['bold' => true],
+                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                ]);
+                $row++;
+
+                foreach ($inv['items'] as $item) {
+                    $item = (array) $item;
+                    $sheet->fromArray([
+                        $item['product_name'],
+                        $fmtN($item['quantity']),
+                        $fmtN($item['unit_price']),
+                        $fmtN($item['quantity'] * $item['unit_price']),
+                        '',
+                    ], null, 'A' . $row);
+                    $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray([
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                    ]);
+                    $row++;
+                }
+            }
+
+            // إجمالي العميل
+            $sheet->fromArray(['الإجمالي', '', $fmtN($entry['total_amount']), 'مدفوع: ' . $fmtN($entry['total_paid']), 'متبقي: ' . $fmtN($entry['total_due'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
+                'font'    => ['bold' => true, 'size' => 11],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row += 2;
+        }
+
+        foreach (range('A', 'E') as $col)
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g  = fn($text) => $arabic->utf8Glyphs($text);
+        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
+
+        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $entries = array_map(function ($entry) use ($g, $en, $fmtN) {
+            return [
+                'name'          => $en($g($entry['customer_name'])),
+                'invoice_count' => $entry['invoice_count'],
+                'total_amount'  => $entry['total_amount'],
+                'total_paid'    => $entry['total_paid'],
+                'total_due'     => $entry['total_due'],
+                'invoices'      => array_map(fn($inv) => [
+                    'id'          => $inv['id'],
+                    'date'        => substr($inv['date'], 0, 10),
+                    'total'       => $inv['total'],
+                    'paid_amount' => $inv['paid_amount'],
+                    'due_amount'  => $inv['due_amount'],
+                    'items'       => array_map(fn($i) => [
+                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
+                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
+                        'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
+                    ], $inv['items']),
+                ], $entry['invoices']),
+            ];
+        }, $data);
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $grandCount  = array_sum(array_column($data, 'invoice_count'));
+        $grandPaid   = array_sum(array_column($data, 'total_paid'));
+        $grandDue    = array_sum(array_column($data, 'total_due'));
+
+        $labels = [
+            'title'          => $g('فواتير العملاء التفصيلية'),
+            'dateFrom'       => $dateFrom ?? $g('البداية'),
+            'dateTo'         => $dateTo ?? now()->format('Y-m-d'),
+            'labelFrom'      => $g('من'),
+            'labelTo'        => $g('إلى'),
+            'grandAmount'    => $grandAmount,
+            'grandCount'     => $grandCount,
+            'grandPaid'      => $grandPaid,
+            'grandDue'       => $grandDue,
+            'product'        => $g('المنتج'),
+            'qty'            => $g('الكمية'),
+            'price'          => $g('السعر'),
+            'amount'         => $g('المبلغ'),
+            'total'          => $g('الإجمالي'),
+            'paid'           => $g('المدفوع'),
+            'due'            => $g('المتبقي'),
+            'invoices_label' => $g('عدد الفواتير'),
+            'date_label'     => $g('التاريخ'),
+            'totalPages'     => 1,
+        ];
+
+        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+        $pdf->render();
+        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        foreach ($options as $k => $v) $pdf->setOption($k, $v);
+
+        return $pdf->stream('sales-customer-invoices-' . now()->format('Y-m-d') . '.pdf');
+    }
 }

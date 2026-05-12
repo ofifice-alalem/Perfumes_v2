@@ -88,6 +88,9 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('reports/sales/excel', [ReportController::class, 'salesExcel'])->name('reports.sales.excel');
         Route::get('reports/sales/pdf', [ReportController::class, 'salesPdf'])->name('reports.sales.pdf');
+        Route::get('reports/sales/customer-invoices', [ReportController::class, 'salesCustomerInvoices'])->name('reports.sales.customer-invoices');
+        Route::get('reports/sales/customer-invoices/excel', [ReportController::class, 'salesCustomerInvoicesExcel'])->name('reports.sales.customer-invoices.excel');
+        Route::get('reports/sales/customer-invoices/pdf', [ReportController::class, 'salesCustomerInvoicesPdf'])->name('reports.sales.customer-invoices.pdf');
     });
 
     // ── العمليات اليومية — super-admin + admin + saler ───────────────────────────
