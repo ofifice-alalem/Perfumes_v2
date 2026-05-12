@@ -658,9 +658,10 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                             const groups = items.reduce((acc, item, idx) => {
                                 const key = `${item.product_id}-${item.size_id ?? 'null'}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
-                                    acc[key] = { ...item, count: 1, totalAmount: parseFloat(item.line_total), indices: [idx] };
+                                    acc[key] = { ...item, count: 1, quantity: parseFloat(item.quantity), totalAmount: parseFloat(item.line_total), indices: [idx] };
                                 } else {
                                     acc[key].count++;
+                                    acc[key].quantity += parseFloat(item.quantity);
                                     acc[key].totalAmount += parseFloat(item.line_total);
                                     acc[key].indices.push(idx);
                                 }
@@ -678,7 +679,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                         <span className="text-center">حذف</span>
                                     </div>
                                     {Object.values(groups).map((g: any, idx) => {
-                                        const displayCount = g.sale_type === 'unit_based' ? parseFloat(g.quantity) * g.count : g.count;
+                                        const displayCount = g.sale_type === 'unit_based' ? g.quantity : g.count;
                                         return (
                                         <div key={idx} className="grid grid-cols-[60px_2fr_70px_80px_90px_50px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
                                             <div className="flex items-center justify-center">
@@ -691,17 +692,20 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                                                 const stock = p ? +p.stock + consumed + (parseFloat(g.quantity) * g.count) : 0;
                                                                 return parseFloat(g.quantity) > 0 ? Math.floor(stock / parseFloat(g.quantity)) : 0;
                                                             })();
-                                                        openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(g.count), newVal => {
+                                                        openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(displayCount), newVal => {
                                                             const newCount = parseInt(newVal) || 1;
                                                             setItems(prev => {
                                                                 const without = prev.filter((_, i) => !g.indices.includes(i));
                                                                 const template = prev[g.indices[0]];
+                                                                if (g.sale_type === 'unit_based') {
+                                                                    return [...without, { ...template, quantity: String(newCount), line_total: (parseFloat(template.unit_price) * newCount).toFixed(2) }];
+                                                                }
                                                                 return [...without, ...Array.from({ length: newCount }, () => ({ ...template }))];
                                                             });
                                                         }, cartMax);
                                                     }}
                                                     className="w-14 h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-base text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95">
-                                                    {g.count}
+                                                    {displayCount}
                                                 </button>
                                             </div>
                                             <div className="min-w-0 flex flex-col justify-center">

@@ -133,6 +133,7 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                                 acc[key] = { name: item.product.name, size_label: item.size?.label ?? null, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
                             } else {
                                 acc[key].count++;
+                                acc[key].quantity += parseFloat(item.quantity);
                                 acc[key].total += parseFloat(item.line_total);
                             }
                             return acc;
@@ -148,10 +149,14 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                                     <span className="text-center">الإجمالي</span>
                                 </div>
                                 <div className="flex flex-col gap-2">
-                                    {Object.values(groups).map((g: any, idx: number) => (
+                                    {Object.values(groups).map((g: any, idx: number) => {
+                                        // صف واحد بكمية > 1 = unit_based → اعرض quantity
+                                        // صفوف متعددة = tier/decant → اعرض count
+                                        const displayCount = g.count === 1 ? g.quantity : g.count;
+                                        return (
                                         <div key={idx} className="hidden sm:grid grid-cols-[60px_2fr_70px_80px_90px] gap-2 px-3 py-2.5 rounded-[12px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
                                             <div className="flex items-center justify-center">
-                                                <span className="w-9 h-8 rounded-[8px] flex items-center justify-center font-black text-sm bg-primary/10 text-primary">{g.count}</span>
+                                                <span className="w-9 h-8 rounded-[8px] flex items-center justify-center font-black text-sm bg-primary/10 text-primary">{displayCount}</span>
                                             </div>
                                             <div className="flex items-center min-w-0">
                                                 <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{g.name}</span>
@@ -168,7 +173,8 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                                                 <span className="font-black text-orange-500 text-sm">{fmt(g.total)}</span>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
