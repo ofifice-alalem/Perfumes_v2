@@ -244,8 +244,10 @@ class RolloverService
 
     private function buildPurchasedProducts(?int $periodId): array
     {
-        return \App\Models\PurchaseItem::where(fn($q) => $this->scopePeriod($q, $periodId))
+        return \App\Models\PurchaseItem::where(fn($q) => $this->scopePeriod($q, $periodId, 'purchase_items'))
             ->join('products', 'purchase_items.product_id', '=', 'products.id')
+            ->join('purchases', 'purchase_items.purchase_id', '=', 'purchases.id')
+            ->whereNull('purchases.deleted_at')
             ->select('products.id', 'products.name', DB::raw('SUM(purchase_items.quantity) as total_qty'))
             ->groupBy('products.id', 'products.name')
             ->get()
@@ -255,8 +257,10 @@ class RolloverService
 
     private function buildSoldProducts(?int $periodId): array
     {
-        return \App\Models\InvoiceItem::where(fn($q) => $this->scopePeriod($q, $periodId))
+        return \App\Models\InvoiceItem::where(fn($q) => $this->scopePeriod($q, $periodId, 'invoice_items'))
             ->join('products', 'invoice_items.product_id', '=', 'products.id')
+            ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->whereNull('invoices.deleted_at')
             ->select('products.id', 'products.name', DB::raw('SUM(invoice_items.quantity) as total_qty'))
             ->groupBy('products.id', 'products.name')
             ->get()
@@ -319,15 +323,19 @@ class RolloverService
      * - includes records with period_id = $periodId
      * - also includes legacy records with period_id = NULL (pre-Step-11 data)
      */
-    private function scopePeriod($query, ?int $periodId): void
+    private function scopePeriod($query, ?int $periodId, string $table = 'period_id'): void
     {
         if ($periodId === null) {
-            return; // no period at all → return everything
+            return;
         }
 
+        $col = str_contains($table, '.') || $table === 'period_id'
+            ? 'period_id'
+            : "{$table}.period_id";
+
         $query->where(fn($q) => $q
-            ->where('period_id', $periodId)
-            ->orWhereNull('period_id')
+            ->where($col, $periodId)
+            ->orWhereNull($col)
         );
     }
 }
