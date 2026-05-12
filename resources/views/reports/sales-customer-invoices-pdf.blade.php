@@ -23,8 +23,19 @@
         .summary-label { font-size: 8px; font-weight: bold; color: #64748b; margin-bottom: 4px; }
         .summary-value { font-size: 15px; font-weight: bold; color: #0f172a; }
 
-        .customer-header { background: #1565C0; color: #fff; font-weight: bold; font-size: 11px; padding: 7px 10px; margin-top: 10px; }
-        .invoice-header  { background: #BBDEFB; font-weight: bold; font-size: 10px; padding: 5px 10px; }
+        .customer-header { background: #1565C0; color: #fff; font-weight: bold; font-size: 11px; margin-top: 10px; border-radius: 2px; }
+        .customer-header table { width: 100%; border-collapse: collapse; direction: ltr; }
+        .customer-header td { padding: 7px 10px; color: #fff; font-weight: bold; direction: rtl; unicode-bidi: bidi-override; }
+        .customer-header td.ch-amount { text-align: left; font-size: 12px; white-space: nowrap; }
+        .customer-header td.ch-count  { text-align: center; font-size: 10px; opacity: 0.85; white-space: nowrap; }
+        .customer-header td.ch-name   { text-align: right; font-size: 12px; }
+
+        .invoice-header { background: #BBDEFB; font-weight: bold; font-size: 10px; border-bottom: 1px solid #90CAF9; }
+        .invoice-header table { width: 100%; border-collapse: collapse; direction: ltr; }
+        .invoice-header td { padding: 5px 10px; direction: rtl; unicode-bidi: bidi-override; color: #0f172a; font-weight: bold; white-space: nowrap; }
+        .invoice-header td.ih-total { text-align: left; color: #1565C0; }
+        .invoice-header td.ih-date  { text-align: center; color: #475569; }
+        .invoice-header td.ih-num   { text-align: right; color: #1565C0; }
 
         table.items { width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed; margin-bottom: 2px; }
         table.items th { color: #0f172a; text-align: right; padding: 5px 6px; font-size: 9px; font-weight: bold; border: 1px solid #94a3b8; background: #f5f5f5; direction: rtl; unicode-bidi: bidi-override; }
@@ -65,12 +76,24 @@
 {{-- Entries --}}
 @foreach($entries as $entry)
 <div class="customer-header">
-    {{ $entry['name'] }} &mdash; {{ $entry['invoice_count'] }} {{ $labels['invoices_label'] }} &mdash; {{ $fmtN($entry['total_amount']) }}
+    <table>
+        <tr>
+            <td class="ch-amount">{{ $fmtN($entry['total_amount']) }}</td>
+            <td class="ch-count">{{ $entry['invoice_count'] }} {{ $labels['invoices_label'] }}</td>
+            <td class="ch-name">{{ $entry['name'] }}</td>
+        </tr>
+    </table>
 </div>
 
 @foreach($entry['invoices'] as $inv)
 <div class="invoice-header">
-    INV#{{ $inv['id'] }} &nbsp;&nbsp; {{ $inv['date'] }} &nbsp;&nbsp; {{ $labels['total'] }}: {{ $fmtN($inv['total']) }}
+    <table>
+        <tr>
+            <td class="ih-total">{{ $fmtN($inv['total']) }} :{{ $labels['total'] }}</td>
+            <td class="ih-date">{{ $inv['date'] }}</td>
+            <td class="ih-num">INV#{{ $inv['id'] }}</td>
+        </tr>
+    </table>
 </div>
 <table class="items">
     <thead>
