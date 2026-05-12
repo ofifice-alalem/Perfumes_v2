@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { router } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, Package, CreditCard, BarChart2, Trash2 } from 'lucide-react';
+import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, CreditCard, BarChart2, CheckCircle } from 'lucide-react';
 
 interface Period { id: number; name: string; started_at: string; }
 
-interface CustomerRow { id: number; name: string; balance: number; }
-interface SupplierRow { id: number; name: string; balance: number; }
-interface ProductRow  { id: number; name: string; stock: number; }
-interface WasteProductRow { id: number; name: string; quantity: number; }
+interface CustomerRow      { id: number; name: string; balance: number; }
+interface SupplierRow      { id: number; name: string; balance: number; }
+interface ProductRow       { id: number; name: string; stock: number; }
+interface OpeningStockRow  { id: number; name: string; quantity: number; }
+interface WasteProductRow  { id: number; name: string; quantity: number; }
+interface PurchasedRow     { id: number; name: string; quantity: number; }
+interface SoldRow          { id: number; name: string; quantity: number; }
 interface PaymentMethodRow { id: number; name: string; balance: number; }
+
 interface Stats {
     total_sales: number; total_purchases: number;
     total_returns_in: number; total_returns_out: number;
@@ -23,7 +26,10 @@ interface Preview {
     customers: CustomerRow[];
     suppliers: SupplierRow[];
     products: ProductRow[];
+    opening_stock: OpeningStockRow[];
     waste_products: WasteProductRow[];
+    purchased_products: PurchasedRow[];
+    sold_products: SoldRow[];
     payment_methods: PaymentMethodRow[];
     stats: Stats;
 }
@@ -38,34 +44,131 @@ function fmt(v: number) {
     return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function fmtDate(v: string) {
-    const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB');
+const statLabels: Record<string, string> = {
+    total_sales: 'إجمالي المبيعات', total_purchases: 'إجمالي المشتريات',
+    total_returns_in: 'مرتجعات العملاء', total_returns_out: 'مرتجعات الموردين',
+    total_waste: 'قيمة التالف', total_paid_in: 'مقبوضات العملاء',
+    total_paid_out: 'مدفوعات الموردين', invoices_count: 'عدد الفواتير',
+    purchases_count: 'عدد المشتريات', new_customers: 'عملاء جدد',
+};
+
+function StockEquationTable({ products, opening, purchased, sold, waste }: {
+    products: ProductRow[];
+    opening: OpeningStockRow[];
+    purchased: PurchasedRow[];
+    sold: SoldRow[];
+    waste: WasteProductRow[];
+}) {
+    const allIds = Array.from(new Set([
+        ...products.map(p => p.id),
+        ...opening.map(p => p.id),
+        ...purchased.map(p => p.id),
+        ...sold.map(p => p.id),
+        ...waste.map(p => p.id),
+    ]));
+
+    const getName = (id: number) =>
+        [...products, ...opening, ...purchased, ...sold, ...waste].find(p => p.id === id)?.name ?? '—';
+
+    const rows = allIds.map(id => {
+        const openingQty   = opening.find(p => p.id === id)?.quantity ?? 0;
+        const purchasedQty = purchased.find(p => p.id === id)?.quantity ?? 0;
+        const soldQty      = sold.find(p => p.id === id)?.quantity ?? 0;
+        const wasteQty     = waste.find(p => p.id === id)?.quantity ?? 0;
+        const stockQty     = products.find(p => p.id === id)?.stock ?? 0;
+        const left  = openingQty + purchasedQty;
+        const right = soldQty + wasteQty + stockQty;
+        const diff  = left - right;
+        return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
+    });
+
+    const allBalanced = rows.every(r => r.diff === 0);
+
+    return (
+        <SpatialCard
+            title="معادلة التحقق من المخزون"
+            icon={allBalanced
+                ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+                : <AlertTriangle className="w-4 h-4 text-amber-500" />
+            }
+        >
+            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40">
+                المعادلة:&nbsp;
+                <span className="text-slate-600 dark:text-white/60">مخزون البداية</span>
+                &nbsp;+&nbsp;
+                <span className="text-primary">المشتري</span>
+                &nbsp;=&nbsp;
+                <span className="text-emerald-600 dark:text-emerald-400">المباع</span>
+                &nbsp;+&nbsp;
+                <span className="text-red-500">التالف</span>
+                &nbsp;+&nbsp;
+                <span className="text-slate-700 dark:text-white/80">المخزون النهائي</span>
+            </div>
+
+            {allBalanced ? (
+                <div className="px-4 py-3 mb-3 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle className="w-4 h-4 shrink-0" /> جميع الأرقام متطابقة ✅
+                </div>
+            ) : (
+                <div className="px-4 py-3 mb-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="w-4 h-4 shrink-0" /> يوجد فرق في بعض المنتجات — يُنصح بمراجعة الحركات قبل التدوير
+                </div>
+            )}
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                        {rows.map(row => (
+                            <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-black/3 dark:hover:bg-white/3'}`}>
+                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
+                                <td className="px-4 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
+                                <td className="px-4 py-3 font-black text-primary">{row.purchasedQty}</td>
+                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
+                                <td className="px-4 py-3 font-black text-red-500">{row.wasteQty}</td>
+                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
+                                <td className="px-4 py-3">
+                                    {row.diff === 0 ? (
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓</span>
+                                    ) : (
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                            {row.diff > 0 ? `+${row.diff}` : row.diff}
+                                        </span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </SpatialCard>
+    );
 }
 
 export default function PeriodsRollover({ currentPeriod, preview, flash }: Props) {
-    const [newName, setNewName] = useState('');
-    const [notes, setNotes] = useState('');
-    const [confirmed, setConfirmed] = useState(false);
+    const [newName, setNewName]       = useState('');
+    const [notes, setNotes]           = useState('');
+    const [confirmed, setConfirmed]   = useState(false);
     const [processing, setProcessing] = useState(false);
 
     function submit() {
         if (!newName.trim()) { alert('اسم الفترة الجديدة مطلوب'); return; }
         if (!confirmed) { alert('يجب تأكيد التدوير أولاً'); return; }
-
         setProcessing(true);
         router.post('/periods/execute', { new_period_name: newName, notes }, {
             onFinish: () => setProcessing(false),
         });
     }
-
-    const statLabels: Record<string, string> = {
-        total_sales: 'إجمالي المبيعات', total_purchases: 'إجمالي المشتريات',
-        total_returns_in: 'مرتجعات العملاء', total_returns_out: 'مرتجعات الموردين',
-        total_waste: 'قيمة التالف', total_paid_in: 'مقبوضات العملاء',
-        total_paid_out: 'مدفوعات الموردين', invoices_count: 'عدد الفواتير',
-        purchases_count: 'عدد المشتريات', new_customers: 'عملاء جدد',
-    };
 
     return (
         <AppShell pageTitle="تنفيذ التدوير">
@@ -83,9 +186,10 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                     </div>
                 </div>
 
-                {flash?.error && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
+                {flash?.error && (
+                    <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>
+                )}
 
-                {/* Warning Banner */}
                 <div className="px-5 py-4 rounded-[18px] bg-amber-500/10 border border-amber-500/20 flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                     <div className="text-sm font-bold text-amber-700 dark:text-amber-400 leading-relaxed">
@@ -95,14 +199,13 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                 </div>
 
                 <div className="grid lg:grid-cols-[1fr_400px] gap-6">
-                    {/* Preview Section */}
                     <div className="flex flex-col gap-6">
 
-                        {/* Customer Balances */}
+                        {/* Customers */}
                         <SpatialCard title={`ديون العملاء (${preview.customers.length})`} icon={<Users className="w-4 h-4" />}>
                             <div className="overflow-x-auto max-h-64 overflow-y-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                                    <thead className="sticky top-0">
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">العميل</th>
                                             <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الرصيد</th>
@@ -122,11 +225,11 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                             </div>
                         </SpatialCard>
 
-                        {/* Supplier Balances */}
+                        {/* Suppliers */}
                         <SpatialCard title={`ديون الموردين (${preview.suppliers.length})`} icon={<Truck className="w-4 h-4" />}>
                             <div className="overflow-x-auto max-h-64 overflow-y-auto">
                                 <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
+                                    <thead className="sticky top-0">
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المورد</th>
                                             <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الرصيد</th>
@@ -146,53 +249,14 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                             </div>
                         </SpatialCard>
 
-                        {/* Product Stocks */}
-                        <SpatialCard title={`المخزون (${preview.products.length})`} icon={<Package className="w-4 h-4" />}>
-                            <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="sticky top-0 bg-white dark:bg-slate-900">
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المنتج</th>
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الكمية</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {preview.products.map(p => (
-                                            <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3">
-                                                <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{p.name}</td>
-                                                <td className="px-4 py-2 font-black text-slate-700 dark:text-white/80">{p.stock}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </SpatialCard>
-
-                        {/* Waste Products */}
-                        <SpatialCard title={`التالف (${preview.waste_products.length} منتج)`} icon={<Trash2 className="w-4 h-4 text-red-500" />}>
-                            {preview.waste_products.length === 0 ? (
-                                <div className="flex items-center justify-center py-8 text-slate-400 dark:text-white/30 font-bold text-sm">لا يوجد تالف في هذه الفترة</div>
-                            ) : (
-                                <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-white dark:bg-slate-900">
-                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المنتج</th>
-                                                <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الكمية التالفة</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {preview.waste_products.map(p => (
-                                                <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3">
-                                                    <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{p.name}</td>
-                                                    <td className="px-4 py-2 font-black text-red-500">{p.quantity}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </SpatialCard>
+                        {/* Stock Equation */}
+                        <StockEquationTable
+                            products={preview.products}
+                            opening={preview.opening_stock}
+                            purchased={preview.purchased_products}
+                            sold={preview.sold_products}
+                            waste={preview.waste_products}
+                        />
 
                         {/* Payment Methods */}
                         <SpatialCard title="الخزينة" icon={<CreditCard className="w-4 h-4" />}>
@@ -216,8 +280,7 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">{statLabels[key] ?? key}</span>
                                         <span className="font-black text-slate-800 dark:text-white">
                                             {typeof val === 'number' && !['invoices_count', 'purchases_count', 'new_customers'].includes(key)
-                                                ? fmt(val)
-                                                : val}
+                                                ? fmt(val) : val}
                                         </span>
                                     </div>
                                 ))}
@@ -225,7 +288,7 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                         </SpatialCard>
                     </div>
 
-                    {/* Confirm Section */}
+                    {/* Confirm */}
                     <div className="flex flex-col gap-5">
                         <SpatialCard title="تأكيد التدوير" icon={<RefreshCw className="w-4 h-4" />}>
                             <div className="flex flex-col gap-5">
@@ -233,42 +296,25 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                                     <label className="block text-sm font-bold text-slate-600 dark:text-white/60 mb-2">
                                         اسم الفترة الجديدة <span className="text-red-500">*</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={newName}
-                                        onChange={e => setNewName(e.target.value)}
+                                    <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
                                         className="w-full h-12 rounded-[14px] spatial-input text-right font-bold text-slate-800 dark:text-white px-4"
-                                        placeholder="مثال: 2026"
-                                    />
+                                        placeholder="مثال: 2027" />
                                 </div>
-
                                 <div>
                                     <label className="block text-sm font-bold text-slate-600 dark:text-white/60 mb-2">ملاحظات (اختياري)</label>
-                                    <textarea
-                                        value={notes}
-                                        onChange={e => setNotes(e.target.value)}
+                                    <textarea value={notes} onChange={e => setNotes(e.target.value)}
                                         className="w-full h-24 rounded-[14px] spatial-input text-right font-bold text-slate-800 dark:text-white resize-none p-4"
-                                        placeholder="ملاحظات عن التدوير..."
-                                    />
+                                        placeholder="ملاحظات عن التدوير..." />
                                 </div>
-
                                 <label className="flex items-start gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={confirmed}
-                                        onChange={e => setConfirmed(e.target.checked)}
-                                        className="mt-1 w-4 h-4 rounded accent-primary"
-                                    />
+                                    <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
+                                        className="mt-1 w-4 h-4 rounded accent-primary" />
                                     <span className="text-sm font-bold text-slate-600 dark:text-white/60 leading-relaxed">
                                         أؤكد أنني أريد إغلاق الفترة الحالية وفتح فترة جديدة. هذا الإجراء لا يمكن التراجع عنه.
                                     </span>
                                 </label>
-
-                                <button
-                                    onClick={submit}
-                                    disabled={!newName.trim() || !confirmed || processing}
-                                    className="w-full h-12 rounded-[14px] bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
+                                <button onClick={submit} disabled={!newName.trim() || !confirmed || processing}
+                                    className="w-full h-12 rounded-[14px] bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                     <RefreshCw className={`w-5 h-5 ${processing ? 'animate-spin' : ''}`} />
                                     {processing ? 'جاري التدوير...' : 'تنفيذ التدوير'}
                                 </button>

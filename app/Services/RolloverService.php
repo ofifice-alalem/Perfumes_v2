@@ -40,12 +40,15 @@ class RolloverService
         $periodId = $this->getCurrentPeriodId();
 
         return [
-            'customers'       => $this->buildCustomerBalances($periodId),
-            'suppliers'       => $this->buildSupplierBalances($periodId),
-            'products'        => $this->buildProductStocks(),
-            'waste_products'  => $this->buildWasteProducts($periodId),
-            'payment_methods' => $this->buildPaymentMethodBalances($periodId),
-            'stats'           => $this->buildStats($periodId),
+            'customers'         => $this->buildCustomerBalances($periodId),
+            'suppliers'         => $this->buildSupplierBalances($periodId),
+            'products'          => $this->buildProductStocks(),
+            'opening_stock'     => $this->buildOpeningStock(),
+            'waste_products'    => $this->buildWasteProducts($periodId),
+            'purchased_products'=> $this->buildPurchasedProducts($periodId),
+            'sold_products'     => $this->buildSoldProducts($periodId),
+            'payment_methods'   => $this->buildPaymentMethodBalances($periodId),
+            'stats'             => $this->buildStats($periodId),
         ];
     }
 
@@ -60,12 +63,15 @@ class RolloverService
 
             // Step 1: Build snapshot data
             $periodId         = $current->id;
-            $customerBalances = $this->buildCustomerBalances($periodId);
-            $supplierBalances = $this->buildSupplierBalances($periodId);
-            $productStocks    = $this->buildProductStocks();
-            $wasteProducts    = $this->buildWasteProducts($periodId);
-            $pmBalances       = $this->buildPaymentMethodBalances($periodId);
-            $stats            = $this->buildStats($periodId);
+            $customerBalances  = $this->buildCustomerBalances($periodId);
+            $supplierBalances  = $this->buildSupplierBalances($periodId);
+            $productStocks     = $this->buildProductStocks();
+            $openingStock      = $this->buildOpeningStock();
+            $wasteProducts     = $this->buildWasteProducts($periodId);
+            $purchasedProducts = $this->buildPurchasedProducts($periodId);
+            $soldProducts      = $this->buildSoldProducts($periodId);
+            $pmBalances        = $this->buildPaymentMethodBalances($periodId);
+            $stats             = $this->buildStats($periodId);
 
             // Step 2: Save snapshot
             $snapshot = PeriodSnapshot::create([
@@ -86,10 +92,19 @@ class RolloverService
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'supplier', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['balance'], 'created_at' => $now];
             }
             foreach ($productStocks as $row) {
-                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'product_stock', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['stock'], 'created_at' => $now];
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'product_stock',    'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['stock'],    'created_at' => $now];
+            }
+            foreach ($openingStock as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'opening_stock',    'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
             }
             foreach ($wasteProducts as $row) {
-                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'waste_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'waste_product',     'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+            }
+            foreach ($purchasedProducts as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'purchased_product', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
+            }
+            foreach ($soldProducts as $row) {
+                $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'sold_product',      'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['quantity'], 'created_at' => $now];
             }
             foreach ($pmBalances as $row) {
                 $items[] = ['snapshot_id' => $snapshot->id, 'type' => 'payment_method', 'entity_id' => $row['id'], 'entity_name' => $row['name'], 'balance' => $row['balance'], 'created_at' => $now];
@@ -182,6 +197,40 @@ class RolloverService
             ->toArray();
     }
 
+    /**
+     * Opening stock = product_stock items from the last closed period's snapshot.
+     * If no previous period exists (first ever rollover), returns 0 for all products.
+     */
+    private function buildOpeningStock(): array
+    {
+        $lastSnapshot = PeriodSnapshot::whereHas('period', fn($q) => $q->where('status', 'closed'))
+            ->latest('snapshot_at')
+            ->first();
+
+        if (! $lastSnapshot) {
+            // First period — opening stock is 0 for all products
+            return Product::select('id', 'name')
+                ->get()
+                ->map(fn($p) => ['id' => $p->id, 'name' => $p->name, 'quantity' => 0.0])
+                ->toArray();
+        }
+
+        // Get product_stock items from the last snapshot
+        $snapshotStocks = $lastSnapshot->items()
+            ->where('type', 'product_stock')
+            ->get()
+            ->keyBy('entity_id');
+
+        return Product::select('id', 'name')
+            ->get()
+            ->map(fn($p) => [
+                'id'       => $p->id,
+                'name'     => $p->name,
+                'quantity' => (float) ($snapshotStocks[$p->id]->balance ?? 0),
+            ])
+            ->toArray();
+    }
+
     private function buildWasteProducts(?int $periodId): array
     {
         return WasteItem::where(fn($q) => $this->scopePeriod($q, $periodId))
@@ -193,6 +242,27 @@ class RolloverService
             ->toArray();
     }
 
+    private function buildPurchasedProducts(?int $periodId): array
+    {
+        return \App\Models\PurchaseItem::where(fn($q) => $this->scopePeriod($q, $periodId))
+            ->join('products', 'purchase_items.product_id', '=', 'products.id')
+            ->select('products.id', 'products.name', DB::raw('SUM(purchase_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->get()
+            ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
+            ->toArray();
+    }
+
+    private function buildSoldProducts(?int $periodId): array
+    {
+        return \App\Models\InvoiceItem::where(fn($q) => $this->scopePeriod($q, $periodId))
+            ->join('products', 'invoice_items.product_id', '=', 'products.id')
+            ->select('products.id', 'products.name', DB::raw('SUM(invoice_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->get()
+            ->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'quantity' => (float) $r->total_qty])
+            ->toArray();
+    }
     private function buildPaymentMethodBalances(?int $periodId): array
     {
         $paid_in  = Payment::where(fn($q) => $this->scopePeriod($q, $periodId))

@@ -1,7 +1,7 @@
 import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { ChevronLeft, Users, Truck, Package, CreditCard, BarChart2, Calendar, Trash2 } from 'lucide-react';
+import { ChevronLeft, Users, Truck, Package, CreditCard, BarChart2, Calendar, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface SnapshotItem {
     id: number;
@@ -28,9 +28,7 @@ interface Period {
     snapshot: Snapshot;
 }
 
-interface Props {
-    period: Period;
-}
+interface Props { period: Period; }
 
 function fmt(v: number) {
     return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,16 +50,127 @@ const statLabels: Record<string, string> = {
 
 const countTypes = ['invoices_count', 'purchases_count', 'new_customers'];
 
+// ─── Stock Equation Table ────────────────────────────────────────────────────
+function StockEquationTable({ products, opening, purchased, sold, waste }: {
+    products: SnapshotItem[];
+    opening: SnapshotItem[];
+    purchased: SnapshotItem[];
+    sold: SnapshotItem[];
+    waste: SnapshotItem[];
+}) {
+    const allIds = Array.from(new Set([
+        ...products.map(p => p.entity_id),
+        ...opening.map(p => p.entity_id),
+        ...purchased.map(p => p.entity_id),
+        ...sold.map(p => p.entity_id),
+        ...waste.map(p => p.entity_id),
+    ])).filter(Boolean) as number[];
+
+    const getName = (id: number) =>
+        [...products, ...opening, ...purchased, ...sold, ...waste].find(i => i.entity_id === id)?.entity_name ?? '—';
+
+    const getVal = (arr: SnapshotItem[], id: number) =>
+        arr.find(i => i.entity_id === id)?.balance ?? 0;
+
+    const rows = allIds.map(id => {
+        const openingQty   = getVal(opening, id);
+        const purchasedQty = getVal(purchased, id);
+        const soldQty      = getVal(sold, id);
+        const wasteQty     = getVal(waste, id);
+        const stockQty     = getVal(products, id);
+        const left  = openingQty + purchasedQty;
+        const right = soldQty + wasteQty + stockQty;
+        const diff  = left - right;
+        return { id, name: getName(id), openingQty, purchasedQty, soldQty, wasteQty, stockQty, diff };
+    });
+
+    const allBalanced = rows.every(r => r.diff === 0);
+
+    return (
+        <SpatialCard
+            title="معادلة التحقق من المخزون"
+            icon={allBalanced
+                ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+                : <AlertTriangle className="w-4 h-4 text-amber-500" />
+            }
+        >
+            <div className="px-4 py-3 mb-2 rounded-[14px] bg-black/3 dark:bg-white/3 text-xs font-bold text-slate-500 dark:text-white/40">
+                المعادلة:&nbsp;
+                <span className="text-slate-600 dark:text-white/60">مخزون البداية</span>
+                &nbsp;+&nbsp;
+                <span className="text-primary">المشتري</span>
+                &nbsp;=&nbsp;
+                <span className="text-emerald-600 dark:text-emerald-400">المباع</span>
+                &nbsp;+&nbsp;
+                <span className="text-red-500">التالف</span>
+                &nbsp;+&nbsp;
+                <span className="text-slate-700 dark:text-white/80">المخزون النهائي</span>
+            </div>
+
+            {allBalanced ? (
+                <div className="px-4 py-3 mb-3 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle className="w-4 h-4 shrink-0" /> جميع الأرقام متطابقة ✅
+                </div>
+            ) : (
+                <div className="px-4 py-3 mb-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="w-4 h-4 shrink-0" /> يوجد فرق في بعض المنتجات — يُنصح بمراجعة الحركات
+                </div>
+            )}
+
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
+                            <th className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                        {rows.map(row => (
+                            <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-black/3 dark:hover:bg-white/3'}`}>
+                                <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
+                                <td className="px-4 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
+                                <td className="px-4 py-3 font-black text-primary">{row.purchasedQty}</td>
+                                <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
+                                <td className="px-4 py-3 font-black text-red-500">{row.wasteQty}</td>
+                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
+                                <td className="px-4 py-3">
+                                    {row.diff === 0 ? (
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓</span>
+                                    ) : (
+                                        <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                            {row.diff > 0 ? `+${row.diff}` : row.diff}
+                                        </span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </SpatialCard>
+    );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function PeriodsSnapshot({ period }: Props) {
     const { snapshot } = period;
     const items = snapshot.items;
 
-    const customers      = items.filter(i => i.type === 'customer');
-    const suppliers      = items.filter(i => i.type === 'supplier');
-    const products       = items.filter(i => i.type === 'product_stock');
-    const wasteProducts  = items.filter(i => i.type === 'waste_product');
-    const paymentMethods = items.filter(i => i.type === 'payment_method');
-    const stats          = items.filter(i => !['customer', 'supplier', 'product_stock', 'waste_product', 'payment_method'].includes(i.type));
+    const customers         = items.filter(i => i.type === 'customer');
+    const suppliers         = items.filter(i => i.type === 'supplier');
+    const products          = items.filter(i => i.type === 'product_stock');
+    const openingStock      = items.filter(i => i.type === 'opening_stock');
+    const wasteProducts     = items.filter(i => i.type === 'waste_product');
+    const purchasedProducts = items.filter(i => i.type === 'purchased_product');
+    const soldProducts      = items.filter(i => i.type === 'sold_product');
+    const paymentMethods    = items.filter(i => i.type === 'payment_method');
+    const stats             = items.filter(i => !['customer','supplier','product_stock','opening_stock','waste_product','purchased_product','sold_product','payment_method'].includes(i.type));
 
     return (
         <AppShell pageTitle={`Snapshot — ${period.name}`}>
@@ -154,7 +263,7 @@ export default function PeriodsSnapshot({ period }: Props) {
                     </SpatialCard>
 
                     {/* Products */}
-                    <SpatialCard title={`المخزون (${products.length})`} icon={<Package className="w-4 h-4" />}>
+                    <SpatialCard title={`المخزون النهائي (${products.length})`} icon={<Package className="w-4 h-4" />}>
                         <div className="overflow-x-auto max-h-72 overflow-y-auto">
                             <table className="w-full text-sm">
                                 <thead className="sticky top-0">
@@ -175,7 +284,7 @@ export default function PeriodsSnapshot({ period }: Props) {
                         </div>
                     </SpatialCard>
 
-                    {/* Waste Products */}
+                    {/* Waste */}
                     <SpatialCard title={`التالف (${wasteProducts.length} منتج)`} icon={<Trash2 className="w-4 h-4 text-red-500" />}>
                         {wasteProducts.length === 0 ? (
                             <div className="flex items-center justify-center py-8 text-slate-400 dark:text-white/30 font-bold text-sm">لا يوجد تالف في هذه الفترة</div>
@@ -215,6 +324,15 @@ export default function PeriodsSnapshot({ period }: Props) {
                         </div>
                     </SpatialCard>
                 </div>
+
+                {/* Stock Equation */}
+                <StockEquationTable
+                    products={products}
+                    opening={openingStock}
+                    purchased={purchasedProducts}
+                    sold={soldProducts}
+                    waste={wasteProducts}
+                />
 
                 {/* Stats */}
                 <SpatialCard title="الملخص الإحصائي" icon={<BarChart2 className="w-4 h-4" />}>
