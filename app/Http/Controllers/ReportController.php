@@ -332,4 +332,47 @@ class ReportController extends Controller
             $request->integer('category_id') ?: null,
         );
     }
+
+    public function returns(Request $request): Response
+    {
+        $dateFrom   = $request->input('date_from');
+        $dateTo     = $request->input('date_to');
+        $userId     = $request->integer('user_id') ?: null;
+        $customerId = $request->integer('customer_id') ?: null;
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $categoryId = $request->integer('category_id') ?: null;
+
+        return Inertia::render('Reports/Returns', [
+            'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
+            'customers'  => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId'),
+            'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId),
+        ]);
+    }
+
+    public function returnsExcel(Request $request)
+    {
+        $this->reports->exportReturnsExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
+
+    public function returnsPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportReturnsPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $request->integer('user_id') ?: null,
+            $request->integer('customer_id') ?: null,
+            $request->integer('supplier_id') ?: null,
+            $request->integer('category_id') ?: null,
+        );
+    }
 }

@@ -2139,4 +2139,255 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('purchases-supplier-invoices-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Returns ───────────────────────────────────────────────────────────────────────
+
+    public function returns(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        // مرتجعات العملاء
+        $crQuery = DB::table('invoice_returns')
+            ->whereNull('deleted_at')
+            ->when($df,         fn($q) => $q->where('created_at', '>=', $df))
+            ->when($dt,         fn($q) => $q->where('created_at', '<=', $dt))
+            ->when($userId,     fn($q) => $q->where('user_id', $userId))
+            ->when($customerId, fn($q) => $q->where('customer_id', $customerId));
+        if ($categoryId) {
+            $crQuery->whereExists(fn($q) => $q->from('invoice_return_items')
+                ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        $customerReturnsTotal = (float) (clone $crQuery)->sum('total');
+        $customerReturnsCount = (int)   (clone $crQuery)->count();
+
+        // مرتجعات الموردين
+        $prQuery = DB::table('purchase_returns')
+            ->whereNull('deleted_at')
+            ->when($df,         fn($q) => $q->where('created_at', '>=', $df))
+            ->when($dt,         fn($q) => $q->where('created_at', '<=', $dt))
+            ->when($userId,     fn($q) => $q->where('user_id', $userId))
+            ->when($supplierId, fn($q) => $q->where('supplier_id', $supplierId));
+        if ($categoryId) {
+            $prQuery->whereExists(fn($q) => $q->from('purchase_return_items')
+                ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
+                ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        $supplierReturnsTotal = (float) (clone $prQuery)->sum('total');
+        $supplierReturnsCount = (int)   (clone $prQuery)->count();
+
+        // مبيعات للمقارنة
+        $salesQuery = DB::table('invoices')
+            ->whereNull('deleted_at')
+            ->when($df,         fn($q) => $q->where('created_at', '>=', $df))
+            ->when($dt,         fn($q) => $q->where('created_at', '<=', $dt))
+            ->when($userId,     fn($q) => $q->where('user_id', $userId))
+            ->when($customerId, fn($q) => $q->where('customer_id', $customerId));
+        $totalSales = (float) $salesQuery->sum('total');
+
+        // تفصيل شهري لمرتجعات العملاء
+        $crMonthlyRows = (clone $crQuery)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw('DATE(created_at)'))->orderBy('date')->get();
+
+        $crMonthly = [];
+        foreach ($crMonthlyRows as $row) {
+            $month = substr($row->date, 0, 7);
+            if (!isset($crMonthly[$month])) $crMonthly[$month] = ['month' => $month, 'total' => 0, 'count' => 0, 'days' => []];
+            $crMonthly[$month]['total'] += (float)$row->total;
+            $crMonthly[$month]['count'] += (int)$row->count;
+            $crMonthly[$month]['days'][] = ['date' => $row->date, 'total' => (float)$row->total, 'count' => (int)$row->count];
+        }
+
+        // تفصيل شهري لمرتجعات الموردين
+        $prMonthlyRows = (clone $prQuery)
+            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as count'))
+            ->groupBy(DB::raw('DATE(created_at)'))->orderBy('date')->get();
+
+        $prMonthly = [];
+        foreach ($prMonthlyRows as $row) {
+            $month = substr($row->date, 0, 7);
+            if (!isset($prMonthly[$month])) $prMonthly[$month] = ['month' => $month, 'total' => 0, 'count' => 0, 'days' => []];
+            $prMonthly[$month]['total'] += (float)$row->total;
+            $prMonthly[$month]['count'] += (int)$row->count;
+            $prMonthly[$month]['days'][] = ['date' => $row->date, 'total' => (float)$row->total, 'count' => (int)$row->count];
+        }
+
+        $returnRate = $totalSales > 0 ? round(($customerReturnsTotal / $totalSales) * 100, 1) : null;
+
+        return [
+            'customerReturnsTotal' => $customerReturnsTotal,
+            'customerReturnsCount' => $customerReturnsCount,
+            'supplierReturnsTotal' => $supplierReturnsTotal,
+            'supplierReturnsCount' => $supplierReturnsCount,
+            'totalSales'           => $totalSales,
+            'returnRate'           => $returnRate,
+            'customerMonthly'      => array_values($crMonthly),
+            'supplierMonthly'      => array_values($prMonthly),
+        ];
+    }
+
+    public function exportReturnsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): void
+    {
+        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('تقرير المرتجعات');
+
+        $row = 1;
+        foreach ([
+            ['تقرير المرتجعات', ''],
+            ['من تاريخ',   $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+            ['', ''],
+            ['مرتجعات العملاء (إجمالي)', $fmtN($data['customerReturnsTotal'])],
+            ['مرتجعات العملاء (عدد)',    $data['customerReturnsCount']],
+            ['مرتجعات الموردين (إجمالي)', $fmtN($data['supplierReturnsTotal'])],
+            ['مرتجعات الموردين (عدد)',    $data['supplierReturnsCount']],
+            ['إجمالي المبيعات',  $fmtN($data['totalSales'])],
+            ['نسبة المرتجعات',  $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—'],
+        ] as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
+        // مرتجعات العملاء
+        $sheet->setCellValue('A' . $row, 'مرتجعات العملاء');
+        $sheet->mergeCells('A' . $row . ':C' . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC2626']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+        $sheet->fromArray(['الشهر', 'عدد', 'الإجمالي'], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']],
+            'font'      => ['bold' => true],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+        foreach ($data['customerMonthly'] as $i => $m) {
+            $sheet->fromArray([$m['month'], $m['count'], $fmtN($m['total'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $i % 2 === 0 ? 'FFF5F5' : 'FFFFFF']],
+                'font'    => ['bold' => true],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+            foreach ($m['days'] as $d) {
+                $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+            }
+        }
+        $row++;
+
+        // مرتجعات الموردين
+        $sheet->setCellValue('A' . $row, 'مرتجعات الموردين');
+        $sheet->mergeCells('A' . $row . ':C' . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D97706']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+        $sheet->fromArray(['الشهر', 'عدد', 'الإجمالي'], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+            'font'      => ['bold' => true],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+        foreach ($data['supplierMonthly'] as $i => $m) {
+            $sheet->fromArray([$m['month'], $m['count'], $fmtN($m['total'])], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $i % 2 === 0 ? 'FFFBEB' : 'FFFFFF']],
+                'font'    => ['bold' => true],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+            foreach ($m['days'] as $d) {
+                $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
+                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                ]);
+                $row++;
+            }
+        }
+
+        foreach (range('A', 'C') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="returns-' . now()->format('Y-m-d') . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportReturnsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g    = fn(string $text) => $arabic->utf8Glyphs($text);
+        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $labels = [
+            'title'                => $g('تقرير المرتجعات'),
+            'generated_at'         => now()->format('Y-m-d H:i'),
+            'label_date_from'      => $g('من تاريخ'),
+            'date_from_val'        => $dateFrom ?? $g('البداية'),
+            'date_to_label'        => $g('إلى تاريخ'),
+            'date_to_val'          => $dateTo ?? now()->format('Y-m-d'),
+            'cr_total'             => $fmtN($data['customerReturnsTotal']),
+            'cr_count'             => $data['customerReturnsCount'],
+            'pr_total'             => $fmtN($data['supplierReturnsTotal']),
+            'pr_count'             => $data['supplierReturnsCount'],
+            'sales_total'          => $fmtN($data['totalSales']),
+            'return_rate'          => $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—',
+            'lbl_cr'               => $g('مرتجعات العملاء'),
+            'lbl_pr'               => $g('مرتجعات الموردين'),
+            'lbl_sales'            => $g('إجمالي المبيعات'),
+            'lbl_rate'             => $g('نسبة المرتجعات'),
+            'col_month'            => $g('الشهر'),
+            'col_count'            => $g('عدد'),
+            'col_total'            => $g('الإجمالي'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-pdf', [
+            'labels' => $labels, 'data' => $data, 'g' => $g, 'fmtN' => $fmtN,
+        ])->setPaper('a4')
+          ->setOption('isHtml5ParserEnabled', true)
+          ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('returns-' . now()->format('Y-m-d') . '.pdf');
+    }
 }
