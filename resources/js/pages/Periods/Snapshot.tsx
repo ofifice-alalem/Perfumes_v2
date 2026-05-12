@@ -8,7 +8,7 @@ interface SnapshotItem {
     type: string;
     entity_id: number | null;
     entity_name: string | null;
-    balance: number;
+    balance: number | string; // API may return string for decimals
 }
 
 interface Snapshot {
@@ -30,8 +30,8 @@ interface Period {
 
 interface Props { period: Period; }
 
-function fmt(v: number) {
-    return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function fmt(v: number | string) {
+    return Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function fmtDate(v: string | null): string {
@@ -75,7 +75,7 @@ function StockEquationTable({ products, opening, purchased, sold, waste, custome
             .find(i => i.entity_id === id)?.entity_name ?? '—';
 
     const getVal = (arr: SnapshotItem[], id: number) =>
-        arr.find(i => i.entity_id === id)?.balance ?? 0;
+        Number(arr.find(i => i.entity_id === id)?.balance ?? 0);
 
     const rows = allIds.map(id => {
         const openingQty   = getVal(opening, id);
