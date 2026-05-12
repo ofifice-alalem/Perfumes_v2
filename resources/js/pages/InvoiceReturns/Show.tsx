@@ -8,7 +8,7 @@ import { ArrowRight, Plus, Trash2, Package, RefreshCw, RotateCcw } from 'lucide-
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
 interface Customer      { id: number; name: string; }
-interface ReturnItem    { id: number; product: Product; quantity: string; unit_price: string; line_total: string; }
+interface ReturnItem    { id: number; product: Product; size: { label: string } | null; quantity: string; unit_price: string; line_total: string; }
 interface Settlement    { id: number; payment_method: { name: string }; amount: string; notes: string | null; created_at: string; }
 interface InvoiceReturn {
     id: number; customer: Customer; invoice: { id: number } | null;
@@ -126,27 +126,53 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
 
                 {/* Items */}
                 <SpatialCard title={`المنتجات المرتجعة (${ret.items.length})`} icon={<Package className="w-4 h-4" />}>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                    {['المنتج', 'الكمية', 'سعر الوحدة', 'الإجمالي'].map(h => (
-                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                    {(() => {
+                        const groups = ret.items.reduce((acc, item) => {
+                            const key = `${item.product.id}-${item.size?.label ?? 'null'}-${item.unit_price}`;
+                            if (!acc[key]) {
+                                acc[key] = { name: item.product.name, size_label: item.size?.label ?? null, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
+                            } else {
+                                acc[key].count++;
+                                acc[key].total += parseFloat(item.line_total);
+                            }
+                            return acc;
+                        }, {} as Record<string, any>);
+
+                        return (
+                            <div className="overflow-x-auto">
+                                <div className="hidden sm:grid grid-cols-[60px_2fr_70px_80px_90px] gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50 mb-2">
+                                    <span className="text-center">عدد</span>
+                                    <span>المنتج</span>
+                                    <span className="text-center">حجم</span>
+                                    <span className="text-center">سعر</span>
+                                    <span className="text-center">الإجمالي</span>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {Object.values(groups).map((g: any, idx: number) => (
+                                        <div key={idx} className="hidden sm:grid grid-cols-[60px_2fr_70px_80px_90px] gap-2 px-3 py-2.5 rounded-[12px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                                            <div className="flex items-center justify-center">
+                                                <span className="w-9 h-8 rounded-[8px] flex items-center justify-center font-black text-sm bg-primary/10 text-primary">{g.count}</span>
+                                            </div>
+                                            <div className="flex items-center min-w-0">
+                                                <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{g.name}</span>
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                {g.size_label
+                                                    ? <span className="text-xs font-black text-white bg-primary px-2 py-1 rounded-full">{g.size_label}</span>
+                                                    : <span className="text-slate-400 text-sm">—</span>}
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{fmt(g.unit_price)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <span className="font-black text-orange-500 text-sm">{fmt(g.total)}</span>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                {ret.items.map(item => (
-                                    <tr key={item.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{item.product.name}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{parseFloat(item.quantity).toLocaleString('en-US')}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{fmt(item.unit_price)}</td>
-                                        <td className="px-4 py-3 font-black text-orange-500">{fmt(item.line_total)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </SpatialCard>
 
                 {/* Settlements */}

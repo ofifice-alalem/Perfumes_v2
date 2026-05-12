@@ -105,6 +105,7 @@ class InvoiceReturnController extends Controller
             'items'                            => 'required|array|min:1',
             'items.*.product_id'               => 'required|exists:products,id',
             'items.*.size_id'                  => 'nullable|exists:sizes,id',
+            'items.*.count'                    => 'nullable|integer|min:1',
             'items.*.quantity'                 => 'required|numeric|min:0.01',
             'items.*.unit_price'               => 'required|numeric|min:0',
             'items.*.line_total'               => 'required|numeric|min:0',
@@ -127,14 +128,20 @@ class InvoiceReturnController extends Controller
             ]);
 
             foreach ($data['items'] as $item) {
-                InvoiceReturnItem::create([
-                    'invoice_return_id' => $ret->id,
-                    'product_id'        => $item['product_id'],
-                    'size_id'           => $item['size_id'] ?? null,
-                    'quantity'          => $item['quantity'],
-                    'unit_price'        => $item['unit_price'],
-                    'line_total'        => $item['line_total'],
-                ]);
+                $count    = max(1, (int) ($item['count'] ?? 1));
+                $quantity = (float) $item['quantity'];
+                $price    = (float) $item['unit_price'];
+
+                for ($i = 0; $i < $count; $i++) {
+                    InvoiceReturnItem::create([
+                        'invoice_return_id' => $ret->id,
+                        'product_id'        => $item['product_id'],
+                        'size_id'           => $item['size_id'] ?? null,
+                        'quantity'          => $quantity,
+                        'unit_price'        => $price,
+                        'line_total'        => $price,
+                    ]);
+                }
             }
 
             $ret->refresh();

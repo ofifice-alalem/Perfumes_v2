@@ -58,6 +58,7 @@ interface ItemRow {
     sale_type?: string;
     size_id?: number | null;
     size_label?: string;
+    count: string;
     quantity: string;
     unit_price: string;
     line_total: string;
@@ -65,7 +66,7 @@ interface ItemRow {
 }
 interface SettlementRow { payment_method_id: string; amount: string; notes: string; }
 
-const emptyItem       = (): ItemRow       => ({ product_id: '', quantity: '', unit_price: '', line_total: '' });
+const emptyItem       = (): ItemRow       => ({ product_id: '', count: '1', quantity: '', unit_price: '', line_total: '' });
 const emptySettlement = (): SettlementRow => ({ payment_method_id: '', amount: '', notes: '' });
 
 function fmt(n: number) {
@@ -80,7 +81,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     // Product selection state
     const [selProduct, setSelProduct] = useState('');
     const [selSize, setSelSize] = useState('');
-    const [selQuantity, setSelQuantity] = useState('1');
+    const [selQty, setSelQty] = useState('1');
     const [selUnitPrice, setSelUnitPrice] = useState('');
     const [selMinPrice, setSelMinPrice] = useState(0);
     
@@ -119,6 +120,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                 sale_type: item.sale_type,
                 size_id: item.size_id ?? null,
                 size_label: item.size_label ?? undefined,
+                count: '1',
                 quantity: '0',
                 unit_price: item.unit_price,
                 line_total: '0',
@@ -202,41 +204,45 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     }, [selectedProduct, selSize, needsSize]);
     
     // Preview calculations
-    const previewQty = parseFloat(selQuantity) || 0;
+    const previewCount = parseInt(selQty) || 1;
     const previewPrice = parseFloat(selUnitPrice) || 0;
-    const previewTotal = previewQty > 0 && previewPrice > 0 ? previewQty * previewPrice : null;
+    const previewTotal = previewPrice > 0 && previewCount > 0 ? previewCount * previewPrice : null;
     
-    const canAddProduct = !!(selProduct && (!needsSize || selSize) && selQuantity && parseFloat(selQuantity) > 0 && selUnitPrice && parseFloat(selUnitPrice) >= selMinPrice);
+    const canAddProduct = !!(selProduct && (!needsSize || selSize) && selQty && parseInt(selQty) > 0 && selUnitPrice && parseFloat(selUnitPrice) >= selMinPrice);
     
     function addProductToCart() {
-        if (!selectedProduct || !selQuantity || !selUnitPrice) return;
+        if (!selectedProduct || !selUnitPrice) return;
         if (needsSize && !selSize) return;
         
-        const qty = parseFloat(selQuantity);
+        const count = parseInt(selQty) || 1;
         const price = parseFloat(selUnitPrice);
-        
-        if (qty <= 0 || price <= 0) return;
+        if (price <= 0) return;
         
         const sizeLabel = selSize && !selSize.startsWith('-custom-')
             ? (sizes.find(s => s.id === +selSize)?.label ?? '')
             : selSize.startsWith('-custom-') ? `${selSize.replace('-custom-', '')} مل` : '';
         
-        const newItem: ItemRow = {
+        // كل قطعة = صف مستقل مثل الفواتير
+        const sizeValue = selSize && !selSize.startsWith('-custom-')
+            ? (sizes.find(s => s.id === +selSize)?.value ?? '1')
+            : selSize.startsWith('-custom-') ? selSize.replace('-custom-', '') : '1';
+
+        const newItems: ItemRow[] = Array.from({ length: count }, () => ({
             product_id: String(selectedProduct.id),
             product_name: selectedProduct.name,
             size_id: selSize && !selSize.startsWith('-custom-') ? +selSize : null,
             size_label: sizeLabel || undefined,
-            quantity: qty.toString(),
+            count: '1',
+            quantity: sizeValue,
             unit_price: price.toFixed(2),
-            line_total: (qty * price).toFixed(2),
-        };
+            line_total: price.toFixed(2),
+        }));
         
-        setItems(prev => [...prev, newItem]);
+        setItems(prev => [...prev, ...newItems]);
         
-        // Reset selection
         setSelProduct('');
         setSelSize('');
-        setSelQuantity('1');
+        setSelQty('1');
         setSelUnitPrice('');
     }
     
@@ -289,19 +295,19 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
             if (i !== idx) return r;
             const updated = { ...r, [field]: val };
             
-            if (field === 'quantity' || field === 'unit_price') {
+            if (field === 'quantity' || field === 'unit_price' || field === 'count') {
+                const count = parseInt(field === 'count' ? val : updated.count) || 1;
                 const qty   = parseFloat(field === 'quantity' ? val : updated.quantity) || 0;
                 const price = parseFloat(field === 'unit_price' ? val : updated.unit_price) || 0;
                 
-                // فحص الحد الأقصى
                 if (field === 'quantity' && updated.max_quantity !== undefined && qty > updated.max_quantity) {
                     updated.quantity = updated.max_quantity.toString();
                     const limitedQty = updated.max_quantity;
-                    updated.line_total = limitedQty > 0 && price > 0 ? (limitedQty * price).toFixed(2) : updated.line_total;
+                    updated.line_total = limitedQty > 0 && price > 0 ? (limitedQty * count * price).toFixed(2) : updated.line_total;
                     return updated;
                 }
                 
-                updated.line_total = qty > 0 && price > 0 ? (qty * price).toFixed(2) : updated.line_total;
+                updated.line_total = qty > 0 && price > 0 ? (qty * count * price).toFixed(2) : updated.line_total;
             }
             return updated;
         }));
@@ -316,7 +322,14 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
 
         form.transform(data => ({
             ...data,
-            items,
+            items: items.map(item => ({
+                product_id: item.product_id,
+                size_id:    item.size_id ?? null,
+                count:      1,
+                quantity:   item.quantity,
+                unit_price: item.unit_price,
+                line_total: item.line_total,
+            })),
             settlements: validSettlements,
         }));
         form.post('/invoice-returns', { preserveScroll: true });
@@ -400,12 +413,12 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                     />
                                 </div>
 
-                                {/* quantity input */}
+                                {/* qty/count input */}
                                 {selectedProduct && (
                                     <button
-                                        onClick={() => openPad('الكمية', selQuantity || '1', v => setSelQuantity(v), availableStock)}
+                                        onClick={() => openPad('العدد', selQty || '1', v => setSelQty(v))}
                                         className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all">
-                                        {selQuantity || '1'}
+                                        {selQty || '1'}
                                     </button>
                                 )}
 
@@ -630,52 +643,90 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
 
                     {/* Cart items */}
                     <div className="flex-1 overflow-y-auto px-4 py-3">
-                        {items.filter(i => parseFloat(i.line_total) > 0).length === 0 ? (
+                        {items.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300 dark:text-white/20">
                                 <Package className="w-12 h-12" />
                                 <span className="font-bold text-sm">لا توجد منتجات</span>
                                 <span className="text-xs">أضف منتجات للمرتجع</span>
                             </div>
-                        ) : (
-                            <div className="flex flex-col gap-2">
-                                <div className="hidden sm:grid grid-cols-[2fr_80px_90px_50px] gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
-                                    <span>المنتج</span>
-                                    <span className="text-center">الكمية</span>
-                                    <span className="text-center">الإجمالي</span>
-                                    <span className="text-center">حذف</span>
-                                </div>
-                                {items.filter(i => parseFloat(i.line_total) > 0).map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-[2fr_80px_90px_50px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
-                                        <div className="min-w-0 flex flex-col justify-center">
-                                            <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product_name}</span>
-                                            {item.size_label && (
-                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{item.size_label}</span>
-                                            )}
-                                            {item.sale_type && (
-                                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{saleTypeLabels[item.sale_type]}</span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center justify-center">
-                                            <button
-                                                onClick={() => openPad('الكمية', item.quantity, v => setItem(idx, 'quantity', v), item.max_quantity)}
-                                                className="w-full h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-base text-slate-800 dark:text-white transition-all cursor-pointer active:scale-[0.95]">
-                                                {item.quantity}
-                                            </button>
-                                        </div>
-                                        <div className="flex items-center justify-center">
-                                            <span className="font-black text-slate-800 dark:text-white text-base">{parseFloat(item.line_total).toFixed(2)}</span>
-                                        </div>
-                                        <div className="flex items-center justify-center">
-                                            <button
-                                                onClick={() => setItems(p => p.filter((_, i) => i !== idx))}
-                                                className="w-10 h-10 rounded-[10px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-[0.95]">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                        </div>
+                        ) : (() => {
+                            const groups = items.reduce((acc, item, idx) => {
+                                const key = `${item.product_id}-${item.size_id ?? 'null'}-${item.unit_price}`;
+                                if (!acc[key]) {
+                                    acc[key] = { ...item, count: 1, totalAmount: parseFloat(item.line_total), indices: [idx] };
+                                } else {
+                                    acc[key].count++;
+                                    acc[key].totalAmount += parseFloat(item.line_total);
+                                    acc[key].indices.push(idx);
+                                }
+                                return acc;
+                            }, {} as Record<string, any>);
+
+                            return (
+                                <div className="flex flex-col gap-2">
+                                    <div className="hidden sm:grid grid-cols-[60px_2fr_70px_80px_90px_50px] gap-2 px-3 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                                        <span className="text-center">عدد</span>
+                                        <span>المنتج</span>
+                                        <span className="text-center">حجم</span>
+                                        <span className="text-center">سعر</span>
+                                        <span className="text-center">الإجمالي</span>
+                                        <span className="text-center">حذف</span>
                                     </div>
-                                ))}
-                            </div>
-                        )}
+                                    {Object.values(groups).map((g: any, idx) => (
+                                        <div key={idx} className="grid grid-cols-[60px_2fr_70px_80px_90px_50px] gap-2 px-3 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
+                                            <div className="flex items-center justify-center">
+                                                <button
+                                                    onClick={() => {
+                                                        openPad('العدد', String(g.count), newVal => {
+                                                            const newCount = parseInt(newVal) || 1;
+                                                            setItems(prev => {
+                                                                const without = prev.filter((_, i) => !g.indices.includes(i));
+                                                                const template = prev[g.indices[0]];
+                                                                const newRows = Array.from({ length: newCount }, () => ({ ...template }));
+                                                                return [...without, ...newRows];
+                                                            });
+                                                        });
+                                                    }}
+                                                    className="w-14 h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-base text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95">
+                                                    {g.count}
+                                                </button>
+                                            </div>
+                                            <div className="min-w-0 flex flex-col justify-center">
+                                                <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{g.product_name}</span>
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                {g.size_label
+                                                    ? <span className="text-xs font-black text-white bg-primary px-2 py-1 rounded-full">{g.size_label}</span>
+                                                    : <span className="text-slate-400 text-sm">—</span>}
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <button
+                                                    onClick={() => openPad('السعر', g.unit_price, newVal => {
+                                                        setItems(prev => prev.map((item, i) =>
+                                                            g.indices.includes(i)
+                                                                ? { ...item, unit_price: parseFloat(newVal).toFixed(2), line_total: parseFloat(newVal).toFixed(2) }
+                                                                : item
+                                                        ));
+                                                    })}
+                                                    className="w-full h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-sm text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95">
+                                                    {g.unit_price}
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <span className="font-black text-slate-800 dark:text-white text-base">{g.totalAmount.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-center">
+                                                <button
+                                                    onClick={() => setItems(prev => prev.filter((_, i) => !g.indices.includes(i)))}
+                                                    className="w-10 h-10 rounded-[10px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-95">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Notes section */}

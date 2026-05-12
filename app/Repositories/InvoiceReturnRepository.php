@@ -48,7 +48,7 @@ class InvoiceReturnRepository extends Repository implements InvoiceReturnReposit
     {
         return $this->model
             ->withTrashed()
-            ->with(['customer', 'invoice', 'items.product', 'settlements.paymentMethod'])
+            ->with(['customer', 'invoice', 'items.product', 'items.size', 'settlements.paymentMethod'])
             ->findOrFail($id);
     }
 }
