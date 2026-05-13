@@ -217,14 +217,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     }
     const availableStock = selectedProduct ? +selectedProduct.stock + getCartConsumed(selectedProduct.id) : 0;
 
-    const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
-        ? (() => {
-            if (effectiveST === 'unit_based') return undefined;
-            if (needsSize && !selSize) return undefined;
-            const qty = resolveQuantity(selectedProduct, effectiveST, selSize, '1', sizes);
-            return qty > 0 ? Math.floor(availableStock / qty) : 0;
-        })()
-        : undefined;
+    const maxCount: number | undefined = undefined;
 
     const previewQty   = selectedProduct && (isTier ? selSize : selSaleType)
         ? resolveQuantity(selectedProduct, effectiveST, selSize, selQty, sizes) : null;
@@ -238,8 +231,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
         && (isTier ? (!needsSize || selSize) : selSaleType)
         && (!needsSize || selSize)
         && (!needsQty || selQty)
-        && selUnitPrice && +selUnitPrice >= selMinPrice
-        && (maxCount === undefined || maxCount > 0));
+        && selUnitPrice && +selUnitPrice >= selMinPrice);
 
     function addToCart() {
         if (!selectedProduct || (!isTier && !selSaleType)) return;
@@ -415,7 +407,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
 
                                 {/* qty / count input */}
                                 {selectedProduct && (isTier || selSaleType) && (
-                                    <button onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
+                                    <button onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v))}
                                         className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
                                         {selQty || '1'}
                                     </button>
@@ -478,15 +470,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
                                 </div>
                             )}
 
-                            {/* Stock warning */}
-                            {selectedProduct && maxCount !== undefined && maxCount === 0 && (
-                                <div className="flex items-center gap-2 px-4 py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
-                                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">
-                                        المخزون غير كافٍ — المتاح: {availableStock} {selectedProduct.category.unit}
-                                    </span>
-                                </div>
-                            )}
+                            {/* Stock warning removed — returns add to stock */}
                         </div>
                     </div>
                     {/* Totals + Payment section */}
