@@ -7,7 +7,7 @@ import { ArrowRight, Plus, Trash2, Package, RefreshCw, RotateCcw } from 'lucide-
 
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
-interface Customer      { id: number; name: string; }
+interface Customer      { id: number; name: string; total_debt: string; }
 interface ReturnItem    { id: number; product: Product; size: { label: string } | null; quantity: string; unit_price: string; line_total: string; }
 interface Settlement    { id: number; payment_method: { name: string }; amount: string; notes: string | null; created_at: string; }
 interface InvoiceReturn {
@@ -47,7 +47,19 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
     const due           = parseFloat(ret.due_recovery);
     const rowsTotal     = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const isCancelled   = !!ret.deleted_at;
-    const isCash        = ret.customer.id === 1;
+    const customerDebt  = parseFloat(ret.customer.total_debt ?? '0');
+    const customerIsCash = ret.customer.id === 1;
+    // التسوية مسموحة فقط إذا كان العميل دائناً (رصيد سالب) وغير نقدي وغير ملغي
+    const canSettle     = !customerIsCash && !isCancelled && ret.recovery_status !== 'paid' && customerDebt < 0;
+
+    // رسالة توضيحية لحالة عدم السماح بالتسوية
+    const settlementMessage = (() => {
+        if (isCancelled) return null;
+        if (customerIsCash) return 'لا يمكن إنشاء تسوية للزبون النقدي';
+        if (ret.recovery_status === 'paid') return 'تم استرداد المرتجع بالكامل';
+        if (customerDebt >= 0) return `العميل لا يزال مديناً (${fmt(customerDebt)})`;
+        return null;
+    })();
 
     function resolveMethodId(label: string) { return String(paymentMethods.find(m => m.name === label)?.id ?? ''); }
     function setRow(idx: number, field: keyof SettlementRow, val: string) {
@@ -184,7 +196,7 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                 {/* Settlements */}
                 <SpatialCard title={`التسويات (${ret.settlements.length})`} icon={<RefreshCw className="w-4 h-4" />}
                     action={
-                        !isCancelled && !isCash && ret.recovery_status !== 'paid' && (
+                        canSettle && (
                             <button onClick={() => { setShowForm(p => !p); setRows([emptyRow()]); }}
                                 className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all font-bold text-sm border border-purple-500/20">
                                 <Plus className="w-3.5 h-3.5" /> تسجيل تسوية
@@ -192,6 +204,13 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                         )
                     }
                 >
+                    {settlementMessage && (
+                        <div className="mb-4 px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                            <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                ⚠️ {settlementMessage}
+                            </span>
+                        </div>
+                    )}
                     {showForm && (
                         <div className="mb-5 p-4 rounded-[20px] bg-purple-500/5 border border-purple-500/20 flex flex-col gap-4">
                             <div className="flex items-center justify-between">

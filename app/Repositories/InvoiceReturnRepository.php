@@ -46,9 +46,14 @@ class InvoiceReturnRepository extends Repository implements InvoiceReturnReposit
 
     public function findWithRelations(int $id)
     {
-        return $this->model
+        $return = $this->model
             ->withTrashed()
             ->with(['customer', 'invoice', 'items.product', 'items.size', 'settlements.paymentMethod'])
             ->findOrFail($id);
+
+        // Load customer debt info
+        $return->customer->total_debt = \App\Models\Customer::find($return->customer_id)?->total_debt ?? 0;
+
+        return $return;
     }
 }

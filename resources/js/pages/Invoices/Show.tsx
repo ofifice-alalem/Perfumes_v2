@@ -99,6 +99,17 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
     const isCash       = invoice.customer?.id === 1 || !invoice.customer;
     const isCancelled  = !!invoice.deleted_at;
 
+    // التسوية مسموحة فقط إذا كان العميل دائناً (رصيد سالب) وغير نقدي وغير ملغي
+    const canSetSettle = !isCash && !isCancelled && customerDebt < 0;
+
+    // رسالة توضيحية لحالة عدم السماح بالتسوية
+    const settlementMessage = (() => {
+        if (isCancelled) return null;
+        if (isCash) return 'لا يمكن إنشاء تسوية للزبون النقدي';
+        if (customerDebt >= 0) return `العميل لا يزال مديناً (${fmt(customerDebt)})`;
+        return null;
+    })();
+
     // Payment rows helpers
     function setPayRow(idx: number, field: keyof PaymentRow, val: string) {
         setPayRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
@@ -443,7 +454,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                 {activeTab === 'settlements' && (
                     <SpatialCard title={`التسويات (${invoice.settlements?.length ?? 0})`} icon={<RefreshCw className="w-4 h-4" />}
                         action={
-                            !isCash && !isCancelled && customerDebt < 0 && (
+                            canSetSettle && (
                                 <button onClick={() => { setShowSetForm(p => !p); setSetRows([emptySetRow()]); }}
                                     className="flex items-center gap-1.5 px-4 h-9 rounded-[14px] bg-purple-500/10 text-purple-500 hover:bg-purple-500 hover:text-white transition-all font-bold text-sm border border-purple-500/20">
                                     <Plus className="w-3.5 h-3.5" /> إضافة تسوية
@@ -451,6 +462,13 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                             )
                         }
                     >
+                        {settlementMessage && (
+                            <div className="mb-4 px-4 py-3 rounded-[14px] bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+                                <span className="text-sm font-bold text-amber-600 dark:text-amber-400">
+                                    ⚠️ {settlementMessage}
+                                </span>
+                            </div>
+                        )}
                         {showSetForm && (
                             <div className="mb-5 p-4 rounded-[20px] bg-purple-500/5 border border-purple-500/20 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
