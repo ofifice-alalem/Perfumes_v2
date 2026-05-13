@@ -25,44 +25,101 @@ cp .env.example .env
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=perfumes
-DB_USERNAME=root
-DB_PASSWORD=
+DB_DATABASE=perfumes_v2
+DB_USERNAME=alalem
+DB_PASSWORD=Alalem@12255!
 ```
 
-### 4. إنشاء قاعدة البيانات
-```sql
-CREATE DATABASE perfumes CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 5. توليد مفتاح التطبيق
+### 4. توليد مفتاح التطبيق
 ```bash
 php artisan key:generate
 ```
 
-### 6. تشغيل الـ Migrations
+### 5. تشغيل الـ Migrations
 ```bash
 php artisan migrate
 ```
 
-### 7. تشغيل الـ Seeder الأساسي
+### 6. تشغيل الـ Seeder الأساسي
 ```bash
 php artisan db:seed --class=StartOperationSeeder
 ```
 
-### 8. تثبيت اعتماديات JavaScript
+### 7. تثبيت اعتماديات JavaScript
 ```bash
 npm install
 ```
 
-### 9. بناء الـ Frontend
+### 8. بناء الـ Frontend
 ```bash
 npm run build
 ```
 
-### 10. تشغيل السيرفر
+### 9. تشغيل السيرفر في الخلفية
+
+#### Windows — تشغيل عند بدء النظام تلقائياً
+
+**الطريقة: Task Scheduler**
+
+1. افتح `Task Scheduler` من قائمة Start
+2. اختر `Create Basic Task`
+3. اضبط الإعدادات:
+   - **Name:** Perfumes Server
+   - **Trigger:** When the computer starts
+   - **Action:** Start a program
+   - **Program:** `cmd.exe`
+   - **Arguments:**
+     ```
+     /c start /B php artisan serve --host=0.0.0.0 --port=8000
+     ```
+   - **Start in:** `C:\path\to\Perfumes_v2`
+4. ✅ فعّل خيار `Run whether user is logged on or not`
+
+أو بدلاً من ذلك، أنشئ ملف `start.bat` في مجلد المشروع:
+```bat
+@echo off
+cd /d C:\path\to\Perfumes_v2
+start /B php artisan serve --host=0.0.0.0 --port=8000
+```
+ثم ضع اختصاره في:
+```
+C:\Users\%USERNAME%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+```
+
+---
+
+#### Linux — تشغيل عند بدء النظام تلقائياً
+
+**الطريقة: systemd service**
+
+أنشئ الملف `/etc/systemd/system/perfumes.service`:
+```ini
+[Unit]
+Description=Perfumes V2 Laravel Server
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=YOUR_USERNAME
+WorkingDirectory=/path/to/Perfumes_v2
+ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+ثم فعّله:
 ```bash
-php artisan serve --host=0.0.0.0 --port=8000
+sudo systemctl daemon-reload
+sudo systemctl enable perfumes
+sudo systemctl start perfumes
+```
+
+للتحقق من حالته:
+```bash
+sudo systemctl status perfumes
 ```
 
 ---
