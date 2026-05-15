@@ -1180,7 +1180,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         <span>المنتجات</span>
                         {cart.length > 0 && (
                             <span className="absolute top-2 left-1/2 -translate-x-1/2 translate-x-6 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
-                                {cart.length}
+                                {cart.reduce((s, i) => s + (i.sale_type === 'unit_based' ? +i.quantity : 1), 0)}
                             </span>
                         )}
                         {activeTab === 'products' && (
@@ -1557,7 +1557,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             <span className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المنتجات</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="font-bold text-slate-800 dark:text-white">{cart.length} منتج</span>
+                                            <span className="font-bold text-slate-800 dark:text-white">{cart.reduce((s, i) => s + (i.sale_type === 'unit_based' ? +i.quantity : 1), 0)} قطعة</span>
                                             <span className="text-lg font-black text-primary">{total.toFixed(2)}</span>
                                         </div>
                                     </div>
