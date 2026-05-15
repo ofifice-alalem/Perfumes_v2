@@ -50,7 +50,13 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
   if (!isOpen) return null;
 
   function handleNumberClick(num: string) {
-    const next = value + num;
+    if (num === '.') {
+      if (value.includes('.')) return;
+      setValue(prev => (hasStartedTyping ? prev : '0') + '.');
+      setHasStartedTyping(true);
+      return;
+    }
+    const next = (hasStartedTyping ? value : '') + num;
     if (maxValue !== undefined && +next > maxValue) return;
     setValue(next);
     setHasStartedTyping(true);
@@ -110,9 +116,10 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
             ))}
           </div>
           <div className="grid grid-cols-3 gap-6 mb-6">
-            <button onClick={handleClear} disabled={!hasStartedTyping}
-              className="w-20 h-20 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-400 font-bold transition-all active:scale-[0.95] hover:scale-[1.05] flex items-center justify-center disabled:opacity-40 mx-auto">
-              <RotateCcw className="w-6 h-6" />
+            <button onClick={() => handleNumberClick('.')}
+              disabled={value.includes('.')}
+              className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-2xl transition-all active:scale-[0.95] hover:scale-[1.05] disabled:opacity-30 mx-auto">
+              .
             </button>
             <button onClick={() => handleNumberClick('0')}
               className="w-20 h-20 rounded-full bg-black/5 dark:bg-white/5 hover:bg-primary/10 hover:border-primary/20 border border-transparent text-slate-800 dark:text-white font-black text-2xl transition-all active:scale-[0.95] hover:scale-[1.05] mx-auto">
@@ -167,9 +174,10 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
               {n}
             </button>
           ))}
-          <button onClick={handleClear} disabled={!hasStartedTyping}
-            className={`${btnBase} h-16 bg-red-500/10 border border-red-500/20 text-red-500 disabled:opacity-30`}>
-            <RotateCcw className="w-5 h-5" />
+          <button onClick={() => handleNumberClick('.')}
+            disabled={value.includes('.')}
+            className={`${btnBase} h-16 bg-black/5 dark:bg-white/5 hover:bg-primary/10 border border-transparent text-slate-800 dark:text-white text-2xl font-black disabled:opacity-30`}>
+            .
           </button>
           <button onClick={() => handleNumberClick('0')}
             className={`${btnBase} h-16 bg-black/5 dark:bg-white/5 hover:bg-primary/10 border border-transparent text-slate-800 dark:text-white text-2xl`}>
