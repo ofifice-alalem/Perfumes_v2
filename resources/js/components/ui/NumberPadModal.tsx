@@ -30,11 +30,12 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (/^[0-9]$/.test(e.key) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) e.preventDefault();
+      if (/^[0-9.]$/.test(e.key) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) e.preventDefault();
       switch (e.key) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
           handleNumberClick(e.key); break;
+        case '.': case ',': handleNumberClick('.'); break;
         case 'Backspace': case 'Delete': if (hasStartedTyping) handleDelete(); break;
         case 'Enter': handleConfirm(); break;
         case 'Escape': onClose(); break;
