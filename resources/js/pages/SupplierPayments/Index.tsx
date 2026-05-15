@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { RestoreModal } from '@/components/ui/RestoreModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye } from 'lucide-react';
+import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
@@ -20,6 +21,7 @@ interface SupplierPayment {
     amount: string;
     notes: string | null;
     created_at: string;
+    deleted_at: string | null;
 }
 interface Paginated<T> {
     data: T[];
@@ -50,6 +52,11 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
     const [showCreate, setShowCreate] = useState(false);
     const [showPad,    setShowPad]    = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
+    const [activeTab,  setActiveTab]  = useState<'active' | 'deleted'>('active');
+
+    const activePayments  = payments.data.filter(p => !p.deleted_at);
+    const deletedPayments = payments.data.filter(p => p.deleted_at);
+    const displayPayments = activeTab === 'active' ? activePayments : deletedPayments;
 
     // قراءة الفلاتر الحالية من URL
     const params = new URLSearchParams(window.location.search);
@@ -262,11 +269,21 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`الدفعات (${payments.total})`} icon={<CreditCard className="w-4 h-4" />}>
-                            {payments.data.length === 0 ? (
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                النشطة ({activePayments.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                الملغية ({deletedPayments.length})
+                            </button>
+                        </div>
+
+                        <SpatialCard title={`الدفعات (${displayPayments.length})`} icon={<CreditCard className="w-4 h-4" />}>
+                            {displayPayments.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">💳</span>
-                                    <span className="font-bold">لا توجد دفعات</span>
+                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد دفعات' : 'لا توجد دفعات ملغية'}</span>
                                 </div>
                             ) : (
                                 <>
@@ -281,8 +298,8 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {payments.data.map(p => (
-                                                    <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                {displayPayments.map(p => (
+                                                    <tr key={p.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${p.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
                                                             <Link href={`/supplier-payments/${p.id}`} className="hover:text-primary transition-colors">{p.supplier.name}</Link>
                                                         </td>
@@ -301,14 +318,23 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                                     className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                                     عرض
                                                                 </Link>
-                                                                <DeleteModal
-                                                                    onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
-                                                                    trigger={
-                                                                        <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                            حذف
-                                                                        </button>
-                                                                    }
-                                                                />
+                                                                {p.deleted_at ? (
+                                                                    <RestoreModal
+                                                                        title="استعادة الدفعة"
+                                                                        description="هل أنت متأكد من استعادة هذه الدفعة؟"
+                                                                        onConfirm={() => router.post(`/supplier-payments/${p.id}/restore`, {}, { preserveScroll: true })}
+                                                                        trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs"><RotateCcw className="w-3 h-3" /> استعادة</button>}
+                                                                    />
+                                                                ) : (
+                                                                    <DeleteModal
+                                                                        onConfirm={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                                        trigger={
+                                                                            <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                                حذف
+                                                                            </button>
+                                                                        }
+                                                                    />
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -319,14 +345,15 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {payments.data.map(p => (
-                                            <div key={p.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                        {displayPayments.map(p => (
+                                            <div key={p.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${p.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-black text-slate-800 dark:text-white">{p.supplier.name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{p.id}</span>
+                                                        {p.deleted_at && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
@@ -360,10 +387,19 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                         <Eye className="w-4 h-4" /> عرض
                                                     </Link>
-                                                    <button onClick={() => router.delete(`/supplier-payments/${p.id}`)}
-                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                        <Trash2 className="w-4 h-4" /> حذف
-                                                    </button>
+                                                    {p.deleted_at ? (
+                                                        <RestoreModal
+                                                            title="استعادة الدفعة"
+                                                            description="هل أنت متأكد من استعادة هذه الدفعة؟"
+                                                            onConfirm={() => router.post(`/supplier-payments/${p.id}/restore`, {}, { preserveScroll: true })}
+                                                            trigger={<button className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm"><RotateCcw className="w-4 h-4" /> استعادة</button>}
+                                                        />
+                                                    ) : (
+                                                        <button onClick={() => router.delete(`/supplier-payments/${p.id}`)}
+                                                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> حذف
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

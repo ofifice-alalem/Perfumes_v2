@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
-import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye } from 'lucide-react';
+import { RestoreModal } from '@/components/ui/RestoreModal';
+import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
@@ -19,6 +20,7 @@ interface SupplierSettlement {
     amount: string;
     notes: string | null;
     created_at: string;
+    deleted_at: string | null;
 }
 interface Paginated<T> {
     data: T[];
@@ -47,6 +49,11 @@ function fmtDate(v: string | null): string {
 export default function SupplierSettlementsIndex({ settlements, suppliers, paymentMethods, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [filterOpen, setFilterOpen] = useState(false);
+    const [activeTab,  setActiveTab]  = useState<'active' | 'deleted'>('active');
+
+    const activeSettlements  = settlements.data.filter(s => !s.deleted_at);
+    const deletedSettlements = settlements.data.filter(s => s.deleted_at);
+    const displaySettlements = activeTab === 'active' ? activeSettlements : deletedSettlements;
 
     // قراءة الفلاتر الحالية من URL
     const params = new URLSearchParams(window.location.search);
@@ -246,11 +253,21 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`التسويات (${settlements.total})`} icon={<RefreshCw className="w-4 h-4" />}>
-                            {settlements.data.length === 0 ? (
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                النشطة ({activeSettlements.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                الملغية ({deletedSettlements.length})
+                            </button>
+                        </div>
+
+                        <SpatialCard title={`التسويات (${displaySettlements.length})`} icon={<RefreshCw className="w-4 h-4" />}>
+                            {displaySettlements.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">🔄</span>
-                                    <span className="font-bold">لا توجد تسويات</span>
+                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد تسويات' : 'لا توجد تسويات ملغية'}</span>
                                 </div>
                             ) : (
                                 <>
@@ -265,8 +282,8 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {settlements.data.map(s => (
-                                                    <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                {displaySettlements.map(s => (
+                                                    <tr key={s.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${s.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
                                                             <Link href={`/supplier-settlements/${s.id}`} className="hover:text-primary transition-colors">{s.supplier.name}</Link>
                                                         </td>
@@ -287,14 +304,23 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                                                     className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                                     عرض
                                                                 </Link>
-                                                                <DeleteModal
-                                                                    onConfirm={() => router.delete(`/supplier-settlements/${s.id}`)}
-                                                                    trigger={
-                                                                        <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                            حذف
-                                                                        </button>
-                                                                    }
-                                                                />
+                                                                {s.deleted_at ? (
+                                                                    <RestoreModal
+                                                                        title="استعادة التسوية"
+                                                                        description="هل أنت متأكد من استعادة هذه التسوية؟"
+                                                                        onConfirm={() => router.post(`/supplier-settlements/${s.id}/restore`, {}, { preserveScroll: true })}
+                                                                        trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs"><RotateCcw className="w-3 h-3" /> استعادة</button>}
+                                                                    />
+                                                                ) : (
+                                                                    <DeleteModal
+                                                                        onConfirm={() => router.delete(`/supplier-settlements/${s.id}`)}
+                                                                        trigger={
+                                                                            <button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                                حذف
+                                                                            </button>
+                                                                        }
+                                                                    />
+                                                                )}
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -305,14 +331,15 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {settlements.data.map(s => (
-                                            <div key={s.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                        {displaySettlements.map(s => (
+                                            <div key={s.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${s.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-black text-slate-800 dark:text-white">{s.supplier.name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 mt-0.5">
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{s.id}</span>
+                                                        {s.deleted_at && <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
@@ -351,10 +378,19 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                                         className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                         <Eye className="w-4 h-4" /> عرض
                                                     </Link>
-                                                    <button onClick={() => router.delete(`/supplier-settlements/${s.id}`)}
-                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                        <Trash2 className="w-4 h-4" /> حذف
-                                                    </button>
+                                                    {s.deleted_at ? (
+                                                        <RestoreModal
+                                                            title="استعادة التسوية"
+                                                            description="هل أنت متأكد من استعادة هذه التسوية؟"
+                                                            onConfirm={() => router.post(`/supplier-settlements/${s.id}/restore`, {}, { preserveScroll: true })}
+                                                            trigger={<button className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm"><RotateCcw className="w-4 h-4" /> استعادة</button>}
+                                                        />
+                                                    ) : (
+                                                        <button onClick={() => router.delete(`/supplier-settlements/${s.id}`)}
+                                                            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                            <Trash2 className="w-4 h-4" /> حذف
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

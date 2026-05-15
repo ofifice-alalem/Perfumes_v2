@@ -182,6 +182,11 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
 export default function PurchasesIndex({ purchases, suppliers, products, paymentMethods, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Purchase | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
+    const [activeTab,    setActiveTab]    = useState<'active' | 'deleted'>('active');
+
+    const activePurchases  = purchases.data.filter(p => !p.deleted_at);
+    const deletedPurchases = purchases.data.filter(p => p.deleted_at);
+    const displayPurchases = activeTab === 'active' ? activePurchases : deletedPurchases;
 
     // قراءة الفلاتر الحالية من URL
     const params = new URLSearchParams(window.location.search);
@@ -344,11 +349,21 @@ export default function PurchasesIndex({ purchases, suppliers, products, payment
                 {/* Main Layout */}
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`الفواتير (${purchases.total})`} icon={<ShoppingCart className="w-4 h-4" />}>
-                            {purchases.data.length === 0 ? (
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                النشطة ({activePurchases.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                الملغية ({deletedPurchases.length})
+                            </button>
+                        </div>
+
+                        <SpatialCard title={`الفواتير (${displayPurchases.length})`} icon={<ShoppingCart className="w-4 h-4" />}>
+                            {displayPurchases.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">🛒</span>
-                                    <span className="font-bold">لا توجد فواتير شراء</span>
+                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد فواتير شراء' : 'لا توجد فواتير ملغية'}</span>
                                 </div>
                             ) : (
                                 <>
@@ -363,7 +378,7 @@ export default function PurchasesIndex({ purchases, suppliers, products, payment
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {purchases.data.map(p => (
+                                                {displayPurchases.map(p => (
                                                     <tr key={p.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${p.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{p.id}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{p.supplier.name}</td>
@@ -409,7 +424,7 @@ export default function PurchasesIndex({ purchases, suppliers, products, payment
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {purchases.data.map(p => (
+                                        {displayPurchases.map(p => (
                                             <div key={p.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${p.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                     <div>

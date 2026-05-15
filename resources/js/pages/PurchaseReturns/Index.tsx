@@ -158,6 +158,11 @@ function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () 
 export default function PurchaseReturnsIndex({ returns: data, suppliers, products, paymentMethods, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<PurchaseReturn | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
+    const [activeTab,    setActiveTab]    = useState<'active' | 'deleted'>('active');
+
+    const activeReturns  = data.data.filter(r => !r.deleted_at);
+    const deletedReturns = data.data.filter(r => r.deleted_at);
+    const displayReturns = activeTab === 'active' ? activeReturns : deletedReturns;
 
     // قراءة الفلاتر الحالية من URL
     const params = new URLSearchParams(window.location.search);
@@ -318,11 +323,21 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0">
-                        <SpatialCard title={`المرتجعات (${data.total})`} icon={<RotateCcw className="w-4 h-4" />}>
-                            {data.data.length === 0 ? (
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                النشطة ({activeReturns.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                الملغية ({deletedReturns.length})
+                            </button>
+                        </div>
+
+                        <SpatialCard title={`المرتجعات (${displayReturns.length})`} icon={<RotateCcw className="w-4 h-4" />}>
+                            {displayReturns.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
                                     <span className="text-4xl">↩️</span>
-                                    <span className="font-bold">لا توجد مرتجعات</span>
+                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد مرتجعات' : 'لا توجد مرتجعات ملغية'}</span>
                                 </div>
                             ) : (
                                 <>
@@ -336,7 +351,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {data.data.map(r => (
+                                                {displayReturns.map(r => (
                                                     <tr key={r.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${r.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
                                                         <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
@@ -387,7 +402,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
 
                                     {/* Mobile Cards */}
                                     <div className="flex flex-col gap-4 lg:hidden">
-                                        {data.data.map(r => (
+                                        {displayReturns.map(r => (
                                             <div key={r.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${r.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                     <div>
