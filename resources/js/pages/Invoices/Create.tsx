@@ -1214,12 +1214,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 </div>
 
                 {/* Tab Content */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-y-auto">
                     {/* Products Tab */}
                     {activeTab === 'products' && (
-                        <div className="h-full flex flex-col overflow-hidden">
+                        <div className="flex flex-col">
                             {/* Add Product Form */}
-                            <div className="px-3 py-3 border-b border-black/5 dark:border-white/5 shrink-0 overflow-y-auto">
+                            <div className="px-3 py-3 border-b border-black/5 dark:border-white/5">
                                 <div className="flex flex-col gap-2.5">
                                     {/* Product Selection */}
                                     <div>
@@ -1416,9 +1416,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                     {/* Payment Tab */}
                     {activeTab === 'payment' && (
-                        <div className="h-full flex flex-col overflow-hidden">
+                        <div className="flex flex-col">
                             {/* Totals Summary */}
-                            <div className="px-3 py-3 border-b border-black/5 dark:border-white/5 shrink-0 bg-black/2 dark:bg-white/2">
+                            <div className="px-3 py-3 border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2">
                                 <div className="flex flex-col gap-2 p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
                                     <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
                                         <span className="text-xs font-bold text-slate-500 dark:text-white/40">الفاتورة</span>
@@ -1446,7 +1446,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             </div>
 
                             {/* Payment Methods */}
-                            <div className="flex-1 overflow-y-auto px-3 py-3">
+                            <div className="px-3 py-3">
                                 <div className="flex flex-col gap-3">
                                     {/* Add Payment Section */}
                                     {cart.length > 0 && (
@@ -1528,9 +1528,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                     {/* Confirm Tab */}
                     {activeTab === 'confirm' && (
-                        <div className="h-full flex flex-col overflow-hidden">
+                        <div className="flex flex-col">
                             {/* Summary */}
-                            <div className="flex-1 overflow-y-auto px-3 py-3">
+                            <div className="px-3 py-3">
                                 <div className="flex flex-col gap-3">
                                     {/* Customer Info */}
                                     <div className="p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
@@ -1621,7 +1621,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="px-3 py-3 border-t border-black/5 dark:border-white/5 shrink-0 bg-white dark:bg-slate-900">
+                            <div className="px-3 py-3 border-t border-black/5 dark:border-white/5 bg-white dark:bg-slate-900">
                                 <div className="flex flex-col gap-2">
                                     {/* Main Action */}
                                     <button onClick={submit}
