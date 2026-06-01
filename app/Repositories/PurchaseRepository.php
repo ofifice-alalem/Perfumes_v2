@@ -19,7 +19,7 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
-        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
+        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['supplier'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('payment_status'),

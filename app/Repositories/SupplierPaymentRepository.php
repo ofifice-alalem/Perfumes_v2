@@ -19,7 +19,7 @@ class SupplierPaymentRepository extends Repository implements SupplierPaymentRep
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
-        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier', 'purchase', 'paymentMethod']))
+        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['supplier', 'purchase', 'paymentMethod']))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),

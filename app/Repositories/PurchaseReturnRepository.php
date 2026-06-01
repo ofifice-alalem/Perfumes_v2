@@ -19,7 +19,7 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
-        return QueryBuilder::for($this->model->where('period_id', $periodId)->with(['supplier', 'purchase'])->withSum('settlements as settlements_total', 'amount'))
+        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['supplier', 'purchase'])->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
                 AllowedFilter::exact('supplier_id'),
                 AllowedFilter::exact('purchase_id'),
