@@ -132,7 +132,7 @@ class InvoiceController extends Controller
             return $invoice;
         });
 
-        return redirect()->route('invoices.show', $invoice->id)
+        return redirect()->route('invoices.create')
             ->with('success', 'تم إنشاء فاتورة البيع بنجاح');
     }
 
