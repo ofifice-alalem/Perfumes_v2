@@ -23,6 +23,7 @@ use App\Http\Controllers\WasteLogController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PeriodController;
+use App\Http\Controllers\DashboardController;
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -38,9 +39,7 @@ Route::post('logout', [LoginController::class, 'destroy'])
 Route::middleware('auth')->group(function () {
 
     // Dashboard — super-admin فقط
-    Route::get('/', function () {
-        return Inertia::render('Dashboard');
-    })->middleware('role:super-admin');
+    Route::get('/', [DashboardController::class, 'index'])->middleware('role:super-admin');
 
     // ── النسخ الاحتياطية — super-admin فقط ──────────────────────────────────
     Route::middleware('role:super-admin')->prefix('backups')->name('backups.')->group(function () {
