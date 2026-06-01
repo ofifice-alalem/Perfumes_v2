@@ -2,8 +2,7 @@ import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import {
     TrendingUp, Package, Users, Truck, BarChart2,
-    ShoppingCart, RotateCcw, AlertTriangle, User,
-    FileText, CreditCard, Star, DollarSign, Calendar,
+    ShoppingCart, RotateCcw
 } from 'lucide-react';
 
 const reports = [
@@ -14,13 +13,6 @@ const reports = [
     { href: '/reports/sales',            icon: <TrendingUp className="w-6 h-6" />,    label: 'المبيعات',                      desc: 'تحليل المبيعات اليومي والشهري والسنوي' },
     { href: '/reports/purchases',        icon: <ShoppingCart className="w-6 h-6" />,  label: 'المشتريات',                     desc: 'تحليل المشتريات والمدفوعات للموردين' },
     { href: '/reports/returns',          icon: <RotateCcw className="w-6 h-6" />,     label: 'المرتجعات',                     desc: 'مرتجعات العملاء والموردين مقارنةً بالمبيعات' },
-    { href: '/reports/waste',            icon: <AlertTriangle className="w-6 h-6" />, label: 'التالف والخسائر',               desc: 'توزيع التالف حسب السبب والمنتج' },
-    { href: '/reports/seller-performance', icon: <User className="w-6 h-6" />,        label: 'أداء البائعين',                 desc: 'مقارنة أداء البائعين خلال فترة' },
-    { href: '/reports/unpaid-invoices',  icon: <FileText className="w-6 h-6" />,      label: 'الفواتير غير المسددة',          desc: 'قائمة الفواتير المتبقية للتحصيل' },
-    { href: '/reports/payments-log',     icon: <CreditCard className="w-6 h-6" />,    label: 'حركة الدفعات والتسويات',        desc: 'سجل كامل للمدفوعات والتسويات' },
-    { href: '/reports/top-products',     icon: <Star className="w-6 h-6" />,          label: 'الأكثر والأقل مبيعاً',          desc: 'ترتيب المنتجات حسب الكمية أو القيمة' },
-    { href: '/reports/gross-profit',     icon: <DollarSign className="w-6 h-6" />,    label: 'إجمالي الربح',                  desc: 'المبيعات مطروحاً منها تكلفة البضاعة' },
-    { href: '/reports/daily-summary',    icon: <Calendar className="w-6 h-6" />,      label: 'الملخص اليومي',                 desc: 'ملخص سريع لعمليات اليوم' },
 ];
 
 export default function ReportsIndex() {
