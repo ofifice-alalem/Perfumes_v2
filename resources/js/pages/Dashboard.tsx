@@ -2,8 +2,18 @@ import { usePage, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import {
   ShoppingCart, TrendingUp, Truck, Users,
-  AlertTriangle, Package, ArrowLeft,
+  AlertTriangle, Package, ArrowLeft, CalendarDays,
 } from 'lucide-react';
+
+interface DailyStatRow {
+  day: number;
+  date: string;
+  sales: number;
+  received: number;
+  due: number;
+  returns: number;
+  count: number;
+}
 
 interface DashboardProps {
   today: { sales: number; received: number; due: number; count: number };
@@ -20,6 +30,7 @@ interface DashboardProps {
   low_stock: Array<{
     id: number; name: string; stock: number; min_stock: number; ratio: number;
   }>;
+  daily_stats: DailyStatRow[];
 }
 
 function fmt(n: number) {
@@ -33,7 +44,7 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 };
 
 export default function Dashboard() {
-  const { today, month, debts, recent_invoices, low_stock } = usePage().props as unknown as DashboardProps;
+  const { today, month, debts, recent_invoices, low_stock, daily_stats } = usePage().props as unknown as DashboardProps;
 
   const collectPct = today.sales > 0 ? Math.min((today.received / today.sales) * 100, 100) : 0;
 
@@ -298,6 +309,104 @@ export default function Dashboard() {
           </div>
 
         </div>
+
+        {/* ── إحصائيات أيام الشهر ── */}
+        {daily_stats.length > 0 && (
+          <div className="spatial-card p-5">
+            <div className="flex items-center gap-2 mb-5">
+              <CalendarDays className="w-4 h-4 text-slate-400 dark:text-white/40" />
+              <h2 className="text-sm font-black text-slate-700 dark:text-white/80">إحصائيات أيام الشهر الحالي</h2>
+            </div>
+
+            <div className="overflow-x-auto -mx-1">
+              <table className="w-full min-w-[560px] text-sm" dir="rtl">
+                <thead>
+                  <tr className="border-b border-black/5 dark:border-white/5">
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-right pr-2">اليوم</th>
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">إجمالي البيع</th>
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">المستلم</th>
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">الدين</th>
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">المرتجع</th>
+                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">الفواتير</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                  {[...daily_stats].reverse().map((row) => {
+                    const isToday = row.day === daily_stats[daily_stats.length - 1]?.day;
+                    const hasData = row.count > 0;
+                    return (
+                      <tr
+                        key={row.date}
+                        className={`transition-colors ${
+                          isToday
+                            ? 'bg-primary/5 dark:bg-primary/10'
+                            : 'hover:bg-slate-50 dark:hover:bg-white/[0.02]'
+                        }`}
+                      >
+                        <td className="py-2.5 pr-2">
+                          <div className="flex items-center gap-2">
+                            {isToday && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-black bg-primary text-white leading-none">اليوم</span>
+                            )}
+                            <span className={`font-black tabular-nums ${
+                              isToday ? 'text-primary' : 'text-slate-700 dark:text-white/80'
+                            }`}>
+                              {row.day}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 text-center tabular-nums font-bold text-slate-800 dark:text-white">
+                          {hasData ? fmt(row.sales) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                        </td>
+                        <td className="py-2.5 text-center tabular-nums font-bold text-emerald-600 dark:text-emerald-400">
+                          {hasData ? fmt(row.received) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                        </td>
+                        <td className="py-2.5 text-center tabular-nums font-bold text-amber-600 dark:text-amber-400">
+                          {hasData ? fmt(row.due) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                        </td>
+                        <td className="py-2.5 text-center tabular-nums font-bold text-red-500 dark:text-red-400">
+                          {row.returns > 0 ? fmt(row.returns) : <span className="text-slate-300 dark:text-white/20">—</span>}
+                        </td>
+                        <td className="py-2.5 text-center">
+                          {hasData ? (
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary text-xs font-black">
+                              {row.count}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-white/20">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+
+                {/* صف الإجماليات */}
+                <tfoot>
+                  <tr className="border-t-2 border-black/10 dark:border-white/10">
+                    <td className="pt-3 pb-1 pr-2 text-xs font-black text-slate-500 dark:text-white/50">الإجمالي</td>
+                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-slate-800 dark:text-white">
+                      {fmt(daily_stats.reduce((s, r) => s + r.sales, 0))}
+                    </td>
+                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-emerald-600 dark:text-emerald-400">
+                      {fmt(daily_stats.reduce((s, r) => s + r.received, 0))}
+                    </td>
+                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-amber-600 dark:text-amber-400">
+                      {fmt(daily_stats.reduce((s, r) => s + r.due, 0))}
+                    </td>
+                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-red-500 dark:text-red-400">
+                      {fmt(daily_stats.reduce((s, r) => s + r.returns, 0))}
+                    </td>
+                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-slate-800 dark:text-white">
+                      {daily_stats.reduce((s, r) => s + r.count, 0)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
       </div>
     </AppShell>
   );

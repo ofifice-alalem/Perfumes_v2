@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Models\InvoiceReturn;
 use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Product;
@@ -79,6 +80,43 @@ class DashboardController extends Controller
                 'ratio'    => $p->min_stock > 0 ? round(($p->stock / $p->min_stock) * 100) : 0,
             ]);
 
+        // ── إحصائيات الأيام السابقة من هذا الشهر ──────────────────────────────
+        $dayOfMonth = now()->day;
+
+        // مبيعات (فواتير) مجمّعة يومياً من أول الشهر حتى اليوم
+        $dailyInvoices = Invoice::selectRaw('DATE(created_at) as day, SUM(total) as sales, SUM(paid_amount) as received, SUM(due_amount) as due, COUNT(*) as count')
+            ->whereBetween('created_at', [$monthStart . ' 00:00:00', $today . ' 23:59:59'])
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy('day');
+
+        // مرتجعات مجمّعة يومياً من أول الشهر حتى اليوم
+        $dailyReturns = InvoiceReturn::selectRaw('DATE(created_at) as day, SUM(total) as returns_total')
+            ->whereBetween('created_at', [$monthStart . ' 00:00:00', $today . ' 23:59:59'])
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->keyBy('day');
+
+        // دمج البيانات في مصفوفة لكل يوم من 1 إلى اليوم الحالي
+        $dailyStats = [];
+        $monthYear = now()->format('Y-m');
+        for ($d = 1; $d <= $dayOfMonth; $d++) {
+            $dateKey = $monthYear . '-' . str_pad($d, 2, '0', STR_PAD_LEFT);
+            $inv  = $dailyInvoices->get($dateKey);
+            $ret  = $dailyReturns->get($dateKey);
+            $dailyStats[] = [
+                'day'     => $d,
+                'date'    => $dateKey,
+                'sales'   => round((float)($inv?->sales    ?? 0), 2),
+                'received'=> round((float)($inv?->received ?? 0), 2),
+                'due'     => round((float)($inv?->due      ?? 0), 2),
+                'returns' => round((float)($ret?->returns_total ?? 0), 2),
+                'count'   => (int)($inv?->count ?? 0),
+            ];
+        }
+
         return Inertia::render('Dashboard', [
             'today' => [
                 'sales'    => round($todaySales, 2),
@@ -101,6 +139,7 @@ class DashboardController extends Controller
             ],
             'recent_invoices' => $recentInvoices,
             'low_stock'       => $lowStockProducts,
+            'daily_stats'     => $dailyStats,
         ]);
     }
 }
