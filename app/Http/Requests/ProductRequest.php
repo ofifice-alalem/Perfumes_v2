@@ -12,6 +12,7 @@ class ProductRequest extends FormRequest
     {
         return [
             'name'                   => 'required|string|max:255',
+            'qrcode'                 => 'nullable|string|max:100',
             'category_id'            => 'required|exists:categories,id',
             'selling_type'           => 'required|in:tier_based,unit_priced',
             'price_tier_id'          => 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',

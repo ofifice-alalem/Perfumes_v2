@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface Category  { id: number; name: string; unit: 'ml' | 'pcs' | 'g'; is_operational: boolean; }
 interface PriceTier { id: number; name: string; description: string | null; }
@@ -15,6 +16,7 @@ interface OriginalPerfumeDetail { bottle_volume: string; }
 interface Product {
     id: number; name: string; selling_type: 'tier_based' | 'unit_priced';
     stock: string; min_stock: string;
+    qrcode: string | null;
     category: Category; price_tier: PriceTier | null;
     product_price: ProductPrice | null;
     original_perfume_detail: OriginalPerfumeDetail | null;
@@ -37,7 +39,7 @@ function fmt(val: string | null | undefined): string {
 
 const emptyForm = {
     name: '', category_id: '', selling_type: 'tier_based' as 'tier_based' | 'unit_priced',
-    price_tier_id: '', min_stock: '',
+    price_tier_id: '', min_stock: '', qrcode: '',
     price_per_unit_regular: '', price_per_unit_vip: '',
     full_bottle_regular: '', full_bottle_vip: '', bottle_volume: '',
 };
@@ -47,16 +49,113 @@ function resolveSellingType(cat: Category): 'tier_based' | 'unit_priced' {
     return cat.unit === 'ml' && cat.name.includes('زيت') ? 'tier_based' : 'unit_priced';
 }
 
-function saleTypeLabel(p: Product) {
-    if (p.selling_type === 'tier_based') return `تير ${p.price_tier?.name}`;
-    if (p.category.unit === 'ml') return 'عطر أصلي';
-    return 'وحدة';
+/** توليد كود QR عشوائي فريد */
+function generateQrCode(productName: string): string {
+    const ts = Date.now().toString(36).toUpperCase();
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const prefix = productName.substring(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+    return `PRD-${prefix}-${ts}-${rand}`;
 }
 
+// ─── Modal عرض QR ──────────────────────────────────────────────
+interface QrModalProps { product: Product; onClose: () => void; }
+
+function QrModal({ product, onClose }: QrModalProps) {
+    const printRef = useRef<HTMLDivElement>(null);
+
+    function handlePrint() {
+        const content = printRef.current;
+        if (!content) return;
+        const win = window.open('', '_blank', 'width=400,height=500');
+        if (!win) return;
+        win.document.write(`
+            <!DOCTYPE html>
+            <html dir="rtl">
+            <head>
+                <meta charset="utf-8" />
+                <title>QR - ${product.name}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
+                    .card { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px; border: 2px solid #e5e7eb; border-radius: 16px; width: 320px; }
+                    .name { font-size: 20px; font-weight: 900; color: #1e293b; text-align: center; }
+                    .code { font-size: 12px; color: #94a3b8; font-family: monospace; letter-spacing: 1px; }
+                    .cat { font-size: 13px; color: #64748b; font-weight: 600; }
+                    svg { display: block; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    ${content.innerHTML}
+                </div>
+                <script>window.onload = () => { window.print(); window.close(); }<\/script>
+            </body>
+            </html>
+        `);
+        win.document.close();
+    }
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+            {/* Card */}
+            <div className="relative z-10 w-full max-w-sm bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8">
+                    <div className="flex items-center gap-2">
+                        <QrCode className="w-5 h-5 text-primary" />
+                        <span className="font-black text-slate-800 dark:text-white text-sm">QR Code المنتج</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-all"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                {/* Content */}
+                <div className="flex flex-col items-center gap-5 p-8">
+                    {/* QR card preview */}
+                    <div
+                        ref={printRef}
+                        className="flex flex-col items-center gap-4 p-6 rounded-[20px] border-2 border-black/8 dark:border-white/12 bg-white w-full"
+                    >
+                        <p className="name font-black text-slate-800 text-xl text-center leading-tight">{product.name}</p>
+                        <p className="cat text-sm font-bold text-slate-500">{product.category.name}</p>
+                        <div className="rounded-[16px] overflow-hidden p-2 bg-white shadow-sm border border-black/8">
+                            <QRCodeSVG
+                                value={product.qrcode!}
+                                size={180}
+                                level="M"
+                                fgColor="#1e293b"
+                            />
+                        </div>
+                        <p className="code text-xs text-slate-400 font-mono tracking-wider">{product.qrcode}</p>
+                    </div>
+
+                    {/* Actions */}
+                    <button
+                        onClick={handlePrint}
+                        className="w-full flex items-center justify-center gap-2 h-12 rounded-[16px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all shadow-sm shadow-primary/30"
+                    >
+                        <Printer className="w-4 h-4" />
+                        طباعة QR Code
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── الصفحة الرئيسية ───────────────────────────────────────────
 export default function ProductsIndex({ products, categories, tiers, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [editingId, setEditingId]   = useState<number | null>(null);
     const [filterCat, setFilterCat]   = useState<number | null>(null);
+    const [qrProduct, setQrProduct]   = useState<Product | null>(null);
 
     const createForm = useForm({ ...emptyForm });
     const editForm   = useForm({ ...emptyForm });
@@ -88,6 +187,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             selling_type:           p.selling_type,
             price_tier_id:          p.price_tier ? String(p.price_tier.id) : '',
             min_stock:              p.min_stock,
+            qrcode:                 p.qrcode ?? '',
             price_per_unit_regular: p.product_price?.price_per_unit_regular ?? '',
             price_per_unit_vip:     p.product_price?.price_per_unit_vip ?? '',
             full_bottle_regular:    p.product_price?.full_bottle_regular ?? '',
@@ -118,6 +218,42 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         const t = tiers.find(t => String(t.id) === form.data.price_tier_id);
         return t ? `تير ${t.name}` : '';
     };
+
+    // ── حقل QR في نموذج التعديل ──────────────────────────────────
+    function QrField({ form, productName }: { form: typeof editForm; productName: string }) {
+        const hasQr = !!form.data.qrcode;
+        return (
+            <div className="flex flex-col gap-1.5 pt-3 border-t border-black/5 dark:border-white/8">
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">
+                        QR Code
+                    </label>
+                    <button
+                        type="button"
+                        onClick={() => form.setData('qrcode', generateQrCode(productName))}
+                        className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                        {hasQr ? 'تجديد' : 'توليد'}
+                    </button>
+                </div>
+                <div className="flex items-center gap-2">
+                    <input
+                        value={form.data.qrcode}
+                        onChange={e => form.setData('qrcode', e.target.value)}
+                        placeholder="أدخل كود QR أو اضغط توليد..."
+                        className="spatial-input h-10 rounded-[12px] px-4 text-[13px] font-mono flex-1"
+                    />
+                    {hasQr && (
+                        <div className="rounded-[8px] overflow-hidden border border-black/8 dark:border-white/12 bg-white p-1 shrink-0">
+                            <QRCodeSVG value={form.data.qrcode} size={36} level="M" />
+                        </div>
+                    )}
+                </div>
+                {form.errors.qrcode && <p className="text-xs text-red-500 font-bold">{form.errors.qrcode}</p>}
+            </div>
+        );
+    }
 
     return (
         <AppShell pageTitle="المنتجات">
@@ -314,7 +450,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {filtered.map((product, idx) => (
+                                        {filtered.map((product) => (
                                             editingId === product.id ? (
                                                 <tr key={product.id}>
                                                     <td colSpan={7} className="px-4 py-4">
@@ -385,6 +521,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                     )}
                                                                 </div>
                                                             )}
+
+                                                            {/* QR Code Field */}
+                                                            <QrField form={editForm} productName={editForm.data.name} />
+
                                                             <div className="flex items-center gap-2">
                                                                 <button onClick={() => submitEdit(product.id)} className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
                                                                     <Check className="w-4 h-4" /> حفظ
@@ -403,6 +543,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         <span className="font-bold text-slate-800 dark:text-white">{product.name}</span>
                                                         {product.category.is_operational && (
                                                             <span className="text-xs font-bold px-2 py-0.5 rounded-[6px] bg-black/5 dark:bg-white/8 border border-black/10 dark:border-white/12 text-slate-500 dark:text-white/50">تشغيلي</span>
+                                                        )}
+                                                        {product.qrcode && (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-[5px] bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                                                                <QrCode className="w-2.5 h-2.5" /> QR
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </td>
@@ -441,6 +586,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <div className="flex items-center gap-2">
+                                                        {/* زر QR — يظهر فقط إن كان للمنتج qrcode */}
+                                                        {product.qrcode && (
+                                                            <button
+                                                                onClick={() => setQrProduct(product)}
+                                                                title="عرض QR Code"
+                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white transition-all font-bold text-xs"
+                                                            >
+                                                                <QrCode className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
                                                         <button onClick={() => startEdit(product)}
                                                             className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                             <Pencil className="w-3 h-3" /> تعديل
@@ -530,6 +685,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         )}
                                                     </div>
                                                 )}
+
+                                                {/* QR Code Field */}
+                                                <QrField form={editForm} productName={editForm.data.name} />
+
                                                 <div className="flex gap-3 pt-2">
                                                     <button onClick={() => submitEdit(product.id)} className="flex-1 spatial-button flex items-center justify-center gap-2 h-11 text-sm">
                                                         <Check className="w-4 h-4" /> حفظ
@@ -545,7 +704,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                             {/* رأس */}
                                             <div className="px-5 py-4 bg-black/3 dark:bg-white/6">
-                                                <span className="font-black text-slate-800 dark:text-white text-lg leading-tight">{product.name}</span>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-black text-slate-800 dark:text-white text-lg leading-tight">{product.name}</span>
+                                                    {product.qrcode && (
+                                                        <span className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-[5px] bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                                                            <QrCode className="w-2.5 h-2.5" /> QR
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-2 flex-wrap mt-1">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/50">{product.category.name}</span>
                                                     {product.selling_type === 'tier_based' && (
@@ -602,6 +768,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                             {/* الإجراءات */}
                                             <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
+                                                {product.qrcode && (
+                                                    <button
+                                                        onClick={() => setQrProduct(product)}
+                                                        className="flex items-center justify-center gap-2 h-11 px-4 rounded-[14px] border border-violet-500/25 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white transition-all font-bold text-sm shrink-0"
+                                                    >
+                                                        <QrCode className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <button onClick={() => startEdit(product)}
                                                     className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                     <Pencil className="w-4 h-4" /> تعديل
@@ -628,6 +802,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
 
             </div>
+
+            {/* QR Modal */}
+            {qrProduct && (
+                <QrModal product={qrProduct} onClose={() => setQrProduct(null)} />
+            )}
         </AppShell>
     );
 }

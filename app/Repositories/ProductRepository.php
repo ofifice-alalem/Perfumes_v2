@@ -39,6 +39,7 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         return DB::transaction(function () use ($data) {
             $product = $this->create([
                 'name'          => $data['name'],
+                'qrcode'        => $data['qrcode'] ?? null,
                 'category_id'   => $data['category_id'],
                 'price_tier_id' => $data['price_tier_id'] ?? null,
                 'selling_type'  => $data['selling_type'],
@@ -77,6 +78,7 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
 
             $this->update([
                 'name'          => $data['name'],
+                'qrcode'        => $data['qrcode'] ?? null,
                 'category_id'   => $data['category_id'],
                 'price_tier_id' => $data['price_tier_id'] ?? null,
                 'selling_type'  => $data['selling_type'],

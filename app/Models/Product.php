@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Product extends Model
 {
     protected $fillable = [
-        'name', 'category_id', 'price_tier_id',
+        'name', 'qrcode', 'category_id', 'price_tier_id',
         'selling_type', 'stock', 'min_stock',
     ];
 
