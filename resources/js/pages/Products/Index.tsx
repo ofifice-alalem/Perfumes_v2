@@ -57,6 +57,8 @@ function generateQrCode(productName: string): string {
     return `PRD-${prefix}-${ts}-${rand}`;
 }
 
+
+
 // ─── Modal عرض QR ──────────────────────────────────────────────
 interface QrModalProps { product: Product; onClose: () => void; }
 
@@ -156,6 +158,33 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const [editingId, setEditingId]   = useState<number | null>(null);
     const [filterCat, setFilterCat]   = useState<number | null>(null);
     const [qrProduct, setQrProduct]   = useState<Product | null>(null);
+    const [generatingAll, setGeneratingAll] = useState(false);
+
+    // توليد QR لمنتج واحد
+    function handleGenerate(p: Product) {
+        const newQr = generateQrCode(p.name);
+        router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, {
+            preserveScroll: true,
+        });
+    }
+
+    // توليد جماعي لكل المنتجات التي لا تحتوي على QR
+    function handleGenerateAll() {
+        const missing = products.filter(p => !p.qrcode);
+        if (missing.length === 0) return;
+        setGeneratingAll(true);
+        let remaining = missing.length;
+        missing.forEach(p => {
+            const newQr = generateQrCode(p.name);
+            router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, {
+                preserveScroll: true,
+                onFinish: () => {
+                    remaining--;
+                    if (remaining === 0) setGeneratingAll(false);
+                },
+            });
+        });
+    }
 
     const createForm = useForm({ ...emptyForm });
     const editForm   = useForm({ ...emptyForm });
@@ -179,7 +208,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         form.setData('price_tier_id', tier ? String(tier.id) : '');
     }
 
+    function cancelEdit() {
+        setEditingId(null);
+        editForm.clearErrors();
+    }
+
     function startEdit(p: Product) {
+        editForm.clearErrors();
         setEditingId(p.id);
         editForm.setData({
             name:                   p.name,
@@ -204,7 +239,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     function submitEdit(id: number) {
         editForm.put(`/products/${id}`, {
-            onSuccess: () => setEditingId(null),
+            onSuccess: () => cancelEdit(),
         });
     }
 
@@ -265,10 +300,22 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <h1 className="text-2xl font-black text-slate-800 dark:text-white">المنتجات</h1>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">إدارة جميع المنتجات وأسعارها</p>
                     </div>
-                    <button onClick={() => setShowCreate(true)}
-                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
-                        <Plus className="w-4 h-4" /> إضافة منتج
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {products.some(p => !p.qrcode) && (
+                            <button
+                                onClick={handleGenerateAll}
+                                disabled={generatingAll}
+                                className="flex items-center justify-center gap-2 px-4 h-11 rounded-[16px] border border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white transition-all font-bold text-sm disabled:opacity-50 shrink-0"
+                            >
+                                <QrCode className="w-4 h-4" />
+                                {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
+                            </button>
+                        )}
+                        <button onClick={() => setShowCreate(true)}
+                            className="spatial-button flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 h-11 text-sm">
+                            <Plus className="w-4 h-4" /> إضافة منتج
+                        </button>
+                    </div>
                 </div>
 
                 {/* Flash */}
@@ -529,7 +576,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                 <button onClick={() => submitEdit(product.id)} className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
                                                                     <Check className="w-4 h-4" /> حفظ
                                                                 </button>
-                                                                <button onClick={() => setEditingId(null)} className="h-10 px-4 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                                                <button onClick={cancelEdit} className="h-10 px-4 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                                                     إلغاء
                                                                 </button>
                                                             </div>
@@ -586,7 +633,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 </td>
                                                 <td className="px-3 py-3">
                                                     <div className="flex items-center gap-2">
-                                                        {/* زر QR — يظهر فقط إن كان للمنتج qrcode */}
+                                                        {!product.qrcode && (
+                                                            <button
+                                                                onClick={() => handleGenerate(product)}
+                                                                title="إنشاء QR Code"
+                                                                className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-violet-500/25 bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-500 hover:text-white transition-all font-bold text-xs"
+                                                            >
+                                                                <QrCode className="w-3.5 h-3.5" /> إنشاء
+                                                            </button>
+                                                        )}
                                                         {product.qrcode && (
                                                             <button
                                                                 onClick={() => setQrProduct(product)}
@@ -629,7 +684,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         <div key={product.id} className="rounded-[24px] border border-primary/25 dark:border-primary/30 overflow-hidden">
                                             <div className="px-5 py-3 bg-primary/5 dark:bg-primary/10 flex items-center justify-between">
                                                 <span className="font-black text-slate-700 dark:text-white/80 text-sm">تعديل: {product.name}</span>
-                                                <button onClick={() => setEditingId(null)} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-all">
+                                                <button onClick={cancelEdit} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-all">
                                                     <X className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -693,7 +748,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     <button onClick={() => submitEdit(product.id)} className="flex-1 spatial-button flex items-center justify-center gap-2 h-11 text-sm">
                                                         <Check className="w-4 h-4" /> حفظ
                                                     </button>
-                                                    <button onClick={() => setEditingId(null)} className="flex-1 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                                    <button onClick={cancelEdit} className="flex-1 h-11 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                                         إلغاء
                                                     </button>
                                                 </div>
