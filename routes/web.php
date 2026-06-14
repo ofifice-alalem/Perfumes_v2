@@ -30,6 +30,7 @@ use App\Http\Controllers\LicenseController;
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
 Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
+Route::get('/license/developer', [LicenseController::class, 'developer'])->name('license.developer');
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {

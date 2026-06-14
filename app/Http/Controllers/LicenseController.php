@@ -40,4 +40,19 @@ class LicenseController extends Controller
 
         return back()->with('error', 'مفتاح التفعيل غير صحيح، يرجى التأكد والمحاولة مرة أخرى.');
     }
+
+    public function developer(Request $request)
+    {
+        if (!$request->session()->get('developer_backdoor')) {
+            return redirect('/');
+        }
+
+        $deviceId = $this->licenseService->getHardwareId();
+        $expectedKey = $this->licenseService->generateLicenseKey($deviceId);
+
+        return Inertia::render('License/Developer', [
+            'deviceId' => $deviceId,
+            'expectedKey' => $expectedKey,
+        ]);
+    }
 }
