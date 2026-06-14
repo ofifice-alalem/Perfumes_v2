@@ -1,12 +1,12 @@
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { ArrowUp, ArrowDown, Package, SlidersHorizontal, ChevronDown, Search, TrendingUp, TrendingDown, FileSpreadsheet, FileText } from 'lucide-react';
 
 interface Category { id: number; name: string; unit: string; }
-interface Product   { id: number; name: string; stock: string; category: Category; }
+interface Product   { id: number; name: string; stock: string; category: Category; qrcode?: string | null; }
 
 interface Movement {
     date: string;
@@ -69,6 +69,44 @@ export default function ProductMovement({ products, product, filters, data }: Pr
     const [dateTo,    setDateTo]    = useState(filters.dateTo ?? '');
     const [type,      setType]      = useState(filters.type ?? '');
 
+    // ── Barcode Scanner Listener ─────────────────────────────────────────────
+    useEffect(() => {
+        let buffer = '';
+        let lastTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            
+            const now = Date.now();
+            if (now - lastTime > 100) {
+                buffer = '';
+            }
+            lastTime = now;
+
+            if (e.key === 'Enter') {
+                if (buffer.length > 3) {
+                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    if (scanned) {
+                        e.preventDefault();
+                        setProductId(String(scanned.id));
+                        router.get('/reports/product-movement', {
+                            product_id: scanned.id,
+                            date_from:  dateFrom  || undefined,
+                            date_to:    dateTo    || undefined,
+                            type:       type      || undefined,
+                        }, { preserveScroll: true });
+                    }
+                }
+                buffer = '';
+            } else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [products, dateFrom, dateTo, type]);
+
     const hasFilter = productId || dateFrom || dateTo || type;
 
     function search() {
@@ -104,7 +142,7 @@ export default function ProductMovement({ products, product, filters, data }: Pr
             <ModernSelect
                 label="المنتج *"
                 placeholder="اختر المنتج"
-                options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})` }))}
+                options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})`, searchKey: p.qrcode ?? undefined }))}
                 defaultValue={selectedProductLabel}
                 onSelect={val => {
                     const p = products.find(pr => `${pr.name} (${pr.stock} ${pr.category.unit})` === val);

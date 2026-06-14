@@ -33,7 +33,7 @@ class ReportController extends Controller
             : null;
 
         return Inertia::render('Reports/ProductMovement', [
-            'products' => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
+            'products' => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id', 'qrcode']),
             'product'  => $product,
             'filters'  => compact('productId', 'dateFrom', 'dateTo', 'type'),
             'data'     => $data,
