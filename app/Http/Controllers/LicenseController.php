@@ -53,6 +53,20 @@ class LicenseController extends Controller
         return Inertia::render('License/Developer', [
             'deviceId' => $deviceId,
             'expectedKey' => $expectedKey,
+            'isLicensed' => $this->licenseService->isLicensed(),
         ]);
+    }
+
+    public function deactivate(Request $request)
+    {
+        if (!$request->session()->get('developer_backdoor')) {
+            return redirect('/');
+        }
+
+        $this->licenseService->deactivate();
+        Cache::forget('is_system_licensed');
+        $request->session()->forget('developer_backdoor');
+
+        return redirect()->route('license.index')->with('success', 'تم إلغاء التفعيل بنجاح! النظام الآن عاد لحالة القفل.');
     }
 }

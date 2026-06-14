@@ -5,10 +5,11 @@ import { ShieldAlert, Key, Copy, CheckCircle2, LockOpen } from 'lucide-react';
 interface Props {
     deviceId: string;
     expectedKey: string;
+    isLicensed: boolean;
     flash?: { error?: string; success?: string };
 }
 
-export default function Developer({ deviceId, expectedKey, flash }: Props) {
+export default function Developer({ deviceId, expectedKey, isLicensed, flash }: Props) {
     const [key, setKey] = useState(expectedKey); // Pre-fill with the expected key for quick activation
     const [copied, setCopied] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -25,6 +26,12 @@ export default function Developer({ deviceId, expectedKey, flash }: Props) {
         router.post('/license/activate', { key }, {
             onFinish: () => setProcessing(false),
         });
+    }
+
+    function deactivate() {
+        if (confirm('هل أنت متأكد من إلغاء تفعيل النظام على هذا الجهاز؟')) {
+            router.post('/license/deactivate');
+        }
     }
 
     return (
@@ -49,6 +56,11 @@ export default function Developer({ deviceId, expectedKey, flash }: Props) {
                     </div>
 
                     <div className="p-8">
+                        {flash?.success && (
+                            <div className="mb-6 p-4 rounded-[14px] bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm font-bold text-center">
+                                {flash.success}
+                            </div>
+                        )}
                         {flash?.error && (
                             <div className="mb-6 p-4 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-bold text-center">
                                 {flash.error}
@@ -107,10 +119,20 @@ export default function Developer({ deviceId, expectedKey, flash }: Props) {
                             <button
                                 type="submit"
                                 disabled={processing || !key}
-                                className="w-full h-14 rounded-[16px] bg-primary text-white font-black text-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center"
+                                className="w-full h-14 rounded-[16px] bg-primary text-white font-black text-lg hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center mb-4"
                             >
                                 {processing ? 'جاري التحقق...' : 'تفعيل النظام الآن'}
                             </button>
+
+                            {isLicensed && (
+                                <button
+                                    type="button"
+                                    onClick={deactivate}
+                                    className="w-full h-14 rounded-[16px] bg-red-500/10 text-red-500 font-black text-lg hover:bg-red-500/20 transition-all flex items-center justify-center"
+                                >
+                                    إلغاء تفعيل النظام (Deactivate)
+                                </button>
+                            )}
                         </form>
                     </div>
                 </div>

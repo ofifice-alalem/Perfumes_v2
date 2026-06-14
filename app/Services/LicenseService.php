@@ -86,4 +86,14 @@ class LicenseService
 
         return false;
     }
+
+    public function deactivate(): bool
+    {
+        $licenseFile = storage_path('app/license.json');
+        if (File::exists($licenseFile)) {
+            File::delete($licenseFile);
+            return true;
+        }
+        return false;
+    }
 }
