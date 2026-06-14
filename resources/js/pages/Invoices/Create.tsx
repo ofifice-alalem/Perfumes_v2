@@ -182,6 +182,41 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         localStorage.setItem('holdInvoices', JSON.stringify(holdInvoices));
     }, [holdInvoices]);
 
+    // ── Barcode Scanner Listener ─────────────────────────────────────────────
+    useEffect(() => {
+        let buffer = '';
+        let lastTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            
+            const now = Date.now();
+            if (now - lastTime > 100) {
+                buffer = '';
+            }
+            lastTime = now;
+
+            if (e.key === 'Enter') {
+                if (buffer.length > 3) {
+                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    if (scanned) {
+                        e.preventDefault();
+                        setSelProduct(String(scanned.id));
+                        setSelSaleType(''); setSelSize(''); setSelQty('1');
+                        setSelUnitPrice(''); setSelMinPrice(0);
+                        setResetKey(k => k + 1);
+                    }
+                }
+                buffer = '';
+            } else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [products]);
+
     // ── derived ──────────────────────────────────────────────────────────────
     const isVip          = customerType === 'vip';
     const isCashCustomer = !customerId;
@@ -647,7 +682,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <div className="flex-1 min-w-full sm:min-w-[180px]">
                                     <ModernSelect key={`p-${resetKey}`} label="" placeholder="اختر المنتج..."
                                         options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}`, searchKey: p.qrcode ?? undefined }))}
-                                        defaultValue=""
+                                        defaultValue={selectedProduct?.name ?? ""}
                                         onSelect={val => {
                                             const p = products.find(p => p.name === val);
                                             setSelProduct(p ? String(p.id) : '');
