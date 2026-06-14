@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
@@ -6,7 +6,7 @@ import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, Check, AlertTriangle, Package } from 'lucide-react';
 
 interface Category { id: number; name: string; unit: string; }
-interface Product { id: number; name: string; stock: string; category: Category; }
+interface Product { id: number; name: string; stock: string; category: Category; qrcode?: string | null; }
 
 interface Props {
     products: Product[];
@@ -47,6 +47,42 @@ export default function WasteLogsCreate({ products, flash }: Props) {
     const [padInitial, setPadInitial] = useState('');
     const [padMax, setPadMax] = useState<number | undefined>(undefined);
     const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
+
+    // ── Barcode Scanner Listener ─────────────────────────────────────────────
+    useEffect(() => {
+        let buffer = '';
+        let lastTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            
+            const now = Date.now();
+            if (now - lastTime > 100) {
+                buffer = '';
+            }
+            lastTime = now;
+
+            if (e.key === 'Enter') {
+                if (buffer.length > 3) {
+                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    if (scanned) {
+                        e.preventDefault();
+                        setSelProduct(String(scanned.id));
+                        setSelQty(''); 
+                        setSelReason('other');
+                        setSelNotes('');
+                        setProductKey(k => k + 1);
+                    }
+                }
+                buffer = '';
+            } else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [products]);
 
     function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
         setPadTitle(title);
@@ -142,7 +178,8 @@ export default function WasteLogsCreate({ products, flash }: Props) {
                             key={productKey}
                             label="المنتج"
                             placeholder="اختر المنتج"
-                            options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})` }))}
+                            options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})`, searchKey: p.qrcode ?? undefined }))}
+                            defaultValue={selectedProduct ? `${selectedProduct.name} (${selectedProduct.stock} ${selectedProduct.category.unit})` : ""}
                             onSelect={val => {
                                 const p = products.find(pr => `${pr.name} (${pr.stock} ${pr.category.unit})` === val);
                                 setSelProduct(p ? String(p.id) : '');

@@ -24,14 +24,14 @@ class WasteLogController extends Controller
         return Inertia::render('WasteLogs/Index', [
             'wasteLogs' => $this->wasteLogs->paginated(30),
             'users'     => User::orderBy('name')->get(['id', 'name']),
-            'products'  => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
+            'products'  => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id', 'qrcode']),
         ]);
     }
 
     public function create(): Response
     {
         return Inertia::render('WasteLogs/Create', [
-            'products' => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
+            'products' => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id', 'qrcode']),
         ]);
     }
 
