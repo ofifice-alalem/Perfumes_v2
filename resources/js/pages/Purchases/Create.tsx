@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
@@ -7,7 +7,7 @@ import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, ChevronLeft,
 
 interface Supplier      { id: number; name: string; phone: string; }
 interface Category      { id: number; name: string; unit: string; }
-interface Product       { id: number; name: string; stock: string; category: Category; }
+interface Product       { id: number; name: string; stock: string; category: Category; qrcode?: string | null; }
 interface PaymentMethod { id: number; name: string; }
 
 interface Props {
@@ -56,6 +56,40 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     
     // Mobile tabs state
     const [activeTab, setActiveTab] = useState<'products' | 'payment' | 'confirm'>('products');
+
+    // ── Barcode Scanner Listener ─────────────────────────────────────────────
+    useEffect(() => {
+        let buffer = '';
+        let lastTime = Date.now();
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            
+            const now = Date.now();
+            if (now - lastTime > 100) {
+                buffer = '';
+            }
+            lastTime = now;
+
+            if (e.key === 'Enter') {
+                if (buffer.length > 3) {
+                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    if (scanned) {
+                        e.preventDefault();
+                        setSelProduct(String(scanned.id));
+                        setSelQty(''); setSelTotalPrice('');
+                        setProductKey(k => k + 1);
+                    }
+                }
+                buffer = '';
+            } else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [products]);
 
     function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
         setPadTitle(title); setPadInitial(initial); setPadCallback(() => cb); setPadMax(max); setShowPad(true);
@@ -210,8 +244,8 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                         </div>
                         <div className="w-full">
                             <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
-                                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}` }))}
-                                defaultValue=""
+                                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
+                                defaultValue={selectedProduct?.name ?? ""}
                                 onSelect={val => {
                                     const p = products.find(p => p.name === val);
                                     setSelProduct(p ? String(p.id) : '');
@@ -514,8 +548,8 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest mb-1.5 block">المنتج</label>
                                         <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
-                                            options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}` }))}
-                                            defaultValue=""
+                                            options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
+                                            defaultValue={selectedProduct?.name ?? ""}
                                             onSelect={val => {
                                                 const p = products.find(p => p.name === val);
                                                 setSelProduct(p ? String(p.id) : '');
