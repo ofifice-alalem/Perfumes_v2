@@ -255,7 +255,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     };
 
     // ── حقل QR في نموذج التعديل ──────────────────────────────────
-    function QrField({ form, productName }: { form: typeof editForm; productName: string }) {
+    const renderQrField = (form: typeof editForm, productName: string) => {
         const hasQr = !!form.data.qrcode;
         return (
             <div className="flex flex-col gap-1.5 pt-3 border-t border-black/5 dark:border-white/8">
@@ -288,7 +288,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 {form.errors.qrcode && <p className="text-xs text-red-500 font-bold">{form.errors.qrcode}</p>}
             </div>
         );
-    }
+    };
 
     return (
         <AppShell pageTitle="المنتجات">
@@ -570,7 +570,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             )}
 
                                                             {/* QR Code Field */}
-                                                            <QrField form={editForm} productName={editForm.data.name} />
+                                                            {renderQrField(editForm, editForm.data.name)}
 
                                                             <div className="flex items-center gap-2">
                                                                 <button onClick={() => submitEdit(product.id)} className="spatial-button flex items-center gap-2 px-5 h-10 text-sm">
@@ -742,7 +742,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 )}
 
                                                 {/* QR Code Field */}
-                                                <QrField form={editForm} productName={editForm.data.name} />
+                                                {renderQrField(editForm, editForm.data.name)}
 
                                                 <div className="flex gap-3 pt-2">
                                                     <button onClick={() => submitEdit(product.id)} className="flex-1 spatial-button flex items-center justify-center gap-2 h-11 text-sm">
