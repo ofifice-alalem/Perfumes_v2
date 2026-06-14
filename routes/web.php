@@ -25,6 +25,12 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\DashboardController;
 
+use App\Http\Controllers\LicenseController;
+
+// ─── License ─────────────────────────────────────────────────────────────────
+Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
+Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
+
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
