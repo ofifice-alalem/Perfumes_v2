@@ -7,8 +7,6 @@ use App\Models\Category;
 use App\Models\Size;
 use App\Models\PriceTier;
 use App\Models\TierPrice;
-use App\Models\Customer;
-use App\Models\PaymentMethod;
 
 class InitialDataSeeder extends Seeder
 {
@@ -75,18 +73,6 @@ class InitialDataSeeder extends Seeder
                 ['tier_id' => $tierId, 'size_id' => $sizeId],
                 ['price_regular' => $regular, 'price_vip' => $vip]
             );
-        }
-
-        // 5. زبون نقدي (أول سجل إلزامي)
-        Customer::firstOrCreate(
-            ['id' => 1],
-            ['name' => 'زبون نقدي', 'is_active' => true]
-        );
-
-        // 6. Payment Methods
-        $methods = ['نقدي', 'بطاقة', 'تحويل بنكي'];
-        foreach ($methods as $method) {
-            PaymentMethod::firstOrCreate(['name' => $method], ['is_active' => true]);
         }
     }
 }

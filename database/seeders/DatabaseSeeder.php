@@ -8,7 +8,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(CoreSystemSeeder::class);
         $this->call(InitialDataSeeder::class);
-        $this->call(CashSupplierSeeder::class);
     }
 }
