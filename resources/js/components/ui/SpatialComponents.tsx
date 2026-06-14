@@ -83,7 +83,7 @@ export function ModernSelect({
   defaultValue = '',
 }: {
   label: string;
-  options: string[] | { label: string; meta?: string; badge?: string }[];
+  options: string[] | { label: string; meta?: string; badge?: string; searchKey?: string }[];
   className?: string;
   placeholder?: string;
   onSelect?: (value: string) => void;
@@ -98,8 +98,8 @@ export function ModernSelect({
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const normalized = (options as (string | { label: string; meta?: string; badge?: string })[]).map((o) =>
-    typeof o === 'string' ? { label: o, meta: undefined, badge: undefined } : o
+  const normalized = (options as (string | { label: string; meta?: string; badge?: string; searchKey?: string })[]).map((o) =>
+    typeof o === 'string' ? { label: o, meta: undefined, badge: undefined, searchKey: undefined } : o
   );
 
   useEffect(() => {
@@ -125,7 +125,7 @@ export function ModernSelect({
     else setSearch('');
   }, [isOpen]);
 
-  const filtered = normalized.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()));
+  const filtered = normalized.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || (o.searchKey && o.searchKey.toLowerCase().includes(search.toLowerCase())));
 
   const optionsList = (size: 'sm' | 'lg') => (
     <ul className={`overflow-y-auto p-2 ${size === 'sm' ? 'max-h-52' : 'flex-1'}`}>

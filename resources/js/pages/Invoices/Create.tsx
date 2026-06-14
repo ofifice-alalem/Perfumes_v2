@@ -21,7 +21,7 @@ interface OriginalDetail { bottle_volume: string; }
 interface TierPrice     { size_id: number; price_regular: string; price_vip: string; }
 interface PriceTier     { id: number; name: string; tier_prices?: TierPrice[]; }
 interface Product {
-    id: number; name: string; stock: string; selling_type: string;
+    id: number; name: string; stock: string; selling_type: string; qrcode?: string | null;
     category: Category;
     price_tier: PriceTier | null;
     product_price: ProductPrice | null;
@@ -646,7 +646,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-end">
                                 <div className="flex-1 min-w-full sm:min-w-[180px]">
                                     <ModernSelect key={`p-${resetKey}`} label="" placeholder="اختر المنتج..."
-                                        options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
+                                        options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}`, searchKey: p.qrcode ?? undefined }))}
                                         defaultValue=""
                                         onSelect={val => {
                                             const p = products.find(p => p.name === val);
