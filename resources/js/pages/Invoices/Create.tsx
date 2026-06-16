@@ -788,37 +788,37 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     {/* Totals + Payment */}
                     <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 flex flex-col gap-3 sm:gap-4">
                         {/* Totals */}
-                        <div className="flex flex-col gap-2 p-3 sm:p-4 rounded-[16px] sm:rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                        <div className="flex flex-col lg:flex-row gap-2 lg:gap-0 p-3 sm:p-4 rounded-[16px] sm:rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
                             {/* الفاتورة */}
-                            <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
+                            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 pb-2 lg:pb-0 border-b lg:border-b-0 lg:border-l border-black/5 dark:border-white/5 lg:pl-4">
                                 <span className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">الفاتورة</span>
-                                <span className="text-sm sm:text-base font-black text-slate-700 dark:text-white/80">{total.toFixed(2)}</span>
+                                <span className="text-sm sm:text-base lg:text-lg font-black text-slate-700 dark:text-white/80">{total.toFixed(2)}</span>
                             </div>
                             
                             {/* الدين (إذا كان موجوداً) */}
                             {debtPayment && (
-                                <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
+                                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 pb-2 lg:pb-0 border-b lg:border-b-0 lg:border-l border-black/5 dark:border-white/5 lg:px-4">
                                     <span className="text-[10px] sm:text-xs font-bold text-red-500 uppercase tracking-widest">الدين السابق</span>
-                                    <span className="text-sm sm:text-base font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
+                                    <span className="text-sm sm:text-base lg:text-lg font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
                                 </div>
                             )}
                             
                             {/* الإجمالي */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:px-4 lg:border-l border-black/5 dark:border-white/5">
                                 <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">الإجمالي</span>
-                                <span className="text-slate-800 dark:text-white text-base sm:text-lg font-black">{grandTotal.toFixed(2)}</span>
+                                <span className="text-slate-800 dark:text-white text-base sm:text-lg lg:text-xl font-black">{grandTotal.toFixed(2)}</span>
                             </div>
                             
                             {/* المدفوع */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:px-4 lg:border-l border-black/5 dark:border-white/5">
                                 <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">المدفوع</span>
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base">{totalPaid.toFixed(2)}</span>
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base lg:text-xl">{totalPaid.toFixed(2)}</span>
                             </div>
                             
                             {/* المتبقي */}
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:pr-4">
                                 <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">المتبقي</span>
-                                <span className={remaining > 0.01 ? 'text-red-500 font-bold text-sm sm:text-base' : 'text-slate-400 dark:text-white/30 font-bold text-sm sm:text-base'}>{remaining.toFixed(2)}</span>
+                                <span className={remaining > 0.01 ? 'text-red-500 font-bold text-sm sm:text-base lg:text-xl' : 'text-slate-400 dark:text-white/30 font-bold text-sm sm:text-base lg:text-xl'}>{remaining.toFixed(2)}</span>
                             </div>
                         </div>
 
