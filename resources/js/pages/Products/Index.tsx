@@ -125,17 +125,20 @@ function QrModal({ product, onClose }: QrModalProps) {
                         ref={printRef}
                         className="flex flex-col items-center gap-4 p-6 rounded-[20px] border-2 border-black/8 dark:border-white/12 bg-white w-full"
                     >
-                        <p className="name font-black text-slate-800 text-xl text-center leading-tight">{product.name}</p>
-                        <p className="cat text-sm font-bold text-slate-500">{product.category.name}</p>
                         <div className="rounded-[16px] overflow-hidden p-2 bg-white shadow-sm border border-black/8">
                             <QRCodeSVG
                                 value={product.qrcode!}
                                 size={180}
-                                level="M"
+                                level="H"
                                 fgColor="#1e293b"
+                                imageSettings={{
+                                    src: "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`),
+                                    width: 56,
+                                    height: 56,
+                                    excavate: true,
+                                }}
                             />
                         </div>
-                        <p className="code text-xs text-slate-400 font-mono tracking-wider">{product.qrcode}</p>
                     </div>
 
                     {/* Actions */}
