@@ -5,6 +5,19 @@
 - Composer
 - Node.js >= 18 + npm
 - MySQL >= 8.0
+- Redis (مطلوب للـ Cache والـ Sessions)
+
+### تثبيت Redis على Windows
+```bash
+winget install Redis.Redis
+```
+
+### تثبيت Redis على Linux
+```bash
+sudo apt install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
 
 ---
 
@@ -30,6 +43,16 @@ DB_USERNAME=alalem
 DB_PASSWORD=Alalem@12255!
 ```
 
+### 3.1 إعدادات Redis في `.env`
+```env
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis
+REDIS_CLIENT=predis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+```
+
 ### 4. توليد مفتاح التطبيق
 ```bash
 php artisan key:generate
@@ -42,7 +65,7 @@ php artisan migrate
 
 ### 6. تشغيل الـ Seeder الأساسي
 ```bash
-php artisan db:seed --class=StartOperationSeeder
+php artisan db:seed --class=CoreSystemSeeder
 ```
 
 ### 7. تثبيت اعتماديات JavaScript
@@ -55,7 +78,12 @@ npm install
 npm run build
 ```
 
-### 9. تشغيل السيرفر في الخلفية
+### 9. تحسين الأداء للإنتاج
+```bash
+php artisan optimize
+```
+
+### 10. تشغيل السيرفر في الخلفية
 
 #### Windows — تشغيل عند بدء النظام تلقائياً
 
