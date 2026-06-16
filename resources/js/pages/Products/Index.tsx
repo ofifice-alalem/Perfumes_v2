@@ -87,7 +87,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                            * { margin:0; padding:0; box-sizing:border-box; }
                            body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
                            .wrap { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; max-width:240mm; }
-                           .code { font-size:20pt; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:6px; }
+                           .code { font-size:${(product.qrcode || '').length > 15 ? '12pt' : '20pt'}; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:${(product.qrcode || '').length > 15 ? '2px' : '6px'}; white-space:nowrap; }
                            svg { width:100% !important; max-width:65mm; height:40mm !important; display:block; margin:0 auto; }`
                         : `@page { size: portrait; margin: 0; }
                            * { margin:0; padding:0; box-sizing:border-box; }
@@ -169,7 +169,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     {tab === 'serial' && (
                         <div
                             ref={printRef}
-                            className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3"
+                            className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3 [&>svg]:w-full [&>svg]:!h-[80px]"
                             style={{ width: '200px' }}
                         >
                             <Barcode
@@ -182,7 +182,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 lineColor="#1e293b"
                                 displayValue={false}
                             />
-                            <p className="code text-xs text-slate-500 font-mono font-bold tracking-wider text-center break-all">{product.qrcode}</p>
+                            <p className={`code text-slate-500 font-mono font-bold text-center whitespace-nowrap ${(product.qrcode || '').length > 15 ? 'text-[10px] tracking-normal' : 'text-xs tracking-wider'}`}>{product.qrcode}</p>
                         </div>
                     )}
 
