@@ -671,11 +671,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                     {/* Add product form */}
                     <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5 shrink-0">
-                        <div className="flex items-center gap-2 mb-2.5 sm:mb-3">
-                            <Package className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                            <span className="text-[10px] sm:text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج</span>
-                        </div>
-
                         <div className="flex flex-col gap-2.5 sm:gap-3">
                             {/* Row 1: product + sale type + qty + preview */}
                             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-end">
@@ -831,7 +826,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         {paymentMethods.map(m => (
                                             <button key={m.id}
                                                 onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                                                className={`flex-1 min-w-[70px] h-14 sm:h-16 rounded-[14px] sm:rounded-[16px] font-bold text-sm sm:text-base transition-all border-2 ${
+                                                className={`flex-1 min-w-[70px] h-16 sm:h-20 rounded-[14px] sm:rounded-[16px] font-bold text-sm sm:text-base transition-all border-2 ${
                                                     selMethod === String(m.id)
                                                         ? 'bg-primary border-primary text-white'
                                                         : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40 active:scale-95'
@@ -843,11 +838,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
-                                            className="spatial-input flex-1 h-14 sm:h-16 rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 text-base sm:text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
+                                            className="spatial-input flex-1 h-16 sm:h-20 rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 text-base sm:text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
                                             {selAmount || remaining.toFixed(2)}
                                         </button>
                                         <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                                            className="spatial-button flex items-center justify-center w-16 sm:w-20 h-14 sm:h-16 disabled:opacity-40 shrink-0 active:scale-95">
+                                            className="spatial-button flex items-center justify-center w-16 sm:w-20 h-16 sm:h-20 disabled:opacity-40 shrink-0 active:scale-95">
                                             <Plus className="w-6 h-6 sm:w-7 sm:h-7" />
                                         </button>
                                     </div>
@@ -857,7 +852,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <div className="flex flex-col gap-2 w-full lg:w-1/2">
                                     {/* Debt payment card */}
                                     {debtPayment && (
-                                        <div className="flex items-center gap-2 px-3 h-16 sm:h-[70px] rounded-[16px] sm:rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
+                                        <div className="flex items-center gap-2 px-3 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
                                             <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                                             <div className="flex flex-col min-w-0 flex-1">
                                                 <span className="font-bold text-red-600 dark:text-red-400 text-[10px] sm:text-xs truncate">سداد الدين — {debtPayment.method_name}</span>
@@ -880,7 +875,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         <div className="flex-1 flex items-center justify-center h-full min-h-[64px] text-slate-300 dark:text-white/20 font-bold text-xs sm:text-sm">لا توجد دفعات</div>
                                     ) : (
                                         payments.map((p, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-16 sm:h-[70px] rounded-[16px] sm:rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                                            <div key={idx} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
                                                 <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 shrink-0" />
                                                 <div className="flex flex-col min-w-0 flex-1">
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] sm:text-xs truncate">{p.method_name}</span>
@@ -1491,7 +1486,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                 {paymentMethods.map(m => (
                                                     <button key={m.id}
                                                         onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                                                        className={`h-14 rounded-[14px] font-bold text-sm transition-all border-2 ${
+                                                        className={`h-16 rounded-[14px] font-bold text-sm transition-all border-2 ${
                                                             selMethod === String(m.id)
                                                                 ? 'bg-primary border-primary text-white'
                                                                 : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40 active:scale-95'
@@ -1502,11 +1497,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             </div>
                                             <div className="flex gap-2">
                                                 <button onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
-                                                    className="spatial-input flex-1 h-14 rounded-[14px] px-3 text-base font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
+                                                    className="spatial-input flex-1 h-16 rounded-[14px] px-3 text-base font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
                                                     {selAmount || remaining.toFixed(2)}
                                                 </button>
                                                 <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                                                    className="spatial-button flex items-center justify-center w-16 h-14 disabled:opacity-40 active:scale-95">
+                                                    className="spatial-button flex items-center justify-center w-16 h-16 disabled:opacity-40 active:scale-95">
                                                     <Plus className="w-6 h-6" />
                                                 </button>
                                             </div>
@@ -1517,7 +1512,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الدفعات</label>
                                         {debtPayment && (
-                                            <div className="flex items-center gap-2 px-3 h-16 rounded-[14px] bg-red-500/10 border-2 border-red-500/20">
+                                            <div className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-red-500/10 border-2 border-red-500/20">
                                                 <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                                                 <div className="flex flex-col min-w-0 flex-1">
                                                     <span className="font-bold text-red-600 dark:text-red-400 text-[10px] truncate">سداد الدين — {debtPayment.method_name}</span>
@@ -1542,7 +1537,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             </div>
                                         ) : (
                                             payments.map((p, idx) => (
-                                                <div key={idx} className="flex items-center gap-2 px-3 h-16 rounded-[14px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                                                <div key={idx} className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-emerald-500/10 border-2 border-emerald-500/20">
                                                     <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] truncate">{p.method_name}</span>
