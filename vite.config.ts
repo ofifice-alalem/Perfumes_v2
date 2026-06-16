@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import path from 'path';
+import compression from 'vite-plugin-compression';
 
 export default defineConfig({
   plugins: [
@@ -10,6 +11,8 @@ export default defineConfig({
       refresh: true,
     }),
     react(),
+    compression({ algorithm: 'gzip' }),
+    compression({ algorithm: 'brotliCompress', ext: '.br' }),
   ],
   resolve: {
     alias: {
