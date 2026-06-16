@@ -5,6 +5,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 
 interface Category  { id: number; name: string; unit: 'ml' | 'pcs' | 'g'; is_operational: boolean; }
 interface PriceTier { id: number; name: string; description: string | null; }
@@ -62,13 +63,17 @@ function generateQrCode(productName: string): string {
 // ─── Modal عرض QR ──────────────────────────────────────────────
 interface QrModalProps { product: Product; onClose: () => void; }
 
+const PERFUME_SVG_B64 = "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`);
+
 function QrModal({ product, onClose }: QrModalProps) {
     const printRef = useRef<HTMLDivElement>(null);
+    const [tab, setTab] = useState<'classic' | 'serial'>('classic');
 
     function handlePrint() {
         const content = printRef.current;
         if (!content) return;
-        const win = window.open('', '_blank', 'width=400,height=500');
+        const isSerial = tab === 'serial';
+        const win = window.open('', '_blank', isSerial ? 'width=420,height=220' : 'width=400,height=400');
         if (!win) return;
         win.document.write(`
             <!DOCTYPE html>
@@ -77,19 +82,23 @@ function QrModal({ product, onClose }: QrModalProps) {
                 <meta charset="utf-8" />
                 <title>QR - ${product.name}</title>
                 <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { font-family: 'Segoe UI', Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #fff; }
-                    .card { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 32px; border: 2px solid #e5e7eb; border-radius: 16px; width: 320px; }
-                    .name { font-size: 20px; font-weight: 900; color: #1e293b; text-align: center; }
-                    .code { font-size: 12px; color: #94a3b8; font-family: monospace; letter-spacing: 1px; }
-                    .cat { font-size: 13px; color: #64748b; font-weight: 600; }
-                    svg { display: block; }
+                    ${isSerial
+                        ? `@page { size: landscape; margin: 8mm; }
+                           * { margin:0; padding:0; box-sizing:border-box; }
+                           body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
+                           .wrap { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; max-width:240mm; }
+                           .code { font-size:13pt; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:1.5px; }
+                           svg { width:100% !important; max-width:120mm; height:40mm !important; display:block; margin:0 auto; }`
+                        : `@page { size: portrait; margin: 0; }
+                           * { margin:0; padding:0; box-sizing:border-box; }
+                           body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
+                           .wrap { display:flex; flex-direction:column; align-items:center; gap:16px; padding:28px; border:2px solid #e5e7eb; border-radius:16px; width:280px; }
+                           svg { display:block; }`
+                    }
                 </style>
             </head>
             <body>
-                <div class="card">
-                    ${content.innerHTML}
-                </div>
+                <div class="wrap">${content.innerHTML}</div>
                 <script>window.onload = () => { window.print(); window.close(); }<\/script>
             </body>
             </html>
@@ -99,10 +108,8 @@ function QrModal({ product, onClose }: QrModalProps) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Overlay */}
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Card */}
             <div className="relative z-10 w-full max-w-sm bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8">
@@ -110,41 +117,78 @@ function QrModal({ product, onClose }: QrModalProps) {
                         <QrCode className="w-5 h-5 text-primary" />
                         <span className="font-black text-slate-800 dark:text-white text-sm">QR Code المنتج</span>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white transition-all"
-                    >
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Content */}
-                <div className="flex flex-col items-center gap-5 p-8">
-                    {/* QR card preview */}
-                    <div
-                        ref={printRef}
-                        className="flex flex-col items-center gap-4 p-6 rounded-[20px] border-2 border-black/8 dark:border-white/12 bg-white w-full"
-                    >
-                        <div className="rounded-[16px] overflow-hidden p-2 bg-white shadow-sm border border-black/8">
-                            <QRCodeSVG
-                                value={product.qrcode!}
-                                size={180}
-                                level="H"
-                                fgColor="#1e293b"
-                                imageSettings={{
-                                    src: "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`),
-                                    width: 56,
-                                    height: 56,
-                                    excavate: true,
-                                }}
-                            />
-                        </div>
-                    </div>
+                {/* Tabs */}
+                <div className="flex gap-1 mx-6 mt-4 p-1 rounded-[14px] bg-black/5 dark:bg-white/8">
+                    {(['classic', 'serial'] as const).map(t => (
+                        <button
+                            key={t}
+                            onClick={() => setTab(t)}
+                            className={`flex-1 h-8 rounded-[10px] text-xs font-bold transition-all ${
+                                tab === t
+                                    ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
+                                    : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'
+                            }`}
+                        >
+                            {t === 'classic' ? 'مربع' : 'Serial No.'}
+                        </button>
+                    ))}
+                </div>
 
-                    {/* Actions */}
+                {/* Content */}
+                <div className="flex flex-col items-center gap-5 p-6">
+
+                    {/* Classic */}
+                    {tab === 'classic' && (
+                        <div
+                            ref={printRef}
+                            className="flex flex-col items-center gap-4 p-6 rounded-[20px] border-2 border-black/8 bg-white w-full"
+                        >
+                            <div className="rounded-[16px] overflow-hidden p-2 bg-white border border-black/8">
+                                <QRCodeSVG
+                                    value={product.qrcode!}
+                                    size={180}
+                                    level="H"
+                                    fgColor="#1e293b"
+                                    imageSettings={{
+                                        src: PERFUME_SVG_B64,
+                                        width: 56,
+                                        height: 56,
+                                        excavate: true,
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Serial */}
+                    {tab === 'serial' && (
+                        <div
+                            ref={printRef}
+                            className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3"
+                            style={{ width: '200px' }}
+                        >
+                            <Barcode
+                                value={product.qrcode!}
+                                width={2}
+                                height={80}
+                                fontSize={11}
+                                margin={0}
+                                background="#ffffff"
+                                lineColor="#1e293b"
+                                displayValue={false}
+                            />
+                            <p className="code text-xs text-slate-500 font-mono font-bold tracking-wider text-center break-all">{product.qrcode}</p>
+                        </div>
+                    )}
+
                     <button
                         onClick={handlePrint}
-                        className="w-full flex items-center justify-center gap-2 h-12 rounded-[16px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all shadow-sm shadow-primary/30"
+                        className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all"
                     >
                         <Printer className="w-4 h-4" />
                         طباعة QR Code
