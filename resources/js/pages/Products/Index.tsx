@@ -87,8 +87,8 @@ function QrModal({ product, onClose }: QrModalProps) {
                            * { margin:0; padding:0; box-sizing:border-box; }
                            body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
                            .wrap { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; max-width:240mm; }
-                           .code { font-size:13pt; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:1.5px; }
-                           svg { width:100% !important; max-width:120mm; height:40mm !important; display:block; margin:0 auto; }`
+                           .code { font-size:20pt; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:6px; }
+                           svg { width:100% !important; max-width:65mm; height:40mm !important; display:block; margin:0 auto; }`
                         : `@page { size: portrait; margin: 0; }
                            * { margin:0; padding:0; box-sizing:border-box; }
                            body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
