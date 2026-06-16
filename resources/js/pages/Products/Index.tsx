@@ -51,11 +51,8 @@ function resolveSellingType(cat: Category): 'tier_based' | 'unit_priced' {
 }
 
 /** توليد كود QR عشوائي فريد */
-function generateQrCode(productName: string): string {
-    const ts = Date.now().toString(36).toUpperCase();
-    const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const prefix = productName.substring(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
-    return `PRD-${prefix}-${ts}-${rand}`;
+function generateQrCode(): string {
+    return Math.floor(1000000000 + Math.random() * 9000000000).toString();
 }
 
 
@@ -166,25 +163,26 @@ function QrModal({ product, onClose }: QrModalProps) {
                     )}
 
                     {/* Serial */}
-                    {tab === 'serial' && (
-                        <div
-                            ref={printRef}
-                            className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3 [&>svg]:w-full [&>svg]:!h-[80px]"
-                            style={{ width: '200px' }}
-                        >
-                            <Barcode
-                                value={product.qrcode!}
-                                width={2}
-                                height={80}
-                                fontSize={11}
-                                margin={0}
-                                background="#ffffff"
-                                lineColor="#1e293b"
-                                displayValue={false}
-                            />
-                            <p className={`code text-slate-500 font-mono font-bold text-center whitespace-nowrap ${(product.qrcode || '').length > 15 ? 'text-[10px] tracking-normal' : 'text-xs tracking-wider'}`}>{product.qrcode}</p>
-                        </div>
-                    )}
+                    {tab === 'serial' && (() => {
+                        const isLong = (product.qrcode || '').length > 12;
+                        return (
+                            <div
+                                ref={printRef}
+                                className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3 w-full"
+                            >
+                                <Barcode
+                                    value={product.qrcode!}
+                                    width={isLong ? 1 : 1.8}
+                                    height={90}
+                                    margin={0}
+                                    background="#ffffff"
+                                    lineColor="#1e293b"
+                                    displayValue={false}
+                                />
+                                <p className={`code font-mono font-bold text-center break-all text-slate-700 ${isLong ? 'text-xs tracking-normal' : 'text-sm tracking-widest'}`}>{product.qrcode}</p>
+                            </div>
+                        );
+                    })()}
 
                     <button
                         onClick={handlePrint}
@@ -209,10 +207,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     // توليد QR لمنتج واحد
     function handleGenerate(p: Product) {
-        const newQr = generateQrCode(p.name);
-        router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, {
-            preserveScroll: true,
-        });
+        const newQr = generateQrCode();
     }
 
     // توليد جماعي لكل المنتجات التي لا تحتوي على QR
@@ -222,7 +217,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         setGeneratingAll(true);
         let remaining = missing.length;
         missing.forEach(p => {
-            const newQr = generateQrCode(p.name);
+            const newQr = generateQrCode();
             router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, {
                 preserveScroll: true,
                 onFinish: () => {
@@ -312,7 +307,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     </label>
                     <button
                         type="button"
-                        onClick={() => form.setData('qrcode', generateQrCode(productName))}
+                        onClick={() => form.setData('qrcode', generateQrCode())}
                         className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all text-xs font-bold"
                     >
                         <RefreshCw className="w-3 h-3" />
