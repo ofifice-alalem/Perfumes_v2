@@ -624,50 +624,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
                     )}
 
-                    {/* Customer bar */}
-                    <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
-                        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3">
-                            <div className="flex items-center gap-2 flex-1 min-w-[160px]">
-                                <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                    <User className="w-4.5 h-4.5 sm:w-4 sm:h-4 text-primary" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <ModernSelect key={`customer-${resetKey}`} label="" options={customerOptions}
-                                        defaultValue={customerId ? customers.find(c => c.id === +customerId)?.name ?? 'زبون نقدي' : 'زبون نقدي'} placeholder="اختر العميل"
-                                        onSelect={val => {
-                                            const c = customers.find(c => c.name === val);
-                                            setCustomerId(c && c.id !== 1 ? String(c.id) : '');
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex gap-2 shrink-0">
-                                {(['regular', 'vip'] as const).map(type => (
-                                    <button key={type} onClick={() => setCustomerType(type)}
-                                        className={`flex-1 sm:flex-none px-4 sm:px-5 h-11 sm:h-12 rounded-[12px] sm:rounded-[14px] border-2 transition-all font-bold text-sm ${customerType === type ? 'border-primary bg-primary text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'}`}>
-                                        {type === 'regular' ? 'عادي' : '⭐ VIP'}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Debt warning */}
-                        {customerId && originalDebt > 0 && (
-                            <div className="mx-3 sm:mx-5 mb-2.5 sm:mb-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-[12px] sm:rounded-[14px] bg-red-500/10 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
-                                <div className="flex items-center gap-2">
-                                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                                    <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">الدين السابق: {originalDebt.toFixed(2)}</span>
-                                </div>
-                                <button onClick={() => {
-                                    const m = paymentMethods[0];
-                                    if (!m) return;
-                                    setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
-                                }} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 h-9 sm:h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0 active:scale-95">
-                                    <CreditCard className="w-3.5 h-3.5" /> سداد الدين
-                                </button>
-                            </div>
-                        )}
-                    </div>
 
                     {/* Add product form */}
                     <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5 shrink-0">
@@ -925,6 +881,51 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 {/* ══ RIGHT PANEL ══ */}
                 <div className="w-full lg:w-[600px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0 border-r border-black/5 dark:border-white/5">
 
+                    {/* Customer bar */}
+                    <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3">
+                            <div className="flex items-center gap-2 flex-1 min-w-[160px]">
+                                <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <User className="w-4.5 h-4.5 sm:w-4 sm:h-4 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <ModernSelect key={`customer-${resetKey}`} label="" options={customerOptions}
+                                        defaultValue={customerId ? customers.find(c => c.id === +customerId)?.name ?? 'زبون نقدي' : 'زبون نقدي'} placeholder="اختر العميل"
+                                        onSelect={val => {
+                                            const c = customers.find(c => c.name === val);
+                                            setCustomerId(c && c.id !== 1 ? String(c.id) : '');
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                                {(['regular', 'vip'] as const).map(type => (
+                                    <button key={type} onClick={() => setCustomerType(type)}
+                                        className={`flex-1 sm:flex-none px-4 sm:px-5 h-11 sm:h-12 rounded-[12px] sm:rounded-[14px] border-2 transition-all font-bold text-sm ${customerType === type ? 'border-primary bg-primary text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'}`}>
+                                        {type === 'regular' ? 'عادي' : '⭐ VIP'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Debt warning */}
+                        {customerId && originalDebt > 0 && (
+                            <div className="mx-3 sm:mx-5 mb-2.5 sm:mb-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-[12px] sm:rounded-[14px] bg-red-500/10 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                                <div className="flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                                    <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">الدين السابق: {originalDebt.toFixed(2)}</span>
+                                </div>
+                                <button onClick={() => {
+                                    const m = paymentMethods[0];
+                                    if (!m) return;
+                                    setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
+                                }} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 h-9 sm:h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0 active:scale-95">
+                                    <CreditCard className="w-3.5 h-3.5" /> سداد الدين
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Panel header */}
                     <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-black/5 dark:border-white/5 shrink-0">
                         <div className="flex items-center gap-2">
@@ -934,7 +935,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 {cart.length > 0 && <span className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs font-black text-primary bg-primary/10 px-1.5 sm:px-2 py-0.5 rounded-full">{cart.length}</span>}
                             </span>
                         </div>
-                        <span className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-white/30 truncate max-w-[120px] sm:max-w-none">{selectedCustomerName}</span>
                     </div>
 
                     {/* Cart items */}
