@@ -18,6 +18,14 @@ class SettlementObserver
         $this->syncCustomer($settlement);
     }
 
+    public function updated(Settlement $settlement): void
+    {
+        if ($settlement->wasChanged(['amount', 'invoice_return_id', 'customer_id'])) {
+            $this->syncInvoiceReturn($settlement);
+            $this->syncCustomer($settlement);
+        }
+    }
+
     public function deleted(Settlement $settlement): void
     {
         $this->syncInvoiceReturn($settlement);
@@ -31,7 +39,7 @@ class SettlementObserver
         $return = \App\Models\InvoiceReturn::find($settlement->invoice_return_id);
         if (!$return) return;
 
-        $return->recovered_amount = $return->settlements()->sum('amount');
+        $return->recovered_amount = \App\Models\Settlement::where('invoice_return_id', $return->id)->sum('amount');
         $return->due_recovery     = $return->total - $return->recovered_amount;
 
         $return->recovery_status = match(true) {

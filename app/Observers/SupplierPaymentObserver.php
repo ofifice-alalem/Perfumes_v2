@@ -18,6 +18,14 @@ class SupplierPaymentObserver
         $this->syncSupplier($payment);
     }
 
+    public function updated(SupplierPayment $payment): void
+    {
+        if ($payment->wasChanged(['amount', 'purchase_id', 'supplier_id'])) {
+            $this->syncPurchase($payment);
+            $this->syncSupplier($payment);
+        }
+    }
+
     public function deleted(SupplierPayment $payment): void
     {
         $this->syncPurchase($payment);
@@ -31,7 +39,7 @@ class SupplierPaymentObserver
         $purchase = \App\Models\Purchase::find($payment->purchase_id);
         if (!$purchase) return;
 
-        $purchase->paid_amount = $purchase->payments()->sum('amount');
+        $purchase->paid_amount = \App\Models\SupplierPayment::where('purchase_id', $purchase->id)->sum('amount');
         $purchase->due_amount  = $purchase->total - $purchase->paid_amount;
 
         $purchase->payment_status = match (true) {

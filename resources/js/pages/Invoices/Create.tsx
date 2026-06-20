@@ -29,12 +29,31 @@ interface Product {
 }
 interface PaymentMethod { id: number; name: string; }
 
+interface InvoiceItemData {
+    id: number; product_id: number; size_id: number | null;
+    sale_type: string; quantity: string; unit_price: string; line_total: string;
+    product: { id: number; name: string; category?: Category };
+    size: { id: number; label: string; value: string } | null;
+}
+interface InvoicePaymentData {
+    id: number; amount: string;
+    payment_method: { id: number; name: string };
+}
+interface EditInvoice {
+    id: number; customer_id: number; customer_type: string;
+    notes: string | null;
+    customer: { id: number; name: string; total_debt?: string } | null;
+    items: InvoiceItemData[];
+    payments: InvoicePaymentData[];
+}
+
 interface Props {
     customers:      Customer[];
     products:       Product[];
     sizes:          Size[];
     paymentMethods: PaymentMethod[];
     flash?: { success?: string; error?: string };
+    editInvoice?: EditInvoice;
 }
 
 interface CartItem {
@@ -115,16 +134,43 @@ function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash }: Props) {
+export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, editInvoice }: Props) {
+    const isEditMode = !!editInvoice;
+
+    // Build initial cart from invoice items when editing
+    function buildInitialCart(): CartItem[] {
+        if (!editInvoice) return [];
+        return editInvoice.items.map(item => ({
+            product_id: item.product_id,
+            product_name: item.product?.name ?? '',
+            sale_type: item.sale_type,
+            size_id: item.size_id ? String(item.size_id) : '',
+            size_label: item.size?.label ?? '',
+            quantity: String(item.quantity),
+            unit_price: +item.unit_price,
+            line_total: +item.line_total,
+        }));
+    }
+
+    // Build initial payments from invoice payments when editing
+    function buildInitialPayments(): PaymentEntry[] {
+        if (!editInvoice) return [];
+        return editInvoice.payments.map(p => ({
+            payment_method_id: String(p.payment_method.id),
+            method_name: p.payment_method.name,
+            amount: (+p.amount).toFixed(2),
+        }));
+    }
+
     const [resetKey,      setResetKey]      = useState(0);
-    const [customerId,    setCustomerId]    = useState('');
-    const [customerType,  setCustomerType]  = useState<'regular'|'vip'>('regular');
-    const [notes,         setNotes]         = useState('');
-    const [cart,          setCart]          = useState<CartItem[]>([]);
-    const [payments,      setPayments]      = useState<PaymentEntry[]>([]);
+    const [customerId,    setCustomerId]    = useState(editInvoice && editInvoice.customer_id !== 1 ? String(editInvoice.customer_id) : '');
+    const [customerType,  setCustomerType]  = useState<'regular'|'vip'>(editInvoice?.customer_type === 'vip' ? 'vip' : 'regular');
+    const [notes,         setNotes]         = useState(editInvoice?.notes ?? '');
+    const [cart,          setCart]          = useState<CartItem[]>(buildInitialCart);
+    const [payments,      setPayments]      = useState<PaymentEntry[]>(buildInitialPayments);
     const [debtPayment,          setDebtPayment]          = useState<PaymentEntry | null>(null);
     const [processing,           setProcessing]           = useState(false);
-    const [paymentManuallySet,   setPaymentManuallySet]   = useState(false);
+    const [paymentManuallySet,   setPaymentManuallySet]   = useState(isEditMode);
     
     // Hold invoices state
     const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
@@ -307,7 +353,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     function getCartConsumed(productId: number): number {
         return cart.filter(i => i.product_id === productId).reduce((s, i) => s + +i.quantity, 0);
     }
-    const availableStock = selectedProduct ? +selectedProduct.stock - getCartConsumed(selectedProduct.id) : 0;
+    // في وضع التعديل، المخزون الحالي يكون مخصوماً منه الفاتورة الأصلية
+    // لذا نضيف كميات الفاتورة الأصلية للمنتج ليظهر المخزون المتاح الفعلي
+    function getOriginalInvoiceQty(productId: number): number {
+        if (!editInvoice) return 0;
+        return editInvoice.items.filter(i => i.product_id === productId).reduce((s, i) => s + +i.quantity, 0);
+    }
+    const availableStock = selectedProduct
+        ? +selectedProduct.stock + getOriginalInvoiceQty(selectedProduct.id) - getCartConsumed(selectedProduct.id)
+        : 0;
 
     const maxCount: number | undefined = selectedProduct && (isTier || selSaleType)
         ? (() => {
@@ -511,7 +565,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     function submit() {
         if (cart.length === 0 || (isCashCustomer && Math.abs(remaining) > 0.01)) return;
         setProcessing(true);
-        router.post('/invoices', {
+
+        const payload = {
             customer_id:   customerId || null,
             customer_type: customerType,
             notes,
@@ -528,14 +583,24 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 amount:            p.amount,
                 notes:             null,
             })),
-            debt_payment: debtPayment ? {
-                payment_method_id: debtPayment.payment_method_id,
-                amount:            debtPayment.amount,
-            } : null,
-        }, {
-            onSuccess: clearForm,
-            onFinish:  () => setProcessing(false),
-        });
+            ...(isEditMode ? {} : {
+                debt_payment: debtPayment ? {
+                    payment_method_id: debtPayment.payment_method_id,
+                    amount:            debtPayment.amount,
+                } : null,
+            }),
+        };
+
+        if (isEditMode) {
+            router.put(`/invoices/${editInvoice!.id}`, payload, {
+                onFinish: () => setProcessing(false),
+            });
+        } else {
+            router.post('/invoices', payload, {
+                onSuccess: clearForm,
+                onFinish:  () => setProcessing(false),
+            });
+        }
     }
 
     const customerOptions = [
@@ -547,7 +612,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     // ── render ────────────────────────────────────────────────────────────────
     return (
         <>
-        <AppShell pageTitle="فاتورة بيع جديدة">
+        <AppShell pageTitle={isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة بيع جديدة'}>
             {/* Desktop Layout - كما هو */}
             <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-120px)] overflow-hidden">
 
@@ -557,17 +622,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     {/* Top bar */}
                     <div className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 border-b border-black/5 dark:border-white/5 shrink-0">
                         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                            <Link href="/invoices" className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs sm:text-sm shrink-0">
+                            <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs sm:text-sm shrink-0">
                                 <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                <span className="hidden sm:inline">فواتير البيع</span>
+                                <span className="hidden sm:inline">{isEditMode ? 'عرض الفاتورة' : 'فواتير البيع'}</span>
                                 <span className="sm:hidden">رجوع</span>
                             </Link>
                             <span className="text-slate-300 dark:text-white/10 hidden sm:inline">/</span>
-                            <span className="font-black text-slate-800 dark:text-white text-xs sm:text-sm truncate">فاتورة جديدة</span>
+                            <span className="font-black text-slate-800 dark:text-white text-xs sm:text-sm truncate">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
                         </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                             {/* Hold invoices indicator */}
-                            {holdInvoices.length > 0 && (
+                            {!isEditMode && holdInvoices.length > 0 && (
                                 <button
                                     onClick={() => setShowHoldList(!showHoldList)}
                                     className="relative flex items-center gap-1 sm:gap-2 px-2 sm:px-3 h-7 sm:h-8 rounded-[8px] sm:rounded-[10px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] sm:text-xs transition-all"
@@ -858,10 +923,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         )}
                         <div className="flex gap-2">
                             <div className="flex flex-col gap-2 w-1/4">
-                                <Link href="/invoices" className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
+                                <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
                                     <X className="w-4 h-4" /> إلغاء
                                 </Link>
-                                {cart.length > 0 && (
+                                {!isEditMode && cart.length > 0 && (
                                     <button onClick={clearForm} className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-sm transition-all">
                                         <Trash2 className="w-4 h-4" /> مسح
                                     </button>
@@ -872,7 +937,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 className="spatial-button flex-1 flex items-center justify-center gap-2 text-lg font-black disabled:opacity-40"
                                 style={{ height: cart.length > 0 ? '144px' : '68px' }}>
                                 <Check className="w-6 h-6" />
-                                {cart.length > 0 ? `تأكيد البيع — ${grandTotal.toFixed(2)}` : 'تأكيد البيع'}
+                                {isEditMode
+                                    ? (cart.length > 0 ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : 'حفظ التعديلات')
+                                    : (cart.length > 0 ? `تأكيد البيع — ${grandTotal.toFixed(2)}` : 'تأكيد البيع')}
                             </button>
                         </div>
                     </div>
@@ -1123,7 +1190,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <textarea value={notes} onChange={e => setNotes(e.target.value)}
                                 rows={2} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
                                 className="flex-1 spatial-input rounded-[14px] sm:rounded-[16px] px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold resize-none min-h-[80px] sm:min-h-[96px]" />
-                            {cart.length > 0 && (
+                            {!isEditMode && cart.length > 0 && (
                                 <button onClick={holdCurrentInvoice}
                                     className="flex-1 sm:flex-none sm:w-32 flex flex-col items-center justify-center gap-1 sm:gap-1.5 rounded-[14px] sm:rounded-[16px] bg-gradient-to-br from-amber-400/15 to-amber-600/15 hover:from-amber-400/25 hover:to-amber-600/25 border-2 border-amber-500/30 hover:border-amber-500/50 text-amber-700 dark:text-amber-300 font-black text-xs sm:text-sm transition-all duration-200 shrink-0 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] hover:-translate-y-0.5 min-h-[80px] sm:min-h-[96px]">
                                     <Pause className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1142,12 +1209,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 {/* Top Bar - Customer Selection */}
                 <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
                     <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 dark:border-white/5">
-                        <Link href="/invoices" className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs">
+                        <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs">
                             <ChevronLeft className="w-3.5 h-3.5" /> رجوع
                         </Link>
-                        <span className="font-black text-slate-800 dark:text-white text-xs">فاتورة جديدة</span>
+                        <span className="font-black text-slate-800 dark:text-white text-xs">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
                         <div className="flex items-center gap-1.5">
-                            {holdInvoices.length > 0 && (
+                            {!isEditMode && holdInvoices.length > 0 && (
                                 <button onClick={() => setShowHoldList(!showHoldList)}
                                     className="flex items-center gap-1 px-2 h-7 rounded-[8px] bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-bold text-[10px] transition-all">
                                     <Clock className="w-3 h-3" />
@@ -1658,27 +1725,27 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
                                         className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-lg font-black disabled:opacity-40 active:scale-95 transition-transform">
                                         <Check className="w-5 h-5" />
-                                        <span>تأكيد البيع — {grandTotal.toFixed(2)}</span>
+                                        <span>{isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : `تأكيد البيع — ${grandTotal.toFixed(2)}`}</span>
                                     </button>
 
                                     {/* Secondary Actions */}
                                     <div className="grid grid-cols-3 gap-2">
-                                        {cart.length > 0 && (
+                                        {!isEditMode && cart.length > 0 && (
                                             <button onClick={holdCurrentInvoice}
                                                 className="flex flex-col items-center justify-center gap-1 h-16 rounded-[12px] bg-gradient-to-br from-amber-400/15 to-amber-600/15 hover:from-amber-400/25 hover:to-amber-600/25 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 font-black text-xs transition-all active:scale-95">
                                                 <Pause className="w-4 h-4" />
                                                 <span>تعليق</span>
                                             </button>
                                         )}
-                                        {cart.length > 0 && (
+                                        {!isEditMode && cart.length > 0 && (
                                             <button onClick={clearForm}
                                                 className="flex flex-col items-center justify-center gap-1 h-16 rounded-[12px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 font-bold text-xs transition-all active:scale-95">
                                                 <Trash2 className="w-4 h-4" />
                                                 <span>مسح</span>
                                             </button>
                                         )}
-                                        <Link href="/invoices"
-                                            className={`flex flex-col items-center justify-center gap-1 h-16 rounded-[12px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 border-2 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 font-bold text-xs transition-all ${cart.length > 0 ? '' : 'col-span-3'}`}>
+                                        <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
+                                            className={`flex flex-col items-center justify-center gap-1 h-16 rounded-[12px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 border-2 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 font-bold text-xs transition-all ${(!isEditMode && cart.length > 0) ? '' : 'col-span-3'}`}>
                                             <X className="w-4 h-4" />
                                             <span>إلغاء</span>
                                         </Link>

@@ -18,6 +18,14 @@ class PaymentObserver
         $this->syncCustomer($payment);
     }
 
+    public function updated(Payment $payment): void
+    {
+        if ($payment->wasChanged(['amount', 'invoice_id', 'customer_id'])) {
+            $this->syncInvoice($payment);
+            $this->syncCustomer($payment);
+        }
+    }
+
     public function deleted(Payment $payment): void
     {
         $this->syncInvoice($payment);
@@ -31,7 +39,7 @@ class PaymentObserver
         $invoice = \App\Models\Invoice::find($payment->invoice_id);
         if (!$invoice) return;
 
-        $invoice->paid_amount = $invoice->payments()->sum('amount');
+        $invoice->paid_amount = \App\Models\Payment::where('invoice_id', $invoice->id)->sum('amount');
         $invoice->due_amount  = $invoice->total - $invoice->paid_amount;
 
         $invoice->payment_status = match (true) {
