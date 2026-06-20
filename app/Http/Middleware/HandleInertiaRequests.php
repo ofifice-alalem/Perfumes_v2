@@ -29,6 +29,7 @@ class HandleInertiaRequests extends Middleware
                     'roles' => $request->user()->getRoleNames(),
                 ] : null,
             ],
+            'globalPaymentMethods' => \App\Models\PaymentMethod::orderBy('name')->get(['id', 'name']),
         ];
     }
 }

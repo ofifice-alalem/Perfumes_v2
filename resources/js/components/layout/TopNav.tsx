@@ -9,17 +9,42 @@ interface TopNavProps {
 }
 
 export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
-  const { auth } = usePage().props as any;
+  const { auth, globalPaymentMethods = [] } = usePage().props as any;
   const userName = auth?.user?.name || 'مستخدم';
   const initial = userName.charAt(0);
   
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [paymentDropdownOpen, setPaymentDropdownOpen] = useState(false);
+  const paymentDropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [defaultPaymentId, setDefaultPaymentId] = useState<string>('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('defaultPaymentMethodId');
+    if (saved && globalPaymentMethods.find((m: any) => String(m.id) === saved)) {
+      setDefaultPaymentId(saved);
+    } else if (globalPaymentMethods.length > 0) {
+      setDefaultPaymentId(String(globalPaymentMethods[0].id));
+    }
+  }, [globalPaymentMethods]);
+
+  useEffect(() => {
+    if (defaultPaymentId) {
+      localStorage.setItem('defaultPaymentMethodId', defaultPaymentId);
+      // Dispatch a custom event so other components can know about the change
+      window.dispatchEvent(new Event('defaultPaymentMethodChanged'));
+    }
+  }, [defaultPaymentId]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (paymentDropdownRef.current && !paymentDropdownRef.current.contains(event.target as Node)) {
+        setPaymentDropdownOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -27,6 +52,8 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  const selectedPaymentName = globalPaymentMethods.find((m: any) => String(m.id) === defaultPaymentId)?.name || 'بطاقة';
 
   return (
     <header className="flex justify-between items-center mb-6 lg:mb-10 shrink-0">
@@ -40,6 +67,35 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
 
       <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto justify-between sm:justify-end">
         
+        {/* Default Payment Dropdown */}
+        <div className="relative" ref={paymentDropdownRef}>
+          <button 
+              onClick={() => setPaymentDropdownOpen(!paymentDropdownOpen)}
+              className="flex items-center gap-2 h-10 lg:h-11 px-4 rounded-full border-2 border-primary/20 bg-white dark:bg-slate-800 text-slate-700 dark:text-white hover:border-primary/50 transition-all font-bold text-xs sm:text-sm shrink-0"
+              title="طريقة الدفع الافتراضية"
+          >
+            <span className="text-primary">الدفع:</span>
+            <span>{selectedPaymentName}</span>
+            <svg className={`w-3 h-3 lg:w-4 lg:h-4 text-slate-400 transition-transform ${paymentDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          
+          {paymentDropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-[#1a1a24] rounded-2xl shadow-xl border border-slate-200 dark:border-white/10 overflow-hidden z-50">
+              <div className="p-2 flex flex-col gap-1">
+                {globalPaymentMethods.map((m: any) => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setDefaultPaymentId(String(m.id)); setPaymentDropdownOpen(false); }}
+                    className={`w-full flex items-center px-3 py-2 text-sm font-bold rounded-xl transition-colors text-right ${defaultPaymentId === String(m.id) ? 'bg-primary/10 text-primary' : 'text-slate-700 dark:text-white hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Quick Actions */}
         <Link
           href="/invoices/create"

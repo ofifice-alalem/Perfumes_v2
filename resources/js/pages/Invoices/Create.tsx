@@ -176,6 +176,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
     const [showHoldList, setShowHoldList] = useState(false);
 
+    // Default Payment Method
+    const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>('');
+    
     // product selection
     const [selProduct,   setSelProduct]   = useState('');
     const [selSaleType,  setSelSaleType]  = useState('');
@@ -227,6 +230,22 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     useEffect(() => {
         localStorage.setItem('holdInvoices', JSON.stringify(holdInvoices));
     }, [holdInvoices]);
+
+    // Load default payment method from localStorage
+    useEffect(() => {
+        const loadDefaultPayment = () => {
+            const saved = localStorage.getItem('defaultPaymentMethodId');
+            if (saved && paymentMethods.find(m => String(m.id) === saved)) {
+                setDefaultPaymentMethodId(saved);
+            } else if (paymentMethods.length > 0) {
+                setDefaultPaymentMethodId(String(paymentMethods[0].id));
+            }
+        };
+
+        loadDefaultPayment();
+        window.addEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
+        return () => window.removeEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
+    }, [paymentMethods]);
 
     // ── Barcode Scanner Listener ─────────────────────────────────────────────
     useEffect(() => {
@@ -424,7 +443,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 
                 if (!paymentManuallySet) {
                     if (prev.length === 0 && paymentMethods.length > 0) {
-                        const def = paymentMethods[0];
+                        const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
                         setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
                     } else if (payments.length === 1) {
                         setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
@@ -452,7 +471,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 
                 if (!paymentManuallySet) {
                     if (prev.length === 0 && paymentMethods.length > 0) {
-                        const def = paymentMethods[0];
+                        const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
                         setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
                     } else if (payments.length === 1) {
                         setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
