@@ -7,7 +7,7 @@ import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
-    CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause,
+    CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause, Edit,
 } from 'lucide-react';
 
 interface Customer      { id: number; name: string; total_debt?: string; }
@@ -874,19 +874,18 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     {/* Debt payment card */}
                                     {debtPayment && (
                                         <div className="flex items-center gap-2 px-3 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
-                                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                                            <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                                setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                            }, originalDebt)}
+                                                className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
+                                                <Edit className="w-4 h-4" />
+                                            </button>
                                             <div className="flex flex-col min-w-0 flex-1">
                                                 <span className="font-bold text-red-600 dark:text-red-400 text-[10px] sm:text-xs truncate">سداد الدين — {debtPayment.method_name}</span>
-                                                <button
-                                                    onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                                        setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                                    }, originalDebt)}
-                                                    className="font-black text-slate-800 dark:text-white text-base sm:text-lg text-left hover:text-primary transition-colors cursor-pointer truncate">
-                                                    {debtPayment.amount}
-                                                </button>
+                                                <span className="font-black text-slate-800 dark:text-white text-base sm:text-lg truncate">{debtPayment.amount}</span>
                                             </div>
                                             <button onClick={() => setDebtPayment(null)}
-                                                className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95">
+                                                className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -897,13 +896,18 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     ) : (
                                         payments.map((p, idx) => (
                                             <div key={idx} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
-                                                <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 shrink-0" />
+                                                <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
+                                                    setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
+                                                    setPaymentManuallySet(true);
+                                                })} className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
                                                 <div className="flex flex-col min-w-0 flex-1">
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] sm:text-xs truncate">{p.method_name}</span>
                                                     <span className="font-black text-slate-800 dark:text-white text-base sm:text-lg truncate">{p.amount}</span>
                                                 </div>
                                                 <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95">
+                                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
                                                     <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                                                 </button>
                                             </div>
@@ -1580,18 +1584,18 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الدفعات</label>
                                         {debtPayment && (
                                             <div className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-red-500/10 border-2 border-red-500/20">
-                                                <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                                                <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                                    setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                                }, originalDebt)}
+                                                    className="w-10 h-10 rounded-[12px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
                                                 <div className="flex flex-col min-w-0 flex-1">
                                                     <span className="font-bold text-red-600 dark:text-red-400 text-[10px] truncate">سداد الدين — {debtPayment.method_name}</span>
-                                                    <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                                        setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                                    }, originalDebt)}
-                                                        className="font-black text-slate-800 dark:text-white text-base text-left hover:text-primary transition-colors cursor-pointer truncate">
-                                                        {debtPayment.amount}
-                                                    </button>
+                                                    <span className="font-black text-slate-800 dark:text-white text-base truncate">{debtPayment.amount}</span>
                                                 </div>
                                                 <button onClick={() => setDebtPayment(null)}
-                                                    className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95">
+                                                    className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -1605,13 +1609,18 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         ) : (
                                             payments.map((p, idx) => (
                                                 <div key={idx} className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-emerald-500/10 border-2 border-emerald-500/20">
-                                                    <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
+                                                        setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
+                                                        setPaymentManuallySet(true);
+                                                    })} className="w-10 h-10 rounded-[12px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
                                                     <div className="flex flex-col min-w-0 flex-1">
                                                         <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] truncate">{p.method_name}</span>
                                                         <span className="font-black text-slate-800 dark:text-white text-base truncate">{p.amount}</span>
                                                     </div>
                                                     <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                        className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95">
+                                                        className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
