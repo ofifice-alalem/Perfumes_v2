@@ -26,6 +26,15 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
     setIsDark(useDark);
   }, []);
 
+  // Keep-alive heartbeat to prevent php artisan serve and DB from sleeping
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch('/up').catch(() => {});
+    }, 4 * 60 * 1000); // Every 4 minutes
+    
+    return () => clearInterval(interval);
+  }, []);
+
   function applyTheme(dark: boolean) {
     const body = document.body;
     if (dark) {

@@ -13,6 +13,7 @@
         "inertiajs/inertia-laravel": "^3.0",
         "khaled.alshamaa/ar-php": "^7.0",
         "laravel/framework": "^13.0",
+        "laravel/octane": "^2.17",
         "laravel/tinker": "^3.0",
         "maatwebsite/excel": "^3.1",
         "moneyphp/money": "^4.8",

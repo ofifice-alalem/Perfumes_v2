@@ -83,7 +83,13 @@ npm run build
 php artisan optimize
 ```
 
-### 10. تشغيل السيرفر في الخلفية
+### 10. تثبيت وتجهيز Laravel Octane (لبيئة الإنتاج السريعة)
+```bash
+composer require laravel/octane
+php artisan octane:install --server=frankenphp
+```
+
+### 11. تشغيل السيرفر في الخلفية
 
 #### Windows — تشغيل عند بدء النظام تلقائياً
 
@@ -98,7 +104,7 @@ php artisan optimize
    - **Program:** `cmd.exe`
    - **Arguments:**
      ```
-     /c start /B php artisan serve --host=0.0.0.0 --port=8000
+     /c start /B php artisan octane:start --host=0.0.0.0 --port=8000
      ```
    - **Start in:** `C:\path\to\Perfumes_v2`
 4. ✅ فعّل خيار `Run whether user is logged on or not`
@@ -107,7 +113,7 @@ php artisan optimize
 ```bat
 @echo off
 cd /d C:\path\to\Perfumes_v2
-start /B php artisan serve --host=0.0.0.0 --port=8000
+start /B php artisan octane:start --host=0.0.0.0 --port=8000
 ```
 ثم ضع اختصاره في:
 ```
@@ -130,7 +136,7 @@ After=network.target mysql.service
 Type=simple
 User=YOUR_USERNAME
 WorkingDirectory=/path/to/Perfumes_v2
-ExecStart=/usr/bin/php artisan serve --host=0.0.0.0 --port=8000
+ExecStart=/usr/bin/php artisan octane:start --host=0.0.0.0 --port=8000
 Restart=always
 RestartSec=5
 
@@ -169,11 +175,11 @@ sudo systemctl status perfumes
   ```
   ثم في terminal آخر:
   ```bash
-  php artisan serve --host=0.0.0.0 --port=8000
+  php artisan octane:start --watch --host=0.0.0.0 --port=8000
   ```
 
 - لإعادة تهيئة المشروع من الصفر:
   ```bash
   php artisan migrate:fresh
-  php artisan db:seed --class=StartOperationSeeder
+  php artisan db:seed --class=CoreSystemSeeder
   ```
