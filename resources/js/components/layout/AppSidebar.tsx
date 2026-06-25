@@ -66,7 +66,7 @@ const navSections: NavSection[] = [
       { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods' },
       { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users' },
       { icon: <HardDrive className="w-5 h-5" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
-      { icon: <RefreshCw className="w-5 h-5" />, label: 'الفترات المحاسبية', href: '/periods', roles: ['super-admin'] },
+      { icon: <RefreshCw className="w-5 h-5" />, label: 'الإقفال والجرد', href: '/periods', roles: ['super-admin'] },
     ],
   },
 ];
