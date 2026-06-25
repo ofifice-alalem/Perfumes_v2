@@ -119,6 +119,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     // payment state
     const [selMethod, setSelMethod] = useState('');
     const [selAmount, setSelAmount] = useState('');
+    const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>('');
 
     // Mobile tabs state
     const [activeTab, setActiveTab] = useState<'products' | 'payment' | 'confirm'>('products');
@@ -286,17 +287,33 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
     const originalDebt   = customer ? parseFloat(customer.total_debt) || 0 : 0;
     const debtAfterReturn = !isCash ? originalDebt - grandTotal + totalRecovered : 0;
 
+    // Default payment method logic
+    useEffect(() => {
+        const loadDefaultPayment = () => {
+            const saved = localStorage.getItem('defaultPaymentMethodId');
+            if (saved && paymentMethods.find(m => String(m.id) === saved)) {
+                setDefaultPaymentMethodId(saved);
+            } else if (paymentMethods.length > 0) {
+                setDefaultPaymentMethodId(String(paymentMethods[0].id));
+            }
+        };
+
+        loadDefaultPayment();
+        window.addEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
+        return () => window.removeEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
+    }, [paymentMethods]);
+
     // تحديث قيمة التسوية تلقائياً
     useEffect(() => {
         if (grandTotal <= 0) { setSettlements([]); return; }
         setSettlements(prev => {
             if (prev.length === 0) {
-                const m = paymentMethods[0];
-                return m ? [{ payment_method_id: String(m.id), amount: grandTotal.toFixed(2), notes: '' }] : [];
+                const defId = defaultPaymentMethodId || (paymentMethods[0] ? String(paymentMethods[0].id) : '');
+                return defId ? [{ payment_method_id: defId, amount: grandTotal.toFixed(2), notes: '' }] : [];
             }
             return prev.map((s, i) => i === 0 ? { ...s, amount: grandTotal.toFixed(2) } : s);
         });
-    }, [grandTotal]);
+    }, [grandTotal, defaultPaymentMethodId, paymentMethods]);
 
     const customerOptions = customers.map(c => ({
         label: c.name,
