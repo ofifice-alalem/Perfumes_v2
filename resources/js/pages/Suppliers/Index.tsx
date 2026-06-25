@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { DeleteModal } from '@/components/ui/DeleteModal';
-import { Plus, Pencil, Trash2, X, Check, Truck } from 'lucide-react';
+import { Plus, Pencil, X, Check, Truck, Power } from 'lucide-react';
 
 interface Supplier {
     id: number;
@@ -29,6 +28,11 @@ const emptyForm = { name: '', phone: '', email: '', address: '', is_active: true
 export default function SuppliersIndex({ suppliers, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+
+    const activeSuppliers = suppliers.filter(s => s.is_active);
+    const inactiveSuppliers = suppliers.filter(s => !s.is_active);
+    const filtered = activeTab === 'active' ? activeSuppliers : inactiveSuppliers;
 
     const createForm = useForm({ ...emptyForm });
     const editForm   = useForm({ name: '', phone: '', email: '', address: '', is_active: true });
@@ -47,6 +51,16 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
     function submitEdit(id: number) {
         editForm.put(`/suppliers/${id}`, {
             onSuccess: () => setEditingId(null),
+        });
+    }
+
+    function toggleActive(supplier: Supplier) {
+        router.put(`/suppliers/${supplier.id}`, {
+            name: supplier.name,
+            phone: supplier.phone,
+            email: supplier.email ?? '',
+            address: supplier.address ?? '',
+            is_active: !supplier.is_active,
         });
     }
 
@@ -126,12 +140,36 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                     </SpatialCard>
                 )}
 
+                {/* Tabs */}
+                <div className="flex gap-2 mb-4">
+                    <button
+                        onClick={() => setActiveTab('active')}
+                        className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${
+                            activeTab === 'active'
+                                ? 'bg-primary text-white'
+                                : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'
+                        }`}
+                    >
+                        نشطون ({activeSuppliers.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('inactive')}
+                        className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${
+                            activeTab === 'inactive'
+                                ? 'bg-primary text-white'
+                                : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'
+                        }`}
+                    >
+                        موقوفون ({inactiveSuppliers.length})
+                    </button>
+                </div>
+
                 {/* List */}
-                <SpatialCard title={`الموردون (${suppliers.length})`} icon={<Truck className="w-4 h-4" />}>
-                    {suppliers.length === 0 ? (
+                <SpatialCard title={`الموردون (${filtered.length})`} icon={<Truck className="w-4 h-4" />}>
+                    {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
-                            <span className="text-4xl">🚚</span>
-                            <span className="font-bold">لا يوجد موردون بعد</span>
+                            <span className="text-4xl">{activeTab === 'active' ? '🚚' : '⏸️'}</span>
+                            <span className="font-bold">{activeTab === 'active' ? 'لا يوجد موردون نشطون' : 'لا يوجد موردون موقوفون'}</span>
                         </div>
                     ) : (
                         <>
@@ -146,7 +184,7 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {suppliers.map(supplier => (
+                                        {filtered.map(supplier => (
                                             editingId === supplier.id ? (
                                                 <tr key={`edit-${supplier.id}`}>
                                                     <td colSpan={9} className="px-4 py-4">
@@ -230,14 +268,14 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                                                 className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
                                                                 <Pencil className="w-3 h-3" /> تعديل
                                                             </button>
-                                                            <DeleteModal
-                                                                onConfirm={() => router.delete(`/suppliers/${supplier.id}`)}
-                                                                trigger={
-                                                                    <button className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                        <Trash2 className="w-3 h-3" /> حذف
-                                                                    </button>
-                                                                }
-                                                            />
+                                                            <button onClick={() => toggleActive(supplier)}
+                                                                className={`flex items-center gap-1.5 px-3 h-8 rounded-[10px] border transition-all font-bold text-xs ${
+                                                                    supplier.is_active
+                                                                        ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white'
+                                                                        : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                                                                }`}>
+                                                                <Power className="w-3 h-3" /> {supplier.is_active ? 'إيقاف' : 'تنشيط'}
+                                                            </button>
                                                         </div>
                                                         )}
                                                     </td>
@@ -250,7 +288,7 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
 
                             {/* كاردات — Mobile */}
                             <div className="flex flex-col gap-4 lg:hidden">
-                                {suppliers.map(supplier => (
+                                {filtered.map(supplier => (
                                     editingId === supplier.id ? (
                                         <div key={supplier.id} className="rounded-[24px] border border-primary/25 overflow-hidden">
                                             <div className="px-5 py-3 bg-primary/5 flex items-center justify-between">
@@ -345,15 +383,14 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                                             className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
                                                             <Pencil className="w-4 h-4" /> تعديل
                                                         </button>
-                                                        <DeleteModal
-                                                            onConfirm={() => router.delete(`/suppliers/${supplier.id}`)}
-                                                            wrapperClassName="flex-1"
-                                                            trigger={
-                                                                <button className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                                    <Trash2 className="w-4 h-4" /> حذف
-                                                                </button>
-                                                            }
-                                                        />
+                                                        <button onClick={() => toggleActive(supplier)}
+                                                            className={`flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border transition-all font-bold text-sm ${
+                                                                supplier.is_active
+                                                                    ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500 hover:text-white'
+                                                                    : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                                                            }`}>
+                                                            <Power className="w-4 h-4" /> {supplier.is_active ? 'إيقاف' : 'تنشيط'}
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>

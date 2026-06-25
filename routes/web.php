@@ -117,8 +117,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:super-admin|admin|saler')->group(function () {
 
         // Customers & Suppliers
-        Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show']);
-        Route::resource('suppliers', SupplierController::class)->except(['create', 'edit', 'show']);
+        Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show', 'destroy']);
+        Route::resource('suppliers', SupplierController::class)->except(['create', 'edit', 'show', 'destroy']);
 
         // Purchases
         Route::resource('purchases', PurchaseController::class)->except(['edit']);
@@ -153,7 +153,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:super-admin|admin|saler|cashier')->group(function () {
 
         // Customers
-        Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show']);
+        Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show', 'destroy']);
 
         // Invoices
         Route::resource('invoices', InvoiceController::class)->except(['edit']);

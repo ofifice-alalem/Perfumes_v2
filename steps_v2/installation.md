@@ -86,7 +86,7 @@ php artisan optimize
 ### 10. تثبيت وتجهيز Laravel Octane (لبيئة الإنتاج السريعة)
 ```bash
 composer require laravel/octane
-php artisan octane:install --server=frankenphp
+php artisan octane:install --server=roadrunner
 ```
 
 ### 11. تشغيل السيرفر في الخلفية

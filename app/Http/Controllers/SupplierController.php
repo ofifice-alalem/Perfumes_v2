@@ -43,14 +43,4 @@ class SupplierController extends Controller
         return back()->with('success', 'تم تحديث المورد بنجاح');
     }
 
-    public function destroy(int $id): RedirectResponse
-    {
-        if ($id === 1) {
-            return back()->with('error', 'لا يمكن حذف المورد النقدي');
-        }
-
-        $this->suppliers->delete($id);
-
-        return back()->with('success', 'تم حذف المورد بنجاح');
-    }
 }

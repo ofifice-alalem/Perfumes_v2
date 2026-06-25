@@ -43,14 +43,4 @@ class CustomerController extends Controller
         return back()->with('success', 'تم تحديث العميل بنجاح');
     }
 
-    public function destroy(int $id): RedirectResponse
-    {
-        if ($id === 1) {
-            return back()->with('error', 'لا يمكن حذف الزبون النقدي');
-        }
-
-        $this->customers->delete($id);
-
-        return back()->with('success', 'تم حذف العميل بنجاح');
-    }
 }
