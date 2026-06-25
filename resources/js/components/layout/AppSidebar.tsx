@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
@@ -55,14 +55,20 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    title: 'إدارة المنتجات',
+    roles: ['super-admin', 'admin', 'saler'],
+    items: [
+      { icon: <Layers className="w-5 h-5" />, label: 'التصنيفات', href: '/categories' },
+      { icon: <Ruler className="w-5 h-5" />, label: 'الأحجام', href: '/sizes' },
+      { icon: <Tags className="w-5 h-5" />, label: 'التيرات والأسعار', href: '/price-tiers' },
+      { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
+    ],
+  },
+  {
     title: 'الإعدادات العامة',
     roles: ['super-admin', 'admin'],
     items: [
       { icon: <BarChart2 className="w-5 h-5" />, label: 'التقارير', href: '/reports' },
-      { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
-      { icon: <Layers className="w-5 h-5" />, label: 'التصنيفات', href: '/categories' },
-      { icon: <Tags className="w-5 h-5" />, label: 'التيرات والأسعار', href: '/price-tiers' },
-      { icon: <Ruler className="w-5 h-5" />, label: 'الأحجام', href: '/sizes' },
       { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods' },
       { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users' },
       { icon: <HardDrive className="w-5 h-5" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
@@ -88,6 +94,18 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
   };
 
   const isSuperAdmin = userRoles.includes('super-admin');
+
+  // Scroll active link into view
+  useEffect(() => {
+    // Small delay to ensure render is complete
+    const timeout = setTimeout(() => {
+      const activeEl = document.getElementById('active-nav-link');
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+    return () => clearTimeout(timeout);
+  }, [url, isOpen]);
 
   return (
     <aside className={`
@@ -176,6 +194,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                   const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                   return (
                     <Link key={item.href} href={item.href}
+                      id={isActive ? 'active-nav-link' : undefined}
                       className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
