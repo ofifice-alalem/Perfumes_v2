@@ -87,6 +87,10 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/stock-status', [ReportController::class, 'stockStatus'])->name('reports.stock-status');
         Route::get('reports/stock-status/excel', [ReportController::class, 'stockStatusExcel'])->name('reports.stock-status.excel');
         Route::get('reports/stock-status/pdf', [ReportController::class, 'stockStatusPdf'])->name('reports.stock-status.pdf');
+
+        Route::get('reports/inventory-count', [ReportController::class, 'inventoryCount'])->name('reports.inventory-count');
+        Route::get('reports/inventory-count/excel', [ReportController::class, 'inventoryCountExcel'])->name('reports.inventory-count.excel');
+        Route::get('reports/inventory-count/pdf', [ReportController::class, 'inventoryCountPdf'])->name('reports.inventory-count.pdf');
         Route::get('reports/customer-aging', [ReportController::class, 'customerAging'])->name('reports.customer-aging');
         Route::get('reports/customer-aging/excel', [ReportController::class, 'customerAgingExcel'])->name('reports.customer-aging.excel');
         Route::get('reports/customer-aging/pdf', [ReportController::class, 'customerAgingPdf'])->name('reports.customer-aging.pdf');

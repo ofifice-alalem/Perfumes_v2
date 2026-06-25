@@ -575,6 +575,109 @@ class ReportRepository implements ReportRepositoryInterface
         return $pdf->stream('stock-status-' . now()->format('Y-m-d') . '.pdf');
     }
 
+    // ─── Inventory Count (الجرد) ────────────────────────────────────────────────
+    
+    public function exportInventoryCountExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
+    {
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('نموذج الجرد');
+
+        $row = 1;
+        $headers = ['#', 'المنتج', 'التصنيف', 'المخزون النظامي', 'المخزون الفعلي', 'ملاحظات'];
+
+        $lastCol = chr(ord('A') + count($headers) - 1);
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        foreach ($data as $i => $p) {
+            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+            $rowData = [
+                $i + 1,
+                $p['name'],
+                $p['category'],
+                $fmtN($p['stock']) . ' ' . $p['unit'],
+                '', // المخزون الفعلي فارغ
+                '', // ملاحظات فارغ
+            ];
+
+            $sheet->fromArray($rowData, null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $sheet->getStyle('D' . $row)->applyFromArray([
+                'font' => ['bold' => true],
+            ]);
+            $row++;
+        }
+
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->getColumnDimension('E')->setWidth(20);
+        $sheet->getColumnDimension('F')->setWidth(30);
+
+        $filename = 'inventory-count-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        (new Xlsx($spreadsheet))->save('php://output');
+        exit;
+    }
+
+    public function exportInventoryCountPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        $labels = [
+            'title'          => $g('نموذج الجرد الفعلي'),
+            'generated_at'   => now()->format('Y-m-d H:i'),
+            'filter_info'    => $g('معلومات التقرير'),
+            'label_category' => $g('التصنيف'),
+            'label_type'     => $g('نوع المنتج'),
+            'label_filter'   => $g('الفلتر'),
+            'all_label'      => $g('الكل'),
+            'low_stock_label'=> $g($lowStockOnly ? 'تحت الحد الأدنى فقط' : 'جميع المنتجات'),
+            'summary_label'  => $g('ملخص'),
+            'total_products' => count($data),
+            'col_name'       => $g('المنتج'),
+            'col_category'   => $g('التصنيف'),
+            'col_stock'      => $g('المخزون النظامي'),
+            'col_actual'     => $g('المخزون الفعلي'),
+            'col_notes'      => $g('ملاحظات'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.inventory-count-pdf', [
+            'labels'       => $labels,
+            'data'         => $data,
+            'g'            => $g,
+            'fmtN'         => $fmtN,
+        ])
+        ->setPaper('a4')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('inventory-count-' . now()->format('Y-m-d') . '.pdf');
+    }
+
     // ─── Customer Aging ────────────────────────────────────────────────────────
 
     public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array

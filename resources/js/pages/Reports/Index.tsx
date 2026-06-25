@@ -2,7 +2,7 @@ import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import {
     TrendingUp, Package, Users, Truck, BarChart2,
-    ShoppingCart, RotateCcw
+    ShoppingCart, RotateCcw, ClipboardList
 } from 'lucide-react';
 
 const reports = [
@@ -13,6 +13,7 @@ const reports = [
     { href: '/reports/sales',            icon: <TrendingUp className="w-6 h-6" />,    label: 'المبيعات',                      desc: 'تحليل المبيعات اليومي والشهري والسنوي' },
     { href: '/reports/purchases',        icon: <ShoppingCart className="w-6 h-6" />,  label: 'المشتريات',                     desc: 'تحليل المشتريات والمدفوعات للموردين' },
     { href: '/reports/returns',          icon: <RotateCcw className="w-6 h-6" />,     label: 'المرتجعات',                     desc: 'مرتجعات العملاء والموردين مقارنةً بالمبيعات' },
+    { href: '/reports/inventory-count',  icon: <ClipboardList className="w-6 h-6" />, label: 'نموذج الجرد',                   desc: 'تصدير نموذج فارغ لعمليات الجرد الفعلي' },
 ];
 
 export default function ReportsIndex() {

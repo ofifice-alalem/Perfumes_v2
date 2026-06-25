@@ -105,6 +105,39 @@ class ReportController extends Controller
         );
     }
 
+    public function inventoryCount(Request $request): Response
+    {
+        $categoryId   = $request->integer('category_id') ?: null;
+        $sellingType  = $request->input('selling_type');
+        $lowStockOnly = $request->boolean('low_stock_only');
+
+        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false);
+
+        return Inertia::render('Reports/InventoryCount', [
+            'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly'),
+            'data'       => $data,
+        ]);
+    }
+
+    public function inventoryCountExcel(Request $request)
+    {
+        $this->reports->exportInventoryCountExcel(
+            $request->integer('category_id') ?: null,
+            $request->input('selling_type'),
+            $request->boolean('low_stock_only'),
+        );
+    }
+
+    public function inventoryCountPdf(Request $request): \Illuminate\Http\Response
+    {
+        return $this->reports->exportInventoryCountPdf(
+            $request->integer('category_id') ?: null,
+            $request->input('selling_type'),
+            $request->boolean('low_stock_only'),
+        );
+    }
+
     public function customerAging(Request $request): Response
     {
         $customerId = $request->integer('customer_id') ?: null;
