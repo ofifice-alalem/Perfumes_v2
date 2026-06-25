@@ -38,9 +38,9 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
     const [settlements, setSettlements] = useState<SettlementRow[]>([]);
     const [resetKey,    setResetKey]    = useState(0);
 
-    const [selProduct,   setSelProduct]   = useState('');
-    const [selQty,       setSelQty]       = useState('1');
-    const [selUnitPrice, setSelUnitPrice] = useState('');
+    const [selProduct,    setSelProduct]    = useState('');
+    const [selQty,        setSelQty]        = useState('1');
+    const [selTotalPrice, setSelTotalPrice] = useState('');
 
     const [showPad,     setShowPad]     = useState(false);
     const [padTitle,    setPadTitle]    = useState('');
@@ -66,11 +66,18 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
 
     const selectedProduct = products.find(p => p.id === +selProduct);
 
+    const unitPricePreview = selQty && selTotalPrice && +selQty > 0 ? (+selTotalPrice / +selQty) : null;
+
     function addToCart() {
         if (!selectedProduct) return;
         const qty = parseFloat(selQty) || 0;
-        const price = parseFloat(selUnitPrice) || 0;
+        const lineTotal = parseFloat(selTotalPrice) || 0;
+        const price = qty > 0 ? lineTotal / qty : 0;
         if (qty <= 0 || price <= 0) return;
+        if (qty > parseFloat(selectedProduct.stock)) {
+            alert(`لا يمكن إرجاع كمية أكبر من المخزون (${selectedProduct.stock})`);
+            return;
+        }
 
         setItems(prev => {
             const existingIdx = prev.findIndex(i => i.product_id === String(selectedProduct.id) && i.unit_price === price.toFixed(2));
@@ -90,7 +97,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
             }];
         });
 
-        setSelProduct(''); setSelQty('1'); setSelUnitPrice('');
+        setSelProduct(''); setSelQty('1'); setSelTotalPrice('');
         setResetKey(k => k + 1);
     }
 
@@ -201,24 +208,29 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                             const p = products.find(p => p.name === val);
                                             setSelProduct(p ? String(p.id) : '');
                                             setSelQty('1');
-                                            setSelUnitPrice('');
+                                            setSelTotalPrice('');
                                         }}
                                     />
                                 </div>
                                 {selectedProduct && (
                                     <>
-                                        <button onClick={() => openPad('الكمية', selQty || '1', v => setSelQty(v))}
+                                        <button onClick={() => openPad('الكمية', selQty || '1', v => setSelQty(v), selectedProduct ? parseFloat(selectedProduct.stock) : undefined)}
                                             className="spatial-input h-14 rounded-[20px] px-4 text-[18px] font-black w-24 text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
                                             {selQty || '1'}
                                         </button>
                                         <div className="flex flex-col gap-1.5 min-w-[140px]">
                                             <button
-                                                onClick={() => openPad('السعر', selUnitPrice, v => setSelUnitPrice(v))}
+                                                onClick={() => openPad('السعر الإجمالي', selTotalPrice, v => setSelTotalPrice(v))}
                                                 className="h-14 rounded-[20px] px-5 text-[18px] font-black w-full text-center cursor-pointer transition-all spatial-input active:scale-95 hover:border-primary/40">
-                                                {selUnitPrice || 'السعر'}
+                                                {selTotalPrice || 'الإجمالي'}
                                             </button>
                                         </div>
-                                        <button onClick={addToCart} disabled={!selProduct || !selQty || !selUnitPrice || +selQty <= 0 || +selUnitPrice <= 0}
+                                        {unitPricePreview !== null && (
+                                            <div className="flex items-center h-14 px-4 rounded-[20px] bg-primary/5 border border-primary/20 min-w-[100px] justify-center">
+                                                <span className="font-black text-primary text-[18px]">{unitPricePreview.toFixed(3)}</span>
+                                            </div>
+                                        )}
+                                        <button onClick={addToCart} disabled={!selProduct || !selQty || !selTotalPrice || +selQty <= 0 || +selTotalPrice <= 0}
                                             className="spatial-button flex items-center justify-center gap-3 px-8 h-14 text-lg font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
                                             <Plus className="w-6 h-6" /> إضافة
                                         </button>
@@ -389,7 +401,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                                     if (newQty > 0) {
                                                         setItems(prev => prev.map((it, i) => i === idx ? { ...it, quantity: newQty.toString(), line_total: (newQty * parseFloat(it.unit_price)).toFixed(2) } : it));
                                                     }
-                                                })}
+                                                }, products.find(p => String(p.id) === item.product_id) ? parseFloat(products.find(p => String(p.id) === item.product_id)!.stock) : undefined)}
                                                 className="w-14 h-12 rounded-[12px] bg-white dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 hover:border-primary/50 font-black text-base text-slate-800 dark:text-white transition-all cursor-pointer active:scale-95">
                                                 {item.quantity}
                                             </button>
@@ -503,22 +515,29 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                     onSelect={val => {
                                         const p = products.find(p => p.name === val);
                                         setSelProduct(p ? String(p.id) : '');
-                                        setSelQty('1'); setSelUnitPrice('');
+                                        setSelQty('1'); setSelTotalPrice('');
                                     }}
                                 />
                                 {selectedProduct && (
                                     <div className="flex gap-2">
-                                        <button onClick={() => openPad('الكمية', selQty || '1', v => setSelQty(v))}
+                                        <button onClick={() => openPad('الكمية', selQty || '1', v => setSelQty(v), selectedProduct ? parseFloat(selectedProduct.stock) : undefined)}
                                             className="spatial-input flex-1 h-12 rounded-[14px] text-base font-black text-center">
                                             الكمية: {selQty || '1'}
                                         </button>
-                                        <button onClick={() => openPad('السعر', selUnitPrice, v => setSelUnitPrice(v))}
+                                        <button onClick={() => openPad('السعر الإجمالي', selTotalPrice, v => setSelTotalPrice(v))}
                                             className="spatial-input flex-1 h-12 rounded-[14px] text-base font-black text-center">
-                                            السعر: {selUnitPrice || '0'}
+                                            الإجمالي: {selTotalPrice || '0'}
                                         </button>
                                     </div>
                                 )}
-                                <button onClick={addToCart} disabled={!selProduct || !selQty || !selUnitPrice || +selQty <= 0 || +selUnitPrice <= 0}
+                                {unitPricePreview !== null && (
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 h-12 rounded-[14px] bg-primary/10 border border-primary/20 flex items-center justify-center font-black text-primary">
+                                            سعر الوحدة: {unitPricePreview.toFixed(3)}
+                                        </div>
+                                    </div>
+                                )}
+                                <button onClick={addToCart} disabled={!selProduct || !selQty || !selTotalPrice || +selQty <= 0 || +selTotalPrice <= 0}
                                     className="spatial-button h-12 w-full flex items-center justify-center gap-2 disabled:opacity-40 mt-2">
                                     <Plus className="w-5 h-5" /> أضف للمرتجع
                                 </button>
@@ -543,7 +562,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
                                                 <button onClick={() => openPad('الكمية', item.quantity, v => {
                                                     const n = parseFloat(v);
                                                     if(n > 0) setItems(prev => prev.map((it, i) => i === idx ? {...it, quantity: n.toString(), line_total: (n * parseFloat(it.unit_price)).toFixed(2)} : it));
-                                                })} className="flex-1 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 font-bold text-xs text-center leading-9">
+                                                }, products.find(p => String(p.id) === item.product_id) ? parseFloat(products.find(p => String(p.id) === item.product_id)!.stock) : undefined)} className="flex-1 h-9 rounded-[10px] bg-black/5 dark:bg-white/5 font-bold text-xs text-center leading-9">
                                                     كمية: {item.quantity}
                                                 </button>
                                                 <button onClick={() => openPad('السعر', item.unit_price, v => {
