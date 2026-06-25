@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
@@ -170,6 +171,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [payments,      setPayments]      = useState<PaymentEntry[]>(buildInitialPayments);
     const [debtPayment,          setDebtPayment]          = useState<PaymentEntry | null>(null);
     const [processing,           setProcessing]           = useState(false);
+    const [showCreditConfirm,    setShowCreditConfirm]    = useState(false);
     const [paymentManuallySet,   setPaymentManuallySet]   = useState(isEditMode);
     
     // Hold invoices state
@@ -583,6 +585,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
     function submit() {
         if (cart.length === 0 || (isCashCustomer && Math.abs(remaining) > 0.01)) return;
+        if (!isCashCustomer && remaining > 0.01) {
+            setShowCreditConfirm(true);
+            return;
+        }
+        executeSubmit();
+    }
+
+    function executeSubmit() {
+        setShowCreditConfirm(false);
         setProcessing(true);
 
         const payload = {
@@ -1801,6 +1812,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             maxValue={padMax}
             onClose={() => setShowPad(false)}
             onConfirm={v => { padCallback?.(v); setShowPad(false); }}
+        />
+        <ConfirmModal
+            isOpen={showCreditConfirm}
+            title="إتمام العملية بالآجل"
+            description={`يوجد مبلغ متبقي (${fmt(remaining)})، هل أنت متأكد من حفظ المعاملة بالآجل؟`}
+            confirmText="تأكيد وحفظ"
+            onConfirm={executeSubmit}
+            onCancel={() => setShowCreditConfirm(false)}
         />
         </>
     );

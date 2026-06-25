@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm, Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
@@ -53,6 +54,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
     const [defaultPaymentMethodId, setDefaultPaymentMethodId] = useState<string>('');
 
     const [activeTab, setActiveTab] = useState<'products' | 'payment' | 'confirm'>('products');
+    const [showCreditConfirm, setShowCreditConfirm] = useState(false);
 
     const form = useForm({
         supplier_id: String(selected_supplier_id ?? 1),
@@ -144,6 +146,16 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
     const productOptions = products.map(p => ({ label: p.name, meta: `المخزون: ${p.stock}` }));
 
     function submit() {
+        const remaining = grandTotal - totalRecovered;
+        if (!isCash && remaining > 0.01) {
+            setShowCreditConfirm(true);
+            return;
+        }
+        executeSubmit();
+    }
+
+    function executeSubmit() {
+        setShowCreditConfirm(false);
         const validSettlements = settlements.filter(r => r.payment_method_id && parseFloat(r.amount) > 0);
         form.transform(data => ({
             ...data,
@@ -682,6 +694,14 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
         
         <NumberPadModal isOpen={showPad} title={padTitle} initialValue={padInitial} maxValue={padMax}
             onClose={() => setShowPad(false)} onConfirm={v => { padCallback?.(v); setShowPad(false); }} />
+        <ConfirmModal
+            isOpen={showCreditConfirm}
+            title="إتمام العملية بالآجل"
+            description={`يوجد مبلغ متبقي (${(grandTotal - totalRecovered).toFixed(2)})، هل أنت متأكد من حفظ المعاملة بالآجل؟`}
+            confirmText="تأكيد وحفظ"
+            onConfirm={executeSubmit}
+            onCancel={() => setShowCreditConfirm(false)}
+        />
         </>
     );
 }

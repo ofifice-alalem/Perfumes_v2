@@ -95,6 +95,7 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
 
     const selectedSupplier = suppliers.find(s => String(s.id) === form.data.supplier_id);
     const supplierDebt     = selectedSupplier ? parseFloat(selectedSupplier.total_debt) : 0;
+    const canPay           = selectedSupplier ? supplierDebt > 0 : false;
     const maxPayment       = supplierDebt > 0 ? supplierDebt : undefined;
 
     const supplierOptions      = suppliers.filter(s => s.is_active !== 0 && s.is_active !== false).map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
@@ -213,34 +214,49 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
                                     </div>
                                 )}
                             </div>
-                            <div>
-                                <ModernSelect
-                                    label="وسيلة الدفع"
-                                    options={paymentMethodOptions}
-                                    defaultValue={paymentMethods.find(m => String(m.id) === form.data.payment_method_id)?.name ?? ''}
-                                    onSelect={val => form.setData('payment_method_id', resolveMethodIdFromLabel(val))}
-                                />
-                                {form.errors.payment_method_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.payment_method_id}</p>}
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                                <button onClick={() => setShowPad(true)}
-                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                    {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{maxPayment ? fmt(maxPayment) : '0.00'}</span>}
-                                </button>
-                                {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
-                            </div>
-                            <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
-                                <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظة (اختياري)</label>
-                                <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
-                                    className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
-                            </div>
+
+                            {selectedSupplier && !canPay && (
+                                <div className="sm:col-span-2 lg:col-span-2 px-4 py-3 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 flex items-center">
+                                    <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                        ⚠️ لا يمكن إنشاء دفعة — لا توجد ديون مستحقة لهذا المورد
+                                    </p>
+                                </div>
+                            )}
+
+                            {canPay && (
+                                <>
+                                    <div>
+                                        <ModernSelect
+                                            label="وسيلة الدفع"
+                                            options={paymentMethodOptions}
+                                            defaultValue={paymentMethods.find(m => String(m.id) === form.data.payment_method_id)?.name ?? ''}
+                                            onSelect={val => form.setData('payment_method_id', resolveMethodIdFromLabel(val))}
+                                        />
+                                        {form.errors.payment_method_id && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.payment_method_id}</p>}
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
+                                        <button onClick={() => setShowPad(true)}
+                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{maxPayment ? fmt(maxPayment) : '0.00'}</span>}
+                                        </button>
+                                        {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
+                                    </div>
+                                    <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
+                                        <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظة (اختياري)</label>
+                                        <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
+                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
+                                    </div>
+                                </>
+                            )}
                         </div>
                         <div className="flex items-center gap-2 mt-4">
-                            <button onClick={submit} disabled={form.processing || !form.data.supplier_id || !form.data.amount}
-                                className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
-                                <Check className="w-4 h-4" /> حفظ
-                            </button>
+                            {canPay && (
+                                <button onClick={submit} disabled={form.processing || !form.data.supplier_id || !form.data.amount}
+                                    className="spatial-button flex items-center gap-2 px-5 h-11 text-sm disabled:opacity-50">
+                                    <Check className="w-4 h-4" /> حفظ
+                                </button>
+                            )}
                             <button onClick={() => { setShowCreate(false); form.reset(); }}
                                 className="h-11 px-4 rounded-[16px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 transition-all">
                                 <X className="w-4 h-4" />

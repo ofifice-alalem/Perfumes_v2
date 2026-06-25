@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, ChevronLeft, Truck } from 'lucide-react';
 
@@ -39,6 +40,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     const [cart,                setCart]                = useState<CartItem[]>([]);
     const [payments,            setPayments]            = useState<PaymentEntry[]>([]);
     const [processing,          setProcessing]          = useState(false);
+    const [showCreditConfirm,   setShowCreditConfirm]   = useState(false);
     const [paymentManuallySet,  setPaymentManuallySet]  = useState(false);
 
     // Add product form
@@ -192,6 +194,15 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     function submit() {
         if (!supplierId || cart.length === 0) return;
         if (supplierId === '1' && remaining > 0.01) return;
+        if (supplierId !== '1' && remaining > 0.01) {
+            setShowCreditConfirm(true);
+            return;
+        }
+        executeSubmit();
+    }
+
+    function executeSubmit() {
+        setShowCreditConfirm(false);
         setProcessing(true);
         router.post('/purchases', {
             supplier_id: supplierId,
@@ -846,6 +857,14 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
             maxValue={padMax}
             onClose={() => setShowPad(false)}
             onConfirm={v => { padCallback?.(v); setShowPad(false); }}
+        />
+        <ConfirmModal
+            isOpen={showCreditConfirm}
+            title="إتمام العملية بالآجل"
+            description={`يوجد مبلغ متبقي (${remaining.toFixed(2)})، هل أنت متأكد من حفظ المعاملة بالآجل؟`}
+            confirmText="تأكيد وحفظ"
+            onConfirm={executeSubmit}
+            onCancel={() => setShowCreditConfirm(false)}
         />
         </>
     );
