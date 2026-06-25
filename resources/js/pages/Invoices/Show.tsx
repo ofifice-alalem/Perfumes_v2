@@ -193,7 +193,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                 <Edit className="w-4 h-4" /> تعديل
                             </Link>
                         )}
-                        {isCancelled ? (
+                        {isCancelled && (
                             <RestoreModal
                                 title="استعادة الفاتورة"
                                 description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
@@ -204,10 +204,6 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     </button>
                                 }
                             />
-                        ) : (
-                            <Link href={`/invoice-returns/create?customer_id=${invoice.customer?.id ?? 1}&invoice_id=${invoice.id}`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 h-10 rounded-[14px] border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-bold text-sm">
-                                <RotateCcw className="w-4 h-4" /> مرتجع
-                            </Link>
                         )}
                     </div>
                 </div>
