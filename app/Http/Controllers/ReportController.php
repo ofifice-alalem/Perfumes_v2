@@ -163,14 +163,33 @@ class ReportController extends Controller
             }
         }
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($wastedItems, $purchasedItems) {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($items, $wastedItems, $purchasedItems) {
             $userId = auth()->id() ?? \App\Models\User::first()->id;
+
+            // 0. Save Inventory Log History
+            $inventoryLog = \App\Models\InventoryLog::create([
+                'user_id' => $userId,
+                'notes'   => 'إقفال جرد فعلي',
+                'created_at' => now(),
+            ]);
+
+            foreach ($items as $item) {
+                \App\Models\InventoryLogItem::create([
+                    'inventory_log_id' => $inventoryLog->id,
+                    'product_id'       => $item['product_id'],
+                    'system_stock'     => $item['system_stock'],
+                    'actual_stock'     => $item['actual_stock'],
+                    'difference'       => $item['actual_stock'] - $item['system_stock'],
+                    'reason'           => $item['reason'] ?? null,
+                    'created_at'       => now(),
+                ]);
+            }
             
             // 1. Process Waste
             if (count($wastedItems) > 0) {
                 $wasteLog = app(\App\Repositories\Contracts\WasteLogRepositoryInterface::class)->create([
                     'user_id' => $userId,
-                    'notes'   => 'تسوية نقص بناء على إقفال الجرد الفعلي',
+                    'notes'   => 'تسوية نقص بناء على إقفال الجرد الفعلي (رقم السجل: ' . $inventoryLog->id . ')',
                 ]);
 
                 foreach ($wastedItems as $wItem) {
@@ -190,7 +209,7 @@ class ReportController extends Controller
                 $purchase = app(\App\Repositories\Contracts\PurchaseRepositoryInterface::class)->create([
                     'supplier_id'    => 1, // Default System/Cash supplier
                     'user_id'        => $userId,
-                    'notes'          => 'تسوية زيادة بناء على إقفال الجرد الفعلي',
+                    'notes'          => 'تسوية زيادة بناء على إقفال الجرد الفعلي (رقم السجل: ' . $inventoryLog->id . ')',
                     'total'          => 0,
                     'paid_amount'    => 0,
                     'due_amount'     => 0,

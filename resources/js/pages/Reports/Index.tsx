@@ -13,7 +13,8 @@ const reports = [
     { href: '/reports/sales',            icon: <TrendingUp className="w-6 h-6" />,    label: 'المبيعات',                      desc: 'تحليل المبيعات اليومي والشهري والسنوي' },
     { href: '/reports/purchases',        icon: <ShoppingCart className="w-6 h-6" />,  label: 'المشتريات',                     desc: 'تحليل المشتريات والمدفوعات للموردين' },
     { href: '/reports/returns',          icon: <RotateCcw className="w-6 h-6" />,     label: 'المرتجعات',                     desc: 'مرتجعات العملاء والموردين مقارنةً بالمبيعات' },
-    { href: '/reports/inventory-count',  icon: <ClipboardList className="w-6 h-6" />, label: 'نموذج الجرد',                   desc: 'تصدير نموذج فارغ لعمليات الجرد الفعلي' },
+    { href: '/reports/inventory-count',  icon: <ClipboardList className="w-6 h-6" />, label: 'نموذج الجرد',                   desc: 'تصدير وإقفال الجرد الفعلي للمخزون' },
+    { href: '/inventory-logs',           icon: <ClipboardList className="w-6 h-6" />, label: 'أرشيف الجرد',                   desc: 'عرض تاريخ عمليات الجرد السابقة وطباعتها' },
 ];
 
 export default function ReportsIndex() {

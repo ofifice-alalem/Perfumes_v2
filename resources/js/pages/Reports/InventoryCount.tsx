@@ -127,7 +127,7 @@ export default function InventoryCount({ categories, filters, data }: Props) {
             system_stock: p.stock,
             actual_stock: parseFloat(items[p.id]?.actual_stock) || 0,
             reason: items[p.id]?.reason || 'other',
-        })).filter(p => p.actual_stock !== p.system_stock);
+        }));
 
         if (payload.length === 0) {
             alert('لا يوجد أي تعديلات على المخزون');
