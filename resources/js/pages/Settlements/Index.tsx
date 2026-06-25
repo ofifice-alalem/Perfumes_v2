@@ -6,6 +6,7 @@ import { DeleteModal } from '@/components/ui/DeleteModal';
 import { RestoreModal } from '@/components/ui/RestoreModal';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 
 interface Customer { id: number; name: string; total_debt: string; is_active?: boolean | number; }
@@ -57,6 +58,17 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
     const [fDateTo,     setFDateTo]     = useState(params.get('filter[date_to]') ?? '');
     const [fAmountFrom, setFAmountFrom] = useState(params.get('filter[amount_from]') ?? '');
     const [fAmountTo,   setFAmountTo]   = useState(params.get('filter[amount_to]') ?? '');
+
+    // NumberPad
+    const [showPad,     setShowPad]     = useState(false);
+    const [padTitle,    setPadTitle]    = useState('');
+    const [padInitial,  setPadInitial]  = useState('');
+    const [padMax,      setPadMax]      = useState<number | undefined>(undefined);
+    const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
+
+    function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
+        setPadTitle(title); setPadInitial(initial); setPadMax(max); setPadCallback(() => cb); setShowPad(true);
+    }
 
     const hasFilter = fCustomer || fMethod || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
 
@@ -127,6 +139,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
     );
 
     return (
+        <>
         <AppShell pageTitle="تسويات العملاء">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -177,9 +190,12 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">المبلغ</label>
-                                        <input type="number" min="0.01" step="0.01" value={form.data.amount}
-                                            onChange={e => form.setData('amount', e.target.value)}
-                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
+                                        <button type="button" onClick={() => {
+                                            const maxSettlementLimit = selectedCustomer ? Math.abs(parseFloat(selectedCustomer.total_debt)) : 0;
+                                            openPad('المبلغ', form.data.amount || String(maxSettlementLimit), v => form.setData('amount', v), maxSettlementLimit);
+                                        }} className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-right w-full cursor-pointer hover:border-primary/40 transition-all">
+                                            {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(selectedCustomer ? Math.abs(parseFloat(selectedCustomer.total_debt)) : 0)}</span>}
+                                        </button>
                                         {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
                                     </div>
                                     <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
@@ -368,5 +384,15 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                 </div>
             </div>
         </AppShell>
+
+        <NumberPadModal
+            isOpen={showPad}
+            title={padTitle}
+            initialValue={padInitial}
+            maxValue={padMax}
+            onClose={() => setShowPad(false)}
+            onConfirm={v => { padCallback?.(v); setShowPad(false); }}
+        />
+        </>
     );
 }

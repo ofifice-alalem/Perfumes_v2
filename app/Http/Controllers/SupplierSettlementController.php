@@ -53,9 +53,9 @@ class SupplierSettlementController extends Controller
             'created_at'         => now(),
         ]);
 
-        $redirectTo = $data['purchase_return_id']
+        $redirectTo = ($data['purchase_return_id'] ?? null)
             ? redirect()->route('purchase-returns.show', $data['purchase_return_id'])
-            : ($data['purchase_id']
+            : (($data['purchase_id'] ?? null)
                 ? redirect()->route('purchases.show', $data['purchase_id'])
                 : back());
 

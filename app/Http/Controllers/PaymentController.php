@@ -55,7 +55,7 @@ class PaymentController extends Controller
             'created_at'        => now(),
         ]);
 
-        $redirectTo = $data['invoice_id']
+        $redirectTo = ($data['invoice_id'] ?? null)
             ? redirect()->route('invoices.show', $data['invoice_id'])
             : back();
 

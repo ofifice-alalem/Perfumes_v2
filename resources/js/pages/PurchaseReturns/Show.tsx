@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { ArrowRight, Plus, Trash2, Package, RefreshCw, RotateCcw } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
@@ -58,6 +59,17 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
     const [rows,        setRows]        = useState<SettlementRow[]>([emptyRow()]);
     const [submitting,  setSubmitting]  = useState(false);
 
+    // NumberPad
+    const [showPad,     setShowPad]     = useState(false);
+    const [padTitle,    setPadTitle]    = useState('');
+    const [padInitial,  setPadInitial]  = useState('');
+    const [padMax,      setPadMax]      = useState<number | undefined>(undefined);
+    const [padCallback, setPadCallback] = useState<((v: string) => void) | null>(null);
+
+    function openPad(title: string, initial: string, cb: (v: string) => void, max?: number) {
+        setPadTitle(title); setPadInitial(initial); setPadMax(max); setPadCallback(() => cb); setShowPad(true);
+    }
+
     const methodOptions = paymentMethods.map(m => ({ label: m.name }));
     const due           = parseFloat(ret.due_recovery);
     const rowsTotal     = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
@@ -101,6 +113,7 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
     }
 
     return (
+        <>
         <AppShell pageTitle={`مرتجع #${ret.id}`}>
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
@@ -210,11 +223,16 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                                     />
                                     <div className="flex flex-col gap-1.5 w-36">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
-                                        <input type="number" min="0.01" step="0.01"
-                                            value={row.amount}
-                                            onChange={e => setRow(idx, 'amount', e.target.value)}
-                                            placeholder={idx === 0 ? fmt(due) : '0.00'}
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                        <button onClick={() => {
+                                            const max = due - rows.reduce((sum, r, i) => i === idx ? sum : sum + (parseFloat(r.amount) || 0), 0);
+                                            openPad('المبلغ', row.amount || fmt(due), v => {
+                                                const val = parseFloat(v) || 0;
+                                                setRow(idx, 'amount', val > max ? String(max) : v);
+                                            }, max);
+                                        }}
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(due)}</span>}
+                                        </button>
                                     </div>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
@@ -298,5 +316,15 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                 )}
             </div>
         </AppShell>
+
+        <NumberPadModal
+            isOpen={showPad}
+            title={padTitle}
+            initialValue={padInitial}
+            maxValue={padMax}
+            onClose={() => setShowPad(false)}
+            onConfirm={v => { padCallback?.(v); setShowPad(false); }}
+        />
+        </>
     );
 }

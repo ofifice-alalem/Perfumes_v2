@@ -170,11 +170,11 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
 
     return (
         <>
-        <AppShell pageTitle="مدفوعات الموردين">
+        <AppShell pageTitle="مدفوعات للموردين">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">مدفوعات الموردين</h1>
+                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">مدفوعات للموردين</h1>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">سجل جميع الدفعات للموردين</p>
                     </div>
                     <button onClick={() => setShowCreate(p => !p)}

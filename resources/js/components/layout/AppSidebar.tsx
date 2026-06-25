@@ -41,7 +41,7 @@ const navSections: NavSection[] = [
     roles: ['super-admin', 'admin', 'saler'],
     items: [
       { icon: <Truck className="w-5 h-5" />, label: 'المشتريات', href: '/purchases' },
-      { icon: <CreditCard className="w-5 h-5" />, label: 'مدفوعات الموردين', href: '/supplier-payments' },
+      { icon: <CreditCard className="w-5 h-5" />, label: 'مدفوعات للموردين', href: '/supplier-payments' },
       { icon: <RefreshCw className="w-5 h-5" />, label: 'تسويات الموردين', href: '/supplier-settlements' },
       { icon: <RotateCcw className="w-5 h-5" />, label: 'مرتجعات الموردين', href: '/purchase-returns' },
       { icon: <Truck className="w-5 h-5" />, label: 'قائمة الموردين', href: '/suppliers' },

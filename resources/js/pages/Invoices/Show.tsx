@@ -99,6 +99,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
     const isCash       = invoice.customer?.id === 1 || !invoice.customer;
     const isCancelled  = !!invoice.deleted_at;
 
+    const maxSettlementLimit = Math.abs(customerDebt < 0 ? customerDebt : 0);
+
     // التسوية مسموحة فقط إذا كان العميل دائناً (رصيد سالب) وغير نقدي وغير ملغي
     const canSetSettle = !isCash && !isCancelled && customerDebt < 0;
 
@@ -481,9 +483,15 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                             onSelect={val => setSetRow(idx, 'payment_method_id', resolveMethodId(val))} />
                                         <div className="flex flex-col gap-1.5 w-36">
                                             <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
-                                            <button onClick={() => openPad('المبلغ', row.amount, v => setSetRow(idx, 'amount', v))}
+                                            <button onClick={() => {
+                                                const max = maxSettlementLimit - setRows.reduce((sum, r, i) => i === idx ? sum : sum + (parseFloat(r.amount) || 0), 0);
+                                                openPad('المبلغ', row.amount || fmt(maxSettlementLimit), v => {
+                                                    const val = parseFloat(v) || 0;
+                                                    setSetRow(idx, 'amount', val > max ? String(max) : v);
+                                                }, max);
+                                            }}
                                                 className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                                {row.amount || '0.00'}
+                                                {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxSettlementLimit)}</span>}
                                             </button>
                                         </div>
                                         <div className="flex flex-col gap-1.5">

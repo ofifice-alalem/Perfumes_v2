@@ -55,9 +55,11 @@ class SettlementController extends Controller
             'created_at'        => now(),
         ]);
 
-        $redirectTo = $data['invoice_id']
-            ? redirect()->route('invoices.show', $data['invoice_id'])
-            : back();
+        $redirectTo = ($data['invoice_return_id'] ?? null)
+            ? redirect()->route('invoice-returns.show', $data['invoice_return_id'])
+            : (($data['invoice_id'] ?? null)
+                ? redirect()->route('invoices.show', $data['invoice_id'])
+                : back());
 
         return $redirectTo->with('success', 'تم تسجيل التسوية بنجاح');
     }

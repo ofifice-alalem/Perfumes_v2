@@ -53,7 +53,7 @@ class SupplierPaymentController extends Controller
             'created_at'        => now(),
         ]);
 
-        $redirectTo = $data['purchase_id']
+        $redirectTo = ($data['purchase_id'] ?? null)
             ? redirect()->route('purchases.show', $data['purchase_id'])
             : back();
 
