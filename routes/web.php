@@ -91,6 +91,7 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/inventory-count', [ReportController::class, 'inventoryCount'])->name('reports.inventory-count');
         Route::get('reports/inventory-count/excel', [ReportController::class, 'inventoryCountExcel'])->name('reports.inventory-count.excel');
         Route::get('reports/inventory-count/pdf', [ReportController::class, 'inventoryCountPdf'])->name('reports.inventory-count.pdf');
+        Route::post('reports/inventory-count/apply', [ReportController::class, 'applyInventoryCount'])->name('reports.inventory-count.apply');
         Route::get('reports/customer-aging', [ReportController::class, 'customerAging'])->name('reports.customer-aging');
         Route::get('reports/customer-aging/excel', [ReportController::class, 'customerAgingExcel'])->name('reports.customer-aging.excel');
         Route::get('reports/customer-aging/pdf', [ReportController::class, 'customerAgingPdf'])->name('reports.customer-aging.pdf');

@@ -138,6 +138,81 @@ class ReportController extends Controller
         );
     }
 
+    public function applyInventoryCount(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $items = $request->input('items', []);
+        
+        $wastedItems = [];
+        $purchasedItems = [];
+
+        foreach ($items as $item) {
+            $system = (float) $item['system_stock'];
+            $actual = (float) $item['actual_stock'];
+            
+            if ($actual < $system) {
+                $wastedItems[] = [
+                    'product_id' => $item['product_id'],
+                    'quantity'   => $system - $actual,
+                    'reason'     => $item['reason'] ?? 'other',
+                ];
+            } elseif ($actual > $system) {
+                $purchasedItems[] = [
+                    'product_id' => $item['product_id'],
+                    'quantity'   => $actual - $system,
+                ];
+            }
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($wastedItems, $purchasedItems) {
+            $userId = auth()->id() ?? \App\Models\User::first()->id;
+            
+            // 1. Process Waste
+            if (count($wastedItems) > 0) {
+                $wasteLog = app(\App\Repositories\Contracts\WasteLogRepositoryInterface::class)->create([
+                    'user_id' => $userId,
+                    'notes'   => 'تسوية نقص بناء على إقفال الجرد الفعلي',
+                ]);
+
+                foreach ($wastedItems as $wItem) {
+                    \App\Models\WasteItem::create([
+                        'waste_log_id' => $wasteLog->id,
+                        'product_id'   => $wItem['product_id'],
+                        'quantity'     => $wItem['quantity'],
+                        'reason'       => $wItem['reason'],
+                        'notes'        => 'نقص جرد',
+                        'created_at'   => now(),
+                    ]);
+                }
+            }
+
+            // 2. Process Purchase (Inventory Correction)
+            if (count($purchasedItems) > 0) {
+                $purchase = app(\App\Repositories\Contracts\PurchaseRepositoryInterface::class)->create([
+                    'supplier_id'    => 1, // Default System/Cash supplier
+                    'user_id'        => $userId,
+                    'notes'          => 'تسوية زيادة بناء على إقفال الجرد الفعلي',
+                    'total'          => 0,
+                    'paid_amount'    => 0,
+                    'due_amount'     => 0,
+                    'payment_status' => 'paid',
+                ]);
+
+                foreach ($purchasedItems as $pItem) {
+                    \App\Models\PurchaseItem::create([
+                        'purchase_id' => $purchase->id,
+                        'product_id'  => $pItem['product_id'],
+                        'quantity'    => $pItem['quantity'],
+                        'unit_cost'   => 0,
+                        'line_total'  => 0,
+                        'created_at'  => now(),
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('reports.stock-status')->with('success', 'تم إقفال الجرد وتسوية المخزون بنجاح');
+    }
+
     public function customerAging(Request $request): Response
     {
         $customerId = $request->integer('customer_id') ?: null;
