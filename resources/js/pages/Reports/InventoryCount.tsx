@@ -342,14 +342,16 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                                                     </td>
                                                                     <td className="px-4 py-3">
                                                                         {isWaste && (
-                                                                            <select 
-                                                                                value={items[p.id]?.reason ?? 'other'}
-                                                                                onChange={(e) => handleReasonChange(p.id, e.target.value)}
-                                                                                className="h-10 rounded-lg spatial-input text-sm font-bold w-40">
-                                                                                {reasonOptions.map(r => (
-                                                                                    <option key={r.value} value={r.value}>{r.label}</option>
-                                                                                ))}
-                                                                            </select>
+                                                                            <ModernSelect 
+                                                                                label=""
+                                                                                defaultValue={reasonOptions.find(r => r.value === (items[p.id]?.reason ?? 'other'))?.label}
+                                                                                onSelect={(label) => {
+                                                                                    const val = reasonOptions.find(r => r.label === label)?.value ?? 'other';
+                                                                                    handleReasonChange(p.id, val);
+                                                                                }}
+                                                                                options={reasonOptions.map(r => ({ label: r.label }))}
+                                                                                className="w-40"
+                                                                            />
                                                                         )}
                                                                     </td>
                                                                 </tr>
@@ -399,14 +401,16 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                                             {isWaste && (
                                                                 <div className="flex justify-between items-center mt-1">
                                                                     <span className="font-bold text-slate-600 dark:text-white/60 text-xs">السبب</span>
-                                                                    <select 
-                                                                        value={items[p.id]?.reason ?? 'other'}
-                                                                        onChange={(e) => handleReasonChange(p.id, e.target.value)}
-                                                                        className="h-10 rounded-lg spatial-input text-sm font-bold w-32">
-                                                                        {reasonOptions.map(r => (
-                                                                            <option key={r.value} value={r.value}>{r.label}</option>
-                                                                        ))}
-                                                                    </select>
+                                                                    <ModernSelect 
+                                                                        label=""
+                                                                        defaultValue={reasonOptions.find(r => r.value === (items[p.id]?.reason ?? 'other'))?.label}
+                                                                        onSelect={(label) => {
+                                                                            const val = reasonOptions.find(r => r.label === label)?.value ?? 'other';
+                                                                            handleReasonChange(p.id, val);
+                                                                        }}
+                                                                        options={reasonOptions.map(r => ({ label: r.label }))}
+                                                                        className="w-32"
+                                                                    />
                                                                 </div>
                                                             )}
                                                         </div>
