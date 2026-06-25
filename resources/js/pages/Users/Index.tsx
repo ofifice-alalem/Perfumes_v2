@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
-import { Plus, Pencil, Trash2, X, Check, Users, Eye, EyeOff } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Users, Eye, EyeOff, ShieldAlert, Shield, ShoppingBag, Wallet } from 'lucide-react';
 
 interface User {
     id: number;
@@ -40,6 +41,7 @@ export default function UsersIndex({ users, flash }: Props) {
     const [editingId, setEditingId] = useState<number | null>(null);
     const [showPass, setShowPass] = useState(false);
     const [showEditPass, setShowEditPass] = useState(false);
+    const [roleModalOpen, setRoleModalOpen] = useState(false);
 
     const createForm = useForm({ ...emptyForm });
     const editForm   = useForm({ name: '', username: '', email: '', password: '', role: 'saler' });
@@ -190,12 +192,64 @@ export default function UsersIndex({ users, flash }: Props) {
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <ModernSelect
-                                                    label="الدور"
-                                                    options={roleOptions.map(r => ({ label: r.label }))}
-                                                    defaultValue={roleValueToLabel(editForm.data.role)}
-                                                    onSelect={val => editForm.setData('role', roleLabelToValue(val))}
-                                                />
+                                                <div className="flex flex-col gap-1.5">
+                                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الدور</label>
+                                                    <button type="button" onClick={() => setRoleModalOpen(true)}
+                                                        className="spatial-input h-10 rounded-[12px] px-4 text-[14px] font-bold w-full flex items-center justify-between">
+                                                        <span>{roleOptions.find(r => r.value === editForm.data.role)?.label ?? editForm.data.role}</span>
+                                                    </button>
+                                                    {roleModalOpen && createPortal(
+                                                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                                                            <div className="bg-white dark:bg-[#1a1a24] rounded-[24px] shadow-2xl w-full max-w-[340px] border border-black/5 dark:border-white/5 overflow-hidden animate-in zoom-in-95 duration-200">
+                                                                <div className="p-5 border-b border-black/5 dark:border-white/5 flex items-center justify-between">
+                                                                    <h3 className="font-black text-slate-800 dark:text-white text-lg">تحديد الصلاحية</h3>
+                                                                    <button onClick={() => setRoleModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/10 text-slate-500 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/20 transition-colors">
+                                                                        <X className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                                <div className="p-3 flex flex-col gap-2">
+                                                                    {roleOptions.map(r => (
+                                                                        <button key={r.value} type="button"
+                                                                            onClick={() => { editForm.setData('role', r.value); setRoleModalOpen(false); }}
+                                                                            className={`w-full flex items-center gap-4 p-4 rounded-[16px] transition-all border-2 text-right ${
+                                                                                editForm.data.role === r.value 
+                                                                                ? 'border-primary bg-primary/5' 
+                                                                                : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
+                                                                            }`}>
+                                                                            <div className={`w-10 h-10 shrink-0 rounded-[12px] flex items-center justify-center ${
+                                                                                editForm.data.role === r.value 
+                                                                                ? 'bg-primary text-white' 
+                                                                                : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50'
+                                                                            }`}>
+                                                                                {r.value === 'super-admin' ? <ShieldAlert className="w-5 h-5" /> :
+                                                                                 r.value === 'admin' ? <Shield className="w-5 h-5" /> :
+                                                                                 r.value === 'saler' ? <ShoppingBag className="w-5 h-5" /> :
+                                                                                 <Wallet className="w-5 h-5" />}
+                                                                            </div>
+                                                                            <div className="flex flex-col">
+                                                                                <span className={`font-bold ${editForm.data.role === r.value ? 'text-primary' : 'text-slate-700 dark:text-white'}`}>{r.label}</span>
+                                                                                <span className="text-[11px] font-bold text-slate-400 dark:text-white/40 mt-0.5">
+                                                                                    {r.value === 'super-admin' ? 'صلاحيات كاملة للنظام' :
+                                                                                     r.value === 'admin' ? 'إدارة المنتجات والمبيعات' :
+                                                                                     r.value === 'saler' ? 'إجراء عمليات البيع فقط' :
+                                                                                     'إدارة الخزينة والمدفوعات'}
+                                                                                </span>
+                                                                            </div>
+                                                                            {editForm.data.role === r.value && (
+                                                                                <div className="mr-auto">
+                                                                                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-white">
+                                                                                        <Check className="w-3 h-3" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>,
+                                                        document.body
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button onClick={() => submitEdit(user.id)}
