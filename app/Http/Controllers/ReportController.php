@@ -179,7 +179,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Sales', [
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'customers'      => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare'),
@@ -222,7 +222,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/SalesCustomerInvoices', [
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'customers'      => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
+            'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId'),
@@ -265,7 +265,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Purchases', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare'),
             'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare),
@@ -304,7 +304,7 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/PurchasesSupplierInvoices', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId'),
             'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId),
@@ -344,8 +344,8 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Returns', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'customers'  => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
-            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'customers'  => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId'),
             'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId),
@@ -388,8 +388,8 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/ReturnsDetails', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
-            'customers'  => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
-            'suppliers'  => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
+            'customers'  => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId', 'type'),
             'data'       => $this->reports->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type),

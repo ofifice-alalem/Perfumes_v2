@@ -10,7 +10,7 @@ import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search, Tra
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
-interface Supplier      { id: number; name: string; total_debt: string; }
+interface Supplier      { id: number; name: string; total_debt: string; is_active?: boolean | number; }
 interface Product       { id: number; name: string; }
 interface PaymentMethod { id: number; name: string; }
 interface SupplierPayment {
@@ -97,7 +97,7 @@ export default function SupplierPaymentsIndex({ payments, suppliers, products, p
     const supplierDebt     = selectedSupplier ? parseFloat(selectedSupplier.total_debt) : 0;
     const maxPayment       = supplierDebt > 0 ? supplierDebt : undefined;
 
-    const supplierOptions      = suppliers.map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
+    const supplierOptions      = suppliers.filter(s => s.is_active !== 0 && s.is_active !== false).map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveSupplierIdFromLabel(label: string) {

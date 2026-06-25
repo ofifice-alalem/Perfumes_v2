@@ -8,7 +8,7 @@ import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 
-interface Customer { id: number; name: string; total_debt: string; }
+interface Customer { id: number; name: string; total_debt: string; is_active?: boolean | number; }
 interface PaymentMethod { id: number; name: string; }
 interface Settlement {
     id: number;
@@ -80,7 +80,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
         customer_id: '', invoice_id: '', payment_method_id: '', amount: '', notes: '',
     });
 
-    const customerOptions      = customers.map(c => ({ label: c.name, meta: fmt(c.total_debt) }));
+    const customerOptions      = customers.filter(c => c.is_active !== 0 && c.is_active !== false).map(c => ({ label: c.name, meta: fmt(c.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveCustomerIdFromLabel(label: string) {

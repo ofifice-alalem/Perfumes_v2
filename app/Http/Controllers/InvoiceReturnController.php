@@ -24,7 +24,7 @@ class InvoiceReturnController extends Controller
     {
         return Inertia::render('InvoiceReturns/Index', [
             'returns'        => $this->returns->paginated(30),
-            'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name']),
+            'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);
@@ -54,7 +54,7 @@ class InvoiceReturnController extends Controller
         }
 
         return Inertia::render('InvoiceReturns/Create', [
-            'customers'      => Customer::orderBy('name')->get(['id', 'name', 'total_debt']),
+            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => Product::with(['category', 'priceTier.tierPrices', 'productPrice', 'originalPerfumeDetail'])
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')

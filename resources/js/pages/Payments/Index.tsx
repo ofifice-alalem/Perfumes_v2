@@ -9,7 +9,7 @@ import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 import { Plus, CreditCard, X, Check, SlidersHorizontal, ChevronDown, Search, Trash2, Eye, RotateCcw } from 'lucide-react';
 import { RestoreModal } from '@/components/ui/RestoreModal';
 
-interface Customer { id: number; name: string; total_debt: string; }
+interface Customer { id: number; name: string; total_debt: string; is_active?: boolean | number; }
 interface PaymentMethod { id: number; name: string; }
 interface Product  { id: number; name: string; }
 interface Payment {
@@ -88,7 +88,7 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, pro
     const customerDebt     = selectedCustomer ? parseFloat(selectedCustomer.total_debt) : 0;
     const maxPayment       = customerDebt > 0 ? customerDebt : undefined;
 
-    const customerOptions      = customers.map(c => ({ label: c.name, meta: fmt(c.total_debt) }));
+    const customerOptions      = customers.filter(c => c.is_active !== 0 && c.is_active !== false).map(c => ({ label: c.name, meta: fmt(c.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveCustomerIdFromLabel(label: string) {

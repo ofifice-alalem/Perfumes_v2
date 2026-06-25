@@ -60,8 +60,7 @@ class SupplierRepository extends Repository implements SupplierRepositoryInterfa
     public function forSelectList()
     {
         return $this->model->withoutCash()
-            ->where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'phone', 'total_debt']);
+            ->get(['id', 'name', 'phone', 'total_debt', 'is_active']);
     }
 }

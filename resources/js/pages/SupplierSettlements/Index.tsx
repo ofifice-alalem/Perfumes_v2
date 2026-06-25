@@ -9,7 +9,7 @@ import { Plus, RefreshCw, X, Check, SlidersHorizontal, ChevronDown, Search, Tras
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 
-interface Supplier      { id: number; name: string; total_debt: string; }
+interface Supplier      { id: number; name: string; total_debt: string; is_active?: boolean | number; }
 interface PaymentMethod { id: number; name: string; }
 interface SupplierSettlement {
     id: number;
@@ -88,7 +88,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
         supplier_id: '', purchase_id: '', payment_method_id: '', amount: '', notes: '',
     });
 
-    const supplierOptions      = suppliers.map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
+    const supplierOptions      = suppliers.filter(s => s.is_active !== 0 && s.is_active !== false).map(s => ({ label: s.name, meta: fmt(s.total_debt) }));
     const paymentMethodOptions = paymentMethods.map(m => ({ label: m.name }));
 
     function resolveSupplierIdFromLabel(label: string) {

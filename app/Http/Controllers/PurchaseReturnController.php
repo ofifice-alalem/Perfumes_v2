@@ -52,7 +52,7 @@ class PurchaseReturnController extends Controller
         }
 
         return Inertia::render('PurchaseReturns/Create', [
-            'suppliers'        => $this->suppliers->forSelectList(),
+            'suppliers'        => $this->suppliers->forSelectList()->filter->is_active->values(),
             'products'         => $products,
             'paymentMethods'   => PaymentMethod::orderBy('name')->get(['id', 'name']),
             'selected_supplier_id' => $supplierId,

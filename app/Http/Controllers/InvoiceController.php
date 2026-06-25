@@ -27,7 +27,7 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Index', [
             'invoices'       => $this->invoices->paginated(30),
-            'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name']),
+            'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
             'users'          => User::orderBy('name')->get(['id', 'name']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
@@ -37,7 +37,7 @@ class InvoiceController extends Controller
     public function create(): Response
     {
         return Inertia::render('Invoices/Create', [
-            'customers'      => Customer::orderBy('name')->get(['id', 'name', 'total_debt']),
+            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => Product::with(['category', 'priceTier.tierPrices.size', 'productPrice', 'originalPerfumeDetail'])
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')->get(),
@@ -148,7 +148,7 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Edit', [
             'invoice'        => $this->invoices->findWithRelations($id),
-            'customers'      => Customer::orderBy('name')->get(['id', 'name', 'total_debt']),
+            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => Product::with(['category', 'priceTier.tierPrices.size', 'productPrice', 'originalPerfumeDetail'])
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')->get(),

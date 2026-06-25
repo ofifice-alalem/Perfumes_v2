@@ -36,7 +36,7 @@ class PurchaseController extends Controller
     public function create(): Response
     {
         return Inertia::render('Purchases/Create', [
-            'suppliers'      => $this->suppliers->forSelectList(),
+            'suppliers'      => $this->suppliers->forSelectList()->filter->is_active->values(),
             'products'       => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id', 'qrcode']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);
