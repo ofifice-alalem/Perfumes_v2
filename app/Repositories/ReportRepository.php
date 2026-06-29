@@ -1600,7 +1600,8 @@ class ReportRepository implements ReportRepositoryInterface
                         'products.name as product_name',
                         'invoice_items.unit_price',
                         DB::raw('MIN(invoice_items.quantity) as quantity'),
-                        DB::raw('COUNT(*) as count')
+                        DB::raw('COUNT(*) as count'),
+                        DB::raw('SUM(invoice_items.line_total) as line_total')
                     )
                     ->groupBy('products.name', 'invoice_items.unit_price')
                     ->get();
@@ -1701,7 +1702,7 @@ class ReportRepository implements ReportRepositoryInterface
                         $item['product_name'],
                         $fmtN($item['quantity']),
                         $fmtN($item['unit_price']),
-                        $fmtN($item['quantity'] * $item['count'] * $item['unit_price']),
+                        $fmtN($item['line_total']),
                     ], null, 'A' . $row);
                     $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1762,6 +1763,7 @@ class ReportRepository implements ReportRepositoryInterface
                         'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
                         'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
                         'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
+                        'line_total'   => is_array($i) ? $i['line_total'] : $i->line_total,
                     ], $inv['items']),
                 ], $entry['invoices']),
             ];

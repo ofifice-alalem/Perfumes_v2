@@ -169,7 +169,7 @@
     <tbody>
         @foreach($inv['items'] as $i => $item)
         <tr class="{{ $i % 2 === 0 ? '' : 'even' }}">
-            <td class="num">{{ $fmtN($item['quantity'] * $item['count'] * $item['unit_price']) }}</td>
+            <td class="num">{{ $fmtN($item['line_total']) }}</td>
             <td class="num">{{ $fmtN($item['unit_price']) }}</td>
             <td class="num">{{ $fmtN($item['quantity']) }}</td>
             <td>{{ $item['product_name'] }}</td>

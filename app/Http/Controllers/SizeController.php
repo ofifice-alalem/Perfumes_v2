@@ -48,10 +48,6 @@ class SizeController extends Controller
 
     public function destroy(int $id)
     {
-        if ($this->sizes->isUsed($id)) {
-            return back()->with('error', 'لا يمكن حذف حجم مستخدم في الأسعار أو الفواتير');
-        }
-
         $this->sizes->delete($id);
 
         return back()->with('success', 'تم حذف الحجم بنجاح');

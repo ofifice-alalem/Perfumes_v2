@@ -243,9 +243,10 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                     <SpatialCard title={`الأصناف (${invoice.items.length})`} icon={<Package className="w-4 h-4" />}>
                         {(() => {
                             const groups = invoice.items.reduce((acc, item) => {
-                                const key = `${item.product.id}-${item.size?.label ?? 'null'}-${item.sale_type}-${item.unit_price}`;
+                                const sizeLabel = item.size?.label ?? ((item.sale_type === 'tier_decant' || item.sale_type === 'unit_decant') ? `${parseFloat(item.quantity)} مل` : null);
+                                const key = `${item.product.id}-${sizeLabel ?? 'null'}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
-                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: item.size?.label ?? null, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
+                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: sizeLabel, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
                                 } else {
                                     acc[key].count++;
                                     acc[key].quantity += parseFloat(item.quantity);

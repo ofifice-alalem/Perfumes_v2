@@ -15,6 +15,7 @@ interface InvoiceItem {
     quantity: number;
     unit_price: number;
     count: number;
+    line_total: number;
 }
 
 interface Invoice {
@@ -283,7 +284,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                                                         <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{fmt(item.unit_price)}</span>
                                                                                                     </div>
                                                                                                     <div className="flex items-center justify-center">
-                                                                                                        <span className="font-black text-slate-800 dark:text-white text-sm">{fmt(item.quantity * item.count * item.unit_price)}</span>
+                                                                                                        <span className="font-black text-slate-800 dark:text-white text-sm">{fmt(item.line_total)}</span>
                                                                                                     </div>
                                                                                                 </div>
                                                                                                 {/* Mobile card row */}
@@ -300,7 +301,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                                                             <span className="text-[10px] font-bold text-slate-400 dark:text-white/30">× {fmt(item.unit_price)}</span>
                                                                                                         </div>
                                                                                                     </div>
-                                                                                                    <span className="font-black text-slate-800 dark:text-white text-sm shrink-0">{fmt(item.quantity * item.count * item.unit_price)}</span>
+                                                                                                    <span className="font-black text-slate-800 dark:text-white text-sm shrink-0">{fmt(item.line_total)}</span>
                                                                                                 </div>
                                                                                             </div>
                                                                                         ))}
