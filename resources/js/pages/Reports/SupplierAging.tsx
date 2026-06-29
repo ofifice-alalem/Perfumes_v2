@@ -228,30 +228,30 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                         {expanded.has(c.supplier_id) && (
                                                             <tr key={`${c.supplier_id}-detail`}>
                                                                 <td colSpan={8} className="px-6 py-4 bg-black/2 dark:bg-white/2">
-                                                                    <table className="w-full text-xs">
+                                                                    <table className="w-full text-[15px]">
                                                                         <thead>
                                                                             <tr className="border-b border-black/5 dark:border-white/5">
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">المرجع</th>
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">النوع</th>
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">التاريخ</th>
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">الإجمالي</th>
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">العمر</th>
-                                                                                <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">الرصيد</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">المرجع</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">النوع</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">التاريخ</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الإجمالي</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">العمر</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الرصيد</th>
                                                                             </tr>
                                                                         </thead>
                                                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                                             {c.movements.map((m, i) => (
                                                                                 <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
-                                                                                    <td className="py-2 px-3 font-black text-primary">{m.ref}</td>
-                                                                                    <td className={`py-2 px-3 font-bold ${typeConfig[m.type].class}`}>{typeConfig[m.type].label}</td>
-                                                                                    <td className="py-2 px-3 text-slate-500 dark:text-white/50">{m.date ? m.date.slice(0, 10) : '--'}</td>
-                                                                                    <td className={`py-2 px-3 ${typeConfig[m.type].amountClass}`}>
+                                                                                    <td className="py-3 px-4 font-black text-primary">{m.ref}</td>
+                                                                                    <td className={`py-3 px-4 font-bold ${typeConfig[m.type].class}`}>{typeConfig[m.type].label}</td>
+                                                                                    <td className="py-3 px-4 text-slate-500 dark:text-white/50">{m.date ? m.date.slice(0, 10) : '--'}</td>
+                                                                                    <td className={`py-3 px-4 ${typeConfig[m.type].amountClass}`}>
                                                                                         {m.amount > 0 ? '+' : ''}{fmt(m.amount)}
                                                                                     </td>
-                                                                                    <td className={`py-2 px-3 ${m.days_old !== null ? agingClass(m.days_old) : 'text-slate-400 dark:text-white/30'}`}>
+                                                                                    <td className={`py-3 px-4 ${m.days_old !== null ? agingClass(m.days_old) : 'text-slate-400 dark:text-white/30'}`}>
                                                                                         {m.days_old !== null ? `${m.days_old} يوم` : '—'}
                                                                                     </td>
-                                                                                    <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(m.balance)}</td>
+                                                                                    <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(m.balance)}</td>
                                                                                 </tr>
                                                                             ))}
                                                                         </tbody>

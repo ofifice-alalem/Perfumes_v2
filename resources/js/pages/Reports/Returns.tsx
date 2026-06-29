@@ -75,21 +75,21 @@ function MonthlyTable({ monthly, label, color }: { monthly: MonthlyBreakdown[]; 
                                     </tr>
                                     {expanded.has(m.month) && (
                                         <tr key={`${m.month}-d`}>
-                                            <td colSpan={4} className="px-6 py-2 bg-black/2 dark:bg-white/2">
-                                                <table className="w-full text-xs">
+                                            <td colSpan={4} className="px-6 py-4 bg-black/2 dark:bg-white/2 rounded-[16px] my-2">
+                                                <table className="w-full text-[15px]">
                                                     <thead>
                                                         <tr className="border-b border-black/5 dark:border-white/5">
-                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">التاريخ</th>
-                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">عدد</th>
-                                                            <th className="text-right py-2 px-3 font-black text-slate-400 dark:text-white/30">الإجمالي</th>
+                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">التاريخ</th>
+                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">عدد</th>
+                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الإجمالي</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                         {m.days.map((d, i) => (
                                                             <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
-                                                                <td className="py-2 px-3 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
-                                                                <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{d.count}</td>
-                                                                <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(d.total)}</td>
+                                                                <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
+                                                                <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{d.count}</td>
+                                                                <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(d.total)}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
