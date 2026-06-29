@@ -60,17 +60,26 @@ class PriceTierController extends Controller
         $data = $request->validate([
             'prices'                 => 'required|array',
             'prices.*.size_id'       => 'required|exists:sizes,id',
-            'prices.*.price_regular' => 'required|numeric|min:0',
-            'prices.*.price_vip'     => 'required|numeric|min:0',
+            'prices.*.price_regular' => 'nullable|numeric|min:0',
+            'prices.*.price_vip'     => 'nullable|numeric|min:0',
         ]);
 
-        foreach ($data['prices'] as $price) {
-            if ($price['price_vip'] > $price['price_regular']) {
+        // Filter out sizes with no prices (both null/empty/0)
+        $activePrices = array_filter($data['prices'], function ($price) {
+            $regular = $price['price_regular'] ?? 0;
+            $vip = $price['price_vip'] ?? 0;
+            return $regular > 0 || $vip > 0;
+        });
+
+        foreach ($activePrices as $price) {
+            $regular = $price['price_regular'] ?? 0;
+            $vip = $price['price_vip'] ?? 0;
+            if ($vip > 0 && $regular > 0 && $vip > $regular) {
                 return back()->with('error', 'سعر VIP يجب أن يكون أقل من أو يساوي السعر العادي');
             }
         }
 
-        $this->tiers->syncPrices($id, $data['prices']);
+        $this->tiers->syncPrices($id, $activePrices, $data['prices']);
 
         return back()->with('success', 'تم تحديث الأسعار بنجاح');
     }

@@ -21,13 +21,25 @@ class PriceTierRepository extends Repository implements PriceTierRepositoryInter
         return $this->find($id)->products()->exists();
     }
 
-    public function syncPrices(int $tierId, array $prices): void
+    public function syncPrices(int $tierId, array $activePrices, array $allPrices): void
     {
-        foreach ($prices as $price) {
+        // Upsert active prices (sizes with actual values)
+        foreach ($activePrices as $price) {
             TierPrice::updateOrCreate(
                 ['tier_id' => $tierId, 'size_id' => $price['size_id']],
-                ['price_regular' => $price['price_regular'], 'price_vip' => $price['price_vip']]
+                ['price_regular' => $price['price_regular'] ?? 0, 'price_vip' => $price['price_vip'] ?? 0]
             );
+        }
+
+        // Delete prices for sizes that were cleared (empty/zero)
+        $activeSizeIds = array_column($activePrices, 'size_id');
+        $allSizeIds = array_column($allPrices, 'size_id');
+        $clearedSizeIds = array_diff($allSizeIds, $activeSizeIds);
+
+        if (!empty($clearedSizeIds)) {
+            TierPrice::where('tier_id', $tierId)
+                ->whereIn('size_id', $clearedSizeIds)
+                ->delete();
         }
     }
 }

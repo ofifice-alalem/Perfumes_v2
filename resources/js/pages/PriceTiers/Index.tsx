@@ -70,8 +70,8 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
   function submitPrices(id: number) {
     const prices = sizes.map(size => ({
       size_id:       size.id,
-      price_regular: pricesData[size.id]?.price_regular ?? '0',
-      price_vip:     pricesData[size.id]?.price_vip ?? '0',
+      price_regular: pricesData[size.id]?.price_regular || null,
+      price_vip:     pricesData[size.id]?.price_vip || null,
     }));
     router.put(`/price-tiers/${id}/prices`, { prices }, {
       onSuccess: () => setEditingPricesId(null),
