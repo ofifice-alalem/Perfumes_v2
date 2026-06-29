@@ -44,7 +44,7 @@ function fmt(v: string | number) {
 function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
 export default function SupplierSettlementsIndex({ settlements, suppliers, paymentMethods, flash }: Props) {
@@ -221,7 +221,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                         <button type="button" onClick={() => {
                                             const maxSettlementLimit = selectedSupplier ? Math.abs(parseFloat(selectedSupplier.total_debt)) : 0;
                                             openPad('المبلغ', form.data.amount || String(maxSettlementLimit), v => form.setData('amount', v), maxSettlementLimit);
-                                        }} className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-black text-right w-full cursor-pointer hover:border-primary/40 transition-all">
+                                        }} className="spatial-input h-14 rounded-[20px] px-5 text-[16px] font-black text-right w-full cursor-pointer hover:border-primary/40 transition-all">
                                             {form.data.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(selectedSupplier ? Math.abs(parseFloat(selectedSupplier.total_debt)) : 0)}</span>}
                                         </button>
                                         {form.errors.amount && <p className="text-xs text-red-500 font-bold mt-1">{form.errors.amount}</p>}
@@ -229,7 +229,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                     <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
                                         <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">ملاحظة</label>
                                         <input value={form.data.notes} onChange={e => form.setData('notes', e.target.value)}
-                                            className="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold" />
+                                            className="spatial-input h-14 rounded-[20px] px-5 text-[16px] font-bold" />
                                     </div>
                                 </>
                             )}
@@ -289,32 +289,32 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                 <>
                                     {/* Desktop Table */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-base">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['المورد', 'المرجع', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {displaySettlements.map(s => (
-                                                    <tr key={s.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${s.deleted_at ? 'opacity-50' : ''}`}>
-                                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">
+                                                    <tr key={s.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors ${s.deleted_at ? 'opacity-50' : ''}`}>
+                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">
                                                             <Link href={`/supplier-settlements/${s.id}`} className="hover:text-primary transition-colors">{s.supplier.name}</Link>
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4">
                                                             {s.purchase_return ? (
                                                                 <Link href={`/purchase-returns/${s.purchase_return.id}`} className="text-orange-500 font-bold hover:underline">مرتجع #{s.purchase_return.id}</Link>
                                                             ) : s.purchase ? (
                                                                 <Link href={`/purchases/${s.purchase.id}`} className="text-primary font-bold hover:underline">فاتورة #{s.purchase.id}</Link>
                                                             ) : <span className="text-slate-400 dark:text-white/30 font-bold">مستقلة</span>}
                                                         </td>
-                                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{s.payment_method.name}</td>
-                                                        <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
-                                                        <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
-                                                        <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{fmtDate(s.created_at)}</td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4 font-bold text-slate-600 dark:text-white/70">{s.payment_method.name}</td>
+                                                        <td className="px-4 py-4 font-black text-purple-500">{fmt(s.amount)}</td>
+                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
+                                                        <td className="px-4 py-4 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(s.created_at)}</span></td>
+                                                        <td className="px-4 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <Link href={`/supplier-settlements/${s.id}`}
                                                                     className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
@@ -386,7 +386,7 @@ export default function SupplierSettlementsIndex({ settlements, suppliers, payme
                                                     </div>
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(s.created_at)}</span>
+                                                        <span className="text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest">{fmtDate(s.created_at)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">

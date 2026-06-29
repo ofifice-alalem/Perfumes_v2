@@ -45,7 +45,7 @@ export function DateFilterInput({ label, value, onChange }: Props) {
         update(day, month, v);
     }
 
-    const fieldCls = `spatial-input h-11 rounded-[14px] text-[14px] font-black text-center cursor-pointer hover:border-primary/40 transition-all flex items-center justify-center select-none`;
+    const fieldCls = `spatial-input h-11 rounded-[14px] text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all flex items-center justify-center select-none`;
     const placeholder = 'text-slate-400 dark:text-white/30 font-bold text-[13px]';
 
     return (
@@ -57,7 +57,7 @@ export function DateFilterInput({ label, value, onChange }: Props) {
                 <div className="grid grid-cols-3 gap-1.5">
                     {/* اليوم */}
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">يوم</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">يوم</span>
                         <button onClick={() => setPadOpen('day')} className={fieldCls}>
                             {day
                                 ? <span className="text-slate-800 dark:text-white">{pad(day)}</span>
@@ -67,7 +67,7 @@ export function DateFilterInput({ label, value, onChange }: Props) {
                     </div>
                     {/* الشهر */}
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">شهر</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">شهر</span>
                         <button onClick={() => setPadOpen('month')} className={fieldCls}>
                             {month
                                 ? <span className="text-slate-800 dark:text-white">{pad(month)}</span>
@@ -77,7 +77,7 @@ export function DateFilterInput({ label, value, onChange }: Props) {
                     </div>
                     {/* السنة */}
                     <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">سنة</span>
+                        <span className="text-xs font-bold text-slate-400 dark:text-white/30 text-center uppercase tracking-widest">سنة</span>
                         <button onClick={() => setPadOpen('year')} className={fieldCls}>
                             {year
                                 ? <span className="text-slate-800 dark:text-white">{year}</span>

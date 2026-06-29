@@ -33,7 +33,7 @@ interface Props {
 function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
 function PurgeModal({ period, onClose }: { period: Period; onClose: () => void }) {
@@ -140,8 +140,8 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                                                         {period.status === 'open' ? 'مفتوحة' : 'مغلقة'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">{fmtDate(period.started_at)}</td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">{fmtDate(period.closed_at)}</td>
+                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.started_at)}</span></td>
+                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.closed_at)}</span></td>
                                                 <td className="px-4 py-3">
                                                     {period.snapshot ? (
                                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">محفوظ</span>

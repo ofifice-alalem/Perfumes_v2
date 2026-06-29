@@ -96,7 +96,7 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                   value={createForm.data.name}
                   onChange={e => createForm.setData('name', e.target.value)}
                   placeholder="مثال: عطور زيتية"
-                  className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
+                  className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold"
                 />
                 {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
               </div>

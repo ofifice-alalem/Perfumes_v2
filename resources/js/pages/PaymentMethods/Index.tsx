@@ -75,7 +75,7 @@ export default function PaymentMethodsIndex({ paymentMethods, flash }: Props) {
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
                                     <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
                                         placeholder="مثال: شبكة"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
                                 </div>
                                 <div className="flex items-end gap-2">

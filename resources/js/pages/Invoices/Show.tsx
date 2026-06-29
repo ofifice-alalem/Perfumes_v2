@@ -346,14 +346,14 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         <div className="flex flex-col gap-1.5 w-36">
                                             <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
                                             <button onClick={() => openPad('المبلغ', row.amount || fmt(maxPayment), v => setPayRow(idx, 'amount', v), maxPayment)}
-                                                className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                                className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
                                                 {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxPayment)}</span>}
                                             </button>
                                         </div>
                                         <div className="flex flex-col gap-1.5">
                                             <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
                                             <input value={row.notes} onChange={e => setPayRow(idx, 'notes', e.target.value)}
-                                                placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                                placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-bold" />
                                         </div>
                                         <button onClick={() => payRows.length > 1 ? setPayRows(p => p.filter((_, i) => i !== idx)) : null}
                                             disabled={payRows.length === 1}
@@ -400,7 +400,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</td>
                                                     <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
                                                     <td className="px-4 py-3 text-slate-600 dark:text-white/60 font-bold text-sm">{pay.user?.name ?? '—'}</td>
-                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(pay.created_at).toLocaleDateString('en-GB')}</td>
+                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</td>
                                                     <td className="px-4 py-3">
                                                         {!isCancelled && (
                                                             <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
@@ -432,7 +432,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 </div>
                                                 <div>
                                                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(pay.created_at).toLocaleDateString('en-GB')}</div>
+                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</div>
                                                 </div>
                                             </div>
                                             {!isCancelled && (
@@ -491,14 +491,14 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     setSetRow(idx, 'amount', val > max ? String(max) : v);
                                                 }, max);
                                             }}
-                                                className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                                className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
                                                 {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxSettlementLimit)}</span>}
                                             </button>
                                         </div>
                                         <div className="flex flex-col gap-1.5">
                                             <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
                                             <input value={row.notes} onChange={e => setSetRow(idx, 'notes', e.target.value)}
-                                                placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                                placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-bold" />
                                         </div>
                                         <button onClick={() => setRows.length > 1 ? setSetRows(p => p.filter((_, i) => i !== idx)) : null}
                                             disabled={setRows.length === 1}
@@ -537,7 +537,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
                                                     <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
                                                     <td className="px-4 py-3 text-slate-600 dark:text-white/60 font-bold text-sm">{s.user?.name ?? '—'}</td>
-                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
+                                                    <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</td>
                                                     <td className="px-4 py-3">
                                                         {!isCancelled && (
                                                             <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
@@ -569,7 +569,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 </div>
                                                 <div>
                                                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(s.created_at).toLocaleDateString('en-GB')}</div>
+                                                    <div className="font-bold text-slate-400 dark:text-white/40">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</div>
                                                 </div>
                                             </div>
                                             {!isCancelled && (

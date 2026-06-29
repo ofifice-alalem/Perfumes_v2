@@ -740,7 +740,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 {/* sale type toggle for non-tier with multiple options */}
                                 {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
                                     <button onClick={() => setShowSaleTypeModal(true)}
-                                        className="spatial-input h-12 sm:h-14 rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 text-sm sm:text-[15px] font-bold w-full sm:w-44 cursor-pointer hover:border-primary/40 transition-all flex items-center justify-between">
+                                        className="spatial-input h-12 sm:h-14 rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 text-sm sm:text-[16px] font-bold w-full sm:w-44 cursor-pointer hover:border-primary/40 transition-all flex items-center justify-between">
                                         <span className="truncate">{saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}</span>
                                         <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

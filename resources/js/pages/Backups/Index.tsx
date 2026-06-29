@@ -394,7 +394,7 @@ export default function BackupsIndex({ backups, flash }: Props) {
                                                         <span className="font-bold text-slate-700 dark:text-white/80 text-xs">{backup.filename}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">{fmtDate(backup.date)}</td>
+                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(backup.date)}</span></td>
                                                 <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{backup.size}</td>
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">

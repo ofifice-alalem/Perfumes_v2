@@ -53,7 +53,7 @@ function fmt(v: string | number) {
 function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
 function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
@@ -342,28 +342,28 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                             ) : (
                                 <>
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-base">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'المورد', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', ''].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {displayReturns.map(r => (
-                                                    <tr key={r.id} className={`hover:bg-black/3 dark:hover:bg-white/3 transition-colors ${r.deleted_at ? 'opacity-50' : ''}`}>
-                                                        <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
-                                                        <td className="px-4 py-3">
+                                                    <tr key={r.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors ${r.deleted_at ? 'opacity-50' : ''}`}>
+                                                        <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
+                                                        <td className="px-4 py-4">
                                                             {r.purchase
                                                                 ? <Link href={`/purchases/${r.purchase.id}`} className="text-primary font-bold hover:underline">#{r.purchase.id}</Link>
                                                                 : <span className="text-slate-400 dark:text-white/30 font-bold">مستقل</span>}
                                                         </td>
-                                                        <td className="px-4 py-3 font-black text-orange-500">{fmt(r.total)}</td>
-                                                        <td className="px-4 py-3 font-black text-purple-500">{fmt(r.recovered_amount)}</td>
-                                                        <td className="px-4 py-3 font-black text-amber-500">{fmt(r.due_recovery)}</td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4 font-black text-orange-500">{fmt(r.total)}</td>
+                                                        <td className="px-4 py-4 font-black text-purple-500">{fmt(r.recovered_amount)}</td>
+                                                        <td className="px-4 py-4 font-black text-amber-500">{fmt(r.due_recovery)}</td>
+                                                        <td className="px-4 py-4">
                                                             {r.deleted_at ? (
                                                                 <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
                                                             ) : (
@@ -372,10 +372,10 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
+                                                        <td className="px-4 py-4 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
                                                             {fmtDate(r.created_at)}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <Link href={`/purchase-returns/${r.id}`}
                                                                     className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
@@ -439,7 +439,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                     </div>
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(r.created_at)}</span>
+                                                        <span className="text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest">{fmtDate(r.created_at)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">

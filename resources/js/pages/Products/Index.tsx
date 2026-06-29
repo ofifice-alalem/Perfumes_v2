@@ -407,7 +407,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     <input value={createForm.data.name}
                                         onChange={e => createForm.setData('name', e.target.value)}
                                         placeholder="مثال: Dior Sauvage"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold"
                                     />
                                     {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
                                 </div>
@@ -438,7 +438,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         value={createForm.data.min_stock}
                                         onChange={e => createForm.setData('min_stock', e.target.value)}
                                         placeholder="0"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold"
                                     />
                                 </div>
                             </div>
@@ -557,11 +557,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <>
                             {/* جدول — PC */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-base">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['الاسم', 'التصنيف', 'مدى السعر', 'سعر العبوة', 'المخزون', 'الحد الأدنى', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -653,8 +653,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     </td>
                                                 </tr>
                                             ) : (
-                                            <tr key={product.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors group">
-                                                <td className="px-3 py-3">
+                                            <tr key={product.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors group">
+                                                <td className="px-3 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-bold text-slate-800 dark:text-white">{product.name}</span>
                                                         {product.category.is_operational && (
@@ -667,8 +667,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-3 font-bold text-slate-600 dark:text-white/70 whitespace-nowrap">{product.category.name}</td>
-                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                <td className="px-3 py-4 font-bold text-slate-600 dark:text-white/70 whitespace-nowrap">{product.category.name}</td>
+                                                <td className="px-3 py-4 whitespace-nowrap">
                                                     {product.selling_type === 'tier_based' ? (
                                                         <span className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-primary/10 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-sm">تير {product.price_tier?.name}</span>
                                                     ) : product.product_price ? (
@@ -681,7 +681,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                <td className="px-3 py-4 whitespace-nowrap">
                                                     {product.product_price?.full_bottle_regular ? (
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="px-2.5 py-1 rounded-[8px] bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-black text-sm">{fmt(product.product_price.full_bottle_vip)}</span>
@@ -692,15 +692,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         <span className="text-slate-300 dark:text-white/25 font-bold">--</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                <td className="px-3 py-4 whitespace-nowrap">
                                                     <span className={`font-bold ${Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0 ? 'text-red-500' : 'text-slate-800 dark:text-white'}`}>
                                                         {fmt(product.stock)} {unitLabels[product.category.unit]}
                                                     </span>
                                                 </td>
-                                                <td className="px-3 py-3 whitespace-nowrap">
+                                                <td className="px-3 py-4 whitespace-nowrap">
                                                     <span className="font-bold text-slate-500 dark:text-white/50">{fmt(product.min_stock)} {unitLabels[product.category.unit]}</span>
                                                 </td>
-                                                <td className="px-3 py-3">
+                                                <td className="px-3 py-4">
                                                     <div className="flex items-center gap-2">
                                                         {!product.qrcode && (
                                                             <button
@@ -761,7 +761,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <div className="flex flex-col gap-3">
                                                     <div className="flex flex-col gap-1.5">
                                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الاسم</label>
-                                                        <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                         {editForm.errors.name && <p className="text-xs text-red-500 font-bold">{editForm.errors.name}</p>}
                                                     </div>
                                                     <ModernSelect label="التصنيف"
@@ -778,7 +778,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     )}
                                                     <div className="flex flex-col gap-1.5">
                                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">حد التنبيه</label>
-                                                        <input type="number" min="0" step="0.01" value={editForm.data.min_stock} onChange={e => editForm.setData('min_stock', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        <input type="number" min="0" step="0.01" value={editForm.data.min_stock} onChange={e => editForm.setData('min_stock', e.target.value)} className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                     </div>
                                                 </div>
                                                 {editCat && editForm.data.selling_type === 'unit_priced' && !editCat.is_operational && (

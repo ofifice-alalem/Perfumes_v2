@@ -230,7 +230,7 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                                                 setRow(idx, 'amount', val > max ? String(max) : v);
                                             }, max);
                                         }}
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
                                             {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(due)}</span>}
                                         </button>
                                     </div>
@@ -239,7 +239,7 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                                         <input value={row.notes}
                                             onChange={e => setRow(idx, 'notes', e.target.value)}
                                             placeholder="اختياري..."
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-bold" />
                                     </div>
                                     <button onClick={() => rows.length > 1 ? setRows(p => p.filter((_, i) => i !== idx)) : null}
                                         disabled={rows.length === 1}
@@ -288,7 +288,7 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                                             <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
                                             <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {new Date(s.created_at).toLocaleDateString('en-GB')}
+                                                {new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal

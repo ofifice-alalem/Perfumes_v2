@@ -35,7 +35,7 @@ export default function ReportsIndex() {
                                 {r.icon}
                             </div>
                             <div>
-                                <p className="font-black text-slate-800 dark:text-white text-[15px]">{r.label}</p>
+                                <p className="font-black text-slate-800 dark:text-white text-[16px]">{r.label}</p>
                                 <p className="text-xs font-bold text-slate-400 dark:text-white/40 mt-1 leading-relaxed">{r.desc}</p>
                             </div>
                         </Link>

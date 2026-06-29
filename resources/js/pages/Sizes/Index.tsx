@@ -82,7 +82,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
                   value={createForm.data.label}
                   onChange={e => createForm.setData('label', e.target.value)}
                   placeholder="مثال: 5ml"
-                  className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
+                  className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold"
                 />
                 {createForm.errors.label && <p className="text-xs text-red-500 font-bold">{createForm.errors.label}</p>}
               </div>
@@ -96,7 +96,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
                   placeholder="5"
                   min="0.01"
                   step="0.01"
-                  className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold"
+                  className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold"
                 />
                 {createForm.errors.value && <p className="text-xs text-red-500 font-bold">{createForm.errors.value}</p>}
               </div>

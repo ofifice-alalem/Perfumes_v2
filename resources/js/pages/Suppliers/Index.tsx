@@ -102,28 +102,28 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
                                     <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
                                         placeholder="مثال: شركة العطور الدولية"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">رقم الهاتف</label>
                                     <input value={createForm.data.phone} onChange={e => createForm.setData('phone', e.target.value)}
                                         placeholder="05xxxxxxxx"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.phone && <p className="text-xs text-red-500 font-bold">{createForm.errors.phone}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">البريد الإلكتروني (اختياري)</label>
                                     <input type="email" value={createForm.data.email} onChange={e => createForm.setData('email', e.target.value)}
                                         placeholder="example@email.com"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.email && <p className="text-xs text-red-500 font-bold">{createForm.errors.email}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">العنوان (اختياري)</label>
                                     <input value={createForm.data.address} onChange={e => createForm.setData('address', e.target.value)}
                                         placeholder="مثال: الرياض"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 pt-2">
@@ -175,11 +175,11 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                         <>
                             {/* جدول — PC */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-base">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['الاسم', 'الهاتف', 'إجمالي المشتريات', 'المدفوع', 'المرتجع', 'التسويات', 'المديونية', 'الحالة', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -234,32 +234,32 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                <tr key={supplier.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                    <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{supplier.name}</td>
-                                                    <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap">{supplier.phone}</td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                <tr key={supplier.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                    <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{supplier.name}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap">{supplier.phone}</td>
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-black text-slate-700 dark:text-white/80">{fmt(supplier.total_purchases)}</span>
                                                     </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-black text-emerald-600 dark:text-emerald-400">{fmt(supplier.total_paid)}</span>
                                                     </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-black text-blue-500 dark:text-blue-400">{fmt(supplier.total_returns)}</span>
                                                     </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-black text-purple-500 dark:text-purple-400">{fmt(supplier.total_settlements)}</span>
                                                     </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className={`font-black ${parseFloat(supplier.total_debt) > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40'}`}>
                                                             {fmt(supplier.total_debt)}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-4">
                                                         <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] ${supplier.is_active ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-black/5 dark:bg-white/8 text-slate-400 dark:text-white/40'}`}>
                                                             {supplier.is_active ? 'نشط' : 'موقوف'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-4">
                                                         {supplier.id === 1 ? (
                                                             <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-amber-500/10 text-amber-600 dark:text-amber-400">افتراضي</span>
                                                         ) : (
@@ -301,22 +301,22 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الاسم</label>
                                                     <input value={editForm.data.name} onChange={e => editForm.setData('name', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                 </div>
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الهاتف</label>
                                                     <input value={editForm.data.phone} onChange={e => editForm.setData('phone', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                 </div>
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">البريد</label>
                                                     <input type="email" value={editForm.data.email} onChange={e => editForm.setData('email', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                 </div>
                                                 <div className="flex flex-col gap-1.5">
                                                     <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">العنوان</label>
                                                     <input value={editForm.data.address} onChange={e => editForm.setData('address', e.target.value)}
-                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[15px] font-bold" />
+                                                        className="spatial-input h-11 rounded-[14px] px-4 text-[16px] font-bold" />
                                                 </div>
                                                 <label className="flex items-center gap-2 cursor-pointer select-none h-11 px-3 rounded-[14px] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 w-fit">
                                                     <span className="text-xs font-bold text-slate-600 dark:text-white/60">نشط</span>

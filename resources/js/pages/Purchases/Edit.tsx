@@ -40,7 +40,7 @@ export default function PurchasesEdit({ purchase, flash }: Props) {
                                 onChange={e => form.setData('notes', e.target.value)}
                                 rows={4}
                                 placeholder="ملاحظات الفاتورة..."
-                                className="spatial-input rounded-[16px] px-4 py-3 text-[15px] font-bold resize-none"
+                                className="spatial-input rounded-[16px] px-4 py-3 text-[16px] font-bold resize-none"
                             />
                         </div>
                         <div className="flex items-center gap-3">

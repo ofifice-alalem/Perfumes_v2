@@ -96,21 +96,21 @@ export default function UsersIndex({ users, flash }: Props) {
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم الكامل</label>
                                     <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
                                         placeholder="مثال: أحمد محمد"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم الدخول</label>
                                     <input value={createForm.data.username} onChange={e => createForm.setData('username', e.target.value)}
                                         placeholder="مثال: ahmed"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.username && <p className="text-xs text-red-500 font-bold">{createForm.errors.username}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
                                     <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">البريد الإلكتروني (اختياري)</label>
                                     <input type="email" value={createForm.data.email} onChange={e => createForm.setData('email', e.target.value)}
                                         placeholder="example@email.com"
-                                        className="spatial-input h-12 rounded-[16px] px-4 text-[15px] font-bold" />
+                                        className="spatial-input h-12 rounded-[16px] px-4 text-[16px] font-bold" />
                                     {createForm.errors.email && <p className="text-xs text-red-500 font-bold">{createForm.errors.email}</p>}
                                 </div>
                                 <div className="flex flex-col gap-2">
@@ -119,7 +119,7 @@ export default function UsersIndex({ users, flash }: Props) {
                                         <input type={showPass ? 'text' : 'password'} value={createForm.data.password}
                                             onChange={e => createForm.setData('password', e.target.value)}
                                             placeholder="6 أحرف على الأقل"
-                                            className="spatial-input h-12 rounded-[16px] px-4 pl-12 text-[15px] font-bold w-full" />
+                                            className="spatial-input h-12 rounded-[16px] px-4 pl-12 text-[16px] font-bold w-full" />
                                         <button type="button" onClick={() => setShowPass(!showPass)}
                                             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/70 transition-colors">
                                             {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

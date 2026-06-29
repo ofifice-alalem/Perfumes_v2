@@ -47,7 +47,7 @@ function fmt(v: string | number) {
 function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
 function DeleteWasteLogModal({ wasteLog, onClose }: { wasteLog: WasteLog; onClose: () => void }) {
@@ -235,24 +235,24 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
                             ) : (
                                 <>
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-base">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'المسجِّل', 'عدد المنتجات', 'التاريخ', 'الإجراءات'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {wasteLogs.data.map(log => (
-                                                    <tr key={log.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                        <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{log.id}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{log.user.name}</td>
-                                                        <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80">{log.items.length}</td>
-                                                        <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
+                                                    <tr key={log.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                        <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{log.id}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{log.user.name}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-700 dark:text-white/80">{log.items.length}</td>
+                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
                                                             {fmtDate(log.created_at)}
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <Link href={`/waste-logs/${log.id}`}
                                                                     className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
@@ -288,7 +288,7 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
                                                     </div>
                                                     <div className="flex items-center justify-between py-3">
                                                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/60">{fmtDate(log.created_at)}</span>
+                                                        <span className="text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest">{fmtDate(log.created_at)}</span>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">

@@ -113,13 +113,13 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                 <div className="flex flex-col gap-2 w-full sm:w-32">
                   <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الاسم</label>
                   <input value={createForm.data.name} onChange={e => createForm.setData('name', e.target.value)}
-                    placeholder="A" className="spatial-input h-14 rounded-[16px] px-4 text-[15px] font-bold" />
+                    placeholder="A" className="spatial-input h-14 rounded-[16px] px-4 text-[16px] font-bold" />
                   {createForm.errors.name && <p className="text-xs text-red-500 font-bold">{createForm.errors.name}</p>}
                 </div>
                 <div className="flex flex-col gap-2 flex-1">
                   <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الوصف</label>
                   <input value={createForm.data.description} onChange={e => createForm.setData('description', e.target.value)}
-                    placeholder="مثال: اقتصادي" className="spatial-input h-14 rounded-[16px] px-4 text-[15px] font-bold" />
+                    placeholder="مثال: اقتصادي" className="spatial-input h-14 rounded-[16px] px-4 text-[16px] font-bold" />
                 </div>
               </div>
               <div className="flex gap-2">

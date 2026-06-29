@@ -238,7 +238,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المبلغ</label>
                                         <button
                                             onClick={() => openPad('المبلغ', row.amount || fmt(maxPayment), v => setRow(idx, 'amount', v), maxPayment)}
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
                                             {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxPayment)}</span>}
                                         </button>
                                     </div>
@@ -247,7 +247,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                         <input value={row.notes}
                                             onChange={e => setRow(idx, 'notes', e.target.value)}
                                             placeholder="اختياري..."
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-bold" />
                                     </div>
                                     <button onClick={() => paymentRows.length > 1 ? setPaymentRows(p => p.filter((_, i) => i !== idx)) : null}
                                         disabled={paymentRows.length === 1}
@@ -300,7 +300,7 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                                             <td className="px-4 py-3 font-black text-emerald-600 dark:text-emerald-400">{fmt(pay.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{pay.notes ?? '—'}</td>
                                             <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
-                                                {new Date(pay.created_at).toLocaleDateString('en-GB')}
+                                                {new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                                             </td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal

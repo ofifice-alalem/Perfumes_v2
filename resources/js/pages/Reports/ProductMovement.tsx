@@ -58,7 +58,7 @@ function fmt(n: number | null, unit?: string): string {
 
 function fmtDate(v: string) {
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB');
+    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
 export default function ProductMovement({ products, product, filters, data }: Props) {
@@ -274,7 +274,7 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {data.movements.map((m, i) => (
                                                     <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap text-xs">{fmtDate(m.date)}</td>
+                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(m.date)}</span></td>
                                                         <td className="px-4 py-3">
                                                             <span className={`font-black text-xs ${typeConfig[m.type]?.color}`}>
                                                                 {typeConfig[m.type]?.label}

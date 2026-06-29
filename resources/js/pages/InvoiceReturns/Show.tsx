@@ -248,14 +248,14 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                                                 setRow(idx, 'amount', val > max ? String(max) : v);
                                             }, max);
                                         }}
-                                            className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
+                                            className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
                                             {row.amount || <span className="text-slate-400 dark:text-white/30 font-bold">{fmt(maxSettlementLimit)}</span>}
                                         </button>
                                     </div>
                                     <div className="flex flex-col gap-1.5">
                                         <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">ملاحظة</label>
                                         <input value={row.notes} onChange={e => setRow(idx, 'notes', e.target.value)}
-                                            placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[15px] font-bold" />
+                                            placeholder="اختياري..." className="spatial-input h-14 rounded-[20px] px-4 text-[16px] font-bold" />
                                     </div>
                                     <button onClick={() => rows.length > 1 ? setRows(p => p.filter((_, i) => i !== idx)) : null}
                                         disabled={rows.length === 1}
@@ -298,7 +298,7 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                                             <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
                                             <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
                                             <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
-                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB')}</td>
+                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</td>
                                             <td className="px-4 py-3">
                                                 <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
                                                     trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
