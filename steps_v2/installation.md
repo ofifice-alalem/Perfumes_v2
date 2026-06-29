@@ -183,3 +183,9 @@ sudo systemctl status perfumes
   php artisan migrate:fresh
   php artisan db:seed --class=CoreSystemSeeder
   ```
+
+
+net stop Apache2.4
+net start Apache2.4
+php artisan optimize:clear
+php artisan optimize
