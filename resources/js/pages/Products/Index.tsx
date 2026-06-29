@@ -202,6 +202,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const [showCreate, setShowCreate] = useState(false);
     const [editingId, setEditingId]   = useState<number | null>(null);
     const [filterCat, setFilterCat]   = useState<number | null>(null);
+    const [searchProdId, setSearchProdId] = useState<number | null>(null);
     const [qrProduct, setQrProduct]   = useState<Product | null>(null);
     const [generatingAll, setGeneratingAll] = useState(false);
 
@@ -289,7 +290,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         router.delete(`/products/${id}`);
     }
 
-    const filtered = filterCat ? products.filter(p => p.category.id === filterCat) : products;
+    const filtered = products.filter(p => {
+        if (searchProdId && p.id !== searchProdId) return false;
+        if (filterCat && p.category.id !== filterCat) return false;
+        return true;
+    });
 
     const tierDefaultValue = (form: typeof createForm) => {
         const t = tiers.find(t => String(t.id) === form.data.price_tier_id);
@@ -342,7 +347,29 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <h1 className="text-2xl font-black text-slate-800 dark:text-white">المنتجات</h1>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">إدارة جميع المنتجات وأسعارها</p>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                        {searchProdId && (
+                            <button onClick={() => setSearchProdId(null)}
+                                className="flex items-center gap-1.5 px-4 h-11 rounded-[16px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm shrink-0">
+                                <X className="w-4 h-4" /> إلغاء البحث
+                            </button>
+                        )}
+                        <div className="w-full sm:w-72">
+                            <ModernSelect
+                                label=""
+                                placeholder="بحث بالاسم أو QR..."
+                                options={products.map(p => ({
+                                    label: p.name,
+                                    badge: p.category.name,
+                                    meta: fmt(p.stock),
+                                    searchKey: p.qrcode ?? undefined
+                                }))}
+                                onSelect={val => {
+                                    const prod = products.find(p => p.name === val);
+                                    if (prod) setSearchProdId(prod.id);
+                                }}
+                            />
+                        </div>
                         {products.some(p => !p.qrcode) && (
                             <button
                                 onClick={handleGenerateAll}
