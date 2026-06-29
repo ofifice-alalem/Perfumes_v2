@@ -70,10 +70,10 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
         <div className="flex-1 flex flex-col p-4 pb-12 md:p-8 md:pb-16 lg:p-10 lg:pb-16 overflow-y-auto min-w-0 h-full relative custom-scroll">
 
           <div className="lg:hidden flex items-center mb-6">
-            <button onClick={() => setIsSidebarOpen(true)} className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
+            <button onClick={() => setIsSidebarOpen(true)} className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
             </button>
-            <span className="mr-4 font-black text-slate-800 dark:text-white text-lg">عطور</span>
+            <span className="mr-4 text-[20px] font-black whitespace-nowrap truncate bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm">طيب التاجوري</span>
           </div>
 
           <TopNav isDark={isDark} onToggleTheme={toggleTheme} pageTitle={pageTitle} />

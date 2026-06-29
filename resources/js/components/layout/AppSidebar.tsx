@@ -121,12 +121,9 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       {/* Logo & Toggle */}
       <div className={`flex items-center w-full mb-4 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
         {isOpen && (
-          <div className="flex items-center gap-3 animate-in fade-in">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center font-bold text-lg text-primary">
-              P<span className="text-primary/60">+</span>
-            </div>
-            <span className="text-xl font-black text-slate-800 dark:text-white whitespace-nowrap">
-              عطور
+          <div className="flex items-center animate-in fade-in pl-2">
+            <span className="text-[22px] font-black whitespace-nowrap truncate bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm">
+              طيب التاجوري
             </span>
           </div>
         )}
