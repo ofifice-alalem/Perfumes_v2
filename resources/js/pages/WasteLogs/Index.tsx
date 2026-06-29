@@ -235,7 +235,7 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
                             ) : (
                                 <>
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-base">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'المسجِّل', 'عدد المنتجات', 'التاريخ', 'الإجراءات'].map(h => (

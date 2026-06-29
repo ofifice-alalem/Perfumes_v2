@@ -52,7 +52,7 @@ function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
     if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '—';
-    return d.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: true }).replace(/\//g, '-').replace(',', '');
 }
 
 export default function WasteLogsShow({ wasteLog, flash }: Props) {
@@ -80,32 +80,32 @@ export default function WasteLogsShow({ wasteLog, flash }: Props) {
                         {/* Items */}
                         <SpatialCard title={`المنتجات التالفة (${wasteLog.items.length})`} icon={<Package className="w-4 h-4" />}>
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['المنتج', 'الكمية', 'السبب', 'ملاحظة'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {wasteLog.items.map(item => (
-                                            <tr key={item.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3">
+                                            <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                <td className="px-4 py-4">
                                                     <div className="flex flex-col">
                                                         <span className="font-bold text-slate-800 dark:text-white">{item.product.name}</span>
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/40">{item.product.category.name}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">
+                                                <td className="px-4 py-4 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">
                                                     {fmt(item.quantity)} {item.product.category.unit}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-4">
                                                     <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] border ${reasonColor[item.reason]}`}>
                                                         {reasonLabel[item.reason]}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 text-xs font-bold">
+                                                <td className="px-4 py-4 text-slate-500 dark:text-white/50 text-xs font-bold">
                                                     {item.notes || '—'}
                                                 </td>
                                             </tr>
@@ -169,7 +169,7 @@ export default function WasteLogsShow({ wasteLog, flash }: Props) {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="text-xs font-bold text-slate-400 dark:text-white/40 mb-1">تاريخ التسجيل</div>
-                                        <div className="font-bold text-slate-700 dark:text-white/80 text-sm">{fmtDate(wasteLog.created_at)}</div>
+                                        <div className="font-bold text-slate-700 dark:text-white/80 text-sm"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest inline-block">{fmtDate(wasteLog.created_at)}</span></div>
                                     </div>
                                 </div>
 

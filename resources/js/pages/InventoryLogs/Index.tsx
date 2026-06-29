@@ -26,8 +26,8 @@ export default function InventoryLogsIndex({ logs }: Props) {
                         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {logs.data.map(log => {
                                 const dateObj = new Date(log.created_at);
-                                const dateStr = dateObj.toLocaleDateString('ar-LY', { year: 'numeric', month: 'long', day: 'numeric' });
-                                const timeStr = dateObj.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' });
+                                const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+                                const timeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
                                 return (
                                     <div key={log.id} className="spatial-card p-5 border border-black/5 dark:border-white/5 flex flex-col gap-4">
                                         <div className="flex justify-between items-start">

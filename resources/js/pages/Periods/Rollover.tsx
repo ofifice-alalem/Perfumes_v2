@@ -130,32 +130,32 @@ function StockEquationTable({ products, opening, purchased, sold, waste, custome
             )}
 
             <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-[16px]">
                     <thead>
                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-primary whitespace-nowrap">المشتري</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-blue-500 whitespace-nowrap">مرتجع عملاء</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-red-500 whitespace-nowrap">التالف</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-orange-500 whitespace-nowrap">مرتجع موردين</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
-                            <th className="text-right px-3 py-3 text-xs font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المنتج</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-slate-600 dark:text-white/60 whitespace-nowrap">مخزون البداية</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-primary whitespace-nowrap">المشتري</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-blue-500 whitespace-nowrap">مرتجع عملاء</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">المباع</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-red-500 whitespace-nowrap">التالف</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-orange-500 whitespace-nowrap">مرتجع موردين</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-slate-500 dark:text-white/40 whitespace-nowrap">المخزون النهائي</th>
+                            <th className="text-right px-3 py-4 text-sm font-black text-slate-500 dark:text-white/40 whitespace-nowrap">الفرق</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                         {rows.map(row => (
-                            <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-black/3 dark:hover:bg-white/3'}`}>
-                                <td className="px-3 py-3 font-bold text-slate-800 dark:text-white">{row.name}</td>
-                                <td className="px-3 py-3 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
-                                <td className="px-3 py-3 font-black text-primary">{row.purchasedQty}</td>
-                                <td className="px-3 py-3 font-black text-blue-500">{row.custRetQty}</td>
-                                <td className="px-3 py-3 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
-                                <td className="px-3 py-3 font-black text-red-500">{row.wasteQty}</td>
-                                <td className="px-3 py-3 font-black text-orange-500">{row.suppRetQty}</td>
-                                <td className="px-3 py-3 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
-                                <td className="px-3 py-3">
+                            <tr key={row.id} className={`transition-colors ${row.diff !== 0 ? 'bg-amber-500/5' : 'hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group'}`}>
+                                <td className="px-3 py-4 font-bold text-slate-800 dark:text-white">{row.name}</td>
+                                <td className="px-3 py-4 font-black text-slate-600 dark:text-white/60">{row.openingQty}</td>
+                                <td className="px-3 py-4 font-black text-primary">{row.purchasedQty}</td>
+                                <td className="px-3 py-4 font-black text-blue-500">{row.custRetQty}</td>
+                                <td className="px-3 py-4 font-black text-emerald-600 dark:text-emerald-400">{row.soldQty}</td>
+                                <td className="px-3 py-4 font-black text-red-500">{row.wasteQty}</td>
+                                <td className="px-3 py-4 font-black text-orange-500">{row.suppRetQty}</td>
+                                <td className="px-3 py-4 font-black text-slate-700 dark:text-white/80">{row.stockQty}</td>
+                                <td className="px-3 py-4">
                                     {row.diff === 0 ? (
                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">✓</span>
                                     ) : (
@@ -222,16 +222,16 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                         {/* Customers */}
                         <SpatialCard title={`ديون العملاء (${preview.customers.length})`} icon={<Users className="w-4 h-4" />}>
                             <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead className="sticky top-0">
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">العميل</th>
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الرصيد</th>
+                                            <th className="text-right px-4 py-2 text-sm font-black text-slate-500 dark:text-white/40">العميل</th>
+                                            <th className="text-right px-4 py-2 text-sm font-black text-slate-500 dark:text-white/40">الرصيد</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {preview.customers.map(c => (
-                                            <tr key={c.id} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                            <tr key={c.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
                                                 <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{c.name}</td>
                                                 <td className={`px-4 py-2 font-black ${c.balance > 0 ? 'text-red-500' : c.balance < 0 ? 'text-emerald-500' : 'text-slate-400 dark:text-white/40'}`}>
                                                     {fmt(c.balance)}
@@ -246,16 +246,16 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                         {/* Suppliers */}
                         <SpatialCard title={`ديون الموردين (${preview.suppliers.length})`} icon={<Truck className="w-4 h-4" />}>
                             <div className="overflow-x-auto max-h-64 overflow-y-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead className="sticky top-0">
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">المورد</th>
-                                            <th className="text-right px-4 py-2 text-xs font-black text-slate-500 dark:text-white/40">الرصيد</th>
+                                            <th className="text-right px-4 py-2 text-sm font-black text-slate-500 dark:text-white/40">المورد</th>
+                                            <th className="text-right px-4 py-2 text-sm font-black text-slate-500 dark:text-white/40">الرصيد</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {preview.suppliers.map(s => (
-                                            <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                            <tr key={s.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
                                                 <td className="px-4 py-2 font-bold text-slate-700 dark:text-white/80">{s.name}</td>
                                                 <td className={`px-4 py-2 font-black ${s.balance > 0 ? 'text-red-500' : s.balance < 0 ? 'text-emerald-500' : 'text-slate-400 dark:text-white/40'}`}>
                                                     {fmt(s.balance)}

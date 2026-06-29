@@ -242,7 +242,7 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, pro
                                 <>
                                     {/* Desktop Table */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-base">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'العميل', 'الفاتورة', 'وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (

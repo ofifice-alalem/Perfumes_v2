@@ -19,8 +19,8 @@ const reasonLabels: Record<string, string> = {
 
 export default function InventoryLogsShow({ log }: Props) {
     const dateObj = new Date(log.created_at);
-    const dateStr = dateObj.toLocaleDateString('ar-LY', { year: 'numeric', month: 'long', day: 'numeric' });
-    const timeStr = dateObj.toLocaleTimeString('ar-LY', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+    const timeStr = dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     return (
         <AppShell pageTitle={`سجل الجرد #${log.id}`}>
@@ -83,11 +83,11 @@ export default function InventoryLogsShow({ log }: Props) {
                     <div className="lg:col-span-2">
                         <SpatialCard title={`المنتجات (${log.items.length})`} icon={<PackageOpen className="w-4 h-4" />}>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['المنتج', 'التصنيف', 'النظامي', 'الفعلي', 'الفارق', 'السبب'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -97,17 +97,17 @@ export default function InventoryLogsShow({ log }: Props) {
                                             const isGain = diff > 0;
                                             const isWaste = diff < 0;
                                             return (
-                                                <tr key={item.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                    <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{item.product?.name ?? 'محذوف'}</td>
-                                                    <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 text-xs">{item.product?.category?.name ?? '—'}</td>
-                                                    <td className="px-4 py-3 font-black text-slate-700 dark:text-white">{Number(item.system_stock)}</td>
-                                                    <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{Number(item.actual_stock)}</td>
-                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{item.product?.name ?? 'محذوف'}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 text-xs">{item.product?.category?.name ?? '—'}</td>
+                                                    <td className="px-4 py-4 font-black text-slate-700 dark:text-white">{Number(item.system_stock)}</td>
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{Number(item.actual_stock)}</td>
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         {diff === 0 ? <span className="font-bold text-slate-400 dark:text-white/40">مطابق</span> : 
                                                          isGain ? <span className="font-bold text-emerald-500">+{Number(diff)}</span> :
                                                          <span className="font-bold text-red-500">{Number(diff)}</span>}
                                                     </td>
-                                                    <td className="px-4 py-3">
+                                                    <td className="px-4 py-4">
                                                         {isWaste && <span className="text-xs font-bold text-red-500 bg-red-500/10 px-2 py-1 rounded">{reasonLabels[item.reason || ''] || item.reason || '—'}</span>}
                                                     </td>
                                                 </tr>

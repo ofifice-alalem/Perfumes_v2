@@ -169,21 +169,21 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                 {/* Items */}
                 <SpatialCard title={`المنتجات المرتجعة (${ret.items.length})`} icon={<Package className="w-4 h-4" />}>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-[16px]">
                             <thead>
                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                     {['المنتج', 'الكمية', 'سعر الوحدة', 'الإجمالي'].map(h => (
-                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                 {ret.items.map(item => (
-                                    <tr key={item.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                        <td className="px-4 py-3 font-bold text-slate-800 dark:text-white">{item.product.name}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{parseFloat(item.quantity).toLocaleString('en-US')}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/70">{fmt(item.unit_cost)}</td>
-                                        <td className="px-4 py-3 font-black text-orange-500">{fmt(item.line_total)}</td>
+                                    <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{item.product.name}</td>
+                                        <td className="px-4 py-4 font-bold text-slate-600 dark:text-white/70">{parseFloat(item.quantity).toLocaleString('en-US')}</td>
+                                        <td className="px-4 py-4 font-bold text-slate-600 dark:text-white/70">{fmt(item.unit_cost)}</td>
+                                        <td className="px-4 py-4 font-black text-orange-500">{fmt(item.line_total)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -273,24 +273,24 @@ export default function PurchaseReturnsShow({ return: ret, paymentMethods, flash
                         <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">لا يوجد استرداد مسجل</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-[16px]">
                                 <thead>
                                     <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                         {['وسيلة الاسترداد', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                            <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                            <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                     {ret.settlements.map(s => (
-                                        <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                            <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
-                                            <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
-                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
+                                        <tr key={s.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                            <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
+                                            <td className="px-4 py-4 font-black text-purple-500">{fmt(s.amount)}</td>
+                                            <td className="px-4 py-4 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
+                                            <td className="px-4 py-4 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">
                                                 {new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                                             </td>
-                                            <td className="px-4 py-3">
+                                            <td className="px-4 py-4">
                                                 <DeleteModal
                                                     onConfirm={() => router.delete(`/supplier-settlements/${s.id}`, { preserveScroll: true })}
                                                     trigger={

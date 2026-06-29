@@ -284,22 +284,22 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                         <p className="text-sm font-bold text-slate-400 dark:text-white/30 py-4 text-center">لا توجد تسويات مسجلة</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-[16px]">
                                 <thead>
                                     <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                         {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                            <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                            <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                     {ret.settlements.map(s => (
-                                        <tr key={s.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                            <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
-                                            <td className="px-4 py-3 font-black text-purple-500">{fmt(s.amount)}</td>
-                                            <td className="px-4 py-3 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
-                                            <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs whitespace-nowrap">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</td>
-                                            <td className="px-4 py-3">
+                                        <tr key={s.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                            <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80">{s.payment_method.name}</td>
+                                            <td className="px-4 py-4 font-black text-purple-500">{fmt(s.amount)}</td>
+                                            <td className="px-4 py-4 text-slate-500 dark:text-white/50 font-bold">{s.notes ?? '—'}</td>
+                                            <td className="px-4 py-4  font-bold  whitespace-nowrap"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest inline-block"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest inline-block">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span></span></td>
+                                            <td className="px-4 py-4">
                                                 <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
                                                     trigger={<button className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs"><Trash2 className="w-3 h-3" /></button>} />
                                             </td>

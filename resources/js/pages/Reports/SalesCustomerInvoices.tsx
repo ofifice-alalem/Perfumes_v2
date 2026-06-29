@@ -208,7 +208,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                             {/* Customer Row */}
                                             <button
                                                 onClick={() => toggleCustomer(customer.customer_id)}
-                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/3 dark:hover:bg-white/3 transition-colors text-right"
+                                                className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors text-right"
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <ChevronRight className={`w-4 h-4 text-primary transition-transform shrink-0 ${expandedCustomers.has(customer.customer_id) ? 'rotate-90' : ''}`} />
@@ -227,19 +227,19 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                             {expandedCustomers.has(customer.customer_id) && (
                                                 <div className="bg-black/2 dark:bg-white/2 px-4 pb-3">
                                                     <div className="overflow-x-auto">
-                                                        <table className="w-full text-sm">
+                                                        <table className="w-full text-[16px]">
                                                             <thead>
                                                                 <tr className="border-b border-black/5 dark:border-white/5">
-                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">رقم الفاتورة</th>
-                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">التاريخ</th>
-                                                                    <th className="text-right py-2 px-3 text-xs font-black text-slate-400 dark:text-white/30">الإجمالي</th>
+                                                                    <th className="text-right py-2 px-3 text-sm font-black text-slate-400 dark:text-white/30">رقم الفاتورة</th>
+                                                                    <th className="text-right py-2 px-3 text-sm font-black text-slate-400 dark:text-white/30">التاريخ</th>
+                                                                    <th className="text-right py-2 px-3 text-sm font-black text-slate-400 dark:text-white/30">الإجمالي</th>
                                                                     <th className="py-2 px-3"></th>
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                                 {customer.invoices.map(inv => (
                                                                     <>
-                                                                        <tr key={inv.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
+                                                                        <tr key={inv.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
                                                                             <td className="py-2 px-3 font-black text-primary">INV#{inv.id}</td>
                                                                             <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{inv.date.substring(0, 10)}</td>
                                                                             <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(inv.total)}</td>

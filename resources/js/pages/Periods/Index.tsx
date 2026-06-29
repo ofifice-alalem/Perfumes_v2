@@ -118,20 +118,20 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                         <>
                             {/* Desktop Table */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['#', 'الاسم', 'الحالة', 'تاريخ الفتح', 'تاريخ الإغلاق', 'Snapshot', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {periods.data.map(period => (
-                                            <tr key={period.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3 font-bold text-slate-400 dark:text-white/40">#{period.id}</td>
-                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{period.name}</td>
-                                                <td className="px-4 py-3">
+                                            <tr key={period.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{period.id}</td>
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{period.name}</td>
+                                                <td className="px-4 py-4">
                                                     <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] border ${
                                                         period.status === 'open'
                                                             ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
@@ -140,16 +140,16 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                                                         {period.status === 'open' ? 'مفتوحة' : 'مغلقة'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.started_at)}</span></td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.closed_at)}</span></td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.started_at)}</span></td>
+                                                <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(period.closed_at)}</span></td>
+                                                <td className="px-4 py-4">
                                                     {period.snapshot ? (
                                                         <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">محفوظ</span>
                                                     ) : (
                                                         <span className="text-xs font-bold text-slate-400 dark:text-white/30">—</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-3">
+                                                <td className="px-4 py-4">
                                                     <div className="flex items-center gap-2">
                                                         {period.snapshot && (
                                                             <Link href={`/periods/${period.id}/snapshot`}

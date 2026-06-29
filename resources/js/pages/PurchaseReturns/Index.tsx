@@ -342,7 +342,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                             ) : (
                                 <>
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-base">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'المورد', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', ''].map(h => (

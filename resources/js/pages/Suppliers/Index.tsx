@@ -175,7 +175,7 @@ export default function SuppliersIndex({ suppliers, flash }: Props) {
                         <>
                             {/* جدول — PC */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-base">
+                                <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['الاسم', 'الهاتف', 'إجمالي المشتريات', 'المدفوع', 'المرتجع', 'التسويات', 'المديونية', 'الحالة', 'الإجراءات'].map(h => (

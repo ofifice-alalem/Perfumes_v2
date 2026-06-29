@@ -239,22 +239,22 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                         <>
                                             {/* Desktop */}
                                             <div className="hidden lg:block overflow-x-auto">
-                                                <table className="w-full text-sm">
+                                                <table className="w-full text-[16px]">
                                                     <thead>
                                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                             {['المنتج', 'التصنيف', 'المخزون النظامي', 'المخزون الفعلي', 'ملاحظات'].map(h => (
-                                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                             ))}
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                         {data.map(p => (
-                                                            <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                                <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
-                                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                                <td className="px-4 py-3"></td>
-                                                                <td className="px-4 py-3"></td>
+                                                            <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
+                                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                                <td className="px-4 py-4"></td>
+                                                                <td className="px-4 py-4"></td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -303,11 +303,11 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                     ) : (
                                         <>
                                             <div className="hidden lg:block overflow-x-auto">
-                                                <table className="w-full text-sm">
+                                                <table className="w-full text-[16px]">
                                                     <thead>
                                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                             {['المنتج', 'التصنيف', 'المخزون النظامي', 'المخزون الفعلي', 'الفارق', 'سبب التلف'].map(h => (
-                                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                             ))}
                                                         </tr>
                                                     </thead>
@@ -318,11 +318,11 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                                             const isWaste = diff < 0;
                                                             const isGain = diff > 0;
                                                             return (
-                                                                <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                                    <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                                    <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
-                                                                    <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                                    <td className="px-4 py-3">
+                                                                <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
+                                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
+                                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                                    <td className="px-4 py-4">
                                                                         <div className="flex items-center gap-2">
                                                                             <input type="number" 
                                                                                 value={items[p.id]?.actual_stock ?? ''}
@@ -335,12 +335,12 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                                                                             </button>
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                                         {diff === 0 ? <span className="font-bold text-slate-400 dark:text-white/40">مطابق</span> : 
                                                                          isGain ? <span className="font-bold text-emerald-500 flex items-center gap-1">+{fmt(diff)} {p.unit}</span> :
                                                                          <span className="font-bold text-red-500 flex items-center gap-1">{fmt(diff)} {p.unit}</span>}
                                                                     </td>
-                                                                    <td className="px-4 py-3">
+                                                                    <td className="px-4 py-4">
                                                                         {isWaste && (
                                                                             <ModernSelect 
                                                                                 label=""

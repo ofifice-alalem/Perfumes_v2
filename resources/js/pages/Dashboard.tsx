@@ -140,16 +140,16 @@ export default function Dashboard() {
             <table className="w-full">
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">الإجمالي</td>
-                  <td className="py-2.5 text-sm font-black text-slate-800 dark:text-white text-left tabular-nums">{fmt(month.sales)} <span className="text-xs font-medium text-slate-400">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">الإجمالي</td>
+                  <td className="py-2.5 text-[16px] font-black text-slate-800 dark:text-white text-left tabular-nums">{fmt(month.sales)} <span className="text-xs font-medium text-slate-400">د.ل</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">المستلم</td>
-                  <td className="py-2.5 text-sm font-black text-emerald-600 dark:text-emerald-400 text-left tabular-nums">{fmt(month.received)} <span className="text-xs font-medium">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">المستلم</td>
+                  <td className="py-2.5 text-[16px] font-black text-emerald-600 dark:text-emerald-400 text-left tabular-nums">{fmt(month.received)} <span className="text-xs font-medium">د.ل</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">الباقي</td>
-                  <td className="py-2.5 text-sm font-black text-amber-600 dark:text-amber-400 text-left tabular-nums">{fmt(month.due)} <span className="text-xs font-medium">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">الباقي</td>
+                  <td className="py-2.5 text-[16px] font-black text-amber-600 dark:text-amber-400 text-left tabular-nums">{fmt(month.due)} <span className="text-xs font-medium">د.ل</span></td>
                 </tr>
               </tbody>
             </table>
@@ -164,16 +164,16 @@ export default function Dashboard() {
             <table className="w-full">
               <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">الإجمالي</td>
-                  <td className="py-2.5 text-sm font-black text-slate-800 dark:text-white text-left tabular-nums">{fmt(month.purchases_total)} <span className="text-xs font-medium text-slate-400">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">الإجمالي</td>
+                  <td className="py-2.5 text-[16px] font-black text-slate-800 dark:text-white text-left tabular-nums">{fmt(month.purchases_total)} <span className="text-xs font-medium text-slate-400">د.ل</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">المدفوع</td>
-                  <td className="py-2.5 text-sm font-black text-emerald-600 dark:text-emerald-400 text-left tabular-nums">{fmt(month.purchases_paid)} <span className="text-xs font-medium">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">المدفوع</td>
+                  <td className="py-2.5 text-[16px] font-black text-emerald-600 dark:text-emerald-400 text-left tabular-nums">{fmt(month.purchases_paid)} <span className="text-xs font-medium">د.ل</span></td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 text-sm text-slate-500 dark:text-white/50">دين الموردين</td>
-                  <td className="py-2.5 text-sm font-black text-red-500 dark:text-red-400 text-left tabular-nums">{fmt(month.purchases_due)} <span className="text-xs font-medium">د.ل</span></td>
+                  <td className="py-2.5 text-[16px] text-slate-500 dark:text-white/50">دين الموردين</td>
+                  <td className="py-2.5 text-[16px] font-black text-red-500 dark:text-red-400 text-left tabular-nums">{fmt(month.purchases_due)} <span className="text-xs font-medium">د.ل</span></td>
                 </tr>
               </tbody>
             </table>
@@ -319,15 +319,15 @@ export default function Dashboard() {
             </div>
 
             <div className="overflow-x-auto -mx-1">
-              <table className="w-full min-w-[560px] text-sm" dir="rtl">
+              <table className="w-full min-w-[560px] text-[16px]" dir="rtl">
                 <thead>
                   <tr className="border-b border-black/5 dark:border-white/5">
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-right pr-2">اليوم</th>
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">إجمالي البيع</th>
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">المستلم</th>
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">الدين</th>
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">المرتجع</th>
-                    <th className="pb-2.5 text-xs font-bold text-slate-400 dark:text-white/30 text-center">الفواتير</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-right pr-2">اليوم</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-center">إجمالي البيع</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-center">المستلم</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-center">الدين</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-center">المرتجع</th>
+                    <th className="pb-2.5 text-sm font-bold text-slate-400 dark:text-white/30 text-center">الفواتير</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -385,19 +385,19 @@ export default function Dashboard() {
                 <tfoot>
                   <tr className="border-t-2 border-black/10 dark:border-white/10">
                     <td className="pt-3 pb-1 pr-2 text-xs font-black text-slate-500 dark:text-white/50">الإجمالي</td>
-                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-slate-800 dark:text-white">
+                    <td className="pt-3 pb-1 text-center tabular-nums text-[16px] font-black text-slate-800 dark:text-white">
                       {fmt(daily_stats.reduce((s, r) => s + r.sales, 0))}
                     </td>
-                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    <td className="pt-3 pb-1 text-center tabular-nums text-[16px] font-black text-emerald-600 dark:text-emerald-400">
                       {fmt(daily_stats.reduce((s, r) => s + r.received, 0))}
                     </td>
-                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-amber-600 dark:text-amber-400">
+                    <td className="pt-3 pb-1 text-center tabular-nums text-[16px] font-black text-amber-600 dark:text-amber-400">
                       {fmt(daily_stats.reduce((s, r) => s + r.due, 0))}
                     </td>
-                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-red-500 dark:text-red-400">
+                    <td className="pt-3 pb-1 text-center tabular-nums text-[16px] font-black text-red-500 dark:text-red-400">
                       {fmt(daily_stats.reduce((s, r) => s + r.returns, 0))}
                     </td>
-                    <td className="pt-3 pb-1 text-center tabular-nums text-sm font-black text-slate-800 dark:text-white">
+                    <td className="pt-3 pb-1 text-center tabular-nums text-[16px] font-black text-slate-800 dark:text-white">
                       {daily_stats.reduce((s, r) => s + r.count, 0)}
                     </td>
                   </tr>

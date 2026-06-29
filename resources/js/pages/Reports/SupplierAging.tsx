@@ -198,26 +198,26 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                 <>
                                     {/* Desktop */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['المورد', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم', 'الحركات', ''].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {data.map(c => (
                                                     <>
-                                                        <tr key={c.supplier_id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                            <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{c.supplier_name}</td>
-                                                            <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(c.total_debt)}</td>
-                                                            <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
+                                                        <tr key={c.supplier_id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                            <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{c.supplier_name}</td>
+                                                            <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(c.total_debt)}</td>
+                                                            <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
                                                             <td className={`px-4 py-3 whitespace-nowrap ${c.days_30_60 > 0 ? 'text-amber-500 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_30_60)}</td>
                                                             <td className={`px-4 py-3 whitespace-nowrap ${c.days_60_90 > 0 ? 'text-amber-600 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_60_90)}</td>
                                                             <td className={`px-4 py-3 whitespace-nowrap ${c.over_90 > 0 ? 'text-red-500 font-black' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.over_90)}</td>
-                                                            <td className="px-4 py-3 text-center font-bold text-slate-500 dark:text-white/50">{c.movements.length}</td>
-                                                            <td className="px-4 py-3">
+                                                            <td className="px-4 py-4 text-center font-bold text-slate-500 dark:text-white/50">{c.movements.length}</td>
+                                                            <td className="px-4 py-4">
                                                                 <button onClick={() => toggleExpand(c.supplier_id)}
                                                                     className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
                                                                     <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />
@@ -227,7 +227,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                         </tr>
                                                         {expanded.has(c.supplier_id) && (
                                                             <tr key={`${c.supplier_id}-detail`}>
-                                                                <td colSpan={8} className="px-6 py-3 bg-black/2 dark:bg-white/2">
+                                                                <td colSpan={8} className="px-6 py-4 bg-black/2 dark:bg-white/2">
                                                                     <table className="w-full text-xs">
                                                                         <thead>
                                                                             <tr className="border-b border-black/5 dark:border-white/5">
@@ -241,7 +241,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                                         </thead>
                                                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                                             {c.movements.map((m, i) => (
-                                                                                <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                                                <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
                                                                                     <td className="py-2 px-3 font-black text-primary">{m.ref}</td>
                                                                                     <td className={`py-2 px-3 font-bold ${typeConfig[m.type].class}`}>{typeConfig[m.type].label}</td>
                                                                                     <td className="py-2 px-3 text-slate-500 dark:text-white/50">{m.date ? m.date.slice(0, 10) : '--'}</td>

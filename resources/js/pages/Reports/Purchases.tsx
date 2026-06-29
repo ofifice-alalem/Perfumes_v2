@@ -202,22 +202,22 @@ export default function Purchases({ users, suppliers, categories, filters, data 
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
+                                    <table className="w-full text-[16px]">
                                         <thead>
                                             <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                 {['الشهر', 'عدد الفواتير', 'إجمالي المشتريات', ''].map(h => (
-                                                    <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                             {data.monthly.map(m => (
                                                 <>
-                                                    <tr key={m.month} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{m.month}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-600 dark:text-white/60">{m.count}</td>
-                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(m.total)}</td>
-                                                        <td className="px-4 py-3">
+                                                    <tr key={m.month} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{m.month}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-600 dark:text-white/60">{m.count}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(m.total)}</td>
+                                                        <td className="px-4 py-4">
                                                             <button onClick={() => toggleExpand(m.month)}
                                                                 className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
                                                                 <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(m.month) ? 'rotate-90' : ''}`} />
@@ -238,7 +238,7 @@ export default function Purchases({ users, suppliers, categories, filters, data 
                                                                     </thead>
                                                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                                         {m.days.map((d, i) => (
-                                                                            <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3">
+                                                                            <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
                                                                                 <td className="py-2 px-3 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
                                                                                 <td className="py-2 px-3 font-bold text-slate-500 dark:text-white/50">{d.count}</td>
                                                                                 <td className="py-2 px-3 font-black text-slate-800 dark:text-white">{fmt(d.total)}</td>
@@ -254,9 +254,9 @@ export default function Purchases({ users, suppliers, categories, filters, data 
                                         </tbody>
                                         <tfoot>
                                             <tr className="border-t-2 border-black/10 dark:border-white/10">
-                                                <td className="px-4 py-3 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
-                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{data.purchasesCount}</td>
-                                                <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{fmt(data.totalPurchases)}</td>
+                                                <td className="px-4 py-4 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{data.purchasesCount}</td>
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(data.totalPurchases)}</td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>

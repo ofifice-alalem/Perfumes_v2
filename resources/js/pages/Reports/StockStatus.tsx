@@ -211,33 +211,33 @@ export default function StockStatus({ categories, filters, data }: Props) {
                                 <>
                                     {/* Desktop */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع', ...(showSold ? ['إجمالي المبيع'] : []), ...(showWasted ? ['إجمالي التالف'] : [])].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {data.map(p => (
-                                                    <tr key={p.id} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
-                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap">{fmt(p.min_stock)} {p.unit}</td>
-                                                        <td className="px-4 py-3">
+                                                    <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 text-xs">{p.category}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap">{fmt(p.min_stock)} {p.unit}</td>
+                                                        <td className="px-4 py-4">
                                                             <div className={`flex items-center gap-1 font-black text-xs ${statusConfig[p.status].class}`}>
                                                                 {statusConfig[p.status].icon}
                                                                 {statusConfig[p.status].label}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.last_purchase_cost)}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.last_sale_price)}</td>
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
-                                                        {showSold   && <td className="px-4 py-3 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>}
-                                                        {showWasted && <td className="px-4 py-3 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>}
+                                                        <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.last_purchase_cost)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.last_sale_price)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                        {showSold   && <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>}
+                                                        {showWasted && <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>}
                                                     </tr>
                                                 ))}
                                             </tbody>

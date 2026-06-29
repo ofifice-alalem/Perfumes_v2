@@ -263,24 +263,24 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                 <>
                                     {/* Desktop Table */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-sm">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['التاريخ', 'النوع', 'الكمية', 'السعر', 'المرجع', 'الرصيد'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {data.movements.map((m, i) => (
-                                                    <tr key={i} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                        <td className="px-4 py-3 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(m.date)}</span></td>
-                                                        <td className="px-4 py-3">
+                                                    <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(m.date)}</span></td>
+                                                        <td className="px-4 py-4">
                                                             <span className={`font-black text-xs ${typeConfig[m.type]?.color}`}>
                                                                 {typeConfig[m.type]?.label}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3">
+                                                        <td className="px-4 py-4">
                                                             <div className={`flex items-center gap-1 font-black whitespace-nowrap ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                                                                 {m.quantity > 0
                                                                     ? <ArrowUp className="w-3.5 h-3.5" />
@@ -288,11 +288,11 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                                                 {fmt(Math.abs(m.quantity))} {product!.category.unit}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-3 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">
+                                                        <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">
                                                             {m.unit_price !== null ? fmt(m.unit_price) : '—'}
                                                         </td>
-                                                        <td className="px-4 py-3 font-bold text-primary text-xs">{m.reference}</td>
-                                                        <td className="px-4 py-3 font-black text-slate-800 dark:text-white whitespace-nowrap">
+                                                        <td className="px-4 py-4 font-bold text-primary text-xs">{m.reference}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">
                                                             {fmt(m.balance)} {product!.category.unit}
                                                         </td>
                                                     </tr>

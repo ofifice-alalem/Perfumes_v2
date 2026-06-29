@@ -375,18 +375,18 @@ export default function BackupsIndex({ backups, flash }: Props) {
                         <>
                             {/* Desktop Table */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-sm">
+                                <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                             {['اسم الملف', 'التاريخ', 'الحجم', 'إجراءات', 'ملاحظة'].map(h => (
-                                                <th key={h} className="text-right px-4 py-3 text-xs font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {backups.map(backup => (
-                                            <tr key={backup.filename} className="hover:bg-black/3 dark:hover:bg-white/3 transition-colors">
-                                                <td className="px-4 py-3 min-w-[260px]">
+                                            <tr key={backup.filename} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                <td className="px-4 py-4 min-w-[260px]">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-8 h-8 rounded-[10px] bg-primary/10 flex items-center justify-center shrink-0">
                                                             <Database className="w-4 h-4 text-primary" />
@@ -394,9 +394,9 @@ export default function BackupsIndex({ backups, flash }: Props) {
                                                         <span className="font-bold text-slate-700 dark:text-white/80 text-xs">{backup.filename}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(backup.date)}</span></td>
-                                                <td className="px-4 py-3 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{backup.size}</td>
-                                                <td className="px-4 py-3 whitespace-nowrap">
+                                                <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(backup.date)}</span></td>
+                                                <td className="px-4 py-4 font-black text-slate-700 dark:text-white/80 whitespace-nowrap">{backup.size}</td>
+                                                <td className="px-4 py-4 whitespace-nowrap">
                                                     <div className="flex items-center gap-1.5">
                                                         <div className="relative group/tip">
                                                             <a href={`/backups/download/${backup.filename}`}
@@ -427,7 +427,7 @@ export default function BackupsIndex({ backups, flash }: Props) {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-slate-400 dark:text-white/40 font-bold text-xs w-[35%] min-w-[200px]">
+                                                <td className="px-4 py-4 text-slate-400 dark:text-white/40 font-bold text-xs w-[35%] min-w-[200px]">
                                                     {backup.note ?? '—'}
                                                 </td>
                                             </tr>

@@ -329,7 +329,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                 <>
                                     {/* Desktop Table */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-base">
+                                        <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
                                                     {['#', 'العميل', 'البائع', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
@@ -355,7 +355,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                                 </span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-sm"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(inv.created_at)}</span></td>
+                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-[16px]"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(inv.created_at)}</span></td>
                                                         <td className="px-4 py-4">
                                                             <div className="flex items-center gap-2">
                                                                 <Link href={`/invoices/${inv.id}`} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
