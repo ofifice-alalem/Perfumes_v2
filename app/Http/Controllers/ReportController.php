@@ -74,12 +74,28 @@ class ReportController extends Controller
         $showSold     = $request->boolean('show_sold');
         $showWasted   = $request->boolean('show_wasted');
 
+        // Profit Analysis tab filters
+        $profitProductIds = $request->input('profit_product_ids') ? explode(',', $request->input('profit_product_ids')) : [];
+        $profitDateFrom   = $request->input('profit_date_from');
+        $profitDateTo     = $request->input('profit_date_to');
+
         $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
+
+        $profitData = (count($profitProductIds) > 0 || $profitDateFrom || $profitDateTo)
+            ? $this->reports->profitAnalysis(array_map('intval', $profitProductIds), $profitDateFrom, $profitDateTo)
+            : null;
 
         return Inertia::render('Reports/StockStatus', [
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'products'   => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
             'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted'),
+            'profitFilters' => [
+                'productIds' => $profitProductIds,
+                'dateFrom'   => $profitDateFrom,
+                'dateTo'     => $profitDateTo,
+            ],
             'data'       => $data,
+            'profitData' => $profitData,
         ]);
     }
 

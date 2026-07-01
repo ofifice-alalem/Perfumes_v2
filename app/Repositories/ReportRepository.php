@@ -2805,4 +2805,117 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $pdf->stream('returns-details-' . now()->format('Y-m-d') . '.pdf');
     }
+
+    // ─── Profit Analysis ────────────────────────────────────────────────────────
+
+    public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo): array
+    {
+        $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $query = DB::table('products')
+            ->join('categories', 'categories.id', '=', 'products.category_id')
+            ->when(count($productIds) > 0, fn($q) => $q->whereIn('products.id', $productIds))
+            ->select(
+                'products.id',
+                'products.name',
+                'products.stock',
+                'categories.name as category_name',
+                'categories.unit',
+            )
+            ->orderBy('products.name')
+            ->get();
+
+        return $query->map(function ($p) use ($dateFromFull, $dateToFull) {
+            $currentStock = (float)$p->stock;
+
+            // ── حساب رصيد أول الفترة ──────────────────────────────────────
+            if ($dateFromFull) {
+                $purchasesAfter = (float) DB::table('purchase_items')
+                    ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                    ->whereNull('purchases.deleted_at')
+                    ->where('purchase_items.product_id', $p->id)
+                    ->where('purchases.created_at', '>=', $dateFromFull)
+                    ->sum('purchase_items.quantity');
+
+                $salesAfter = (float) DB::table('invoice_items')
+                    ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                    ->whereNull('invoices.deleted_at')
+                    ->where('invoice_items.product_id', $p->id)
+                    ->where('invoices.created_at', '>=', $dateFromFull)
+                    ->sum('invoice_items.quantity');
+
+                $returnInAfter = (float) DB::table('invoice_return_items')
+                    ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+                    ->whereNull('invoice_returns.deleted_at')
+                    ->where('invoice_return_items.product_id', $p->id)
+                    ->where('invoice_returns.created_at', '>=', $dateFromFull)
+                    ->sum('invoice_return_items.quantity');
+
+                $returnOutAfter = (float) DB::table('purchase_return_items')
+                    ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                    ->whereNull('purchase_returns.deleted_at')
+                    ->where('purchase_return_items.product_id', $p->id)
+                    ->where('purchase_returns.created_at', '>=', $dateFromFull)
+                    ->sum('purchase_return_items.quantity');
+
+                $wasteAfter = (float) DB::table('waste_items')
+                    ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
+                    ->where('waste_items.product_id', $p->id)
+                    ->where('waste_logs.created_at', '>=', $dateFromFull)
+                    ->sum('waste_items.quantity');
+
+                $openingStock = $currentStock
+                    - $purchasesAfter
+                    + $salesAfter
+                    - $returnInAfter
+                    + $returnOutAfter
+                    + $wasteAfter;
+            } else {
+                $openingStock = 0;
+            }
+
+            // ── المشتريات في الفترة ──────────────────────────────────────
+            $purchaseQuery = DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull));
+
+            $totalPurchaseQty = (float) (clone $purchaseQuery)->sum('purchase_items.quantity');
+            $avgPurchaseCost  = (clone $purchaseQuery)->avg('purchase_items.unit_cost');
+
+            // ── المبيعات في الفترة ──────────────────────────────────────
+            $saleQuery = DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull));
+
+            $totalSoldQty  = (float) (clone $saleQuery)->sum('invoice_items.quantity');
+            $avgSalePrice  = (clone $saleQuery)->avg('invoice_items.unit_price');
+
+            // ── حساب الربح ──────────────────────────────────────────────
+            // الربح = (متوسط سعر البيع × الكمية المباعة) - (متوسط سعر الشراء × الكمية المباعة)
+            $profit = null;
+            if ($totalSoldQty > 0 && $avgPurchaseCost !== null && $avgSalePrice !== null) {
+                $profit = round(($avgSalePrice - $avgPurchaseCost) * $totalSoldQty, 2);
+            }
+
+            return [
+                'id'                  => $p->id,
+                'name'                => $p->name,
+                'category'            => $p->category_name,
+                'unit'                => $p->unit,
+                'opening_stock'       => round((float)$openingStock, 2),
+                'avg_purchase_cost'   => $avgPurchaseCost ? round((float)$avgPurchaseCost, 2) : null,
+                'total_purchase_qty'  => round($totalPurchaseQty, 2),
+                'avg_sale_price'      => $avgSalePrice ? round((float)$avgSalePrice, 2) : null,
+                'total_sold_qty'      => round($totalSoldQty, 2),
+                'profit'              => $profit,
+            ];
+        })->values()->toArray();
+    }
 }
