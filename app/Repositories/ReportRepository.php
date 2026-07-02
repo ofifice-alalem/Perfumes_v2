@@ -427,8 +427,37 @@ class ReportRepository implements ReportRepositoryInterface
 
             $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
 
-            $netPurchaseQty  = $totalPurchasedQty - $totalReturnOutQty;
-            $avgPurchaseCost = $netPurchaseQty > 0 ? (($totalPurchaseValue - $totalReturnOutValue) / $netPurchaseQty) : null;
+            // Historical Calculations for Average Cost (ignores dateFrom)
+            $histPurchasedQty = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->sum('purchase_items.quantity');
+
+            $histPurchaseValue = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->sum('purchase_items.line_total');
+
+            $histReturnOutQty = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $p->id)
+                ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->sum('purchase_return_items.quantity');
+
+            $histReturnOutValue = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $p->id)
+                ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->sum('purchase_return_items.line_total');
+
+            $netHistPurchaseQty = $histPurchasedQty - $histReturnOutQty;
+            $avgPurchaseCost = $netHistPurchaseQty > 0 ? (($histPurchaseValue - $histReturnOutValue) / $netHistPurchaseQty) : null;
 
             $lastPurchaseCost = DB::table('purchase_items')
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
