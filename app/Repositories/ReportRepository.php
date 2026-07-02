@@ -527,12 +527,67 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
                 ->sum('waste_items.quantity') : null;
 
+            // حساب الربح يومياً بنفس منطق dailyProfitSummary
             $profit = null;
-            if ($avgSalePrice !== null && $netSaleQty > 0) {
-                $cost = $avgPurchaseCost ?? 0;
-                $netSales = $totalSaleValue - $totalReturnInValue;
-                $netCost  = $netSaleQty * $cost;
-                $profit   = round($netSales - $netCost, 2);
+            if ($netSaleQty > 0) {
+                // جلب كل مشتريات المنتج حتى نهاية الفترة
+                $allPurchases = DB::table('purchase_items')
+                    ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                    ->whereNull('purchases.deleted_at')
+                    ->where('purchase_items.product_id', $p->id)
+                    ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                    ->select('purchase_items.quantity', 'purchase_items.line_total', DB::raw('DATE(purchases.created_at) as date'))
+                    ->get();
+
+                $allPurchaseReturns = DB::table('purchase_return_items')
+                    ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                    ->whereNull('purchase_returns.deleted_at')
+                    ->where('purchase_return_items.product_id', $p->id)
+                    ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                    ->select('purchase_return_items.quantity', 'purchase_return_items.line_total', DB::raw('DATE(purchase_returns.created_at) as date'))
+                    ->get();
+
+                $getAvgCostAtDate = function ($targetDate) use ($allPurchases, $allPurchaseReturns) {
+                    $qty = 0; $val = 0;
+                    foreach ($allPurchases as $pur) {
+                        if ($pur->date <= $targetDate) { $qty += (float)$pur->quantity; $val += (float)$pur->line_total; }
+                    }
+                    foreach ($allPurchaseReturns as $pr) {
+                        if ($pr->date <= $targetDate) { $qty -= (float)$pr->quantity; $val -= (float)$pr->line_total; }
+                    }
+                    return $qty > 0 ? ($val / $qty) : 0;
+                };
+
+                $dailySales = DB::table('invoice_items')
+                    ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                    ->whereNull('invoices.deleted_at')
+                    ->where('invoice_items.product_id', $p->id)
+                    ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                    ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                    ->select(DB::raw('DATE(invoices.created_at) as date'), DB::raw('SUM(invoice_items.quantity) as qty'), DB::raw('SUM(invoice_items.line_total) as total'))
+                    ->groupBy(DB::raw('DATE(invoices.created_at)'))
+                    ->get();
+
+                $dailyReturns = DB::table('invoice_return_items')
+                    ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+                    ->whereNull('invoice_returns.deleted_at')
+                    ->where('invoice_return_items.product_id', $p->id)
+                    ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
+                    ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                    ->select(DB::raw('DATE(invoice_returns.created_at) as date'), DB::raw('SUM(invoice_return_items.quantity) as qty'), DB::raw('SUM(invoice_return_items.line_total) as total'))
+                    ->groupBy(DB::raw('DATE(invoice_returns.created_at)'))
+                    ->get();
+
+                $netProfit = 0;
+                foreach ($dailySales as $sale) {
+                    $cost = $getAvgCostAtDate($sale->date);
+                    $netProfit += (float)$sale->total - ((float)$sale->qty * $cost);
+                }
+                foreach ($dailyReturns as $ret) {
+                    $cost = $getAvgCostAtDate($ret->date);
+                    $netProfit -= (float)$ret->total - ((float)$ret->qty * $cost);
+                }
+                $profit = round($netProfit, 2);
             }
 
             return [
