@@ -45,6 +45,32 @@ class ReportController extends Controller
         ]);
     }
 
+    public function profitAnalysisExcel(Request $request)
+    {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
+        $this->reports->exportProfitAnalysisExcel(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $productIds
+        );
+    }
+
+    public function profitAnalysisPdf(Request $request): \Illuminate\Http\Response
+    {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
+        return $this->reports->exportProfitAnalysisPdf(
+            $request->input('date_from'),
+            $request->input('date_to'),
+            $productIds
+        );
+    }
+
     public function productMovement(Request $request): Response
     {
         $productId = $request->integer('product_id');
@@ -137,6 +163,10 @@ class ReportController extends Controller
 
     public function stockStatusExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportStockStatusExcel(
             $request->integer('category_id') ?: null,
             $request->input('selling_type'),
@@ -146,12 +176,17 @@ class ReportController extends Controller
             $request->boolean('show_purchased'),
             $request->input('date_from'),
             $request->input('date_to'),
-            $request->boolean('compact_view')
+            $request->boolean('compact_view'),
+            $productIds
         );
     }
 
     public function stockStatusPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportStockStatusPdf(
             $request->integer('category_id') ?: null,
             $request->input('selling_type'),
@@ -161,7 +196,8 @@ class ReportController extends Controller
             $request->boolean('show_purchased'),
             $request->input('date_from'),
             $request->input('date_to'),
-            $request->boolean('compact_view')
+            $request->boolean('compact_view'),
+            $productIds
         );
     }
 

@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { TrendingUp, ChevronRight, Search, FileText } from 'lucide-react';
+import { TrendingUp, ChevronRight, Search, FileText, FileSpreadsheet, Download } from 'lucide-react';
 
 interface Category { id: number; name: string; }
 interface Product { id: number; name: string; }
@@ -124,6 +124,27 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         }, { preserveScroll: true });
     }
 
+    function buildDailyExportUrl(format: 'excel' | 'pdf') {
+        const p = new URLSearchParams();
+        if (dateFrom) p.set('date_from', dateFrom);
+        if (dateTo) p.set('date_to', dateTo);
+        if (productIds.length) p.set('product_ids', productIds.join(','));
+        return `/reports/profit-analysis/${format}?${p.toString()}`;
+    }
+
+    function buildStockExportUrl(format: 'excel' | 'pdf') {
+        const p = new URLSearchParams();
+        if (stockCategoryId) p.set('category_id', stockCategoryId);
+        if (stockDateFrom) p.set('date_from', stockDateFrom);
+        if (stockDateTo) p.set('date_to', stockDateTo);
+        if (stockProductIds.length) p.set('product_ids', stockProductIds.join(','));
+        p.set('show_purchased', '1');
+        p.set('show_sold', '1');
+        p.set('show_wasted', '1');
+        if (compactView) p.set('compact_view', '1');
+        return `/reports/stock-status/${format}?${p.toString()}`;
+    }
+
     return (
         <AppShell pageTitle="تحليل الأرباح الشامل">
             <div className="flex flex-col gap-6 pb-32 lg:pb-6">
@@ -159,7 +180,26 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                         </div>
 
                         {/* Daily Table */}
-                        <SpatialCard title={`التفصيل الشهري للأرباح (${profitSummary.monthly.length} شهر)`} icon={<TrendingUp className="w-4 h-4" />}>
+                        <SpatialCard 
+                            title={`التفصيل الشهري للأرباح (${profitSummary.monthly.length} شهر)`} 
+                            icon={<TrendingUp className="w-4 h-4" />}
+                            action={
+                                <div className="flex items-center gap-2">
+                                    <a href={buildDailyExportUrl('excel')} target="_blank"
+                                        className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
+                                        title="تصدير إكسيل"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                    </a>
+                                    <a href={buildDailyExportUrl('pdf')} target="_blank"
+                                        className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
+                                        title="تصدير PDF"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </a>
+                                </div>
+                            }
+                        >
                             {profitSummary.monthly.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
                                     <TrendingUp className="w-12 h-12 opacity-30" />
@@ -247,7 +287,26 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                             </p>
                         </div>
 
-                        <SpatialCard title={`تقرير الأرباح (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
+                        <SpatialCard 
+                            title={`تقرير الأرباح (${displayData.length})`} 
+                            icon={<FileText className="w-4 h-4" />}
+                            action={
+                                <div className="flex items-center gap-2">
+                                    <a href={buildStockExportUrl('excel')} target="_blank"
+                                        className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
+                                        title="تصدير إكسيل"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                    </a>
+                                    <a href={buildStockExportUrl('pdf')} target="_blank"
+                                        className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
+                                        title="تصدير PDF"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                    </a>
+                                </div>
+                            }
+                        >
                             <div className="hidden lg:block overflow-x-auto">
                                 <table className="w-full text-[16px]">
                                     <thead>

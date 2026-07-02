@@ -3315,4 +3315,102 @@ class ReportRepository implements ReportRepositoryInterface
             'daily' => $daily
         ];
     }
+
+    public function exportProfitAnalysisExcel(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null): void
+    {
+        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds);
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setRightToLeft(true);
+        $sheet->setTitle('تحليل الأرباح الشامل');
+
+        $row = 1;
+        $headers = ['#', 'التاريخ', 'الشهر', 'المبيعات', 'المرتجعات', 'صافي المبيعات', 'الربح'];
+        
+        $lastCol = chr(ord('A') + count($headers) - 1);
+        $sheet->fromArray($headers, null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        $i = 0;
+        foreach ($data['monthly'] as $m) {
+            foreach ($m['days'] as $d) {
+                $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                $rowData = [
+                    $i + 1,
+                    $d['date'],
+                    $m['month'],
+                    $fmtN($d['sales']),
+                    $fmtN($d['returns']),
+                    $fmtN($d['net_sales']),
+                    $fmtN($d['profit'])
+                ];
+
+                $sheet->fromArray($rowData, null, 'A' . $row);
+                $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                    'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
+                    'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
+                    'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+                ]);
+                $row++;
+                $i++;
+            }
+        }
+
+        // Add Total Row
+        $sheet->fromArray(['', '', 'الإجمالي', '', '', $fmtN(array_sum(array_column($data['monthly'], 'net_sales'))), $fmtN($data['total_profit'])], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'font'      => ['bold' => true, 'color' => ['rgb' => '1E293B']],
+            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+
+        foreach (range('A', $lastCol) as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="profit-analysis-' . now()->format('Y-m-d') . '.xlsx"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit;
+    }
+
+    public function exportProfitAnalysisPdf(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null): \Illuminate\Http\Response
+    {
+        $arabic = new \ArPHP\I18N\Arabic();
+        $g = fn(string $text) => $arabic->utf8Glyphs($text);
+
+        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds);
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
+        $labels = [
+            'title'        => $g('تحليل الأرباح الشامل'),
+            'generated_at' => now()->format('Y-m-d H:i'),
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.profit-analysis-pdf', [
+            'labels' => $labels,
+            'data'   => $data,
+            'g'      => $g,
+            'fmtN'   => $fmtN,
+        ])
+        ->setPaper('a4', 'portrait')
+        ->setOption('isHtml5ParserEnabled', true)
+        ->setOption('isFontSubsettingEnabled', true);
+
+        return $pdf->stream('profit-analysis-' . now()->format('Y-m-d') . '.pdf');
+    }
 }
