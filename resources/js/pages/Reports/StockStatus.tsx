@@ -158,6 +158,10 @@ export default function StockStatus({ categories, products, filters, profitFilte
     const warningCount  = data.filter(p => p.status === 'warning').length;
     const criticalCount = data.filter(p => p.status === 'critical').length;
     
+    const displayData = activeTab === 'stock_profit' 
+        ? data.filter(p => p.avg_sale_price !== null) 
+        : data;
+    
     const storeCapital = data.reduce((sum, p) => {
         const qty = Math.max(0, Number(p.stock) || 0);
         const cost = p.avg_purchase_cost ?? p.last_purchase_cost ?? 0;
@@ -566,17 +570,17 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                 </a>
                             </div>
                             
-                            {data.length > 0 && (
+                            {displayData.length > 0 && (
                                 <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 shrink-0 rounded-[16px]">
                                     <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
                                     <p className="text-xl font-black text-primary">
-                                        {fmt(data.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
+                                        {fmt(displayData.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
                                     </p>
                                 </div>
                             )}
                         </div>
-                        <SpatialCard title={`تقرير الأرباح (${data.length})`} icon={<FileText className="w-4 h-4" />}>
-                            {data.length === 0 ? (
+                        <SpatialCard title={`تقرير الأرباح (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
+                            {displayData.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
                                     <FileText className="w-12 h-12 opacity-30" />
                                     <p className="font-bold">لا توجد بيانات</p>
@@ -600,7 +604,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {data.map(p => (
+                                                {displayData.map(p => (
                                                     <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
                                                         <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
                                                         
@@ -638,7 +642,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
 
                                     {/* Mobile */}
                                     <div className="flex flex-col gap-3 lg:hidden">
-                                        {data.map(p => (
+                                        {displayData.map(p => (
                                             <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
                                                 <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                     <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
