@@ -56,7 +56,9 @@ interface Props {
     filters: {
         dateFrom: string;
         dateTo: string;
-        categoryId: number | null;
+        stockDateFrom: string;
+        stockDateTo: string;
+        stockCategoryId: number | null;
     }
 }
 
@@ -71,10 +73,16 @@ function fmt(n: number | null): string {
 export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, filters }: Props) {
     const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>('daily');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+    // فلاتر التاب الأول
     const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '');
-    const [dateTo, setDateTo] = useState(filters.dateTo ?? '');
-    const [categoryId, setCategoryId] = useState(filters.categoryId ? String(filters.categoryId) : '');
-    const [compactView, setCompactView] = useState(false);
+    const [dateTo,   setDateTo]   = useState(filters.dateTo ?? '');
+
+    // فلاتر التاب الثاني
+    const [stockDateFrom,   setStockDateFrom]   = useState(filters.stockDateFrom ?? '');
+    const [stockDateTo,     setStockDateTo]     = useState(filters.stockDateTo ?? '');
+    const [stockCategoryId, setStockCategoryId] = useState(filters.stockCategoryId ? String(filters.stockCategoryId) : '');
+    const [compactView,     setCompactView]     = useState(false);
 
     const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
 
@@ -86,11 +94,23 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         });
     }
 
-    function search() {
+    function searchDaily() {
         router.get('/reports/profit-analysis', {
-            date_from:   dateFrom   || undefined,
-            date_to:     dateTo     || undefined,
-            category_id: categoryId || undefined,
+            date_from:         dateFrom         || undefined,
+            date_to:           dateTo           || undefined,
+            stock_date_from:   stockDateFrom    || undefined,
+            stock_date_to:     stockDateTo      || undefined,
+            stock_category_id: stockCategoryId  || undefined,
+        }, { preserveScroll: true });
+    }
+
+    function searchStock() {
+        router.get('/reports/profit-analysis', {
+            date_from:         dateFrom         || undefined,
+            date_to:           dateTo           || undefined,
+            stock_date_from:   stockDateFrom    || undefined,
+            stock_date_to:     stockDateTo      || undefined,
+            stock_category_id: stockCategoryId  || undefined,
         }, { preserveScroll: true });
     }
 
@@ -294,19 +314,35 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
 
                     {/* Filter Sidebar */}
                     <div className="w-full lg:w-[320px] shrink-0">
-                        <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
-                            <div className="flex flex-col gap-4">
-                                <ModernSelect
-                                    label="التصنيف"
-                                    placeholder="الكل"
-                                    options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
-                                    defaultValue={categoryId ? (categories.find(c => String(c.id) === categoryId)?.name ?? '') : 'الكل'}
-                                    onSelect={val => setCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
-                                />
-                                <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
-                                <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
-
-                                {activeTab === 'stock_profit' && (
+                        {activeTab === 'daily' ? (
+                            <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-col gap-4">
+                                    <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+                                    <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
+                                    <button onClick={searchDaily}
+                                        className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                                        <Search className="w-4 h-4" /> عرض التقرير
+                                    </button>
+                                    {(dateFrom || dateTo) && (
+                                        <button onClick={() => { setDateFrom(''); setDateTo(''); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined }); }}
+                                            className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                            إعادة تعيين
+                                        </button>
+                                    )}
+                                </div>
+                            </SpatialCard>
+                        ) : (
+                            <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-col gap-4">
+                                    <ModernSelect
+                                        label="التصنيف"
+                                        placeholder="الكل"
+                                        options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
+                                        defaultValue={stockCategoryId ? (categories.find(c => String(c.id) === stockCategoryId)?.name ?? '') : 'الكل'}
+                                        onSelect={val => setStockCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
+                                    />
+                                    <DateFilterInput label="من تاريخ" value={stockDateFrom} onChange={setStockDateFrom} />
+                                    <DateFilterInput label="إلى تاريخ" value={stockDateTo} onChange={setStockDateTo} />
                                     <div className="flex items-center gap-3 px-1">
                                         <button onClick={() => setCompactView(p => !p)}
                                             className={`w-11 h-6 rounded-full transition-all relative ${compactView ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'}`}>
@@ -314,26 +350,19 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         </button>
                                         <span className="text-sm font-bold text-slate-600 dark:text-white/70">عرض مختصر للربح</span>
                                     </div>
-                                )}
-
-                                <button onClick={search}
-                                    className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-                                    <Search className="w-4 h-4" /> عرض التقرير
-                                </button>
-
-                                {(dateFrom !== filters.dateFrom || dateTo !== filters.dateTo || categoryId) && (
-                                    <button onClick={() => {
-                                        setDateFrom(filters.dateFrom);
-                                        setDateTo(filters.dateTo);
-                                        setCategoryId('');
-                                        router.get('/reports/profit-analysis');
-                                    }}
-                                        className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                                        إعادة تعيين
+                                    <button onClick={searchStock}
+                                        className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
+                                        <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                )}
-                            </div>
-                        </SpatialCard>
+                                    {(stockDateFrom || stockDateTo || stockCategoryId) && (
+                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined }); }}
+                                            className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
+                                            إعادة تعيين
+                                        </button>
+                                    )}
+                                </div>
+                            </SpatialCard>
+                        )}
                     </div>
                 </div>
 

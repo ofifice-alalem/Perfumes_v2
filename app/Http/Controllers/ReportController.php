@@ -19,18 +19,20 @@ class ReportController extends Controller
 
     public function profitAnalysisSummary(Request $request): Response
     {
-        $dateFrom   = $request->input('date_from', now()->startOfMonth()->toDateString());
-        $dateTo     = $request->input('date_to', now()->endOfMonth()->toDateString());
-        $categoryId = $request->integer('category_id') ?: null;
+        $dateFrom        = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo          = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $stockDateFrom   = $request->input('stock_date_from', now()->startOfMonth()->toDateString());
+        $stockDateTo     = $request->input('stock_date_to', now()->endOfMonth()->toDateString());
+        $stockCategoryId = $request->integer('stock_category_id') ?: null;
 
         $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
-        $stockProfitData = $this->reports->stockStatus($categoryId, null, false, true, true, true, $dateFrom, $dateTo);
+        $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo);
 
         return Inertia::render('Reports/ProfitAnalysis', [
             'profitSummary'   => $profitSummary,
             'stockProfitData' => $stockProfitData,
             'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'         => compact('dateFrom', 'dateTo', 'categoryId'),
+            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId'),
         ]);
     }
 
