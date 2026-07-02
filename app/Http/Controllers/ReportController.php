@@ -22,11 +22,13 @@ class ReportController extends Controller
         $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
         $dateTo   = $request->input('date_to', now()->endOfMonth()->toDateString());
 
-        $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+        $profitSummary  = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+        $stockProfitData = $this->reports->stockStatus(null, null, false, true, true, true, $dateFrom, $dateTo);
 
         return Inertia::render('Reports/ProfitAnalysis', [
-            'profitSummary' => $profitSummary,
-            'filters' => compact('dateFrom', 'dateTo')
+            'profitSummary'   => $profitSummary,
+            'stockProfitData' => $stockProfitData,
+            'filters'         => compact('dateFrom', 'dateTo')
         ]);
     }
 
