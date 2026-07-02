@@ -7,9 +7,9 @@ interface ReportRepositoryInterface
     public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): array;
     public function exportProductMovementExcel(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): void;
     public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): \Illuminate\Http\Response;
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): array;
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): void;
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted): \Illuminate\Http\Response;
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null): array;
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted, ?string $dateFrom = null, ?string $dateTo = null): void;
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted, ?string $dateFrom = null, ?string $dateTo = null): \Illuminate\Http\Response;
     public function exportInventoryCountExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void;
     public function exportInventoryCountPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response;
     public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array;
@@ -36,5 +36,5 @@ interface ReportRepositoryInterface
     public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): array;
     public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): void;
     public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): \Illuminate\Http\Response;
-    public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo): array;
+    public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo, ?int $categoryId = null): array;
 }

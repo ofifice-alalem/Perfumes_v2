@@ -367,7 +367,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Stock Status ──────────────────────────────────────────────────────────
 
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): array
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $query = DB::table('products')
             ->join('categories', 'categories.id', '=', 'products.category_id')
@@ -388,11 +388,16 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('products.name')
             ->get();
 
-        return $query->map(function ($p) use ($showSold, $showWasted) {
+        return $query->map(function ($p) use ($showSold, $showWasted, $showPurchased, $dateFrom, $dateTo) {
+            $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+            $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
             $lastPurchaseCost = DB::table('purchase_items')
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
                 ->whereNull('purchases.deleted_at')
                 ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
                 ->orderByDesc('purchases.created_at')
                 ->value('purchase_items.unit_cost');
 
@@ -400,12 +405,16 @@ class ReportRepository implements ReportRepositoryInterface
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
                 ->whereNull('purchases.deleted_at')
                 ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
                 ->avg('purchase_items.unit_cost');
 
             $lastSalePrice = DB::table('invoice_items')
                 ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
                 ->whereNull('invoices.deleted_at')
                 ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
                 ->orderByDesc('invoices.created_at')
                 ->value('invoice_items.unit_price');
 
@@ -413,6 +422,8 @@ class ReportRepository implements ReportRepositoryInterface
                 ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
                 ->whereNull('invoices.deleted_at')
                 ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
                 ->avg('invoice_items.unit_price');
 
             $status = match(true) {
@@ -425,12 +436,29 @@ class ReportRepository implements ReportRepositoryInterface
                 ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
                 ->whereNull('invoices.deleted_at')
                 ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
                 ->sum('invoice_items.quantity') : null;
 
             $totalWasted = $showWasted ? (float) DB::table('waste_items')
                 ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
                 ->where('waste_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('waste_logs.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
                 ->sum('waste_items.quantity') : null;
+
+            $totalPurchased = $showPurchased ? (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->sum('purchase_items.quantity') : null;
+
+            $profit = null;
+            if ($totalSold !== null && $avgSalePrice !== null && $avgPurchaseCost !== null) {
+                $profit = round(($totalSold * $avgSalePrice) - ($totalSold * $avgPurchaseCost), 2);
+            }
 
             return [
                 'id'                 => $p->id,
@@ -448,13 +476,15 @@ class ReportRepository implements ReportRepositoryInterface
                 'avg_sale_price'     => $avgSalePrice     ? round((float)$avgSalePrice, 2)    : null,
                 'total_sold'         => $totalSold,
                 'total_wasted'       => $totalWasted,
+                'total_purchased'    => $totalPurchased,
+                'profit'             => $profit,
             ];
         })->values()->toArray();
     }
 
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): void
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, ?string $dateFrom = null, ?string $dateTo = null): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, false, $dateFrom, $dateTo);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -521,12 +551,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false): \Illuminate\Http\Response
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, ?string $dateFrom = null, ?string $dateTo = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, false, $dateFrom, $dateTo);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
@@ -579,7 +609,7 @@ class ReportRepository implements ReportRepositoryInterface
     
     public function exportInventoryCountExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -643,7 +673,7 @@ class ReportRepository implements ReportRepositoryInterface
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
@@ -2808,7 +2838,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Profit Analysis ────────────────────────────────────────────────────────
 
-    public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo): array
+    public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo, ?int $categoryId = null): array
     {
         $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2816,6 +2846,7 @@ class ReportRepository implements ReportRepositoryInterface
         $query = DB::table('products')
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->when(count($productIds) > 0, fn($q) => $q->whereIn('products.id', $productIds))
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
             ->select(
                 'products.id',
                 'products.name',
@@ -2883,8 +2914,9 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull));
 
-            $totalPurchaseQty = (float) (clone $purchaseQuery)->sum('purchase_items.quantity');
-            $avgPurchaseCost  = (clone $purchaseQuery)->avg('purchase_items.unit_cost');
+            $totalPurchaseQty  = (float) (clone $purchaseQuery)->sum('purchase_items.quantity');
+            $totalPurchaseCost = (float) (clone $purchaseQuery)->sum('purchase_items.line_total');
+            $avgPurchaseCost   = $totalPurchaseQty > 0 ? $totalPurchaseCost / $totalPurchaseQty : null;
 
             // ── المبيعات في الفترة ──────────────────────────────────────
             $saleQuery = DB::table('invoice_items')
@@ -2894,14 +2926,13 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull));
 
-            $totalSoldQty  = (float) (clone $saleQuery)->sum('invoice_items.quantity');
-            $avgSalePrice  = (clone $saleQuery)->avg('invoice_items.unit_price');
+            $totalSoldQty   = (float) (clone $saleQuery)->sum('invoice_items.quantity');
+            $totalSaleValue = (float) (clone $saleQuery)->sum('invoice_items.line_total');
 
-            // ── حساب الربح ──────────────────────────────────────────────
-            // الربح = (متوسط سعر البيع × الكمية المباعة) - (متوسط سعر الشراء × الكمية المباعة)
+            // الربح = إجمالي قيمة المبيعات - (متوسط تكلفة الشراء × الكمية المباعة)
             $profit = null;
-            if ($totalSoldQty > 0 && $avgPurchaseCost !== null && $avgSalePrice !== null) {
-                $profit = round(($avgSalePrice - $avgPurchaseCost) * $totalSoldQty, 2);
+            if ($totalSoldQty > 0 && $avgPurchaseCost !== null) {
+                $profit = round($totalSaleValue - ($avgPurchaseCost * $totalSoldQty), 2);
             }
 
             return [
@@ -2910,9 +2941,9 @@ class ReportRepository implements ReportRepositoryInterface
                 'category'            => $p->category_name,
                 'unit'                => $p->unit,
                 'opening_stock'       => round((float)$openingStock, 2),
-                'avg_purchase_cost'   => $avgPurchaseCost ? round((float)$avgPurchaseCost, 2) : null,
+                'total_purchase_cost' => round($totalPurchaseCost, 2),
                 'total_purchase_qty'  => round($totalPurchaseQty, 2),
-                'avg_sale_price'      => $avgSalePrice ? round((float)$avgSalePrice, 2) : null,
+                'total_sale_value'    => round($totalSaleValue, 2),
                 'total_sold_qty'      => round($totalSoldQty, 2),
                 'profit'              => $profit,
             ];
