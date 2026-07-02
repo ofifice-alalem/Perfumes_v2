@@ -367,9 +367,10 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Stock Status ──────────────────────────────────────────────────────────
 
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null): array
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null): array
     {
         $query = DB::table('products')
+            ->when(!empty($filterProductIds), fn($q) => $q->whereIn('products.id', $filterProductIds))
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->leftJoin('price_tiers', 'price_tiers.id', '=', 'products.price_tier_id')
             ->when($categoryId,   fn($q) => $q->where('products.category_id', $categoryId))
@@ -3139,7 +3140,7 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
-    public function dailyProfitSummary(?string $dateFrom, ?string $dateTo): array
+    public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : now()->startOfMonth()->toDateTimeString();
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : now()->endOfMonth()->toDateTimeString();
@@ -3149,6 +3150,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->whereNull('invoices.deleted_at')
             ->whereBetween('invoices.created_at', [$df, $dt])
+            ->when(!empty($filterProductIds), fn($q) => $q->whereIn('invoice_items.product_id', $filterProductIds))
             ->pluck('invoice_items.product_id')
             ->unique()
             ->toArray();
@@ -3157,6 +3159,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
             ->whereNull('invoice_returns.deleted_at')
             ->whereBetween('invoice_returns.created_at', [$df, $dt])
+            ->when(!empty($filterProductIds), fn($q) => $q->whereIn('invoice_return_items.product_id', $filterProductIds))
             ->pluck('invoice_return_items.product_id')
             ->unique()
             ->toArray();

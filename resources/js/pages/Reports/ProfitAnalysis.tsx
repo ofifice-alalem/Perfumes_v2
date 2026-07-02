@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { TrendingUp, ChevronRight, Search, FileText } from 'lucide-react';
 
 interface Category { id: number; name: string; }
+interface Product { id: number; name: string; }
 
 interface DailyProfit {
     date: string;
@@ -53,12 +54,15 @@ interface Props {
     profitSummary: ProfitSummary;
     stockProfitData: ProductStock[];
     categories: Category[];
+    products: Product[];
     filters: {
         dateFrom: string;
         dateTo: string;
         stockDateFrom: string;
         stockDateTo: string;
         stockCategoryId: number | null;
+        productIds: number[];
+        stockProductIds: number[];
     }
 }
 
@@ -70,18 +74,20 @@ function fmt(n: number | null): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, filters }: Props) {
+export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, products, filters }: Props) {
     const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>('daily');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
     // فلاتر التاب الأول
     const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '');
     const [dateTo,   setDateTo]   = useState(filters.dateTo ?? '');
+    const [productIds, setProductIds] = useState<number[]>(filters.productIds ?? []);
 
     // فلاتر التاب الثاني
     const [stockDateFrom,   setStockDateFrom]   = useState(filters.stockDateFrom ?? '');
     const [stockDateTo,     setStockDateTo]     = useState(filters.stockDateTo ?? '');
     const [stockCategoryId, setStockCategoryId] = useState(filters.stockCategoryId ? String(filters.stockCategoryId) : '');
+    const [stockProductIds, setStockProductIds] = useState<number[]>(filters.stockProductIds ?? []);
     const [compactView,     setCompactView]     = useState(false);
 
     const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
@@ -98,9 +104,11 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         router.get('/reports/profit-analysis', {
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
+            product_ids:       productIds.length ? productIds.join(',') : undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
+            stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
         }, { preserveScroll: true });
     }
 
@@ -108,9 +116,11 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         router.get('/reports/profit-analysis', {
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
+            product_ids:       productIds.length ? productIds.join(',') : undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
+            stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
         }, { preserveScroll: true });
     }
 
@@ -317,14 +327,21 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                         {activeTab === 'daily' ? (
                             <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                                 <div className="flex flex-col gap-4">
+                                    <ModernMultiSelect
+                                        label="المنتجات"
+                                        placeholder="الكل"
+                                        options={products.map(p => ({ value: String(p.id), label: p.name }))}
+                                        defaultValues={productIds.map(String)}
+                                        onSelect={(vals) => setProductIds(vals.map(Number))}
+                                    />
                                     <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
                                     <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
                                     <button onClick={searchDaily}
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(dateFrom || dateTo) && (
-                                        <button onClick={() => { setDateFrom(''); setDateTo(''); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined }); }}
+                                    {(dateFrom || dateTo || productIds.length > 0) && (
+                                        <button onClick={() => { setDateFrom(''); setDateTo(''); setProductIds([]); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined, stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>
@@ -341,6 +358,13 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         defaultValue={stockCategoryId ? (categories.find(c => String(c.id) === stockCategoryId)?.name ?? '') : 'الكل'}
                                         onSelect={val => setStockCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
                                     />
+                                    <ModernMultiSelect
+                                        label="المنتجات"
+                                        placeholder="الكل"
+                                        options={products.map(p => ({ value: String(p.id), label: p.name }))}
+                                        defaultValues={stockProductIds.map(String)}
+                                        onSelect={(vals) => setStockProductIds(vals.map(Number))}
+                                    />
                                     <DateFilterInput label="من تاريخ" value={stockDateFrom} onChange={setStockDateFrom} />
                                     <DateFilterInput label="إلى تاريخ" value={stockDateTo} onChange={setStockDateTo} />
                                     <div className="flex items-center gap-3 px-1">
@@ -354,8 +378,8 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(stockDateFrom || stockDateTo || stockCategoryId) && (
-                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined }); }}
+                                    {(stockDateFrom || stockDateTo || stockCategoryId || stockProductIds.length > 0) && (
+                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); setStockProductIds([]); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined, product_ids: productIds.length ? productIds.join(',') : undefined }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>

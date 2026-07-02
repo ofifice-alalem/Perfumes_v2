@@ -24,15 +24,24 @@ class ReportController extends Controller
         $stockDateFrom   = $request->input('stock_date_from', now()->startOfMonth()->toDateString());
         $stockDateTo     = $request->input('stock_date_to', now()->endOfMonth()->toDateString());
         $stockCategoryId = $request->integer('stock_category_id') ?: null;
+        $productIds      = $request->input('product_ids', []);
+        $stockProductIds = $request->input('stock_product_ids', []);
+        
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        if (is_string($stockProductIds)) $stockProductIds = explode(',', $stockProductIds);
+        
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+        $stockProductIds = array_filter(array_map('intval', (array)$stockProductIds));
 
-        $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
-        $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo);
+        $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds);
+        $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds);
 
         return Inertia::render('Reports/ProfitAnalysis', [
             'profitSummary'   => $profitSummary,
             'stockProfitData' => $stockProfitData,
             'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId'),
+            'products'        => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId', 'productIds', 'stockProductIds'),
         ]);
     }
 
