@@ -9,6 +9,7 @@ use App\Models\InvoiceReturn;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PeriodSnapshot;
+use App\Models\PeriodSnapshotDailyProfit;
 use App\Models\PeriodSnapshotItem;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -16,12 +17,15 @@ use App\Models\PurchaseReturn;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Models\WasteItem;
+use App\Repositories\Contracts\ReportRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class RolloverService
 {
+    public function __construct(private ReportRepositoryInterface $reports) {}
+
     public function getCurrentPeriodId(): ?int
     {
         return AccountingPeriod::where('status', 'open')->value('id');
@@ -38,6 +42,10 @@ class RolloverService
     public function previewSnapshot(): array
     {
         $periodId = $this->getCurrentPeriodId();
+        $current  = $this->getCurrentPeriod();
+
+        $dateFrom = $current?->started_at->toDateString();
+        $dateTo   = now()->toDateString();
 
         return [
             'customers'              => $this->buildCustomerBalances($periodId),
@@ -51,6 +59,7 @@ class RolloverService
             'supplier_return_products' => $this->buildSupplierReturnProducts($periodId),
             'payment_methods'        => $this->buildPaymentMethodBalances($periodId),
             'stats'                  => $this->buildStats($periodId),
+            'profit_summary'         => $this->reports->dailyProfitSummary($dateFrom, $dateTo),
         ];
     }
 
@@ -124,6 +133,27 @@ class RolloverService
             }
 
             PeriodSnapshotItem::insert($items);
+
+            // Save daily profit data
+            $dateFrom     = $current->started_at->toDateString();
+            $dateTo       = now()->toDateString();
+            $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+            $dailyRows = [];
+            foreach ($profitSummary['monthly'] as $month) {
+                foreach ($month['days'] as $day) {
+                    $dailyRows[] = [
+                        'snapshot_id' => $snapshot->id,
+                        'date'        => $day['date'],
+                        'sales'       => $day['sales'],
+                        'returns'     => $day['returns'],
+                        'net_sales'   => $day['net_sales'],
+                        'profit'      => $day['profit'],
+                    ];
+                }
+            }
+            if (!empty($dailyRows)) {
+                PeriodSnapshotDailyProfit::insert($dailyRows);
+            }
 
             // Step 3: Update opening balances
             foreach ($customerBalances as $row) {
