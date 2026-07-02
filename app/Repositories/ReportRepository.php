@@ -520,6 +520,7 @@ class ReportRepository implements ReportRepositoryInterface
                 'last_sale_price'    => $lastSalePrice    ? (float)$lastSalePrice    : null,
                 'avg_sale_price'     => $avgSalePrice     ? round((float)$avgSalePrice, 2)    : null,
                 'total_sold'         => $showSold ? $totalSoldQty : null,
+                'net_sale_qty'       => $showSold ? $netSaleQty : null,
                 'total_wasted'       => $totalWasted,
                 'total_return_in'    => $showSold ? $totalReturnInQty : null,
                 'avg_return_in_price'=> $showSold ? ($avgReturnInPrice ? round((float)$avgReturnInPrice, 2) : null) : null,
@@ -531,19 +532,28 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, ?string $dateFrom = null, ?string $dateTo = null): void
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, false, $dateFrom, $dateTo);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
-        $sheet->setTitle('المخزون الحالي');
+        $sheet->setTitle($showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي');
 
         $row = 1;
-        $headers = ['#', 'المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع'];
-        if ($showSold)   $headers[] = 'إجمالي المبيع';
-        if ($showWasted) $headers[] = 'إجمالي التالف';
+        
+        if ($showPurchased) {
+            if ($compactView) {
+                $headers = ['#', 'المنتج', 'متوسط شراء', 'متوسط بيع', 'صافي كمية المبيعات', 'الربح'];
+            } else {
+                $headers = ['#', 'المنتج', 'اجمالي المشتراه', 'اجمالي المخزون', 'اجمالي المبيعات', 'اجمالي التالف', 'مرتجع مورد', 'متوسط ارجاع المورد', 'مرتجع زبائن', 'متوسط ارجاع الزبائن', 'متوسط شراء', 'متوسط بيع', 'الربح'];
+            }
+        } else {
+            $headers = ['#', 'المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء', 'متوسط شراء', 'آخر بيع', 'متوسط بيع'];
+            if ($showSold)   $headers[] = 'إجمالي المبيع';
+            if ($showWasted) $headers[] = 'إجمالي التالف';
+        }
 
         $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
@@ -562,29 +572,69 @@ class ReportRepository implements ReportRepositoryInterface
 
         foreach ($data as $i => $p) {
             $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-            $rowData = [
-                $i + 1,
-                $p['name'],
-                $p['category'],
-                $fmtN($p['stock']) . ' ' . $p['unit'],
-                $fmtN($p['min_stock']) . ' ' . $p['unit'],
-                $statusLabels[$p['status']],
-                $fmtN($p['last_purchase_cost']),
-                $fmtN($p['avg_purchase_cost']),
-                $fmtN($p['last_sale_price']),
-                $fmtN($p['avg_sale_price']),
-            ];
-            if ($showSold)   $rowData[] = $fmtN($p['total_sold'])   . ' ' . $p['unit'];
-            if ($showWasted) $rowData[] = $fmtN($p['total_wasted']) . ' ' . $p['unit'];
+            
+            if ($showPurchased) {
+                if ($compactView) {
+                    $rowData = [
+                        $i + 1,
+                        $p['name'],
+                        $fmtN($p['avg_purchase_cost']),
+                        $fmtN($p['avg_sale_price']),
+                        $fmtN($p['net_sale_qty']) . ' ' . $p['unit'],
+                        $fmtN($p['profit'])
+                    ];
+                } else {
+                    $rowData = [
+                        $i + 1,
+                        $p['name'],
+                        $fmtN($p['total_purchased']) . ' ' . $p['unit'],
+                        $fmtN($p['stock']) . ' ' . $p['unit'],
+                        $fmtN($p['total_sold']) . ' ' . $p['unit'],
+                        $fmtN($p['total_wasted']) . ' ' . $p['unit'],
+                        $fmtN($p['total_return_out']) . ' ' . $p['unit'],
+                        $fmtN($p['avg_return_out_price']),
+                        $fmtN($p['total_return_in']) . ' ' . $p['unit'],
+                        $fmtN($p['avg_return_in_price']),
+                        $fmtN($p['avg_purchase_cost']),
+                        $fmtN($p['avg_sale_price']),
+                        $fmtN($p['profit'])
+                    ];
+                }
+            } else {
+                $rowData = [
+                    $i + 1,
+                    $p['name'],
+                    $p['category'],
+                    $fmtN($p['stock']) . ' ' . $p['unit'],
+                    $fmtN($p['min_stock']) . ' ' . $p['unit'],
+                    $statusLabels[$p['status']],
+                    $fmtN($p['last_purchase_cost']),
+                    $fmtN($p['avg_purchase_cost']),
+                    $fmtN($p['last_sale_price']),
+                    $fmtN($p['avg_sale_price']),
+                ];
+                if ($showSold)   $rowData[] = $fmtN($p['total_sold'])   . ' ' . $p['unit'];
+                if ($showWasted) $rowData[] = $fmtN($p['total_wasted']) . ' ' . $p['unit'];
+            }
 
             $sheet->fromArray($rowData, null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
-            $sheet->getStyle('F' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'color' => ['rgb' => $statusColors[$p['status']]]],
-            ]);
+            
+            if (!$showPurchased) {
+                $sheet->getStyle('F' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => $statusColors[$p['status']]]],
+                ]);
+            } else {
+                // Color profit column
+                $profitColIndex = $compactView ? 'F' : 'M';
+                $profitColor = $p['profit'] !== null ? ($p['profit'] >= 0 ? '16A34A' : 'DC2626') : '94A3B8';
+                $sheet->getStyle($profitColIndex . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => $profitColor]],
+                ]);
+            }
             $row++;
         }
 
@@ -600,19 +650,19 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, ?string $dateFrom = null, ?string $dateTo = null): \Illuminate\Http\Response
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, false, $dateFrom, $dateTo);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
         $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
 
         $labels = [
-            'title'          => $g('تقرير المخزون الحالي'),
+            'title'          => $g($showPurchased ? 'تقرير الأرباح' : 'تقرير المخزون الحالي'),
             'generated_at'   => now()->format('Y-m-d H:i'),
             'filter_info'    => $g('معلومات التقرير'),
             'label_category' => $g('التصنيف'),
@@ -636,8 +686,12 @@ class ReportRepository implements ReportRepositoryInterface
             'col_avg_price'  => $g('متوسط بيع'),
             'col_sold'       => $g('إجمالي المبيع'),
             'col_wasted'     => $g('إجمالي التالف'),
+            'col_profit'     => $g('الربح'),
+            'col_net_qty'    => $g('صافي البيع'),
             'show_sold'      => $showSold,
             'show_wasted'    => $showWasted,
+            'show_purchased' => $showPurchased,
+            'compact_view'   => $compactView,
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.stock-status-pdf', [
@@ -647,7 +701,7 @@ class ReportRepository implements ReportRepositoryInterface
             'g'            => $g,
             'fmtN'         => $fmtN,
         ])
-        ->setPaper('a4')
+        ->setPaper($showPurchased && !$compactView ? 'a4' : 'a4', $showPurchased && !$compactView ? 'landscape' : 'portrait')
         ->setOption('isHtml5ParserEnabled', true)
         ->setOption('isFontSubsettingEnabled', true);
 

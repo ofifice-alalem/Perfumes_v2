@@ -29,6 +29,7 @@ interface ProductStock {
     total_return_out: number | null;
     avg_return_out_price: number | null;
     total_purchased: number | null;
+    net_sale_qty: number | null;
     profit: number | null;
 }
 
@@ -84,6 +85,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
     const [showWasted,    setShowWasted]    = useState(filters.showWasted ?? false);
     const [dateFrom,      setDateFrom]      = useState(filters.dateFrom ?? '');
     const [dateTo,        setDateTo]        = useState(filters.dateTo ?? '');
+    const [compactView,   setCompactView]   = useState(false);
 
     // Profit tab state
     const [profitProductIds, setProfitProductIds] = useState<string[]>(profitFilters.productIds ?? []);
@@ -139,15 +141,17 @@ export default function StockStatus({ categories, products, filters, profitFilte
     }
 
     function buildExportUrl(format: 'excel' | 'pdf') {
-        const params = new URLSearchParams();
-        if (categoryId)   params.set('category_id', categoryId);
-        if (sellingType)  params.set('selling_type', sellingType);
-        if (lowStockOnly) params.set('low_stock_only', '1');
-        if (showSold)     params.set('show_sold', '1');
-        if (showWasted)   params.set('show_wasted', '1');
-        if (dateFrom)     params.set('date_from', dateFrom);
-        if (dateTo)       params.set('date_to', dateTo);
-        return `/reports/stock-status/${format}?${params.toString()}`;
+        const p = new URLSearchParams();
+        if (categoryId)   p.set('category_id', categoryId);
+        if (sellingType)  p.set('selling_type', sellingType);
+        if (lowStockOnly) p.set('low_stock_only', '1');
+        if (showSold)     p.set('show_sold', '1');
+        if (showWasted)   p.set('show_wasted', '1');
+        if (dateFrom)     p.set('date_from', dateFrom);
+        if (dateTo)       p.set('date_to', dateTo);
+        if (activeTab === 'stock_profit') p.set('show_purchased', '1');
+        if (compactView) p.set('compact_view', '1');
+        return `/reports/stock-status/${format}?${p.toString()}`;
     }
 
     const okCount       = data.filter(p => p.status === 'ok').length;
@@ -186,6 +190,15 @@ export default function StockStatus({ categories, products, filters, profitFilte
                 </button>
                 <span className="text-sm font-bold text-slate-600 dark:text-white/70">إظهار إجمالي التالف</span>
             </div>
+            {activeTab === 'stock_profit' && (
+                <div className="flex items-center gap-3 px-1">
+                    <button onClick={() => setCompactView(p => !p)}
+                        className={`w-11 h-6 rounded-full transition-all relative ${compactView ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'}`}>
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${compactView ? 'left-0.5 translate-x-5' : 'left-0.5'}`} />
+                    </button>
+                    <span className="text-sm font-bold text-slate-600 dark:text-white/70">عرض مختصر للربح</span>
+                </div>
+            )}
             <button onClick={search}
                 className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                 <Search className="w-4 h-4" /> عرض التقرير
@@ -505,7 +518,18 @@ export default function StockStatus({ categories, products, filters, profitFilte
                         </SpatialCard>
                     )}
 
-                    {activeTab === 'stock_profit' && (
+                    {activeTab === 'stock_profit' && (<>
+                        {/* Export Buttons */}
+                        <div className="flex items-center gap-2 mb-4">
+                            <a href={buildExportUrl('excel')} target="_blank"
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                <FileSpreadsheet className="w-4 h-4" /> Excel
+                            </a>
+                            <a href={buildExportUrl('pdf')} target="_blank"
+                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                <FileText className="w-4 h-4" /> PDF
+                            </a>
+                        </div>
                         <SpatialCard title={`تقرير الأرباح (${data.length})`} icon={<FileText className="w-4 h-4" />}>
                             {data.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
@@ -519,25 +543,43 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                         <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['المنتج', 'اجمالي المشتراه', 'اجمالي المخزون', 'اجمالي المبيعات', 'اجمالي التالف', 'مرتجع مورد', 'متوسط ارجاع المورد', 'مرتجع زبائن', 'متوسط ارجاع الزبائن', 'متوسط شراء', 'متوسط بيع', 'الربح'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                    ))}
+                                                    {compactView ? (
+                                                        ['المنتج', 'متوسط شراء', 'متوسط بيع', 'صافي كمية المبيعات', 'الربح'].map(h => (
+                                                            <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        ))
+                                                    ) : (
+                                                        ['المنتج', 'اجمالي المشتراه', 'اجمالي المخزون', 'اجمالي المبيعات', 'اجمالي التالف', 'مرتجع مورد', 'متوسط ارجاع المورد', 'مرتجع زبائن', 'متوسط ارجاع الزبائن', 'متوسط شراء', 'متوسط بيع', 'الربح'].map(h => (
+                                                            <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                        ))
+                                                    )}
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                 {data.map(p => (
                                                     <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
                                                         <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                        <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
-                                                        <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                        
+                                                        {compactView ? (
+                                                            <>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                                <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty)} {p.unit}</td>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
+                                                                <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                            </>
+                                                        )}
+
                                                         <td className="px-4 py-4 font-black whitespace-nowrap">
                                                             <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
                                                                 {p.profit !== null ? fmt(p.profit) : '—'}
@@ -560,46 +602,65 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                                     </span>
                                                 </div>
                                                 <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المشتراه</span>
-                                                        <span className="font-bold text-blue-600 dark:text-blue-400">{fmt(p.total_purchased)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المخزون</span>
-                                                        <span className="font-black text-slate-800 dark:text-white">{fmt(p.stock)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المبيعات</span>
-                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(p.total_sold)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">إجمالي التالف</span>
-                                                        <span className="font-bold text-red-500">{fmt(p.total_wasted)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">مرتجع مورد</span>
-                                                        <span className="font-bold text-amber-500">{fmt(p.total_return_out)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع المورد</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_out_price)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">مرتجع زبائن</span>
-                                                        <span className="font-bold text-orange-500">{fmt(p.total_return_in)} {p.unit}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع الزبائن</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_in_price)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط شراء</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_purchase_cost)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط بيع</span>
-                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_sale_price)}</span>
-                                                    </div>
+                                                    {compactView ? (
+                                                        <>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط شراء</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_purchase_cost)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط بيع</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_sale_price)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">صافي كمية المبيعات</span>
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400">{fmt(p.net_sale_qty)} {p.unit}</span>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المشتراه</span>
+                                                                <span className="font-bold text-blue-600 dark:text-blue-400">{fmt(p.total_purchased)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المخزون</span>
+                                                                <span className="font-black text-slate-800 dark:text-white">{fmt(p.stock)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">إجمالي المبيعات</span>
+                                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(p.total_sold)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">إجمالي التالف</span>
+                                                                <span className="font-bold text-red-500">{fmt(p.total_wasted)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">مرتجع مورد</span>
+                                                                <span className="font-bold text-amber-500">{fmt(p.total_return_out)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع المورد</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_out_price)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">مرتجع زبائن</span>
+                                                                <span className="font-bold text-orange-500">{fmt(p.total_return_in)} {p.unit}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع الزبائن</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_in_price)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط شراء</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_purchase_cost)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="font-bold text-slate-400 dark:text-white/40">متوسط بيع</span>
+                                                                <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_sale_price)}</span>
+                                                            </div>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -607,7 +668,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                 </>
                             )}
                         </SpatialCard>
-                    )}
+                    </>)}
 
                     </div>
 

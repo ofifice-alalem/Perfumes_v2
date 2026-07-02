@@ -115,8 +115,10 @@ class ReportController extends Controller
             $request->boolean('low_stock_only'),
             $request->boolean('show_sold'),
             $request->boolean('show_wasted'),
+            $request->boolean('show_purchased'),
             $request->input('date_from'),
-            $request->input('date_to')
+            $request->input('date_to'),
+            $request->boolean('compact_view')
         );
     }
 
@@ -128,8 +130,10 @@ class ReportController extends Controller
             $request->boolean('low_stock_only'),
             $request->boolean('show_sold'),
             $request->boolean('show_wasted'),
+            $request->boolean('show_purchased'),
             $request->input('date_from'),
-            $request->input('date_to')
+            $request->input('date_to'),
+            $request->boolean('compact_view')
         );
     }
 

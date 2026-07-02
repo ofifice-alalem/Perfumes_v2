@@ -127,18 +127,43 @@
 <table class="main">
     <thead>
         <tr>
-            <th style="width:9%">{{ $labels['col_status'] }}</th>
-            <th style="width:9%">{{ $labels['col_price'] }}</th>
-            <th style="width:9%">{{ $labels['col_avg_price'] }}</th>
-            <th style="width:9%">{{ $labels['col_cost'] }}</th>
-            <th style="width:9%">{{ $labels['col_avg_cost'] }}</th>
-            @if($labels['show_sold'])<th style="width:9%">{{ $labels['col_sold'] }}</th>@endif
-            @if($labels['show_wasted'])<th style="width:9%">{{ $labels['col_wasted'] }}</th>@endif
-            <th style="width:10%">{{ $labels['col_min'] }}</th>
-            <th style="width:10%">{{ $labels['col_stock'] }}</th>
-            <th style="width:15%">{{ $labels['col_category'] }}</th>
-            <th>{{ $labels['col_name'] }}</th>
-            <th style="width:5%; text-align:center">#</th>
+            @if($labels['show_purchased'])
+                @if($labels['compact_view'])
+                    <th style="width:15%">{{ $labels['col_profit'] }}</th>
+                    <th style="width:15%">{{ $labels['col_net_qty'] }}</th>
+                    <th style="width:15%">{{ $labels['col_avg_price'] }}</th>
+                    <th style="width:15%">{{ $labels['col_avg_cost'] }}</th>
+                    <th>{{ $labels['col_name'] }}</th>
+                    <th style="width:5%; text-align:center">#</th>
+                @else
+                    <th style="width:8%">{{ $labels['col_profit'] }}</th>
+                    <th style="width:8%">{{ $labels['col_avg_price'] }}</th>
+                    <th style="width:8%">{{ $labels['col_avg_cost'] }}</th>
+                    <th style="width:9%">{{ $g('م.ارجاع زبون') }}</th>
+                    <th style="width:9%">{{ $g('مرتجع زبون') }}</th>
+                    <th style="width:9%">{{ $g('م.ارجاع مورد') }}</th>
+                    <th style="width:9%">{{ $g('مرتجع مورد') }}</th>
+                    <th style="width:6%">{{ $g('التالف') }}</th>
+                    <th style="width:8%">{{ $g('المبيعات') }}</th>
+                    <th style="width:8%">{{ $labels['col_stock'] }}</th>
+                    <th style="width:8%">{{ $g('المشتريات') }}</th>
+                    <th>{{ $labels['col_name'] }}</th>
+                    <th style="width:4%; text-align:center">#</th>
+                @endif
+            @else
+                <th style="width:9%">{{ $labels['col_status'] }}</th>
+                <th style="width:9%">{{ $labels['col_price'] }}</th>
+                <th style="width:9%">{{ $labels['col_avg_price'] }}</th>
+                <th style="width:9%">{{ $labels['col_cost'] }}</th>
+                <th style="width:9%">{{ $labels['col_avg_cost'] }}</th>
+                @if($labels['show_sold'])<th style="width:9%">{{ $labels['col_sold'] }}</th>@endif
+                @if($labels['show_wasted'])<th style="width:9%">{{ $labels['col_wasted'] }}</th>@endif
+                <th style="width:10%">{{ $labels['col_min'] }}</th>
+                <th style="width:10%">{{ $labels['col_stock'] }}</th>
+                <th style="width:15%">{{ $labels['col_category'] }}</th>
+                <th>{{ $labels['col_name'] }}</th>
+                <th style="width:5%; text-align:center">#</th>
+            @endif
         </tr>
     </thead>
     <tbody>
@@ -148,18 +173,43 @@
             $statusLabel = $g($statusLabels[$p['status']]);
         @endphp
         <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
-            <td class="{{ $statusClass }}">{{ $statusLabel }}</td>
-            <td class="num">{{ $fmtN($p['last_sale_price']) }}</td>
-            <td class="num">{{ $fmtN($p['avg_sale_price']) }}</td>
-            <td class="num">{{ $fmtN($p['last_purchase_cost']) }}</td>
-            <td class="num">{{ $fmtN($p['avg_purchase_cost']) }}</td>
-            @if($labels['show_sold'])<td class="num">{{ $fmtN($p['total_sold']) }}</td>@endif
-            @if($labels['show_wasted'])<td class="num" style="color:#dc2626">{{ $fmtN($p['total_wasted']) }}</td>@endif
-            <td class="num">{{ $fmtN($p['min_stock']) }}</td>
-            <td class="num">{{ $fmtN($p['stock']) }}</td>
-            <td>{{ $g($p['category']) }}</td>
-            <td style="font-weight: bold; color: #0f172a;">{{ $g($p['name']) }}</td>
-            <td class="idx">{{ $i + 1 }}</td>
+            @if($labels['show_purchased'])
+                @if($labels['compact_view'])
+                    <td class="num" style="color: {{ $p['profit'] !== null ? ($p['profit'] >= 0 ? '#16a34a' : '#dc2626') : '#94a3b8' }}">{{ $fmtN($p['profit']) }}</td>
+                    <td class="num">{{ $fmtN($p['net_sale_qty']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_sale_price']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_purchase_cost']) }}</td>
+                    <td style="font-weight: bold; color: #0f172a;">{{ $g($p['name']) }}</td>
+                    <td class="idx">{{ $i + 1 }}</td>
+                @else
+                    <td class="num" style="color: {{ $p['profit'] !== null ? ($p['profit'] >= 0 ? '#16a34a' : '#dc2626') : '#94a3b8' }}">{{ $fmtN($p['profit']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_sale_price']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_purchase_cost']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_return_in_price']) }}</td>
+                    <td class="num">{{ $fmtN($p['total_return_in']) }}</td>
+                    <td class="num">{{ $fmtN($p['avg_return_out_price']) }}</td>
+                    <td class="num">{{ $fmtN($p['total_return_out']) }}</td>
+                    <td class="num" style="color:#dc2626">{{ $fmtN($p['total_wasted']) }}</td>
+                    <td class="num">{{ $fmtN($p['total_sold']) }}</td>
+                    <td class="num">{{ $fmtN($p['stock']) }}</td>
+                    <td class="num">{{ $fmtN($p['total_purchased']) }}</td>
+                    <td style="font-weight: bold; color: #0f172a;">{{ $g($p['name']) }}</td>
+                    <td class="idx">{{ $i + 1 }}</td>
+                @endif
+            @else
+                <td class="{{ $statusClass }}">{{ $statusLabel }}</td>
+                <td class="num">{{ $fmtN($p['last_sale_price']) }}</td>
+                <td class="num">{{ $fmtN($p['avg_sale_price']) }}</td>
+                <td class="num">{{ $fmtN($p['last_purchase_cost']) }}</td>
+                <td class="num">{{ $fmtN($p['avg_purchase_cost']) }}</td>
+                @if($labels['show_sold'])<td class="num">{{ $fmtN($p['total_sold']) }}</td>@endif
+                @if($labels['show_wasted'])<td class="num" style="color:#dc2626">{{ $fmtN($p['total_wasted']) }}</td>@endif
+                <td class="num">{{ $fmtN($p['min_stock']) }}</td>
+                <td class="num">{{ $fmtN($p['stock']) }}</td>
+                <td>{{ $g($p['category']) }}</td>
+                <td style="font-weight: bold; color: #0f172a;">{{ $g($p['name']) }}</td>
+                <td class="idx">{{ $i + 1 }}</td>
+            @endif
         </tr>
         @endforeach
     </tbody>
