@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { TrendingUp, ChevronRight, Search, FileText } from 'lucide-react';
+
+interface Category { id: number; name: string; }
 
 interface DailyProfit {
     date: string;
@@ -50,9 +52,11 @@ interface ProductStock {
 interface Props {
     profitSummary: ProfitSummary;
     stockProfitData: ProductStock[];
+    categories: Category[];
     filters: {
         dateFrom: string;
         dateTo: string;
+        categoryId: number | null;
     }
 }
 
@@ -64,11 +68,15 @@ function fmt(n: number | null): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function ProfitAnalysis({ profitSummary, stockProfitData, filters }: Props) {
+export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, filters }: Props) {
     const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>('daily');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '');
     const [dateTo, setDateTo] = useState(filters.dateTo ?? '');
+    const [categoryId, setCategoryId] = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [compactView, setCompactView] = useState(false);
+
+    const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
 
     function toggleExpand(month: string) {
         setExpanded(prev => {
@@ -80,8 +88,9 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, filters
 
     function search() {
         router.get('/reports/profit-analysis', {
-            date_from: dateFrom || undefined,
-            date_to: dateTo || undefined,
+            date_from:   dateFrom   || undefined,
+            date_to:     dateTo     || undefined,
+            category_id: categoryId || undefined,
         }, { preserveScroll: true });
     }
 
@@ -208,30 +217,39 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, filters
                             </p>
                         </div>
 
-                        <SpatialCard title={`تقرير الأرباح (${stockProfitData.length})`} icon={<FileText className="w-4 h-4" />}>
+                        <SpatialCard title={`تقرير الأرباح (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
                             <div className="hidden lg:block overflow-x-auto">
                                 <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['المنتج','اجمالي المشتراه','اجمالي المخزون','اجمالي المبيعات','اجمالي التالف','مرتجع مورد','متوسط ارجاع المورد','مرتجع زبائن','متوسط ارجاع الزبائن','متوسط شراء','متوسط بيع','الربح'].map(h => (
+                                            {(compactView
+                                                ? ['المنتج','متوسط شراء','متوسط بيع','صافي كمية المبيعات','الربح']
+                                                : ['المنتج','اجمالي المشتراه','اجمالي المخزون','اجمالي المبيعات','اجمالي التالف','مرتجع مورد','متوسط ارجاع المورد','مرتجع زبائن','متوسط ارجاع الزبائن','متوسط شراء','متوسط بيع','الربح']
+                                            ).map(h => (
                                                 <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {stockProfitData.map(p => (
+                                        {displayData.map(p => (
                                             <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
                                                 <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
-                                                <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                {compactView ? (<>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty)} {p.unit}</td>
+                                                </>) : (<>
+                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
+                                                    <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                </>)}
                                                 <td className="px-4 py-4 font-black whitespace-nowrap">
                                                     <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
                                                         {p.profit !== null ? fmt(p.profit) : '—'}
@@ -244,7 +262,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, filters
                             </div>
                             {/* Mobile */}
                             <div className="flex flex-col gap-3 lg:hidden">
-                                {stockProfitData.map(p => (
+                                {displayData.map(p => (
                                     <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
                                         <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                             <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
@@ -278,18 +296,36 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, filters
                     <div className="w-full lg:w-[320px] shrink-0">
                         <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                             <div className="flex flex-col gap-4">
+                                <ModernSelect
+                                    label="التصنيف"
+                                    placeholder="الكل"
+                                    options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
+                                    defaultValue={categoryId ? (categories.find(c => String(c.id) === categoryId)?.name ?? '') : 'الكل'}
+                                    onSelect={val => setCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
+                                />
                                 <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
                                 <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
-                                
+
+                                {activeTab === 'stock_profit' && (
+                                    <div className="flex items-center gap-3 px-1">
+                                        <button onClick={() => setCompactView(p => !p)}
+                                            className={`w-11 h-6 rounded-full transition-all relative ${compactView ? 'bg-primary' : 'bg-black/10 dark:bg-white/10'}`}>
+                                            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${compactView ? 'left-0.5 translate-x-5' : 'left-0.5'}`} />
+                                        </button>
+                                        <span className="text-sm font-bold text-slate-600 dark:text-white/70">عرض مختصر للربح</span>
+                                    </div>
+                                )}
+
                                 <button onClick={search}
                                     className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                     <Search className="w-4 h-4" /> عرض التقرير
                                 </button>
-                                
-                                {(dateFrom !== filters.dateFrom || dateTo !== filters.dateTo) && (
+
+                                {(dateFrom !== filters.dateFrom || dateTo !== filters.dateTo || categoryId) && (
                                     <button onClick={() => {
                                         setDateFrom(filters.dateFrom);
                                         setDateTo(filters.dateTo);
+                                        setCategoryId('');
                                         router.get('/reports/profit-analysis');
                                     }}
                                         className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">

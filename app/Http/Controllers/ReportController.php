@@ -19,16 +19,18 @@ class ReportController extends Controller
 
     public function profitAnalysisSummary(Request $request): Response
     {
-        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
-        $dateTo   = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $dateFrom   = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo     = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $categoryId = $request->integer('category_id') ?: null;
 
-        $profitSummary  = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
-        $stockProfitData = $this->reports->stockStatus(null, null, false, true, true, true, $dateFrom, $dateTo);
+        $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+        $stockProfitData = $this->reports->stockStatus($categoryId, null, false, true, true, true, $dateFrom, $dateTo);
 
         return Inertia::render('Reports/ProfitAnalysis', [
             'profitSummary'   => $profitSummary,
             'stockProfitData' => $stockProfitData,
-            'filters'         => compact('dateFrom', 'dateTo')
+            'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'filters'         => compact('dateFrom', 'dateTo', 'categoryId'),
         ]);
     }
 
