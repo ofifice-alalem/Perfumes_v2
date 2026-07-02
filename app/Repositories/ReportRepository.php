@@ -528,9 +528,10 @@ class ReportRepository implements ReportRepositoryInterface
                 ->sum('waste_items.quantity') : null;
 
             $profit = null;
-            if ($avgSalePrice !== null && $avgPurchaseCost !== null && $netSaleQty > 0) {
+            if ($avgSalePrice !== null && $netSaleQty > 0) {
+                $cost = $avgPurchaseCost ?? 0;
                 $netSales = $totalSaleValue - $totalReturnInValue;
-                $netCost  = $netSaleQty * $avgPurchaseCost;
+                $netCost  = $netSaleQty * $cost;
                 $profit   = round($netSales - $netCost, 2);
             }
 
@@ -3063,8 +3064,9 @@ class ReportRepository implements ReportRepositoryInterface
 
             // الربح = إجمالي قيمة المبيعات - (متوسط تكلفة الشراء × الكمية المباعة)
             $profit = null;
-            if ($totalSoldQty > 0 && $avgPurchaseCost !== null) {
-                $profit = round($totalSaleValue - ($avgPurchaseCost * $totalSoldQty), 2);
+            if ($totalSoldQty > 0) {
+                $cost = $avgPurchaseCost ?? 0;
+                $profit = round($totalSaleValue - ($cost * $totalSoldQty), 2);
             }
 
             return [
