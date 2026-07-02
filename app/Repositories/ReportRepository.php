@@ -3172,6 +3172,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sales = DB::table('invoice_items')
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->whereNull('invoices.deleted_at')
+            ->whereIn('invoice_items.product_id', $productIds)
             ->whereBetween('invoices.created_at', [$df, $dt])
             ->select(
                 DB::raw('DATE(invoices.created_at) as date'),
@@ -3185,6 +3186,7 @@ class ReportRepository implements ReportRepositoryInterface
         $returns = DB::table('invoice_return_items')
             ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
             ->whereNull('invoice_returns.deleted_at')
+            ->whereIn('invoice_return_items.product_id', $productIds)
             ->whereBetween('invoice_returns.created_at', [$df, $dt])
             ->select(
                 DB::raw('DATE(invoice_returns.created_at) as date'),
