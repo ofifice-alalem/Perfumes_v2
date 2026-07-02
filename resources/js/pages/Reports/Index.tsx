@@ -2,10 +2,11 @@ import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import {
     TrendingUp, Package, Users, Truck, BarChart2,
-    ShoppingCart, RotateCcw, ClipboardList
+    ShoppingCart, RotateCcw, ClipboardList, DollarSign
 } from 'lucide-react';
 
 const reports = [
+    { href: '/reports/profit-analysis',  icon: <DollarSign className="w-6 h-6" />,    label: 'تحليل الأرباح الشامل',            desc: 'تحليل صافي الربح الشهري واليومي للمتجر' },
     { href: '/reports/product-movement', icon: <Package className="w-6 h-6" />,      label: 'حركة المنتج',                  desc: 'تتبع دخول وخروج المخزون لمنتج معين' },
     { href: '/reports/stock-status',     icon: <BarChart2 className="w-6 h-6" />,     label: 'المخزون الحالي',                desc: 'حالة المخزون مع تنبيهات الحد الأدنى' },
     { href: '/reports/customer-aging',   icon: <Users className="w-6 h-6" />,         label: 'ديون العملاء',                  desc: 'تصنيف ديون العملاء حسب العمر الزمني' },

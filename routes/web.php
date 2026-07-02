@@ -87,6 +87,8 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/stock-status', [ReportController::class, 'stockStatus'])->name('reports.stock-status');
         Route::get('reports/stock-status/excel', [ReportController::class, 'stockStatusExcel'])->name('reports.stock-status.excel');
         Route::get('reports/stock-status/pdf', [ReportController::class, 'stockStatusPdf'])->name('reports.stock-status.pdf');
+        
+        Route::get('reports/profit-analysis', [ReportController::class, 'profitAnalysisSummary'])->name('reports.profit-analysis');
 
         Route::get('reports/inventory-count', [ReportController::class, 'inventoryCount'])->name('reports.inventory-count');
         Route::get('reports/inventory-count/excel', [ReportController::class, 'inventoryCountExcel'])->name('reports.inventory-count.excel');

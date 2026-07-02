@@ -448,7 +448,30 @@ export default function StockStatus({ categories, products, filters, profitFilte
                     </>)}
 
                     {activeTab === 'profit' && (
-                        <SpatialCard title={`تحليل الأرباح${profitData ? ` (${profitData.length})` : ''}`} icon={<TrendingUp className="w-4 h-4" />}>
+                        <div className="flex flex-col gap-4">
+                            {profitData && profitData.length > 0 && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="spatial-card p-4 flex flex-col gap-1 border border-primary/20 bg-primary/5">
+                                        <p className="text-xs font-black text-primary uppercase tracking-widest">إجمالي أرباح الفترة</p>
+                                        <p className="text-2xl font-black text-primary">
+                                            {fmt(profitData.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-sm">د.ل</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                                <a href={buildExportUrl('excel')} target="_blank"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                    <FileSpreadsheet className="w-4 h-4" /> Excel
+                                </a>
+                                <a href={buildExportUrl('pdf')} target="_blank"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                    <FileText className="w-4 h-4" /> PDF
+                                </a>
+                            </div>
+
+                            <SpatialCard title={`تحليل الأرباح${profitData ? ` (${profitData.length})` : ''}`} icon={<TrendingUp className="w-4 h-4" />}>
                             {!profitData ? (
                                 <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
                                     <TrendingUp className="w-12 h-12 opacity-30" />
@@ -526,19 +549,31 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                 </div>
                             </>)}
                         </SpatialCard>
+                        </div>
                     )}
 
                     {activeTab === 'stock_profit' && (<>
-                        {/* Export Buttons */}
-                        <div className="flex items-center gap-2 mb-4">
-                            <a href={buildExportUrl('excel')} target="_blank"
-                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                <FileSpreadsheet className="w-4 h-4" /> Excel
-                            </a>
-                            <a href={buildExportUrl('pdf')} target="_blank"
-                                className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                <FileText className="w-4 h-4" /> PDF
-                            </a>
+                        {/* Actions and Summary */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-2">
+                                <a href={buildExportUrl('excel')} target="_blank"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                    <FileSpreadsheet className="w-4 h-4" /> Excel
+                                </a>
+                                <a href={buildExportUrl('pdf')} target="_blank"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                    <FileText className="w-4 h-4" /> PDF
+                                </a>
+                            </div>
+                            
+                            {data.length > 0 && (
+                                <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 shrink-0 rounded-[16px]">
+                                    <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
+                                    <p className="text-xl font-black text-primary">
+                                        {fmt(data.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <SpatialCard title={`تقرير الأرباح (${data.length})`} icon={<FileText className="w-4 h-4" />}>
                             {data.length === 0 ? (

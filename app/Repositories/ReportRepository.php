@@ -407,7 +407,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->sum(DB::raw('purchase_items.quantity * purchase_items.unit_cost'));
+                ->sum('purchase_items.line_total');
 
             $totalReturnOutQty = (float) DB::table('purchase_return_items')
                 ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
@@ -423,7 +423,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                ->sum(DB::raw('purchase_return_items.quantity * purchase_return_items.unit_cost'));
+                ->sum('purchase_return_items.line_total');
 
             $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
 
@@ -454,7 +454,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->sum(DB::raw('invoice_items.quantity * invoice_items.unit_price'));
+                ->sum('invoice_items.line_total');
 
             $totalReturnInQty = (float) DB::table('invoice_return_items')
                 ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
@@ -470,7 +470,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
-                ->sum(DB::raw('invoice_return_items.quantity * invoice_return_items.unit_price'));
+                ->sum('invoice_return_items.line_total');
 
             $netSaleQty       = $totalSoldQty - $totalReturnInQty;
             $avgSalePrice     = $netSaleQty > 0 ? (($totalSaleValue - $totalReturnInValue) / $netSaleQty) : null;
@@ -3051,5 +3051,156 @@ class ReportRepository implements ReportRepositoryInterface
                 'profit'              => $profit,
             ];
         })->values()->toArray();
+    }
+
+    public function dailyProfitSummary(?string $dateFrom, ?string $dateTo): array
+    {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : now()->startOfMonth()->toDateTimeString();
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : now()->endOfMonth()->toDateTimeString();
+
+        // 1. Get products sold or returned in the period
+        $soldProductIds = DB::table('invoice_items')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereBetween('invoices.created_at', [$df, $dt])
+            ->pluck('invoice_items.product_id')
+            ->unique()
+            ->toArray();
+
+        $returnedProductIds = DB::table('invoice_return_items')
+            ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->whereBetween('invoice_returns.created_at', [$df, $dt])
+            ->pluck('invoice_return_items.product_id')
+            ->unique()
+            ->toArray();
+
+        $productIds = array_unique(array_merge($soldProductIds, $returnedProductIds));
+        
+        if (empty($productIds)) {
+            return ['total_profit' => 0, 'monthly' => [], 'daily' => []];
+        }
+
+        // 2. Compute avg purchase cost for these products (up to $dt)
+        $avgCosts = [];
+        foreach ($productIds as $pid) {
+            $totalPurchasedQty = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $pid)
+                ->where('purchases.created_at', '<=', $dt)
+                ->sum('purchase_items.quantity');
+
+            $totalPurchaseValue = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $pid)
+                ->where('purchases.created_at', '<=', $dt)
+                ->sum('purchase_items.line_total');
+
+            $totalReturnOutQty = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $pid)
+                ->where('purchase_returns.created_at', '<=', $dt)
+                ->sum('purchase_return_items.quantity');
+
+            $totalReturnOutValue = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $pid)
+                ->where('purchase_returns.created_at', '<=', $dt)
+                ->sum(DB::raw('purchase_return_items.quantity * purchase_return_items.unit_cost'));
+
+            $netPurchaseQty = $totalPurchasedQty - $totalReturnOutQty;
+            $avgCosts[$pid] = $netPurchaseQty > 0 ? (($totalPurchaseValue - $totalReturnOutValue) / $netPurchaseQty) : 0;
+        }
+
+        // 3. Process daily sales
+        $sales = DB::table('invoice_items')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereBetween('invoices.created_at', [$df, $dt])
+            ->select(
+                DB::raw('DATE(invoices.created_at) as date'),
+                'invoice_items.product_id',
+                'invoice_items.quantity',
+                'invoice_items.line_total'
+            )
+            ->get();
+
+        // 4. Process daily returns
+        $returns = DB::table('invoice_return_items')
+            ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->whereBetween('invoice_returns.created_at', [$df, $dt])
+            ->select(
+                DB::raw('DATE(invoice_returns.created_at) as date'),
+                'invoice_return_items.product_id',
+                'invoice_return_items.quantity',
+                'invoice_return_items.line_total'
+            )
+            ->get();
+
+        $dailyData = [];
+
+        foreach ($sales as $sale) {
+            $date = $sale->date;
+            if (!isset($dailyData[$date])) {
+                $dailyData[$date] = ['date' => $date, 'sales' => 0, 'returns' => 0, 'cost_of_sales' => 0, 'cost_of_returns' => 0];
+            }
+            $dailyData[$date]['sales'] += (float)$sale->line_total;
+            $dailyData[$date]['cost_of_sales'] += (float)$sale->quantity * ($avgCosts[$sale->product_id] ?? 0);
+        }
+
+        foreach ($returns as $ret) {
+            $date = $ret->date;
+            if (!isset($dailyData[$date])) {
+                $dailyData[$date] = ['date' => $date, 'sales' => 0, 'returns' => 0, 'cost_of_sales' => 0, 'cost_of_returns' => 0];
+            }
+            $dailyData[$date]['returns'] += (float)$ret->line_total;
+            $dailyData[$date]['cost_of_returns'] += (float)$ret->quantity * ($avgCosts[$ret->product_id] ?? 0);
+        }
+
+        ksort($dailyData);
+        $daily = [];
+        $monthlyData = [];
+        $totalProfit = 0;
+
+        foreach ($dailyData as $date => $data) {
+            $netSales = $data['sales'] - $data['returns'];
+            $netCost = $data['cost_of_sales'] - $data['cost_of_returns'];
+            $profit = $netSales - $netCost;
+            $totalProfit += $profit;
+            
+            $dayRow = [
+                'date' => $date,
+                'sales' => $data['sales'],
+                'returns' => $data['returns'],
+                'net_sales' => $netSales,
+                'profit' => round($profit, 2)
+            ];
+            $daily[] = $dayRow;
+
+            $month = substr($date, 0, 7);
+            if (!isset($monthlyData[$month])) {
+                $monthlyData[$month] = ['month' => $month, 'sales' => 0, 'returns' => 0, 'net_sales' => 0, 'profit' => 0, 'days' => []];
+            }
+            $monthlyData[$month]['sales'] += $data['sales'];
+            $monthlyData[$month]['returns'] += $data['returns'];
+            $monthlyData[$month]['net_sales'] += $netSales;
+            $monthlyData[$month]['profit'] += $profit;
+            $monthlyData[$month]['days'][] = $dayRow;
+        }
+
+        foreach ($monthlyData as &$m) {
+            $m['profit'] = round($m['profit'], 2);
+        }
+
+        return [
+            'total_profit' => round($totalProfit, 2),
+            'monthly' => array_values($monthlyData),
+            'daily' => $daily
+        ];
     }
 }

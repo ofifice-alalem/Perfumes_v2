@@ -17,6 +17,19 @@ class ReportController extends Controller
         return Inertia::render('Reports/Index');
     }
 
+    public function profitAnalysisSummary(Request $request): Response
+    {
+        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo   = $request->input('date_to', now()->endOfMonth()->toDateString());
+
+        $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+
+        return Inertia::render('Reports/ProfitAnalysis', [
+            'profitSummary' => $profitSummary,
+            'filters' => compact('dateFrom', 'dateTo')
+        ]);
+    }
+
     public function productMovement(Request $request): Response
     {
         $productId = $request->integer('product_id');
