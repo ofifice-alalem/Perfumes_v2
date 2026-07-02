@@ -94,9 +94,15 @@
 
     <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 12px auto 0; border: 2px solid #0f172a;">
         <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
-            <td colspan="4" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
+            <td colspan="{{ $labels['show_purchased'] ? '2' : '4' }}" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
         </tr>
         <tr>
+            @if($labels['show_purchased'])
+            <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc; width: 50%;">
+                <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('إجمالي الربح') }}</div>
+                <div style="font-size: 20px; font-weight: bold; color: #16a34a;">{{ $fmtN($labels['total_profit']) }}</div>
+            </td>
+            @else
             <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
                 <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('حرج') }}</div>
                 <div style="font-size: 20px; font-weight: bold; color: #dc2626;">{{ $labels['critical_count'] }}</div>
@@ -109,7 +115,8 @@
                 <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('جيد') }}</div>
                 <div style="font-size: 20px; font-weight: bold; color: #16a34a;">{{ $labels['ok_count'] }}</div>
             </td>
-            <td style="padding: 16px 8px; text-align: center; background: #f8fafc;">
+            @endif
+            <td style="padding: 16px 8px; text-align: center; background: #f8fafc; width: {{ $labels['show_purchased'] ? '50%' : 'auto' }};">
                 <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('إجمالي المنتجات') }}</div>
                 <div style="font-size: 20px; font-weight: bold; color: #0f172a;">{{ $labels['total_products'] }}</div>
             </td>
@@ -121,22 +128,33 @@
 
 {{-- Summary Cards --}}
 <div class="summary-tbl">
-    <div class="summary-cell">
-        <div class="summary-label">{{ $g('حرج') }}</div>
-        <div class="summary-value" style="color: #dc2626;">{{ $labels['critical_count'] }}</div>
+    @if($labels['show_purchased'])
+    <div class="summary-cell" style="width:50%;">
+        <div class="summary-label">{{ $g('إجمالي الربح') }}</div>
+        <div class="summary-value" style="color: #16a34a;">{{ $fmtN($labels['total_profit']) }}</div>
     </div>
-    <div class="summary-cell" style="border-right: none; border-left: none;">
-        <div class="summary-label">{{ $g('تحذير') }}</div>
-        <div class="summary-value" style="color: #d97706;">{{ $labels['warning_count'] }}</div>
-    </div>
-    <div class="summary-cell" style="border-left: none;">
-        <div class="summary-label">{{ $g('جيد') }}</div>
-        <div class="summary-value" style="color: #16a34a;">{{ $labels['ok_count'] }}</div>
-    </div>
-    <div class="summary-cell">
+    <div class="summary-cell" style="border-right: none; width:50%;">
         <div class="summary-label">{{ $g('إجمالي المنتجات') }}</div>
         <div class="summary-value">{{ $labels['total_products'] }}</div>
     </div>
+    @else
+    <div class="summary-cell" style="width:25%;">
+        <div class="summary-label">{{ $g('حرج') }}</div>
+        <div class="summary-value" style="color: #dc2626;">{{ $labels['critical_count'] }}</div>
+    </div>
+    <div class="summary-cell" style="border-right: none; width:25%;">
+        <div class="summary-label">{{ $g('تحذير') }}</div>
+        <div class="summary-value" style="color: #d97706;">{{ $labels['warning_count'] }}</div>
+    </div>
+    <div class="summary-cell" style="border-right: none; width:25%;">
+        <div class="summary-label">{{ $g('جيد') }}</div>
+        <div class="summary-value" style="color: #16a34a;">{{ $labels['ok_count'] }}</div>
+    </div>
+    <div class="summary-cell" style="width:25%;">
+        <div class="summary-label">{{ $g('إجمالي المنتجات') }}</div>
+        <div class="summary-value">{{ $labels['total_products'] }}</div>
+    </div>
+    @endif
 </div>
 
 {{-- جدول المخزون --}}
@@ -231,8 +249,18 @@
     </tbody>
     <tfoot>
         <tr>
-            <td colspan="7" style="text-align: right; color: #64748b;">{{ $g('إجمالي المنتجات') }}: {{ $labels['total_products'] }}</td>
-            <td colspan="3"></td>
+            @if($labels['show_purchased'])
+                @if($labels['compact_view'])
+                    <td class="num" style="color: #16a34a;">{{ $fmtN($labels['total_profit']) }}</td>
+                    <td colspan="5" style="text-align: right; color: #64748b;">{{ $g('الإجمالي') }}</td>
+                @else
+                    <td class="num" style="color: #16a34a;">{{ $fmtN($labels['total_profit']) }}</td>
+                    <td colspan="12" style="text-align: right; color: #64748b;">{{ $g('الإجمالي') }}</td>
+                @endif
+            @else
+                <td colspan="7" style="text-align: right; color: #64748b;">{{ $g('إجمالي المنتجات') }}: {{ $labels['total_products'] }}</td>
+                <td colspan="3"></td>
+            @endif
         </tr>
     </tfoot>
 </table>

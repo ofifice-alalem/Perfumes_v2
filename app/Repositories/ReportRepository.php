@@ -618,9 +618,9 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false): void
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -633,7 +633,6 @@ class ReportRepository implements ReportRepositoryInterface
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
-        $row = 1;
         $infoRows = [
             [$showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
@@ -642,7 +641,14 @@ class ReportRepository implements ReportRepositoryInterface
             ['التصنيف',     $categoryName ?: 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
+
+        if ($showPurchased) {
+            $totalProfit = array_reduce($data, fn($carry, $item) => $carry + (float)($item['profit'] ?? 0), 0.0);
+            $infoRows[] = ['', ''];
+            $infoRows[] = ['إجمالي الربح', $fmtN($totalProfit)];
+        }
         
+        $row = 1;
         foreach ($infoRows as $info) {
             $sheet->setCellValue('A' . $row, $info[0]);
             $sheet->setCellValue('B' . $row, $info[1]);
@@ -748,6 +754,25 @@ class ReportRepository implements ReportRepositoryInterface
             $row++;
         }
 
+        if ($showPurchased) {
+            if ($compactView) {
+                $sheet->setCellValue('F' . $row, $fmtN($totalProfit));
+                $sheet->mergeCells("A$row:E$row");
+                $sheet->setCellValue("A$row", "الإجمالي");
+            } else {
+                $sheet->setCellValue('M' . $row, $fmtN($totalProfit));
+                $sheet->mergeCells("A$row:L$row");
+                $sheet->setCellValue("A$row", "الإجمالي");
+            }
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+                'font'      => ['bold' => true, 'color' => ['rgb' => '0F172A'], 'size' => 11],
+                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+            $row++;
+        }
+
         foreach (range('A', $lastCol) as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
@@ -760,12 +785,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false): \Illuminate\Http\Response
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
@@ -773,6 +798,11 @@ class ReportRepository implements ReportRepositoryInterface
 
         $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
         $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
+        $totalProfit = null;
+        if ($showPurchased) {
+            $totalProfit = array_reduce($data, fn($carry, $item) => $carry + (float)($item['profit'] ?? 0), 0.0);
+        }
 
         $labels = [
             'title'          => $g($showPurchased ? 'تقرير الأرباح' : 'تقرير المخزون الحالي'),
@@ -808,6 +838,7 @@ class ReportRepository implements ReportRepositoryInterface
             'show_wasted'    => $showWasted,
             'show_purchased' => $showPurchased,
             'compact_view'   => $compactView,
+            'total_profit'   => $totalProfit,
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.stock-status-pdf', [
