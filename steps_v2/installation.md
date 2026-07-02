@@ -189,3 +189,40 @@ net stop Apache2.4
 net start Apache2.4
 php artisan optimize:clear
 php artisan optimize
+
+---
+
+## إصلاح period_id الفارغة (في حال إنشاء معاملات قبل إنشاء دورة محاسبية)
+
+```sql
+-- 1. إنشاء الدورة المحاسبية من بداية السنة الحالية
+INSERT INTO accounting_periods (name, started_at, closed_at, status, notes, created_by, created_at, updated_at)
+SELECT
+    CONCAT('دورة ', YEAR(NOW())),
+    CONCAT(YEAR(NOW()), '-01-01 00:00:00'),
+    NULL,
+    'open',
+    NULL,
+    id,
+    NOW(),
+    NOW()
+FROM users ORDER BY id ASC LIMIT 1;
+
+-- 2. ربط جميع السجلات التي لا تحتوي على period_id بهذه الدورة
+SET @period_id = LAST_INSERT_ID();
+
+UPDATE invoices              SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE invoice_items         SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE payments              SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE settlements           SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE purchases             SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE purchase_items        SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE supplier_payments     SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE supplier_settlements  SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE invoice_returns       SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE invoice_return_items  SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE purchase_returns      SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE purchase_return_items SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE waste_logs            SET period_id = @period_id WHERE period_id IS NULL;
+UPDATE waste_items           SET period_id = @period_id WHERE period_id IS NULL;
+```
