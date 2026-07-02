@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\RolloverRequest;
 use App\Repositories\Contracts\AccountingPeriodRepositoryInterface;
+use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Services\RolloverService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class PeriodController extends Controller
     public function __construct(
         private AccountingPeriodRepositoryInterface $periods,
         private RolloverService $rollover,
+        private ReportRepositoryInterface $reports,
     ) {}
 
     public function index(): Response
@@ -31,9 +33,15 @@ class PeriodController extends Controller
 
         abort_unless($current, 404, 'لا توجد فترة مفتوحة');
 
+        $dateFrom = $current->started_at->toDateString();
+        $dateTo   = now()->toDateString();
+
         return Inertia::render('Periods/Rollover', [
             'currentPeriod' => $current,
             'preview'       => $this->rollover->previewSnapshot(),
+            'profitSummary' => $this->reports->dailyProfitSummary($dateFrom, $dateTo),
+            'periodDateFrom'=> $dateFrom,
+            'periodDateTo'  => $dateTo,
         ]);
     }
 

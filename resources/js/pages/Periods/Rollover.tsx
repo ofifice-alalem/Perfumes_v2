@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, CreditCard, BarChart2, CheckCircle } from 'lucide-react';
+import { RefreshCw, ChevronLeft, AlertTriangle, Users, Truck, CreditCard, BarChart2, CheckCircle, TrendingUp, ChevronRight } from 'lucide-react';
 
 interface Period { id: number; name: string; started_at: string; }
 
@@ -37,9 +37,16 @@ interface Preview {
     stats: Stats;
 }
 
+interface DailyProfit { date: string; sales: number; returns: number; net_sales: number; profit: number; }
+interface MonthlyProfit { month: string; sales: number; returns: number; net_sales: number; profit: number; days: DailyProfit[]; }
+interface ProfitSummary { total_profit: number; monthly: MonthlyProfit[]; daily: DailyProfit[]; }
+
 interface Props {
     currentPeriod: Period;
     preview: Preview;
+    profitSummary: ProfitSummary;
+    periodDateFrom: string;
+    periodDateTo: string;
     flash?: { success?: string; error?: string };
 }
 
@@ -173,11 +180,17 @@ function StockEquationTable({ products, opening, purchased, sold, waste, custome
     );
 }
 
-export default function PeriodsRollover({ currentPeriod, preview, flash }: Props) {
+export default function PeriodsRollover({ currentPeriod, preview, profitSummary, periodDateFrom, periodDateTo, flash }: Props) {
+    const [activeTab, setActiveTab]   = useState<'summary' | 'daily'>('summary');
+    const [expanded, setExpanded]     = useState<Set<string>>(new Set());
     const [newName, setNewName]       = useState('');
     const [notes, setNotes]           = useState('');
     const [confirmed, setConfirmed]   = useState(false);
     const [processing, setProcessing] = useState(false);
+
+    function toggleExpand(month: string) {
+        setExpanded(prev => { const n = new Set(prev); n.has(month) ? n.delete(month) : n.add(month); return n; });
+    }
 
     function submit() {
         if (!newName.trim()) { alert('اسم الفترة الجديدة مطلوب'); return; }
@@ -216,7 +229,104 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-[1fr_400px] gap-6">
+                {/* Tabs */}
+                <div className="flex gap-2">
+                    <button onClick={() => setActiveTab('summary')}
+                        className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${
+                            activeTab === 'summary' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
+                        }`}>
+                        <BarChart2 className="w-4 h-4" /> ملخص الفترة
+                    </button>
+                    <button onClick={() => setActiveTab('daily')}
+                        className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${
+                            activeTab === 'daily' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
+                        }`}>
+                        <TrendingUp className="w-4 h-4" /> تحليل يومي
+                    </button>
+                </div>
+
+                {activeTab === 'daily' && (
+                    <div className="flex flex-col gap-6">
+                        <div className="spatial-card p-6 flex flex-col gap-1 border border-primary/20 bg-primary/5">
+                            <p className="text-xs font-black text-primary uppercase tracking-widest">صافي الربح للفترة ({periodDateFrom} → {periodDateTo})</p>
+                            <p className="text-4xl font-black text-primary">{fmt(profitSummary.total_profit)} <span className="text-lg">د.ل</span></p>
+                        </div>
+                        <SpatialCard title={`التفصيل الشهري (${profitSummary.monthly.length} شهر)`} icon={<TrendingUp className="w-4 h-4" />}>
+                            {profitSummary.monthly.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
+                                    <TrendingUp className="w-12 h-12 opacity-30" />
+                                    <p className="font-bold">لا توجد مبيعات في هذه الفترة</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-[16px]">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                {['الشهر', 'صافي المبيعات', 'الربح', ''].map(h => (
+                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {profitSummary.monthly.map(m => (
+                                                <React.Fragment key={m.month}>
+                                                    <tr className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{m.month}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(m.net_sales)}</td>
+                                                        <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">{fmt(m.profit)}</td>
+                                                        <td className="px-4 py-4">
+                                                            <button onClick={() => toggleExpand(m.month)}
+                                                                className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
+                                                                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(m.month) ? 'rotate-90' : ''}`} />
+                                                                تفاصيل
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                    {expanded.has(m.month) && (
+                                                        <tr>
+                                                            <td colSpan={4} className="px-6 py-4 bg-black/2 dark:bg-white/2">
+                                                                <table className="w-full text-[15px]">
+                                                                    <thead>
+                                                                        <tr className="border-b border-black/5 dark:border-white/5">
+                                                                            {['التاريخ','المبيعات','المرتجعات','صافي البيع','الربح'].map(h => (
+                                                                                <th key={h} className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm">{h}</th>
+                                                                            ))}
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                                        {m.days.map((d, i) => (
+                                                                            <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20">
+                                                                                <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
+                                                                                <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.sales)}</td>
+                                                                                <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.returns)}</td>
+                                                                                <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(d.net_sales)}</td>
+                                                                                <td className={`py-3 px-4 font-black ${d.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{fmt(d.profit)}</td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="border-t-2 border-black/10 dark:border-white/10">
+                                                <td className="px-4 py-4 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(profitSummary.monthly.reduce((a, b) => a + b.net_sales, 0))}</td>
+                                                <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">{fmt(profitSummary.total_profit)}</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </SpatialCard>
+                    </div>
+                )}
+
+                {activeTab === 'summary' && <div className="grid lg:grid-cols-[1fr_400px] gap-6">
                     <div className="flex flex-col gap-6">
 
                         {/* Customers */}
@@ -393,7 +503,7 @@ export default function PeriodsRollover({ currentPeriod, preview, flash }: Props
                             </div>
                         </SpatialCard>
                     </div>
-                </div>
+                </div>}
             </div>
         </AppShell>
     );
