@@ -157,6 +157,12 @@ export default function StockStatus({ categories, products, filters, profitFilte
     const okCount       = data.filter(p => p.status === 'ok').length;
     const warningCount  = data.filter(p => p.status === 'warning').length;
     const criticalCount = data.filter(p => p.status === 'critical').length;
+    
+    const storeCapital = data.reduce((sum, p) => {
+        const qty = Math.max(0, Number(p.stock) || 0);
+        const cost = p.avg_purchase_cost ?? p.last_purchase_cost ?? 0;
+        return sum + (qty * Number(cost));
+    }, 0);
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
@@ -306,9 +312,9 @@ export default function StockStatus({ categories, products, filters, profitFilte
                     {activeTab === 'stock' && (<>
                         {/* Summary + Export */}
                         <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="spatial-card p-4 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">إجمالي</p>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div className="spatial-card p-4 flex flex-col gap-1 col-span-2 md:col-span-1">
+                                    <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">إجمالي المنتجات</p>
                                     <p className="text-2xl font-black text-slate-800 dark:text-white">{data.length}</p>
                                 </div>
                                 <div className="spatial-card p-4 flex flex-col gap-1">
@@ -322,6 +328,10 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                 <div className="spatial-card p-4 flex flex-col gap-1">
                                     <p className="text-xs font-black text-red-500 uppercase tracking-widest">حرج</p>
                                     <p className="text-2xl font-black text-red-500">{criticalCount}</p>
+                                </div>
+                                <div className="spatial-card p-4 flex flex-col gap-1 col-span-2 md:col-span-1 border border-primary/20 bg-primary/5">
+                                    <p className="text-xs font-black text-primary uppercase tracking-widest">رأس مال المتجر</p>
+                                    <p className="text-2xl font-black text-primary">{fmt(storeCapital)} <span className="text-sm">د.ل</span></p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
