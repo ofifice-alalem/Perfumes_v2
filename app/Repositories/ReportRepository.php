@@ -627,7 +627,33 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->setRightToLeft(true);
         $sheet->setTitle($showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي');
 
+        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
         $row = 1;
+        $infoRows = [
+            [$showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي', ''],
+            ['من تاريخ',   $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['المنتجات',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['التصنيف',     $categoryName ?: 'الكل'],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+        ];
+        
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
         
         if ($showPurchased) {
             if ($compactView) {
@@ -653,8 +679,6 @@ class ReportRepository implements ReportRepositoryInterface
 
         $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
         $statusColors = ['ok' => '16A34A', 'warning' => 'D97706', 'critical' => 'DC2626'];
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
         foreach ($data as $i => $p) {
             $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
@@ -747,10 +771,16 @@ class ReportRepository implements ReportRepositoryInterface
 
         $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
 
+        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
         $labels = [
             'title'          => $g($showPurchased ? 'تقرير الأرباح' : 'تقرير المخزون الحالي'),
             'generated_at'   => now()->format('Y-m-d H:i'),
-            'filter_info'    => $g('معلومات التقرير'),
+            'date_from_val'  => $dateFrom ?: $g('البداية'),
+            'date_to_val'    => $dateTo ?: $g('النهاية'),
+            'products_val'   => !empty($productNames) ? $g(implode('، ', $productNames)) : $g('الكل'),
+            'category_val'   => $categoryName ? $g($categoryName) : $g('الكل'),
             'label_category' => $g('التصنيف'),
             'label_type'     => $g('نوع المنتج'),
             'label_filter'   => $g('الفلتر'),
@@ -3320,12 +3350,40 @@ class ReportRepository implements ReportRepositoryInterface
     {
         $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds);
 
+        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('تحليل الأرباح الشامل');
 
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
+
         $row = 1;
+        $infoRows = [
+            ['تحليل الأرباح الشامل', ''],
+            ['من تاريخ',   $dateFrom ?? 'البداية'],
+            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
+            ['المنتجات',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
+            ['', ''],
+            ['إجمالي صافي المبيعات', $fmtN(array_sum(array_column($data['monthly'], 'net_sales')))],
+            ['إجمالي الربح', $fmtN($data['total_profit'])],
+        ];
+        
+        foreach ($infoRows as $info) {
+            $sheet->setCellValue('A' . $row, $info[0]);
+            $sheet->setCellValue('B' . $row, $info[1]);
+            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
+                'font'    => ['bold' => true, 'size' => 10],
+                'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+        $row++;
+
         $headers = ['#', 'التاريخ', 'الشهر', 'المبيعات', 'المرتجعات', 'صافي المبيعات', 'الربح'];
         
         $lastCol = chr(ord('A') + count($headers) - 1);
@@ -3337,9 +3395,6 @@ class ReportRepository implements ReportRepositoryInterface
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
         $row++;
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
         $i = 0;
         foreach ($data['monthly'] as $m) {
@@ -3396,16 +3451,21 @@ class ReportRepository implements ReportRepositoryInterface
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
+        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+
         $labels = [
             'title'        => $g('تحليل الأرباح الشامل'),
             'generated_at' => now()->format('Y-m-d H:i'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.profit-analysis-pdf', [
-            'labels' => $labels,
-            'data'   => $data,
-            'g'      => $g,
-            'fmtN'   => $fmtN,
+            'labels'       => $labels,
+            'data'         => $data,
+            'g'            => $g,
+            'fmtN'         => $fmtN,
+            'dateFrom'     => $dateFrom,
+            'dateTo'       => $dateTo,
+            'productNames' => $productNames,
         ])
         ->setPaper('a4', 'portrait')
         ->setOption('isHtml5ParserEnabled', true)

@@ -51,6 +51,51 @@
     </div>
 </div>
 
+{{-- Cover Page --}}
+<div style="page-break-after: always; padding: 20px 40px; text-align: center;">
+    <div style="margin-bottom: 20px;">
+        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 300px; max-width: 550px;">
+    </div>
+    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px;">
+        <div style="font-size: 22px; font-weight: bold; color: #0f172a;">{{ $labels['title'] }}</div>
+    </div>
+
+    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0f172a;">
+        <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
+            <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none;">&#x2014; {{ $g('معلومات الفلتر') }} &#x2014;</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $dateFrom ?: $g('بداية الشهر') }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('من تاريخ') }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $dateTo ?: $g('نهاية الشهر') }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('إلى تاريخ') }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">{{ !empty($productNames) ? $g(implode('، ', $productNames)) : $g('الكل') }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المحددة') }}</td>
+        </tr>
+    </table>
+
+    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 12px auto 0; border: 2px solid #0f172a;">
+        <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
+            <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none;">&#x2014; {{ $g('ملخص الأرباح') }} &#x2014;</td>
+        </tr>
+        <tr>
+            <td style="padding: 14px 6px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc; width: 50%;">
+                <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 4px;">{{ $g('إجمالي الربح') }}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #16a34a;">{{ $fmtN($data['total_profit']) }}</div>
+            </td>
+            <td style="padding: 14px 6px; text-align: center; background: #f8fafc; width: 50%;">
+                <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 4px;">{{ $g('إجمالي صافي المبيعات') }}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #0f172a;">{{ $fmtN(array_sum(array_column($data['monthly'], 'net_sales'))) }}</div>
+            </td>
+        </tr>
+    </table>
+    <div style="margin-top: 16px; font-size: 9px; color: #94a3b8;">{{ $labels['generated_at'] }}</div>
+</div>
+
 <div class="summary-tbl">
     <div class="summary-cell" style="border-left: none;">
         <div class="summary-label">{{ $g('إجمالي صافي المبيعات') }}</div>
