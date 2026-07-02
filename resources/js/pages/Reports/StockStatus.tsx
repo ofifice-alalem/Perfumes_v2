@@ -24,6 +24,10 @@ interface ProductStock {
     avg_sale_price: number | null;
     total_sold: number | null;
     total_wasted: number | null;
+    total_return_in: number | null;
+    avg_return_in_price: number | null;
+    total_return_out: number | null;
+    avg_return_out_price: number | null;
     total_purchased: number | null;
     profit: number | null;
 }
@@ -515,7 +519,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                         <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['المنتج', 'اجمالي المشتراه', 'اجمالي المخزون', 'اجمالي المبيعات', 'اجمالي التالف', 'متوسط شراء', 'متوسط بيع', 'الربح'].map(h => (
+                                                    {['المنتج', 'اجمالي المشتراه', 'اجمالي المخزون', 'اجمالي المبيعات', 'اجمالي التالف', 'مرتجع مورد', 'متوسط ارجاع المورد', 'مرتجع زبائن', 'متوسط ارجاع الزبائن', 'متوسط شراء', 'متوسط بيع', 'الربح'].map(h => (
                                                         <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -528,6 +532,10 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                                         <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
                                                         <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
                                                         <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
+                                                        <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
                                                         <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
                                                         <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
                                                         <td className="px-4 py-4 font-black whitespace-nowrap">
@@ -567,6 +575,22 @@ export default function StockStatus({ categories, products, filters, profitFilte
                                                     <div className="flex justify-between">
                                                         <span className="font-bold text-slate-400 dark:text-white/40">إجمالي التالف</span>
                                                         <span className="font-bold text-red-500">{fmt(p.total_wasted)} {p.unit}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="font-bold text-slate-400 dark:text-white/40">مرتجع مورد</span>
+                                                        <span className="font-bold text-amber-500">{fmt(p.total_return_out)} {p.unit}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع المورد</span>
+                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_out_price)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="font-bold text-slate-400 dark:text-white/40">مرتجع زبائن</span>
+                                                        <span className="font-bold text-orange-500">{fmt(p.total_return_in)} {p.unit}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span className="font-bold text-slate-400 dark:text-white/40">متوسط ارجاع الزبائن</span>
+                                                        <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.avg_return_in_price)}</span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span className="font-bold text-slate-400 dark:text-white/40">متوسط شراء</span>

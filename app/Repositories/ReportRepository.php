@@ -392,6 +392,44 @@ class ReportRepository implements ReportRepositoryInterface
             $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
             $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
+            // 1. Purchase Calculations (Weighted Average)
+            $totalPurchasedQty = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->sum('purchase_items.quantity');
+
+            $totalPurchaseValue = (float) DB::table('purchase_items')
+                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+                ->whereNull('purchases.deleted_at')
+                ->where('purchase_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->sum(DB::raw('purchase_items.quantity * purchase_items.unit_cost'));
+
+            $totalReturnOutQty = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->sum('purchase_return_items.quantity');
+
+            $totalReturnOutValue = (float) DB::table('purchase_return_items')
+                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+                ->whereNull('purchase_returns.deleted_at')
+                ->where('purchase_return_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->sum(DB::raw('purchase_return_items.quantity * purchase_return_items.unit_cost'));
+
+            $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
+
+            $netPurchaseQty  = $totalPurchasedQty - $totalReturnOutQty;
+            $avgPurchaseCost = $netPurchaseQty > 0 ? (($totalPurchaseValue - $totalReturnOutValue) / $netPurchaseQty) : null;
+
             $lastPurchaseCost = DB::table('purchase_items')
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
                 ->whereNull('purchases.deleted_at')
@@ -401,13 +439,42 @@ class ReportRepository implements ReportRepositoryInterface
                 ->orderByDesc('purchases.created_at')
                 ->value('purchase_items.unit_cost');
 
-            $avgPurchaseCost = DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->avg('purchase_items.unit_cost');
+            // 2. Sales Calculations (Weighted Average)
+            $totalSoldQty = (float) DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                ->sum('invoice_items.quantity');
+
+            $totalSaleValue = (float) DB::table('invoice_items')
+                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+                ->whereNull('invoices.deleted_at')
+                ->where('invoice_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                ->sum(DB::raw('invoice_items.quantity * invoice_items.unit_price'));
+
+            $totalReturnInQty = (float) DB::table('invoice_return_items')
+                ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+                ->whereNull('invoice_returns.deleted_at')
+                ->where('invoice_return_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                ->sum('invoice_return_items.quantity');
+
+            $totalReturnInValue = (float) DB::table('invoice_return_items')
+                ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+                ->whereNull('invoice_returns.deleted_at')
+                ->where('invoice_return_items.product_id', $p->id)
+                ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                ->sum(DB::raw('invoice_return_items.quantity * invoice_return_items.unit_price'));
+
+            $netSaleQty       = $totalSoldQty - $totalReturnInQty;
+            $avgSalePrice     = $netSaleQty > 0 ? (($totalSaleValue - $totalReturnInValue) / $netSaleQty) : null;
+            $avgReturnInPrice = $totalReturnInQty > 0 ? ($totalReturnInValue / $totalReturnInQty) : null;
 
             $lastSalePrice = DB::table('invoice_items')
                 ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
@@ -418,27 +485,11 @@ class ReportRepository implements ReportRepositoryInterface
                 ->orderByDesc('invoices.created_at')
                 ->value('invoice_items.unit_price');
 
-            $avgSalePrice = DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->avg('invoice_items.unit_price');
-
             $status = match(true) {
                 (float)$p->stock <= 0                     => 'critical',
                 (float)$p->stock <= (float)$p->min_stock  => 'warning',
                 default                                   => 'ok',
             };
-
-            $totalSold = $showSold ? (float) DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->sum('invoice_items.quantity') : null;
 
             $totalWasted = $showWasted ? (float) DB::table('waste_items')
                 ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
@@ -447,17 +498,11 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
                 ->sum('waste_items.quantity') : null;
 
-            $totalPurchased = $showPurchased ? (float) DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->sum('purchase_items.quantity') : null;
-
             $profit = null;
-            if ($totalSold !== null && $avgSalePrice !== null && $avgPurchaseCost !== null) {
-                $profit = round(($totalSold * $avgSalePrice) - ($totalSold * $avgPurchaseCost), 2);
+            if ($avgSalePrice !== null && $avgPurchaseCost !== null && $netSaleQty > 0) {
+                $netSales = $totalSaleValue - $totalReturnInValue;
+                $netCost  = $netSaleQty * $avgPurchaseCost;
+                $profit   = round($netSales - $netCost, 2);
             }
 
             return [
@@ -474,9 +519,13 @@ class ReportRepository implements ReportRepositoryInterface
                 'avg_purchase_cost'  => $avgPurchaseCost  ? round((float)$avgPurchaseCost, 2) : null,
                 'last_sale_price'    => $lastSalePrice    ? (float)$lastSalePrice    : null,
                 'avg_sale_price'     => $avgSalePrice     ? round((float)$avgSalePrice, 2)    : null,
-                'total_sold'         => $totalSold,
+                'total_sold'         => $showSold ? $totalSoldQty : null,
                 'total_wasted'       => $totalWasted,
-                'total_purchased'    => $totalPurchased,
+                'total_return_in'    => $showSold ? $totalReturnInQty : null,
+                'avg_return_in_price'=> $showSold ? ($avgReturnInPrice ? round((float)$avgReturnInPrice, 2) : null) : null,
+                'total_return_out'   => $showPurchased ? $totalReturnOutQty : null,
+                'avg_return_out_price'=> $showPurchased ? ($avgReturnOutPrice !== null ? round((float)$avgReturnOutPrice, 2) : null) : null,
+                'total_purchased'    => $showPurchased ? $totalPurchasedQty : null,
                 'profit'             => $profit,
             ];
         })->values()->toArray();
