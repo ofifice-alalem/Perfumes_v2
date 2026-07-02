@@ -1,7 +1,7 @@
 import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { RefreshCw, Eye, Trash2, AlertTriangle, X, Plus } from 'lucide-react';
+import { RefreshCw, Eye, Trash2, AlertTriangle, X, Plus, Play } from 'lucide-react';
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -88,22 +88,39 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                         <h1 className="text-2xl font-black text-slate-800 dark:text-white">الإقفال والجرد</h1>
                         <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">إدارة عمليات الإقفال المالي وتدوير الحسابات</p>
                     </div>
-                    {currentPeriod && (
+                    {currentPeriod ? (
                         <Link href="/periods/rollover"
                             className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
                             <RefreshCw className="w-4 h-4" /> تنفيذ التدوير
                         </Link>
+                    ) : (
+                        <button onClick={() => {
+                            const name = prompt('الرجاء إدخال اسم الفترة المحاسبية الجديدة: (مثلاً: الفترة الافتتاحية)');
+                            if (name) {
+                                router.post('/periods/start-first', { name }, { preserveScroll: true });
+                            }
+                        }}
+                            className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm !bg-emerald-500 !shadow-emerald-500/20 hover:!bg-emerald-600">
+                            <Play className="w-4 h-4" /> بدء فترة محاسبية
+                        </button>
                     )}
                 </div>
 
                 {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
                 {flash?.error && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
 
-                {currentPeriod && (
+                {currentPeriod ? (
                     <div className="px-5 py-4 rounded-[18px] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="font-bold text-emerald-700 dark:text-emerald-400 text-sm">
                             الفترة الحالية: <strong>{currentPeriod.name}</strong> — مفتوحة منذ {fmtDate(currentPeriod.started_at)}
+                        </span>
+                    </div>
+                ) : (
+                    <div className="px-5 py-4 rounded-[18px] bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        <span className="font-bold text-red-700 dark:text-red-400 text-sm">
+                            لا توجد فترة محاسبية مفتوحة حالياً. النظام لا يمكنه تسجيل أي فواتير أو حركات مالية قبل بدء فترة جديدة.
                         </span>
                     </div>
                 )}

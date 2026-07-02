@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/',              [PeriodController::class, 'index'])    ->name('index');
         Route::get('/rollover',      [PeriodController::class, 'rollover']) ->name('rollover');
         Route::post('/execute',      [PeriodController::class, 'execute'])  ->name('execute');
+        Route::post('/start-first',  [PeriodController::class, 'startFirst'])->name('start-first');
         Route::get('/{id}/snapshot', [PeriodController::class, 'snapshot']) ->name('snapshot');
         Route::delete('/{id}/purge', [PeriodController::class, 'purge'])    ->name('purge');
     });
