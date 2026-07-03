@@ -59,7 +59,7 @@ class RolloverService
             'supplier_return_products' => $this->buildSupplierReturnProducts($periodId),
             'payment_methods'        => $this->buildPaymentMethodBalances($periodId),
             'stats'                  => $this->buildStats($periodId),
-            'profit_summary'         => $this->reports->dailyProfitSummary($dateFrom, $dateTo),
+            'profit_summary'         => $this->reports->dailyProfitSummary($dateFrom, $dateTo, null, $periodId),
         ];
     }
 
@@ -137,7 +137,7 @@ class RolloverService
             // Save daily profit data
             $dateFrom     = $current->started_at->toDateString();
             $dateTo       = now()->toDateString();
-            $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo);
+            $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo, null, $periodId);
             $dailyRows = [];
             foreach ($profitSummary['monthly'] as $month) {
                 foreach ($month['days'] as $day) {

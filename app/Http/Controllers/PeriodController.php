@@ -39,7 +39,7 @@ class PeriodController extends Controller
         return Inertia::render('Periods/Rollover', [
             'currentPeriod' => $current,
             'preview'       => $this->rollover->previewSnapshot(),
-            'profitSummary' => $this->reports->dailyProfitSummary($dateFrom, $dateTo),
+            'profitSummary' => $this->reports->dailyProfitSummary($dateFrom, $dateTo, null, $current->id),
             'periodDateFrom'=> $dateFrom,
             'periodDateTo'  => $dateTo,
         ]);
