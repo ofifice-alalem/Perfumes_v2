@@ -197,7 +197,7 @@ export default function PeriodsSnapshot({ period }: Props) {
     const dailyProfits = snapshot.daily_profits ?? [];
     const totalProfit  = dailyProfits.reduce((s, d) => s + Number(d.profit), 0);
     const monthlyMap   = dailyProfits.reduce<Record<string, { net_sales: number; profit: number; days: DailyProfit[] }>>((acc, d) => {
-        const month = d.date.slice(0, 7);
+        const month = String(d.date).slice(0, 7);
         if (!acc[month]) acc[month] = { net_sales: 0, profit: 0, days: [] };
         acc[month].net_sales += Number(d.net_sales);
         acc[month].profit    += Number(d.profit);
@@ -299,7 +299,7 @@ export default function PeriodsSnapshot({ period }: Props) {
                                                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                                                         {m.days.map(d => (
                                                                             <tr key={d.id} className="hover:bg-primary/5 dark:hover:bg-primary/20">
-                                                                                <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
+                                                                                <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{String(d.date).slice(0, 10)}</td>
                                                                                 <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.sales)}</td>
                                                                                 <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.returns)}</td>
                                                                                 <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(d.net_sales)}</td>

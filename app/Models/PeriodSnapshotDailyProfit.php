@@ -11,7 +11,7 @@ class PeriodSnapshotDailyProfit extends Model
 
     protected $fillable = ['snapshot_id', 'date', 'sales', 'returns', 'net_sales', 'profit'];
 
-    protected $casts = ['date' => 'date'];
+    protected $casts = ['date' => 'date:Y-m-d'];
 
     public function snapshot(): BelongsTo
     {
