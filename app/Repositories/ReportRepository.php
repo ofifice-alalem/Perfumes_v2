@@ -3211,7 +3211,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->whereNull('invoices.deleted_at')
             ->whereBetween('invoices.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where('invoices.period_id', $periodId))
+            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoices.period_id', $periodId)->orWhereNull('invoices.period_id')))
             ->when(!empty($filterProductIds), fn($q) => $q->whereIn('invoice_items.product_id', $filterProductIds))
             ->pluck('invoice_items.product_id')
             ->unique()
@@ -3221,7 +3221,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
             ->whereNull('invoice_returns.deleted_at')
             ->whereBetween('invoice_returns.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where('invoice_returns.period_id', $periodId))
+            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoice_returns.period_id', $periodId)->orWhereNull('invoice_returns.period_id')))
             ->when(!empty($filterProductIds), fn($q) => $q->whereIn('invoice_return_items.product_id', $filterProductIds))
             ->pluck('invoice_return_items.product_id')
             ->unique()
@@ -3295,7 +3295,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('invoices.deleted_at')
             ->whereIn('invoice_items.product_id', $productIds)
             ->whereBetween('invoices.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where('invoices.period_id', $periodId))
+            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoices.period_id', $periodId)->orWhereNull('invoices.period_id')))
             ->select(
                 DB::raw('DATE(invoices.created_at) as date'),
                 'invoice_items.product_id',
@@ -3310,7 +3310,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('invoice_returns.deleted_at')
             ->whereIn('invoice_return_items.product_id', $productIds)
             ->whereBetween('invoice_returns.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where('invoice_returns.period_id', $periodId))
+            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoice_returns.period_id', $periodId)->orWhereNull('invoice_returns.period_id')))
             ->select(
                 DB::raw('DATE(invoice_returns.created_at) as date'),
                 'invoice_return_items.product_id',
