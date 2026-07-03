@@ -32,7 +32,7 @@ class AccountingPeriodRepository extends Repository implements AccountingPeriodR
     public function findWithSnapshot(int $id)
     {
         return $this->model
-            ->with(['createdBy', 'snapshot.createdBy', 'snapshot.items', 'snapshot.dailyProfits'])
+            ->with(['createdBy', 'snapshot.createdBy', 'snapshot.items', 'snapshot.dailyProfits', 'snapshot.stockProfits'])
             ->findOrFail($id);
     }
 }

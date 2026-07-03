@@ -23,6 +23,15 @@ interface Stats {
     invoices_count: number; purchases_count: number; new_customers: number;
 }
 
+interface ProductStock {
+    id: number; name: string; category: string; unit: string; stock: number;
+    total_purchased: number | null; total_sold: number | null; total_wasted: number | null;
+    total_return_in: number | null; avg_return_in_price: number | null;
+    total_return_out: number | null; avg_return_out_price: number | null;
+    net_sale_qty: number | null; avg_purchase_cost: number | null;
+    avg_sale_price: number | null; profit: number | null;
+}
+
 interface Preview {
     customers: CustomerRow[];
     suppliers: SupplierRow[];
@@ -35,6 +44,7 @@ interface Preview {
     supplier_return_products: ReturnRow[];
     payment_methods: PaymentMethodRow[];
     stats: Stats;
+    stock_profit_data: ProductStock[];
 }
 
 interface DailyProfit { date: string; sales: number; returns: number; net_sales: number; profit: number; }
@@ -181,7 +191,7 @@ function StockEquationTable({ products, opening, purchased, sold, waste, custome
 }
 
 export default function PeriodsRollover({ currentPeriod, preview, profitSummary, periodDateFrom, periodDateTo, flash }: Props) {
-    const [activeTab, setActiveTab]   = useState<'summary' | 'daily'>('summary');
+    const [activeTab, setActiveTab]   = useState<'summary' | 'daily' | 'stock_profit'>('summary');
     const [expanded, setExpanded]     = useState<Set<string>>(new Set());
     const [newName, setNewName]       = useState('');
     const [notes, setNotes]           = useState('');
@@ -242,6 +252,12 @@ export default function PeriodsRollover({ currentPeriod, preview, profitSummary,
                             activeTab === 'daily' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
                         }`}>
                         <TrendingUp className="w-4 h-4" /> تحليل يومي
+                    </button>
+                    <button onClick={() => setActiveTab('stock_profit')}
+                        className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${
+                            activeTab === 'stock_profit' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
+                        }`}>
+                        <BarChart2 className="w-4 h-4" /> تقرير الأرباح (بالتاريخ)
                     </button>
                 </div>
 
@@ -314,8 +330,12 @@ export default function PeriodsRollover({ currentPeriod, preview, profitSummary,
                                         <tfoot>
                                             <tr className="border-t-2 border-black/10 dark:border-white/10">
                                                 <td className="px-4 py-4 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
-                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(profitSummary.monthly.reduce((a, b) => a + b.net_sales, 0))}</td>
-                                                <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">{fmt(profitSummary.total_profit)}</td>
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">
+                                                    {fmt(profitSummary.monthly.reduce((a, b) => a + b.net_sales, 0))}
+                                                </td>
+                                                <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">
+                                                    {fmt(profitSummary.total_profit)}
+                                                </td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
@@ -325,6 +345,46 @@ export default function PeriodsRollover({ currentPeriod, preview, profitSummary,
                         </SpatialCard>
                     </div>
                 )}
+
+                {activeTab === 'stock_profit' && (
+                    <div className="flex flex-col gap-6">
+                        <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 rounded-[16px]">
+                            <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
+                            <p className="text-xl font-black text-primary">
+                                {fmt(preview.stock_profit_data.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
+                            </p>
+                        </div>
+                        <SpatialCard title={`تقرير الأرباح (${preview.stock_profit_data.length})`} icon={<BarChart2 className="w-4 h-4" />}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-[16px]">
+                                    <thead>
+                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                            {['المنتج','متوسط شراء','متوسط بيع','صافي كمية المبيعات','الربح'].map(h => (
+                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                        {preview.stock_profit_data.map(p => (
+                                            <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
+                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
+                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost || 0)}</td>
+                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price || 0)}</td>
+                                                <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty || 0)} {p.unit}</td>
+                                                <td className="px-4 py-4 font-black whitespace-nowrap">
+                                                    <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
+                                                        {p.profit !== null ? fmt(p.profit) : '—'}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </SpatialCard>
+                    </div>
+                )}
+
 
                 {activeTab === 'summary' && <div className="grid lg:grid-cols-[1fr_400px] gap-6">
                     <div className="flex flex-col gap-6">

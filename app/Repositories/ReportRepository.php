@@ -367,8 +367,14 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Stock Status ──────────────────────────────────────────────────────────
 
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null): array
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null): array
     {
+        $scopePeriod = function ($q, string $table) use ($periodId) {
+            if ($periodId) {
+                $q->where(fn($sq) => $sq->where("{$table}.period_id", $periodId)->orWhereNull("{$table}.period_id"));
+            }
+        };
+
         $query = DB::table('products')
             ->when(!empty($filterProductIds), fn($q) => $q->whereIn('products.id', $filterProductIds))
             ->join('categories', 'categories.id', '=', 'products.category_id')
@@ -389,7 +395,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('products.name')
             ->get();
 
-        return $query->map(function ($p) use ($showSold, $showWasted, $showPurchased, $dateFrom, $dateTo) {
+        return $query->map(function ($p) use ($showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $scopePeriod) {
             $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
             $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -400,6 +406,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->sum('purchase_items.quantity');
 
             $totalPurchaseValue = (float) DB::table('purchase_items')
@@ -408,6 +415,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->sum('purchase_items.line_total');
 
             $totalReturnOutQty = (float) DB::table('purchase_return_items')
@@ -416,6 +424,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                 ->sum('purchase_return_items.quantity');
 
             $totalReturnOutValue = (float) DB::table('purchase_return_items')
@@ -424,6 +433,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                 ->sum('purchase_return_items.line_total');
 
             $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
@@ -434,6 +444,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->whereNull('purchases.deleted_at')
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->sum('purchase_items.quantity');
 
             $histPurchaseValue = (float) DB::table('purchase_items')
@@ -441,6 +452,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->whereNull('purchases.deleted_at')
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->sum('purchase_items.line_total');
 
             $histReturnOutQty = (float) DB::table('purchase_return_items')
@@ -448,6 +460,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->whereNull('purchase_returns.deleted_at')
                 ->where('purchase_return_items.product_id', $p->id)
                 ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                 ->sum('purchase_return_items.quantity');
 
             $histReturnOutValue = (float) DB::table('purchase_return_items')
@@ -455,6 +468,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->whereNull('purchase_returns.deleted_at')
                 ->where('purchase_return_items.product_id', $p->id)
                 ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                 ->sum('purchase_return_items.line_total');
 
             $netHistPurchaseQty = $histPurchasedQty - $histReturnOutQty;
@@ -466,6 +480,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('purchase_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->orderByDesc('purchases.created_at')
                 ->value('purchase_items.unit_cost');
 
@@ -476,6 +491,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
                 ->sum('invoice_items.quantity');
 
             $totalSaleValue = (float) DB::table('invoice_items')
@@ -484,6 +500,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
                 ->sum('invoice_items.line_total');
 
             $totalReturnInQty = (float) DB::table('invoice_return_items')
@@ -492,6 +509,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
                 ->sum('invoice_return_items.quantity');
 
             $totalReturnInValue = (float) DB::table('invoice_return_items')
@@ -500,6 +518,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_return_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
                 ->sum('invoice_return_items.line_total');
 
             $netSaleQty       = $totalSoldQty - $totalReturnInQty;
@@ -512,6 +531,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('invoice_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
                 ->orderByDesc('invoices.created_at')
                 ->value('invoice_items.unit_price');
 
@@ -526,6 +546,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('waste_items.product_id', $p->id)
                 ->when($dateFromFull, fn($q) => $q->where('waste_logs.created_at', '>=', $dateFromFull))
                 ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'waste_logs'))
                 ->sum('waste_items.quantity') : null;
 
             // حساب الربح يومياً بنفس منطق dailyProfitSummary
@@ -537,6 +558,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->whereNull('purchases.deleted_at')
                     ->where('purchase_items.product_id', $p->id)
                     ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+                    ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                     ->select('purchase_items.quantity', 'purchase_items.line_total', DB::raw('DATE(purchases.created_at) as date'))
                     ->get();
 
@@ -545,6 +567,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->whereNull('purchase_returns.deleted_at')
                     ->where('purchase_return_items.product_id', $p->id)
                     ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+                    ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                     ->select('purchase_return_items.quantity', 'purchase_return_items.line_total', DB::raw('DATE(purchase_returns.created_at) as date'))
                     ->get();
 
@@ -565,6 +588,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->where('invoice_items.product_id', $p->id)
                     ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
                     ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+                    ->tap(fn($q) => $scopePeriod($q, 'invoices'))
                     ->select(DB::raw('DATE(invoices.created_at) as date'), DB::raw('SUM(invoice_items.quantity) as qty'), DB::raw('SUM(invoice_items.line_total) as total'))
                     ->groupBy(DB::raw('DATE(invoices.created_at)'))
                     ->get();
@@ -575,6 +599,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->where('invoice_return_items.product_id', $p->id)
                     ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
                     ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+                    ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
                     ->select(DB::raw('DATE(invoice_returns.created_at) as date'), DB::raw('SUM(invoice_return_items.quantity) as qty'), DB::raw('SUM(invoice_return_items.line_total) as total'))
                     ->groupBy(DB::raw('DATE(invoice_returns.created_at)'))
                     ->get();

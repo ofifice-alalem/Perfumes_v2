@@ -21,6 +21,15 @@ interface DailyProfit {
     profit: number;
 }
 
+interface ProductStock {
+    id: number; name: string; category_name: string; unit: string; stock: number;
+    total_purchased: number | null; total_sold: number | null; total_wasted: number | null;
+    total_return_in: number | null; avg_return_in_price: number | null;
+    total_return_out: number | null; avg_return_out_price: number | null;
+    net_sale_qty: number | null; avg_purchase_cost: number | null;
+    avg_sale_price: number | null; profit: number | null;
+}
+
 interface Snapshot {
     id: number;
     snapshot_at: string;
@@ -28,6 +37,7 @@ interface Snapshot {
     created_by: { name: string };
     items: SnapshotItem[];
     daily_profits: DailyProfit[];
+    stock_profits: ProductStock[];
 }
 
 interface Period {
@@ -186,7 +196,7 @@ function StockEquationTable({ products, opening, purchased, sold, waste, custome
 export default function PeriodsSnapshot({ period }: Props) {
     const { snapshot } = period;
     const items = snapshot.items;
-    const [activeTab, setActiveTab] = useState<'summary' | 'daily'>('summary');
+    const [activeTab, setActiveTab] = useState<'summary' | 'daily' | 'stock_profit'>('summary');
     const [expanded, setExpanded]   = useState<Set<string>>(new Set());
 
     function toggleExpand(month: string) {
@@ -245,6 +255,12 @@ export default function PeriodsSnapshot({ period }: Props) {
                             activeTab === 'daily' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
                         }`}>
                         <TrendingUp className="w-4 h-4" /> تحليل يومي
+                    </button>
+                    <button onClick={() => setActiveTab('stock_profit')}
+                        className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${
+                            activeTab === 'stock_profit' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'
+                        }`}>
+                        <BarChart2 className="w-4 h-4" /> تقرير الأرباح (بالتاريخ)
                     </button>
                 </div>
 
@@ -322,6 +338,52 @@ export default function PeriodsSnapshot({ period }: Props) {
                                                 <td></td>
                                             </tr>
                                         </tfoot>
+                                    </table>
+                                </div>
+                            )}
+                        </SpatialCard>
+                    </div>
+                )}
+
+                {activeTab === 'stock_profit' && (
+                    <div className="flex flex-col gap-6">
+                        <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 rounded-[16px]">
+                            <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
+                            <p className="text-xl font-black text-primary">
+                                {fmt((snapshot.stock_profits ?? []).reduce((sum, p) => sum + Number(p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
+                            </p>
+                        </div>
+                        <SpatialCard title={`تقرير الأرباح (${(snapshot.stock_profits ?? []).length})`} icon={<BarChart2 className="w-4 h-4" />}>
+                            {(snapshot.stock_profits ?? []).length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
+                                    <BarChart2 className="w-12 h-12 opacity-30" />
+                                    <p className="font-bold">لا توجد بيانات ربح منتجات محفوظة لهذه الفترة</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-[16px]">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                {['المنتج','متوسط شراء','متوسط بيع','صافي كمية المبيعات','الربح'].map(h => (
+                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {snapshot.stock_profits.map(p => (
+                                                <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.product_name}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost || 0)}</td>
+                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price || 0)}</td>
+                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty || 0)} {p.unit}</td>
+                                                    <td className="px-4 py-4 font-black whitespace-nowrap">
+                                                        <span className={p.profit !== null ? (Number(p.profit) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
+                                                            {p.profit !== null ? fmt(p.profit) : '—'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
                                     </table>
                                 </div>
                             )}

@@ -60,6 +60,7 @@ class RolloverService
             'payment_methods'        => $this->buildPaymentMethodBalances($periodId),
             'stats'                  => $this->buildStats($periodId),
             'profit_summary'         => $this->reports->dailyProfitSummary($dateFrom, $dateTo, null, $periodId),
+            'stock_profit_data'      => $this->reports->stockStatus(null, null, false, true, true, true, $dateFrom, $dateTo, null, $periodId),
         ];
     }
 
@@ -153,6 +154,34 @@ class RolloverService
             }
             if (!empty($dailyRows)) {
                 PeriodSnapshotDailyProfit::insert($dailyRows);
+            }
+
+            // Save stock profit data
+            $stockProfitData = $this->reports->stockStatus(null, null, false, true, true, true, $dateFrom, $dateTo, null, $periodId);
+            $stockProfitRows = [];
+            foreach ($stockProfitData as $sp) {
+                $stockProfitRows[] = [
+                    'snapshot_id'          => $snapshot->id,
+                    'product_id'           => $sp['id'],
+                    'product_name'         => $sp['name'],
+                    'category_name'        => $sp['category'],
+                    'unit'                 => $sp['unit'],
+                    'stock'                => $sp['stock'] ?? 0,
+                    'total_purchased'      => $sp['total_purchased'],
+                    'total_sold'           => $sp['total_sold'],
+                    'total_wasted'         => $sp['total_wasted'],
+                    'total_return_in'      => $sp['total_return_in'],
+                    'avg_return_in_price'  => $sp['avg_return_in_price'],
+                    'total_return_out'     => $sp['total_return_out'],
+                    'avg_return_out_price' => $sp['avg_return_out_price'],
+                    'net_sale_qty'         => $sp['net_sale_qty'],
+                    'avg_purchase_cost'    => $sp['avg_purchase_cost'],
+                    'avg_sale_price'       => $sp['avg_sale_price'],
+                    'profit'               => $sp['profit'],
+                ];
+            }
+            if (!empty($stockProfitRows)) {
+                \App\Models\PeriodSnapshotStockProfit::insert($stockProfitRows);
             }
 
             // Step 3: Update opening balances

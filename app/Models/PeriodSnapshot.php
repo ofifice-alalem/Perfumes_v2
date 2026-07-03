@@ -36,4 +36,9 @@ class PeriodSnapshot extends Model
     {
         return $this->hasMany(PeriodSnapshotDailyProfit::class, 'snapshot_id');
     }
+
+    public function stockProfits(): HasMany
+    {
+        return $this->hasMany(PeriodSnapshotStockProfit::class, 'snapshot_id');
+    }
 }
