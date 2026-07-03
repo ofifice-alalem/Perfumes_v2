@@ -693,6 +693,10 @@ class ReportRepository implements ReportRepositoryInterface
     {
         $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
 
+        if ($compactView) {
+            $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
@@ -862,6 +866,11 @@ class ReportRepository implements ReportRepositoryInterface
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
         $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
+        
+        if ($compactView) {
+            $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));
+        }
+
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
