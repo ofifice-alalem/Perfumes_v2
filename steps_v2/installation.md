@@ -226,3 +226,6 @@ UPDATE purchase_return_items SET period_id = @period_id WHERE period_id IS NULL;
 UPDATE waste_logs            SET period_id = @period_id WHERE period_id IS NULL;
 UPDATE waste_items           SET period_id = @period_id WHERE period_id IS NULL;
 ```
+
+
+php artisan migrate
