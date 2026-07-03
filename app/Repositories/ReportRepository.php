@@ -395,7 +395,37 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('products.name')
             ->get();
 
-        return $query->map(function ($p) use ($showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $scopePeriod) {
+        $previousSnapshotId = null;
+        if ($periodId) {
+            $previousSnapshotId = DB::table('period_snapshots')
+                ->where('period_id', '<', $periodId)
+                ->orderBy('period_id', 'desc')
+                ->value('id');
+        } else {
+            $previousSnapshotId = DB::table('period_snapshots')
+                ->orderBy('id', 'desc')
+                ->value('id');
+        }
+
+        $fallbackCosts = [];
+        $fallbackStocks = [];
+        if ($previousSnapshotId) {
+            $stockProfits = DB::table('period_snapshot_stock_profits')
+                ->where('snapshot_id', $previousSnapshotId)
+                ->get(['product_id', 'avg_purchase_cost', 'stock']);
+
+            foreach ($stockProfits as $sp) {
+                if ($sp->avg_purchase_cost !== null) {
+                    $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
+                }
+                $fallbackStocks[$sp->product_id] = (float) $sp->stock;
+            }
+        }
+
+        return $query->map(function ($p) use (
+            $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $scopePeriod,
+            $fallbackCosts, $fallbackStocks
+        ) {
             $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
             $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -471,8 +501,18 @@ class ReportRepository implements ReportRepositoryInterface
                 ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
                 ->sum('purchase_return_items.line_total');
 
-            $netHistPurchaseQty = $histPurchasedQty - $histReturnOutQty;
-            $avgPurchaseCost = $netHistPurchaseQty > 0 ? (($histPurchaseValue - $histReturnOutValue) / $netHistPurchaseQty) : null;
+            $openingQty = $fallbackStocks[$p->id] ?? 0.0;
+            $openingCost = $fallbackCosts[$p->id] ?? 0.0;
+
+            $netHistPurchaseQty = $histPurchasedQty - $histReturnOutQty + $openingQty;
+            $totalHistValue = ($histPurchaseValue - $histReturnOutValue) + ($openingQty * $openingCost);
+
+            $avgPurchaseCost = null;
+            if ($netHistPurchaseQty > 0) {
+                $avgPurchaseCost = $totalHistValue / $netHistPurchaseQty;
+            } elseif ($openingCost > 0) {
+                $avgPurchaseCost = $openingCost;
+            }
 
             $lastPurchaseCost = DB::table('purchase_items')
                 ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
@@ -483,6 +523,10 @@ class ReportRepository implements ReportRepositoryInterface
                 ->tap(fn($q) => $scopePeriod($q, 'purchases'))
                 ->orderByDesc('purchases.created_at')
                 ->value('purchase_items.unit_cost');
+                
+            if ($lastPurchaseCost === null && $openingCost > 0) {
+                $lastPurchaseCost = $openingCost;
+            }
 
             // 2. Sales Calculations (Weighted Average)
             $totalSoldQty = (float) DB::table('invoice_items')
@@ -571,15 +615,17 @@ class ReportRepository implements ReportRepositoryInterface
                     ->select('purchase_return_items.quantity', 'purchase_return_items.line_total', DB::raw('DATE(purchase_returns.created_at) as date'))
                     ->get();
 
-                $getAvgCostAtDate = function ($targetDate) use ($allPurchases, $allPurchaseReturns) {
-                    $qty = 0; $val = 0;
+                $getAvgCostAtDate = function ($targetDate) use ($allPurchases, $allPurchaseReturns, $openingQty, $openingCost) {
+                    $qty = $openingQty; 
+                    $val = $openingQty * $openingCost;
+                    
                     foreach ($allPurchases as $pur) {
                         if ($pur->date <= $targetDate) { $qty += (float)$pur->quantity; $val += (float)$pur->line_total; }
                     }
                     foreach ($allPurchaseReturns as $pr) {
                         if ($pr->date <= $targetDate) { $qty -= (float)$pr->quantity; $val -= (float)$pr->line_total; }
                     }
-                    return $qty > 0 ? ($val / $qty) : 0;
+                    return $qty > 0 ? ($val / $qty) : ($openingCost > 0 ? $openingCost : 0);
                 };
 
                 $dailySales = DB::table('invoice_items')
@@ -3258,6 +3304,34 @@ class ReportRepository implements ReportRepositoryInterface
             return ['total_profit' => 0, 'monthly' => [], 'daily' => []];
         }
 
+        $previousSnapshotId = null;
+        if ($periodId) {
+            $previousSnapshotId = DB::table('period_snapshots')
+                ->where('period_id', '<', $periodId)
+                ->orderBy('period_id', 'desc')
+                ->value('id');
+        } else {
+            $previousSnapshotId = DB::table('period_snapshots')
+                ->orderBy('id', 'desc')
+                ->value('id');
+        }
+
+        $fallbackCosts = [];
+        $fallbackStocks = [];
+        if ($previousSnapshotId) {
+            $stockProfits = DB::table('period_snapshot_stock_profits')
+                ->where('snapshot_id', $previousSnapshotId)
+                ->whereIn('product_id', $productIds)
+                ->get(['product_id', 'avg_purchase_cost', 'stock']);
+
+            foreach ($stockProfits as $sp) {
+                if ($sp->avg_purchase_cost !== null) {
+                    $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
+                }
+                $fallbackStocks[$sp->product_id] = (float) $sp->stock;
+            }
+        }
+
         // 2. Fetch ALL purchases and returns for these products up to $dt
         $purchases = DB::table('purchase_items')
             ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
@@ -3286,14 +3360,17 @@ class ReportRepository implements ReportRepositoryInterface
             ->get();
 
         $avgCostCache = [];
-        $getAvgCost = function ($pid, $targetDate) use ($purchases, $purchaseReturns, &$avgCostCache) {
+        $getAvgCost = function ($pid, $targetDate) use ($purchases, $purchaseReturns, &$avgCostCache, $fallbackCosts, $fallbackStocks) {
             $cacheKey = $pid . '_' . $targetDate;
             if (isset($avgCostCache[$cacheKey])) {
                 return $avgCostCache[$cacheKey];
             }
 
-            $qty = 0;
-            $val = 0;
+            $openingQty = $fallbackStocks[$pid] ?? 0.0;
+            $openingCost = $fallbackCosts[$pid] ?? 0.0;
+
+            $qty = $openingQty;
+            $val = $openingQty * $openingCost;
 
             foreach ($purchases as $p) {
                 if ($p->product_id == $pid && $p->date <= $targetDate) {
@@ -3309,7 +3386,7 @@ class ReportRepository implements ReportRepositoryInterface
                 }
             }
 
-            $cost = $qty > 0 ? ($val / $qty) : 0;
+            $cost = $qty > 0 ? ($val / $qty) : ($openingCost > 0 ? $openingCost : 0);
             $avgCostCache[$cacheKey] = $cost;
             return $cost;
         };
