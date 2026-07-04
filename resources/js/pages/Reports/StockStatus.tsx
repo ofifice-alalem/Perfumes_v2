@@ -33,26 +33,11 @@ interface ProductStock {
     profit: number | null;
 }
 
-interface ProfitItem {
-    id: number;
-    name: string;
-    category: string;
-    unit: string;
-    opening_stock: number;
-    total_purchase_cost: number;
-    total_purchase_qty: number;
-    total_sale_value: number;
-    total_sold_qty: number;
-    profit: number | null;
-}
-
 interface Props {
     categories: Category[];
     products: Product[];
     filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean; showPurchased?: boolean; dateFrom: string; dateTo: string };
-    profitFilters: { productIds: string[]; dateFrom: string; dateTo: string; categoryId: number | null; search: boolean };
     data: ProductStock[];
-    profitData: ProfitItem[] | null;
 }
 
 const sellingTypeOptions = [
@@ -75,9 +60,9 @@ function fmt(n: number | null): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function StockStatus({ categories, products, filters, profitFilters, data, profitData }: Props) {
+export default function StockStatus({ categories, products, filters, data }: Props) {
     const [filterOpen,    setFilterOpen]    = useState(false);
-    const [activeTab,     setActiveTab]     = useState<'stock' | 'profit' | 'stock_profit'>(profitData ? 'profit' : (filters.showPurchased ? 'stock_profit' : 'stock'));
+    const [activeTab,     setActiveTab]     = useState<'stock' | 'stock_profit'>(filters.showPurchased ? 'stock_profit' : 'stock');
     const [categoryId,    setCategoryId]    = useState(filters.categoryId ? String(filters.categoryId) : '');
     const [sellingType,   setSellingType]   = useState(filters.sellingType ?? '');
     const [lowStockOnly,  setLowStockOnly]  = useState(filters.lowStockOnly ?? false);
@@ -87,14 +72,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
     const [dateTo,        setDateTo]        = useState(filters.dateTo ?? '');
     const [compactView,   setCompactView]   = useState(false);
 
-    // Profit tab state
-    const [profitProductIds, setProfitProductIds] = useState<string[]>(profitFilters.productIds ?? []);
-    const [profitCategoryId, setProfitCategoryId] = useState(profitFilters.categoryId ? String(profitFilters.categoryId) : '');
-    const [profitDateFrom,   setProfitDateFrom]   = useState(profitFilters.dateFrom ?? '');
-    const [profitDateTo,     setProfitDateTo]     = useState(profitFilters.dateTo ?? '');
-
     const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted || dateFrom || dateTo;
-    const hasProfitFilter = profitProductIds.length > 0 || profitDateFrom || profitDateTo || profitCategoryId;
 
     function search() {
         router.get('/reports/stock-status', {
@@ -112,32 +90,6 @@ export default function StockStatus({ categories, products, filters, profitFilte
     function reset() {
         setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false); setDateFrom(''); setDateTo('');
         router.get('/reports/stock-status', {}, { preserveScroll: true });
-    }
-
-    function searchProfit() {
-        router.get('/reports/stock-status', {
-            profit_product_ids: profitProductIds.join(',') || undefined,
-            profit_category_id: profitCategoryId || undefined,
-            profit_date_from:   profitDateFrom || undefined,
-            profit_date_to:     profitDateTo   || undefined,
-            profit_search:      1,
-        }, { preserveScroll: true });
-    }
-
-    function resetProfit() {
-        setProfitProductIds([]); setProfitCategoryId(''); setProfitDateFrom(''); setProfitDateTo('');
-        router.get('/reports/stock-status', {}, { preserveScroll: true });
-    }
-
-    function addProfitProduct(productName: string) {
-        const p = products.find(pr => `${pr.name} (${pr.stock} ${pr.category.unit})` === productName);
-        if (p && !profitProductIds.includes(String(p.id))) {
-            setProfitProductIds(prev => [...prev, String(p.id)]);
-        }
-    }
-
-    function removeProfitProduct(id: string) {
-        setProfitProductIds(prev => prev.filter(pid => pid !== id));
     }
 
     function buildExportUrl(format: 'excel' | 'pdf') {
@@ -222,51 +174,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
         </div>
     );
 
-    const ProfitFilterPanel = () => (
-        <div className="flex flex-col gap-4">
-            <ModernSelect
-                label="التصنيف"
-                placeholder="الكل"
-                options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
-                defaultValue={profitCategoryId ? (categories.find(c => String(c.id) === profitCategoryId)?.name ?? '') : 'الكل'}
-                onSelect={val => setProfitCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
-            />
-            <ModernSelect
-                label="المنتج"
-                placeholder="كل المنتجات"
-                options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})` }))}
-                defaultValue=""
-                onSelect={addProfitProduct}
-            />
-            {profitProductIds.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                    {profitProductIds.map(id => {
-                        const p = products.find(pr => String(pr.id) === id);
-                        return p ? (
-                            <span key={id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
-                                {p.name}
-                                <button onClick={() => removeProfitProduct(id)} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors">
-                                    <X className="w-3 h-3" />
-                                </button>
-                            </span>
-                        ) : null;
-                    })}
-                </div>
-            )}
-            <DateFilterInput label="من تاريخ" value={profitDateFrom} onChange={setProfitDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={profitDateTo} onChange={setProfitDateTo} />
-            <button onClick={searchProfit}
-                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" /> عرض التقرير
-            </button>
-            {hasProfitFilter && (
-                <button onClick={resetProfit}
-                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                    إعادة تعيين
-                </button>
-            )}
-        </div>
-    );
+
 
     return (
         <AppShell pageTitle="المخزون الحالي">
@@ -283,10 +191,6 @@ export default function StockStatus({ categories, products, filters, profitFilte
                         className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'stock' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'}`}>
                         <BarChart2 className="w-4 h-4" /> المخزون الحالي
                     </button>
-                    <button onClick={() => setActiveTab('profit')}
-                        className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'profit' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'}`}>
-                        <TrendingUp className="w-4 h-4" /> تحليل الأرباح
-                    </button>
                     <button onClick={() => { setActiveTab('stock_profit'); setShowSold(true); setShowWasted(true); }}
                         className={`flex items-center gap-2 px-5 h-11 rounded-[16px] font-bold text-sm transition-all ${activeTab === 'stock_profit' ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'spatial-input text-slate-600 dark:text-white/60 hover:border-primary/30'}`}>
                         <FileText className="w-4 h-4" /> تقرير الأرباح (بالتاريخ)
@@ -299,13 +203,13 @@ export default function StockStatus({ categories, products, filters, profitFilte
                         className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
                         <div className="flex items-center gap-2">
                             <SlidersHorizontal className="w-4 h-4" /> فلترة
-                            {((activeTab === 'stock' || activeTab === 'stock_profit') ? hasFilter : hasProfitFilter) && <span className="w-2 h-2 rounded-full bg-primary" />}
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
                         <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {filterOpen && (
                         <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
-                            {(activeTab === 'stock' || activeTab === 'stock_profit') ? <FilterPanel /> : <ProfitFilterPanel />}
+                            <FilterPanel />
                         </div>
                     )}
                 </div>
@@ -451,110 +355,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
                         </SpatialCard>
                     </>)}
 
-                    {activeTab === 'profit' && (
-                        <div className="flex flex-col gap-4">
-                            {profitData && profitData.length > 0 && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="spatial-card p-4 flex flex-col gap-1 border border-primary/20 bg-primary/5">
-                                        <p className="text-xs font-black text-primary uppercase tracking-widest">إجمالي أرباح الفترة</p>
-                                        <p className="text-2xl font-black text-primary">
-                                            {fmt(profitData.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-sm">د.ل</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
 
-                            <div className="flex items-center gap-2">
-                                <a href={buildExportUrl('excel')} target="_blank"
-                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                    <FileSpreadsheet className="w-4 h-4" /> Excel
-                                </a>
-                                <a href={buildExportUrl('pdf')} target="_blank"
-                                    className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                    <FileText className="w-4 h-4" /> PDF
-                                </a>
-                            </div>
-
-                            <SpatialCard title={`تحليل الأرباح${profitData ? ` (${profitData.length})` : ''}`} icon={<TrendingUp className="w-4 h-4" />}>
-                            {!profitData ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
-                                    <TrendingUp className="w-12 h-12 opacity-30" />
-                                    <p className="font-bold">حدد الفلاتر المطلوبة واضغط عرض التقرير</p>
-                                </div>
-                            ) : profitData.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
-                                    <TrendingUp className="w-12 h-12 opacity-30" />
-                                    <p className="font-bold">لا توجد بيانات</p>
-                                </div>
-                            ) : (<>
-                                {/* Desktop */}
-                                <div className="hidden lg:block overflow-x-auto">
-                                    <table className="w-full text-[16px]">
-                                        <thead>
-                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                {['المنتج', 'المخزون قبل الفترة', 'إجمالي الشراء', 'الكمية المشتراه', 'إجمالي البيع', 'الكمية المباعة', 'الربح'].map(h => (
-                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {profitData.map(p => (
-                                                <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
-                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">{fmt(p.opening_stock)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.total_purchase_cost)}</td>
-                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchase_qty)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.total_sale_value)}</td>
-                                                    <td className="px-4 py-4 font-bold text-orange-600 dark:text-orange-400 whitespace-nowrap">{fmt(p.total_sold_qty)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-black whitespace-nowrap">
-                                                        <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
-                                                            {p.profit !== null ? fmt(p.profit) : '—'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {/* Mobile */}
-                                <div className="flex flex-col gap-3 lg:hidden">
-                                    {profitData.map(p => (
-                                        <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
-                                            <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                                <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
-                                                <span className={`font-black text-sm ${p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}`}>
-                                                    {p.profit !== null ? fmt(p.profit) : '—'}
-                                                </span>
-                                            </div>
-                                            <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">المخزون قبل الفترة</span>
-                                                    <span className="font-bold text-slate-700 dark:text-white/80">{fmt(p.opening_stock)} {p.unit}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">إجمالي الشراء</span>
-                                                    <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.total_purchase_cost)}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">الكمية المشتراه</span>
-                                                    <span className="font-bold text-blue-600 dark:text-blue-400">{fmt(p.total_purchase_qty)} {p.unit}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">إجمالي البيع</span>
-                                                    <span className="font-bold text-slate-500 dark:text-white/50">{fmt(p.total_sale_value)}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">الكمية المباعة</span>
-                                                    <span className="font-bold text-orange-600 dark:text-orange-400">{fmt(p.total_sold_qty)} {p.unit}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>)}
-                        </SpatialCard>
-                        </div>
-                    )}
 
                     {activeTab === 'stock_profit' && (<>
                         {/* Actions and Summary */}
@@ -724,7 +525,7 @@ export default function StockStatus({ categories, products, filters, profitFilte
                     {/* Desktop Filter */}
                     <div className="hidden lg:block w-[360px] shrink-0">
                         <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-                            {(activeTab === 'stock' || activeTab === 'stock_profit') ? <FilterPanel /> : <ProfitFilterPanel />}
+                            <FilterPanel />
                         </SpatialCard>
                     </div>
                 </div>
