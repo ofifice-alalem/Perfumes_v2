@@ -38,10 +38,12 @@ interface Props {
     customers: Customer[];
     paymentMethods: PaymentMethod[];
     categories: Category[];
+    products: { id: number; name: string; }[];
     filters: {
         dateFrom: string | null; dateTo: string | null;
         userId: number | null; customerId: number | null;
         paymentMethodId: number | null; categoryId: number | null;
+        searchName?: string;
     };
     data: CustomerEntry[];
 }
@@ -52,7 +54,7 @@ function fmt(n: number): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function SalesCustomerInvoices({ users, customers, paymentMethods, categories, filters, data }: Props) {
+export default function SalesCustomerInvoices({ users, customers, paymentMethods, categories, products, filters, data }: Props) {
     const [filterOpen,      setFilterOpen]      = useState(false);
     const [dateFrom,        setDateFrom]        = useState(filters.dateFrom ?? '');
     const [dateTo,          setDateTo]          = useState(filters.dateTo ?? '');
@@ -60,6 +62,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
     const [customerId,      setCustomerId]      = useState(filters.customerId ? String(filters.customerId) : '');
     const [paymentMethodId, setPaymentMethodId] = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
     const [categoryId,      setCategoryId]      = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [searchName,      setSearchName]      = useState(filters.searchName ?? '');
     const [expandedCustomers, setExpandedCustomers] = useState<Set<number>>(new Set());
     const [expandedInvoices,  setExpandedInvoices]  = useState<Set<number>>(new Set());
 
@@ -70,7 +73,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
         setExpandedInvoices(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     }
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId;
+    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || searchName;
 
     function buildParams() {
         const p: Record<string, string> = {};
@@ -80,6 +83,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
         if (customerId)      p.customer_id        = customerId;
         if (paymentMethodId) p.payment_method_id  = paymentMethodId;
         if (categoryId)      p.category_id        = categoryId;
+        if (searchName)      p.search_name        = searchName;
         return p;
     }
 
@@ -89,7 +93,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
 
     function reset() {
         setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId('');
-        setPaymentMethodId(''); setCategoryId('');
+        setPaymentMethodId(''); setCategoryId(''); setSearchName('');
         router.get('/reports/sales/customer-invoices', {}, { preserveScroll: true });
     }
 
@@ -105,6 +109,14 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect label="البائع" placeholder="الكل"
                 options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
                 defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}

@@ -386,6 +386,7 @@ class ReportController extends Controller
         $customerId      = $request->integer('customer_id') ?: null;
         $paymentMethodId = $request->integer('payment_method_id') ?: null;
         $categoryId      = $request->integer('category_id') ?: null;
+        $searchName      = $request->input('search_name');
         $compare         = $request->boolean('compare');
 
         return Inertia::render('Reports/Sales', [
@@ -393,8 +394,9 @@ class ReportController extends Controller
             'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare'),
-            'data'           => $this->reports->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $compare),
+            'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare', 'searchName'),
+            'data'           => $this->reports->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $compare, $searchName),
         ]);
     }
 
@@ -407,6 +409,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -419,6 +422,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -430,14 +434,16 @@ class ReportController extends Controller
         $customerId      = $request->integer('customer_id') ?: null;
         $paymentMethodId = $request->integer('payment_method_id') ?: null;
         $categoryId      = $request->integer('category_id') ?: null;
+        $searchName      = $request->input('search_name');
 
         return Inertia::render('Reports/SalesCustomerInvoices', [
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId'),
-            'data'           => $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId),
+            'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'searchName'),
+            'data'           => $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $searchName),
         ]);
     }
 
@@ -472,14 +478,16 @@ class ReportController extends Controller
         $userId     = $request->integer('user_id') ?: null;
         $supplierId = $request->integer('supplier_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
+        $searchName = $request->input('search_name');
         $compare    = $request->boolean('compare');
 
         return Inertia::render('Reports/Purchases', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare'),
-            'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare),
+            'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare', 'searchName'),
+            'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare, $searchName),
         ]);
     }
 
@@ -491,6 +499,7 @@ class ReportController extends Controller
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -502,6 +511,7 @@ class ReportController extends Controller
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -512,13 +522,15 @@ class ReportController extends Controller
         $userId     = $request->integer('user_id') ?: null;
         $supplierId = $request->integer('supplier_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
+        $searchName = $request->input('search_name');
 
         return Inertia::render('Reports/PurchasesSupplierInvoices', [
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId'),
-            'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId),
+            'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'searchName'),
+            'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $searchName),
         ]);
     }
 
@@ -530,6 +542,7 @@ class ReportController extends Controller
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -541,6 +554,7 @@ class ReportController extends Controller
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 

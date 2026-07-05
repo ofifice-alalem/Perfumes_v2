@@ -35,11 +35,13 @@ interface Props {
     customers: Customer[];
     paymentMethods: PaymentMethod[];
     categories: Category[];
+    products: { id: number; name: string; }[];
     filters: {
         dateFrom: string | null; dateTo: string | null;
         userId: number | null; customerId: number | null;
         paymentMethodId: number | null; categoryId: number | null;
         compare: boolean;
+        searchName?: string;
     };
     data: SalesData;
 }
@@ -51,7 +53,7 @@ function fmt(n: number): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function Sales({ users, customers, paymentMethods, categories, filters, data }: Props) {
+export default function Sales({ users, customers, paymentMethods, categories, products, filters, data }: Props) {
     const [filterOpen,       setFilterOpen]       = useState(false);
     const [dateFrom,         setDateFrom]         = useState(filters.dateFrom ?? '');
     const [dateTo,           setDateTo]           = useState(filters.dateTo ?? '');
@@ -59,6 +61,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
     const [customerId,       setCustomerId]       = useState(filters.customerId ? String(filters.customerId) : '');
     const [paymentMethodId,  setPaymentMethodId]  = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
     const [categoryId,       setCategoryId]       = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [searchName,       setSearchName]       = useState(filters.searchName ?? '');
     const [compare,          setCompare]          = useState(filters.compare ?? false);
     const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
 
@@ -70,7 +73,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
         });
     }
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || compare;
+    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || searchName || compare;
 
     function search() {
         router.get('/reports/sales', {
@@ -80,13 +83,14 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
             customer_id:        customerId        || undefined,
             payment_method_id:  paymentMethodId   || undefined,
             category_id:        categoryId        || undefined,
+            search_name:        searchName        || undefined,
             compare:            compare           || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
         setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId('');
-        setPaymentMethodId(''); setCategoryId(''); setCompare(false);
+        setPaymentMethodId(''); setCategoryId(''); setSearchName(''); setCompare(false);
         router.get('/reports/sales', {}, { preserveScroll: true });
     }
 
@@ -98,6 +102,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
         if (customerId)      params.set('customer_id', customerId);
         if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
         if (categoryId)      params.set('category_id', categoryId);
+        if (searchName)      params.set('search_name', searchName);
         return `/reports/sales/${format}?${params.toString()}`;
     }
 
@@ -109,6 +114,7 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
         if (customerId)      params.set('customer_id', customerId);
         if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
         if (categoryId)      params.set('category_id', categoryId);
+        if (searchName)      params.set('search_name', searchName);
         if (format) return `/reports/sales/customer-invoices/${format}?${params.toString()}`;
         return `/reports/sales/customer-invoices?${params.toString()}`;
     }
@@ -117,6 +123,14 @@ export default function Sales({ users, customers, paymentMethods, categories, fi
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect label="البائع" placeholder="الكل"
                 options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
                 defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}

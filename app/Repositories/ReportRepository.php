@@ -1739,7 +1739,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Sales ─────────────────────────────────────────────────────────────────
 
-    private function salesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId)
+    private function salesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null)
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -1765,15 +1765,22 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('products.category_id', $categoryId));
         }
 
+        if ($searchName) {
+            $query->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where('products.name', 'like', '%' . $searchName . '%'));
+        }
+
         return $query;
     }
 
-    public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false): array
+    public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
-        $base = $this->salesQuery($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+        $base = $this->salesQuery($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $searchName);
 
         $totalSales     = (float) (clone $base)->sum('invoices.total');
         $invoicesCount  = (int)   (clone $base)->count();
@@ -1810,7 +1817,7 @@ class ReportRepository implements ReportRepositoryInterface
             $prevDt    = \Carbon\Carbon::parse($df)->subSecond()->toDateTimeString();
             $prevBase  = $this->salesQuery(
                 substr($prevDf, 0, 10), substr($prevDt, 0, 10),
-                $userId, $customerId, $paymentMethodId, $categoryId
+                $userId, $customerId, $paymentMethodId, $categoryId, $searchName
             );
             $prevTotal = (float) (clone $prevBase)->sum('invoices.total');
             $prevCount = (int)   (clone $prevBase)->count();
@@ -1824,9 +1831,9 @@ class ReportRepository implements ReportRepositoryInterface
         return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison');
     }
 
-    public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void
+    public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null): void
     {
-        $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false);
+        $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $searchName);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -1913,12 +1920,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): \Illuminate\Http\Response
+    public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false);
+        $data    = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -1962,7 +1969,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Sales Customer Invoices ───────────────────────────────────────────────
 
-    public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): array
+    public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -1996,6 +2003,13 @@ class ReportRepository implements ReportRepositoryInterface
                     ->where('products.category_id', $categoryId));
             }
 
+            if ($searchName) {
+                $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                    ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                    ->where('products.name', 'like', '%' . $searchName . '%'));
+            }
+
             $invoices = $invoicesQuery
                 ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at')
                 ->orderBy('invoices.created_at')
@@ -2009,6 +2023,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->join('products', 'products.id', '=', 'invoice_items.product_id')
                     ->where('invoice_items.invoice_id', $inv->id)
                     ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                    ->when($searchName, fn($q) => $q->where('products.name', 'like', '%' . $searchName . '%'))
                     ->select(
                         'products.name as product_name',
                         'invoice_items.unit_price',
@@ -2045,9 +2060,9 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
-    public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): void
+    public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null): void
     {
-        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $searchName);
 
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -2152,13 +2167,13 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId): \Illuminate\Http\Response
+    public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
 
-        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId);
+        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2230,7 +2245,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Purchases ───────────────────────────────────────────────────────────────────────
 
-    private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId)
+    private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null)
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2249,15 +2264,22 @@ class ReportRepository implements ReportRepositoryInterface
                 ->where('products.category_id', $categoryId));
         }
 
+        if ($searchName) {
+            $query->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where('products.name', 'like', '%' . $searchName . '%'));
+        }
+
         return $query;
     }
 
-    public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, bool $compare = false): array
+    public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, bool $compare = false, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
-        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $searchName);
 
         $totalPurchases  = (float) (clone $base)->sum('purchases.total');
         $purchasesCount  = (int)   (clone $base)->count();
@@ -2288,7 +2310,7 @@ class ReportRepository implements ReportRepositoryInterface
             $diffDays = \Carbon\Carbon::parse($df)->diffInDays(\Carbon\Carbon::parse($dt)) + 1;
             $prevDf   = \Carbon\Carbon::parse($df)->subDays($diffDays)->toDateTimeString();
             $prevDt   = \Carbon\Carbon::parse($df)->subSecond()->toDateTimeString();
-            $prevBase = $this->purchasesQuery(substr($prevDf, 0, 10), substr($prevDt, 0, 10), $userId, $supplierId, $categoryId);
+            $prevBase = $this->purchasesQuery(substr($prevDf, 0, 10), substr($prevDt, 0, 10), $userId, $supplierId, $categoryId, $searchName);
             $prevTotal = (float) (clone $prevBase)->sum('purchases.total');
             $prevCount = (int)   (clone $prevBase)->count();
             $comparison = [
@@ -2301,9 +2323,9 @@ class ReportRepository implements ReportRepositoryInterface
         return compact('totalPurchases', 'purchasesCount', 'avgPurchase', 'totalPaid', 'totalDue', 'monthly', 'comparison');
     }
 
-    public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): void
+    public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): void
     {
-        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false);
+        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2382,11 +2404,11 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
-        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false);
+        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2421,7 +2443,7 @@ class ReportRepository implements ReportRepositoryInterface
         return $pdf->stream('purchases-' . now()->format('Y-m-d') . '.pdf');
     }
 
-    public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): array
+    public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2446,6 +2468,13 @@ class ReportRepository implements ReportRepositoryInterface
                     ->where('products.category_id', $categoryId));
             }
 
+            if ($searchName) {
+                $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                    ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                    ->where('products.name', 'like', '%' . $searchName . '%'));
+            }
+
             $purchases = $purchasesQuery
                 ->select('purchases.id', 'purchases.total', 'purchases.created_at')
                 ->orderBy('purchases.created_at')->get();
@@ -2458,6 +2487,7 @@ class ReportRepository implements ReportRepositoryInterface
                     ->join('products', 'products.id', '=', 'purchase_items.product_id')
                     ->where('purchase_items.purchase_id', $p->id)
                     ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                    ->when($searchName, fn($q) => $q->where('products.name', 'like', '%' . $searchName . '%'))
                     ->select(
                         'products.name as product_name',
                         'purchase_items.unit_cost',
@@ -2488,9 +2518,9 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
-    public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): void
+    public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): void
     {
-        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2587,12 +2617,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId);
+        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

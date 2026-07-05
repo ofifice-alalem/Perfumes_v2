@@ -18,8 +18,8 @@ interface SupplierEntry {
 }
 
 interface Props {
-    users: User[]; suppliers: Supplier[]; categories: Category[];
-    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; supplierId: number | null; categoryId: number | null; };
+    users: User[]; suppliers: Supplier[]; categories: Category[]; products: { id: number; name: string; }[];
+    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; supplierId: number | null; categoryId: number | null; searchName?: string; };
     data: SupplierEntry[];
 }
 
@@ -29,13 +29,14 @@ function fmt(n: number): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function PurchasesSupplierInvoices({ users, suppliers, categories, filters, data }: Props) {
+export default function PurchasesSupplierInvoices({ users, suppliers, categories, products, filters, data }: Props) {
     const [filterOpen,         setFilterOpen]         = useState(false);
     const [dateFrom,           setDateFrom]           = useState(filters.dateFrom ?? '');
     const [dateTo,             setDateTo]             = useState(filters.dateTo ?? '');
     const [userId,             setUserId]             = useState(filters.userId ? String(filters.userId) : '');
     const [supplierId,         setSupplierId]         = useState(filters.supplierId ? String(filters.supplierId) : '');
     const [categoryId,         setCategoryId]         = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [searchName,         setSearchName]         = useState(filters.searchName ?? '');
     const [expandedSuppliers,  setExpandedSuppliers]  = useState<Set<number>>(new Set());
     const [expandedPurchases,  setExpandedPurchases]  = useState<Set<number>>(new Set());
 
@@ -46,7 +47,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
         setExpandedPurchases(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     }
 
-    const hasFilter = dateFrom || dateTo || userId || supplierId || categoryId;
+    const hasFilter = dateFrom || dateTo || userId || supplierId || categoryId || searchName;
 
     function buildParams() {
         const p: Record<string, string> = {};
@@ -55,6 +56,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
         if (userId)     p.user_id     = userId;
         if (supplierId) p.supplier_id = supplierId;
         if (categoryId) p.category_id = categoryId;
+        if (searchName) p.search_name = searchName;
         return p;
     }
 
@@ -62,7 +64,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
         router.get('/reports/purchases/supplier-invoices', buildParams(), { preserveScroll: true });
     }
     function reset() {
-        setDateFrom(''); setDateTo(''); setUserId(''); setSupplierId(''); setCategoryId('');
+        setDateFrom(''); setDateTo(''); setUserId(''); setSupplierId(''); setCategoryId(''); setSearchName('');
         router.get('/reports/purchases/supplier-invoices', {}, { preserveScroll: true });
     }
     function buildExportUrl(format: 'excel' | 'pdf') {
@@ -76,6 +78,14 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect label="المستخدم" placeholder="الكل"
                 options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
                 defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}
