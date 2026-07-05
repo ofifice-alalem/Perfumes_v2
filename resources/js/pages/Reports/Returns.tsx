@@ -1,9 +1,9 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { RotateCcw, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, List } from 'lucide-react';
+import { RotateCcw, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, List, Package } from 'lucide-react';
 
 interface User     { id: number; name: string; }
 interface Customer { id: number; name: string; }
@@ -23,8 +23,9 @@ interface ReturnsData {
 
 interface Props {
     users: User[]; customers: Customer[]; suppliers: Supplier[]; categories: Category[]; products: { id: number; name: string; }[];
-    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; searchName?: string; };
+    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; productIds?: number[]; searchName?: string; };
     data: ReturnsData;
+    includedProducts?: { id: number; name: string; }[];
 }
 
 function fmt(n: number): string {
@@ -117,7 +118,7 @@ function MonthlyTable({ monthly, label, color }: { monthly: MonthlyBreakdown[]; 
     );
 }
 
-export default function Returns({ users, customers, suppliers, categories, products, filters, data }: Props) {
+export default function Returns({ users, customers, suppliers, categories, products, filters, data, includedProducts }: Props) {
     const [filterOpen,  setFilterOpen]  = useState(false);
     const [dateFrom,    setDateFrom]    = useState(filters.dateFrom ?? '');
     const [dateTo,      setDateTo]      = useState(filters.dateTo ?? '');
@@ -125,9 +126,12 @@ export default function Returns({ users, customers, suppliers, categories, produ
     const [customerId,  setCustomerId]  = useState(filters.customerId ? String(filters.customerId) : '');
     const [supplierId,  setSupplierId]  = useState(filters.supplierId ? String(filters.supplierId) : '');
     const [categoryId,  setCategoryId]  = useState(filters.categoryId ? String(filters.categoryId) : '');
-    const [searchName,  setSearchName]  = useState(filters.searchName ?? '');
+    const [multiSearch, setMultiSearch] = useState<string[]>([
+        ...(filters.productIds?.map(String) || []),
+        ...(filters.searchName ? filters.searchName.split(',') : [])
+    ]);
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId || searchName;
+    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId || multiSearch.length > 0;
 
     function buildParams() {
         const p: Record<string, string> = {};
@@ -137,13 +141,16 @@ export default function Returns({ users, customers, suppliers, categories, produ
         if (customerId) p.customer_id = customerId;
         if (supplierId) p.supplier_id = supplierId;
         if (categoryId) p.category_id = categoryId;
-        if (searchName) p.search_name = searchName;
+        const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+        const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+        if (prodIds.length > 0) p.product_ids = prodIds.join(',');
+        if (sName) p.search_name = sName;
         return p;
     }
 
     function search() { router.get('/reports/returns', buildParams(), { preserveScroll: true }); }
     function reset() {
-        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId(''); setSearchName('');
+        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId(''); setMultiSearch([]);
         router.get('/reports/returns', {}, { preserveScroll: true });
     }
     function buildExportUrl(format: 'excel' | 'pdf') {
@@ -154,12 +161,12 @@ export default function Returns({ users, customers, suppliers, categories, produ
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
-            <ModernSelect
-                label="البحث باسم المنتج"
-                placeholder="الكل (اختر أو اكتب للبحث)"
-                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                defaultValue={searchName}
-                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+            <ModernMultiSelect
+                label="المنتجات"
+                placeholder="الكل"
+                options={products.map(p => ({ label: p.name, value: String(p.id), searchKey: p.name }))}
+                defaultValues={multiSearch}
+                onSelect={setMultiSearch}
                 allowFreeText={true}
             />
             <ModernSelect label="المستخدم" placeholder="الكل"
@@ -221,6 +228,18 @@ export default function Returns({ users, customers, suppliers, categories, produ
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
+
+                        {includedProducts && includedProducts.length > 0 && (
+                            <SpatialCard title={`المنتجات المشمولة في الحساب (${includedProducts.length})`} icon={<Package className="w-4 h-4" />}>
+                                <div className="flex flex-wrap gap-2">
+                                    {includedProducts.map(p => (
+                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                            {p.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </SpatialCard>
+                        )}
 
                         {/* Summary Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">

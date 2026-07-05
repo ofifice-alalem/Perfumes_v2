@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { TrendingUp, SlidersHorizontal, ChevronDown, ChevronRight, Search, FileSpreadsheet, FileText, ArrowUp, ArrowDown, Users } from 'lucide-react';
 
@@ -41,6 +41,8 @@ interface Props {
         userId: number | null; customerId: number | null;
         paymentMethodId: number | null; categoryId: number | null;
         compare: boolean;
+        compare: boolean;
+        productIds?: number[];
         searchName?: string;
     };
     data: SalesData;
@@ -61,7 +63,15 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
     const [customerId,       setCustomerId]       = useState(filters.customerId ? String(filters.customerId) : '');
     const [paymentMethodId,  setPaymentMethodId]  = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
     const [categoryId,       setCategoryId]       = useState(filters.categoryId ? String(filters.categoryId) : '');
-    const [searchName,       setSearchName]       = useState(filters.searchName ?? '');
+    const [multiSearch,      setMultiSearch]      = useState<string[]>(() => {
+        let arr: string[] = [];
+        if (filters.productIds) arr.push(...filters.productIds.map(String));
+        if (filters.searchName) {
+            const splitted = filters.searchName.split(',').filter(Boolean);
+            arr.push(...splitted);
+        }
+        return Array.from(new Set(arr));
+    });
     const [compare,          setCompare]          = useState(filters.compare ?? false);
     const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
 
@@ -73,7 +83,7 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
         });
     }
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || searchName || compare;
+    const hasFilter = dateFrom || dateTo || userId || customerId || paymentMethodId || categoryId || multiSearch.length > 0 || compare;
 
     function search() {
         router.get('/reports/sales', {
@@ -83,14 +93,15 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
             customer_id:        customerId        || undefined,
             payment_method_id:  paymentMethodId   || undefined,
             category_id:        categoryId        || undefined,
-            search_name:        searchName        || undefined,
+            product_ids:        multiSearch.filter(s => !isNaN(Number(s))) || undefined,
+            search_name:        multiSearch.filter(s => isNaN(Number(s))).join(',') || undefined,
             compare:            compare           || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
         setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId('');
-        setPaymentMethodId(''); setCategoryId(''); setSearchName(''); setCompare(false);
+        setPaymentMethodId(''); setCategoryId(''); setMultiSearch([]); setCompare(false);
         router.get('/reports/sales', {}, { preserveScroll: true });
     }
 
@@ -102,7 +113,10 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
         if (customerId)      params.set('customer_id', customerId);
         if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
         if (categoryId)      params.set('category_id', categoryId);
-        if (searchName)      params.set('search_name', searchName);
+        const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+        const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+        if (prodIds.length > 0) prodIds.forEach(id => params.append('product_ids[]', id));
+        if (sName)           params.set('search_name', sName);
         return `/reports/sales/${format}?${params.toString()}`;
     }
 
@@ -114,7 +128,10 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
         if (customerId)      params.set('customer_id', customerId);
         if (paymentMethodId) params.set('payment_method_id', paymentMethodId);
         if (categoryId)      params.set('category_id', categoryId);
-        if (searchName)      params.set('search_name', searchName);
+        const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+        const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+        if (prodIds.length > 0) prodIds.forEach(id => params.append('product_ids[]', id));
+        if (sName)           params.set('search_name', sName);
         if (format) return `/reports/sales/customer-invoices/${format}?${params.toString()}`;
         return `/reports/sales/customer-invoices?${params.toString()}`;
     }
@@ -123,12 +140,16 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
-            <ModernSelect
-                label="البحث باسم المنتج"
-                placeholder="الكل (اختر أو اكتب للبحث)"
-                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                defaultValue={searchName}
-                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+            <ModernMultiSelect
+                label="الفلترة بالمنتج (متعدد / كلمات)"
+                placeholder="اختر منتجات أو اكتب للبحث..."
+                options={products.map(p => ({
+                    value: String(p.id),
+                    label: p.name,
+                    searchKey: p.name
+                }))}
+                defaultValues={multiSearch}
+                onSelect={setMultiSearch}
                 allowFreeText={true}
             />
             <ModernSelect label="البائع" placeholder="الكل"
@@ -199,6 +220,18 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
+
+                        {multiSearch.length > 0 && data.includedProducts && data.includedProducts.length > 0 && (
+                            <SpatialCard title={`المنتجات المشمولة في الحساب (${data.includedProducts.length})`} icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-wrap gap-2">
+                                    {data.includedProducts.map((p: any) => (
+                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                            {p.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </SpatialCard>
+                        )}
 
                         {/* Summary Cards */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

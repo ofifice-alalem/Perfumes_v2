@@ -393,19 +393,27 @@ class ReportController extends Controller
         $searchName      = $request->input('search_name');
         $compare         = $request->boolean('compare');
 
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return Inertia::render('Reports/Sales', [
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare', 'searchName'),
-            'data'           => $this->reports->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $compare, $searchName),
+            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'compare', 'productIds', 'searchName'),
+            'data'           => $this->reports->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $compare, $productIds, $searchName),
         ]);
     }
 
     public function salesExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportSalesExcel(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -413,12 +421,17 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
 
     public function salesPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportSalesPdf(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -426,6 +439,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
@@ -440,19 +454,28 @@ class ReportController extends Controller
         $categoryId      = $request->integer('category_id') ?: null;
         $searchName      = $request->input('search_name');
 
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return Inertia::render('Reports/SalesCustomerInvoices', [
+            'includedProducts' => $this->reports->getIncludedProducts($productIds, $searchName),
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'customers'      => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods' => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'searchName'),
-            'data'           => $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $searchName),
+            'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'productIds', 'searchName'),
+            'data'           => $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $productIds, $searchName),
         ]);
     }
 
     public function salesCustomerInvoicesExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportSalesCustomerInvoicesExcel(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -460,11 +483,17 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
+            $request->input('search_name')
         );
     }
 
     public function salesCustomerInvoicesPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportSalesCustomerInvoicesPdf(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -472,6 +501,8 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
+            $request->input('search_name')
         );
     }
 
@@ -485,36 +516,51 @@ class ReportController extends Controller
         $searchName = $request->input('search_name');
         $compare    = $request->boolean('compare');
 
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return Inertia::render('Reports/Purchases', [
+            'includedProducts' => $this->reports->getIncludedProducts($productIds, $searchName),
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare', 'searchName'),
-            'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare, $searchName),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'compare', 'productIds', 'searchName'),
+            'data'       => $this->reports->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $compare, $productIds, $searchName),
         ]);
     }
 
     public function purchasesExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportPurchasesExcel(
             $request->input('date_from'),
             $request->input('date_to'),
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
 
     public function purchasesPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportPurchasesPdf(
             $request->input('date_from'),
             $request->input('date_to'),
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
@@ -528,36 +574,51 @@ class ReportController extends Controller
         $categoryId = $request->integer('category_id') ?: null;
         $searchName = $request->input('search_name');
 
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return Inertia::render('Reports/PurchasesSupplierInvoices', [
+            'includedProducts' => $this->reports->getIncludedProducts($productIds, $searchName),
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'searchName'),
-            'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $searchName),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'supplierId', 'categoryId', 'productIds', 'searchName'),
+            'data'       => $this->reports->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $productIds, $searchName),
         ]);
     }
 
     public function purchasesSupplierInvoicesExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportPurchasesSupplierInvoicesExcel(
             $request->input('date_from'),
             $request->input('date_to'),
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
 
     public function purchasesSupplierInvoicesPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportPurchasesSupplierInvoicesPdf(
             $request->input('date_from'),
             $request->input('date_to'),
             $request->integer('user_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
@@ -571,19 +632,30 @@ class ReportController extends Controller
         $supplierId = $request->integer('supplier_id') ?: null;
         $categoryId = $request->integer('category_id') ?: null;
 
+        $searchName = $request->input('search_name');
+
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return Inertia::render('Reports/Returns', [
+            'includedProducts' => $this->reports->getIncludedProducts($productIds, $searchName),
             'users'      => \App\Models\User::orderBy('name')->get(['id', 'name']),
             'customers'  => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'    => array_merge(compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId'), ['searchName' => $request->input('search_name')]),
-            'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $request->input('search_name')),
+            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId', 'productIds', 'searchName'),
+            'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $productIds, $searchName),
         ]);
     }
 
     public function returnsExcel(Request $request)
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         $this->reports->exportReturnsExcel(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -591,12 +663,17 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }
 
     public function returnsPdf(Request $request): \Illuminate\Http\Response
     {
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
         return $this->reports->exportReturnsPdf(
             $request->input('date_from'),
             $request->input('date_to'),
@@ -604,6 +681,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $productIds,
             $request->input('search_name')
         );
     }

@@ -65,9 +65,13 @@
             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_from_val'] }}</td>
             <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $labels['label_date_from'] }}</td>
         </tr>
-        <tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_to_val'] }}</td>
             <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['date_to_label'] }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">{{ $labels['products_val'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
         </tr>
     </table>
 

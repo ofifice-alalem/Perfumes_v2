@@ -49,6 +49,7 @@
         <div class="ph-r">
             <div class="ph-title">{{ $labels['title'] }}</div>
             <div class="ph-sub">{{ $labels['label_date_from'] }} {{ $labels['date_from_val'] }} &mdash; {{ $labels['date_to_label'] }} {{ $labels['date_to_val'] }} &mdash; {{ $labels['generated_at'] }}</div>
+            <div class="ph-sub" style="margin-top: 4px; color:#1e293b;">{{ $g('المنتجات المشمولة في الحساب') }}: {{ $labels['products_val'] }}</div>
         </div>
     </div>
 </div>

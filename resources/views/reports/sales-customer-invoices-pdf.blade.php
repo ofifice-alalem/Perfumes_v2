@@ -86,6 +86,10 @@
             <td class="ct-label">{{ $labels['labelTo'] }}</td>
             <td class="ct-value">{{ $labels['dateTo'] }}</td>
         </tr>
+        <tr>
+            <td class="ct-label">{{ $g('المنتجات المشمولة في الحساب') }}</td>
+            <td class="ct-value" style="line-height: 1.5">{{ $labels['products_val'] }}</td>
+        </tr>
         @if($labels['filterUser'])
         <tr>
             <td class="ct-label">{{ $labels['labelUser'] }}</td>
