@@ -776,7 +776,7 @@ class ReportRepository implements ReportRepositoryInterface
             [$showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? $productNames : 'الكل'],
             ['التصنيف',     $categoryName ?: 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
@@ -789,9 +789,10 @@ class ReportRepository implements ReportRepositoryInterface
         
         $row = 1;
         foreach ($infoRows as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 10],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1908,7 +1909,7 @@ class ReportRepository implements ReportRepositoryInterface
             ['تقرير المبيعات', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
             ['', ''],
             ['إجمالي المبيعات', $fmtN($data['totalSales'])],
@@ -1918,9 +1919,10 @@ class ReportRepository implements ReportRepositoryInterface
             ['إجمالي المتبقي',  $fmtN($data['totalDue'])],
         ];
         foreach ($infoRows as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 10],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -2171,13 +2173,14 @@ class ReportRepository implements ReportRepositoryInterface
             ['تقرير فواتير العملاء', ''],
             ['من تاريخ',    $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
         foreach ($infoRows as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
                 'font'    => ['bold' => true, 'size' => 11],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -2465,7 +2468,7 @@ class ReportRepository implements ReportRepositoryInterface
             ['تقرير المشتريات', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
             ['', ''],
             ['إجمالي المشتريات', $fmtN($data['totalPurchases'])],
@@ -2475,9 +2478,10 @@ class ReportRepository implements ReportRepositoryInterface
             ['إجمالي المتبقي',  $fmtN($data['totalDue'])],
         ];
         foreach ($infoRows as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 10],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -2694,16 +2698,18 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->setTitle('فواتير الموردين');
 
         $row = 1;
-        foreach ([
+        $infoRows = [
             ['تقرير فواتير الموردين', ''],
             ['من تاريخ', $dateFrom ?? 'البداية'],
             ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
-        ] as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+        ];
+        foreach ($infoRows as $info) {
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
                 'font'    => ['bold' => true, 'size' => 11],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -3029,11 +3035,11 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->setTitle('تقرير المرتجعات');
 
         $row = 1;
-        foreach ([
+        $infoRows = [
             ['تقرير المرتجعات', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
             ['', ''],
             ['مرتجعات العملاء (إجمالي)', $fmtN($data['customerReturnsTotal'])],
@@ -3042,10 +3048,12 @@ class ReportRepository implements ReportRepositoryInterface
             ['مرتجعات الموردين (عدد)',    $data['supplierReturnsCount']],
             ['إجمالي المبيعات',  $fmtN($data['totalSales'])],
             ['نسبة المرتجعات',  $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—'],
-        ] as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+        ];
+        foreach ($infoRows as $info) {
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 10],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -3868,7 +3876,7 @@ class ReportRepository implements ReportRepositoryInterface
             ['تحليل الأرباح الشامل', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
             ['', ''],
             ['إجمالي صافي المبيعات', $fmtN(array_sum(array_column($data['monthly'], 'net_sales')))],
@@ -3876,9 +3884,10 @@ class ReportRepository implements ReportRepositoryInterface
         ];
         
         foreach ($infoRows as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
+            $sheet->fromArray($cells, null, 'A' . $row);
+            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
+            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 10],
                 'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
