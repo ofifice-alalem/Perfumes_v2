@@ -2690,7 +2690,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Returns ───────────────────────────────────────────────────────────────────────
 
-    public function returns(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): array
+    public function returns(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2707,6 +2707,12 @@ class ReportRepository implements ReportRepositoryInterface
                 ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
                 ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
                 ->where('products.category_id', $categoryId));
+        }
+        if ($searchName) {
+            $crQuery->whereExists(fn($q) => $q->from('invoice_return_items')
+                ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
+                ->where('products.name', 'like', '%' . $searchName . '%'));
         }
 
         $customerReturnsTotal = (float) (clone $crQuery)->sum('total');
@@ -2725,6 +2731,12 @@ class ReportRepository implements ReportRepositoryInterface
                 ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
                 ->where('products.category_id', $categoryId));
         }
+        if ($searchName) {
+            $prQuery->whereExists(fn($q) => $q->from('purchase_return_items')
+                ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
+                ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
+                ->where('products.name', 'like', '%' . $searchName . '%'));
+        }
 
         $supplierReturnsTotal = (float) (clone $prQuery)->sum('total');
         $supplierReturnsCount = (int)   (clone $prQuery)->count();
@@ -2736,6 +2748,12 @@ class ReportRepository implements ReportRepositoryInterface
             ->when($dt,         fn($q) => $q->where('created_at', '<=', $dt))
             ->when($userId,     fn($q) => $q->where('user_id', $userId))
             ->when($customerId, fn($q) => $q->where('customer_id', $customerId));
+        if ($searchName) {
+            $salesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where('products.name', 'like', '%' . $searchName . '%'));
+        }
         $totalSales = (float) $salesQuery->sum('total');
 
         // تفصيل شهري لمرتجعات العملاء
@@ -2780,9 +2798,9 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
-    public function exportReturnsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): void
+    public function exportReturnsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): void
     {
-        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId);
+        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2900,11 +2918,11 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportReturnsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId): \Illuminate\Http\Response
+    public function exportReturnsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g    = fn(string $text) => $arabic->utf8Glyphs($text);
-        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId);
+        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -2939,7 +2957,7 @@ class ReportRepository implements ReportRepositoryInterface
         return $pdf->stream('returns-' . now()->format('Y-m-d') . '.pdf');
     }
 
-    public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): array
+    public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2962,6 +2980,12 @@ class ReportRepository implements ReportRepositoryInterface
                         ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
                         ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
                         ->where('products.category_id', $categoryId));
+                }
+                if ($searchName) {
+                    $returnsQuery->whereExists(fn($q) => $q->from('invoice_return_items')
+                        ->join('products', 'products.id', '=', 'invoice_return_items.product_id')
+                        ->whereColumn('invoice_return_items.invoice_return_id', 'invoice_returns.id')
+                        ->where('products.name', 'like', '%' . $searchName . '%'));
                 }
                 $returns = $returnsQuery->select('id', 'total', 'created_at')->orderBy('created_at')->get();
                 if ($returns->isEmpty()) continue;
@@ -3023,6 +3047,12 @@ class ReportRepository implements ReportRepositoryInterface
                         ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
                         ->where('products.category_id', $categoryId));
                 }
+                if ($searchName) {
+                    $returnsQuery->whereExists(fn($q) => $q->from('purchase_return_items')
+                        ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
+                        ->whereColumn('purchase_return_items.purchase_return_id', 'purchase_returns.id')
+                        ->where('products.name', 'like', '%' . $searchName . '%'));
+                }
                 $returns = $returnsQuery->select('id', 'total', 'created_at')->orderBy('created_at')->get();
                 if ($returns->isEmpty()) continue;
 
@@ -3069,9 +3099,9 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
-    public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): void
+    public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): void
     {
-        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type);
+        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -3170,12 +3200,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type): \Illuminate\Http\Response
+    public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type);
+        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

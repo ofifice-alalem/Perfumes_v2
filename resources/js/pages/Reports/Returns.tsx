@@ -22,8 +22,8 @@ interface ReturnsData {
 }
 
 interface Props {
-    users: User[]; customers: Customer[]; suppliers: Supplier[]; categories: Category[];
-    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; };
+    users: User[]; customers: Customer[]; suppliers: Supplier[]; categories: Category[]; products: { id: number; name: string; }[];
+    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; searchName?: string; };
     data: ReturnsData;
 }
 
@@ -117,7 +117,7 @@ function MonthlyTable({ monthly, label, color }: { monthly: MonthlyBreakdown[]; 
     );
 }
 
-export default function Returns({ users, customers, suppliers, categories, filters, data }: Props) {
+export default function Returns({ users, customers, suppliers, categories, products, filters, data }: Props) {
     const [filterOpen,  setFilterOpen]  = useState(false);
     const [dateFrom,    setDateFrom]    = useState(filters.dateFrom ?? '');
     const [dateTo,      setDateTo]      = useState(filters.dateTo ?? '');
@@ -125,8 +125,9 @@ export default function Returns({ users, customers, suppliers, categories, filte
     const [customerId,  setCustomerId]  = useState(filters.customerId ? String(filters.customerId) : '');
     const [supplierId,  setSupplierId]  = useState(filters.supplierId ? String(filters.supplierId) : '');
     const [categoryId,  setCategoryId]  = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [searchName,  setSearchName]  = useState(filters.searchName ?? '');
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId;
+    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId || searchName;
 
     function buildParams() {
         const p: Record<string, string> = {};
@@ -136,12 +137,13 @@ export default function Returns({ users, customers, suppliers, categories, filte
         if (customerId) p.customer_id = customerId;
         if (supplierId) p.supplier_id = supplierId;
         if (categoryId) p.category_id = categoryId;
+        if (searchName) p.search_name = searchName;
         return p;
     }
 
     function search() { router.get('/reports/returns', buildParams(), { preserveScroll: true }); }
     function reset() {
-        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId('');
+        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId(''); setSearchName('');
         router.get('/reports/returns', {}, { preserveScroll: true });
     }
     function buildExportUrl(format: 'excel' | 'pdf') {
@@ -152,6 +154,14 @@ export default function Returns({ users, customers, suppliers, categories, filte
         <div className="flex flex-col gap-4">
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect label="المستخدم" placeholder="الكل"
                 options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
                 defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}

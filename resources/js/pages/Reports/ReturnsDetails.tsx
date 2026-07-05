@@ -18,8 +18,8 @@ interface EntityEntry  {
 }
 
 interface Props {
-    users: User[]; customers: Customer[]; suppliers: Supplier[]; categories: Category[];
-    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; type: string; };
+    users: User[]; customers: Customer[]; suppliers: Supplier[]; categories: Category[]; products: { id: number; name: string; }[];
+    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; customerId: number | null; supplierId: number | null; categoryId: number | null; type: string; searchName?: string; };
     data: EntityEntry[];
 }
 
@@ -27,7 +27,7 @@ function fmt(n: number): string {
     return n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-export default function ReturnsDetails({ users, customers, suppliers, categories, filters, data }: Props) {
+export default function ReturnsDetails({ users, customers, suppliers, categories, products, filters, data }: Props) {
     const [filterOpen,       setFilterOpen]       = useState(false);
     const [dateFrom,         setDateFrom]         = useState(filters.dateFrom ?? '');
     const [dateTo,           setDateTo]           = useState(filters.dateTo ?? '');
@@ -36,6 +36,7 @@ export default function ReturnsDetails({ users, customers, suppliers, categories
     const [supplierId,       setSupplierId]       = useState(filters.supplierId ? String(filters.supplierId) : '');
     const [categoryId,       setCategoryId]       = useState(filters.categoryId ? String(filters.categoryId) : '');
     const [type,             setType]             = useState(filters.type ?? 'all');
+    const [searchName,       setSearchName]       = useState(filters.searchName ?? '');
     const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set());
     const [expandedReturns,  setExpandedReturns]  = useState<Set<number>>(new Set());
 
@@ -46,7 +47,7 @@ export default function ReturnsDetails({ users, customers, suppliers, categories
         setExpandedReturns(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     }
 
-    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId || type !== 'all';
+    const hasFilter = dateFrom || dateTo || userId || customerId || supplierId || categoryId || type !== 'all' || searchName;
 
     function buildParams() {
         const p: Record<string, string> = {};
@@ -57,12 +58,13 @@ export default function ReturnsDetails({ users, customers, suppliers, categories
         if (supplierId)      p.supplier_id = supplierId;
         if (categoryId)      p.category_id = categoryId;
         if (type !== 'all')  p.type        = type;
+        if (searchName)      p.search_name = searchName;
         return p;
     }
 
     function search() { router.get('/reports/returns/details', buildParams(), { preserveScroll: true }); }
     function reset() {
-        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId(''); setType('all');
+        setDateFrom(''); setDateTo(''); setUserId(''); setCustomerId(''); setSupplierId(''); setCategoryId(''); setType('all'); setSearchName('');
         router.get('/reports/returns/details', {}, { preserveScroll: true });
     }
     function buildExportUrl(format: 'excel' | 'pdf') {
@@ -91,6 +93,14 @@ export default function ReturnsDetails({ users, customers, suppliers, categories
                     ))}
                 </div>
             </div>
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect label="المستخدم" placeholder="الكل"
                 options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
                 defaultValue={userId ? (users.find(u => String(u.id) === userId)?.name ?? '') : 'الكل'}

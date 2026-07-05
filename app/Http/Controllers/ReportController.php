@@ -572,8 +572,9 @@ class ReportController extends Controller
             'customers'  => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId'),
-            'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId),
+            'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'    => array_merge(compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId'), ['searchName' => $request->input('search_name')]),
+            'data'       => $this->reports->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $request->input('search_name')),
         ]);
     }
 
@@ -586,6 +587,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -598,6 +600,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
+            $request->input('search_name')
         );
     }
 
@@ -616,8 +619,9 @@ class ReportController extends Controller
             'customers'  => \App\Models\Customer::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'suppliers'  => \App\Models\Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'filters'    => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId', 'type'),
-            'data'       => $this->reports->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type),
+            'products'   => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'    => array_merge(compact('dateFrom', 'dateTo', 'userId', 'customerId', 'supplierId', 'categoryId', 'type'), ['searchName' => $request->input('search_name')]),
+            'data'       => $this->reports->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $request->input('search_name')),
         ]);
     }
 
@@ -631,6 +635,7 @@ class ReportController extends Controller
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
             $request->input('type', 'all'),
+            $request->input('search_name')
         );
     }
 
@@ -644,6 +649,7 @@ class ReportController extends Controller
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
             $request->input('type', 'all'),
+            $request->input('search_name')
         );
     }
 }
