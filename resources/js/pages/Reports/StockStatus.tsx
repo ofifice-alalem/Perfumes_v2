@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { BarChart2, SlidersHorizontal, ChevronDown, Search, FileSpreadsheet, FileText, AlertTriangle, CheckCircle, XCircle, TrendingUp, X } from 'lucide-react';
 
@@ -36,7 +36,7 @@ interface ProductStock {
 interface Props {
     categories: Category[];
     products: Product[];
-    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean; showPurchased?: boolean; dateFrom: string; dateTo: string; searchName?: string };
+    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean; showPurchased?: boolean; dateFrom: string; dateTo: string; productIds?: number[]; searchName?: string };
     data: ProductStock[];
 }
 
@@ -70,10 +70,18 @@ export default function StockStatus({ categories, products, filters, data }: Pro
     const [showWasted,    setShowWasted]    = useState(filters.showWasted ?? false);
     const [dateFrom,      setDateFrom]      = useState(filters.dateFrom ?? '');
     const [dateTo,        setDateTo]        = useState(filters.dateTo ?? '');
-    const [searchName,    setSearchName]    = useState(filters.searchName ?? '');
+    const [multiSearch, setMultiSearch] = useState<string[]>(() => {
+        let arr: string[] = [];
+        if (filters.productIds) arr.push(...filters.productIds.map(String));
+        if (filters.searchName) {
+            const splitted = filters.searchName.split(',').filter(Boolean);
+            arr.push(...splitted);
+        }
+        return Array.from(new Set(arr));
+    });
     const [compactView,   setCompactView]   = useState(false);
 
-    const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted || dateFrom || dateTo || searchName;
+    const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted || dateFrom || dateTo || multiSearch.length > 0;
 
     function search() {
         router.get('/reports/stock-status', {
@@ -85,12 +93,13 @@ export default function StockStatus({ categories, products, filters, data }: Pro
             show_purchased: (activeTab === 'stock_profit') ? 1 : undefined,
             date_from:      dateFrom      || undefined,
             date_to:        dateTo        || undefined,
-            search_name:    searchName    || undefined,
+            product_ids:    multiSearch.filter(s => !isNaN(Number(s))) || undefined,
+            search_name:    multiSearch.filter(s => isNaN(Number(s))).join(',') || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false); setDateFrom(''); setDateTo(''); setSearchName('');
+        setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false); setDateFrom(''); setDateTo(''); setMultiSearch([]);
         router.get('/reports/stock-status', {}, { preserveScroll: true });
     }
 
@@ -104,7 +113,10 @@ export default function StockStatus({ categories, products, filters, data }: Pro
         if (dateFrom)     p.set('date_from', dateFrom);
         if (dateTo)       p.set('date_to', dateTo);
         if (activeTab === 'stock_profit') p.set('show_purchased', '1');
-        if (searchName)   p.set('search_name', searchName);
+        const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+        const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+        if (prodIds.length > 0) prodIds.forEach(id => p.append('product_ids[]', id));
+        if (sName) p.set('search_name', sName);
         if (compactView) p.set('compact_view', '1');
         return `/reports/stock-status/${format}?${p.toString()}`;
     }
@@ -125,12 +137,16 @@ export default function StockStatus({ categories, products, filters, data }: Pro
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
-            <ModernSelect
-                label="البحث باسم المنتج"
-                placeholder="الكل (اختر أو اكتب للبحث)"
-                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                defaultValue={searchName}
-                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+            <ModernMultiSelect
+                label="الفلترة بالمنتج (متعدد / كلمات)"
+                placeholder="اختر منتجات أو اكتب للبحث..."
+                options={products.map(p => ({
+                    value: String(p.id),
+                    label: p.name,
+                    searchKey: p.name
+                }))}
+                defaultValues={multiSearch}
+                onSelect={setMultiSearch}
                 allowFreeText={true}
             />
             <ModernSelect
@@ -227,6 +243,18 @@ export default function StockStatus({ categories, products, filters, data }: Pro
 
                 <div className="flex gap-6">
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
+
+                        {multiSearch.length > 0 && displayData && displayData.length > 0 && (
+                            <SpatialCard title={`المنتجات المشمولة في الحساب (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-wrap gap-2">
+                                    {displayData.map(p => (
+                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                            {p.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </SpatialCard>
+                        )}
 
                     {activeTab === 'stock' && (<>
                         {/* Summary + Export */}

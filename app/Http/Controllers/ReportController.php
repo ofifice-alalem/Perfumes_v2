@@ -137,12 +137,16 @@ class ReportController extends Controller
         $dateFrom     = $request->input('date_from');
         $dateTo       = $request->input('date_to');
 
-        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, null, null, $searchName);
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
+        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $productIds, null, $searchName);
 
         return Inertia::render('Reports/StockStatus', [
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'   => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
-            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted', 'showPurchased', 'dateFrom', 'dateTo', 'searchName'),
+            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted', 'showPurchased', 'dateFrom', 'dateTo', 'productIds', 'searchName'),
             'data'       => $data,
         ]);
     }
