@@ -79,7 +79,15 @@
             <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('إلى تاريخ') }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">{{ $labels['products_val'] }}</td>
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">
+                @if(!empty($labels['products_val']) && is_array($labels['products_val']))
+                    @foreach($labels['products_val'] as $pName)
+                        <span style="display:inline-block; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px; margin-bottom:4px;">{{ $pName }}</span>
+                    @endforeach
+                @else
+                    {{ $g('الكل') }}
+                @endif
+            </td>
             <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">

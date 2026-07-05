@@ -49,7 +49,16 @@
         <div class="ph-r">
             <div class="ph-title">{{ $labels['title'] }}</div>
             <div class="ph-sub">{{ $labels['label_date_from'] }} {{ $labels['date_from_val'] }} &mdash; {{ $labels['date_to_label'] }} {{ $labels['date_to_val'] }} &mdash; {{ $labels['generated_at'] }}</div>
-            <div class="ph-sub" style="margin-top: 4px; color:#1e293b;">{{ $g('المنتجات المشمولة في الحساب') }}: {{ $labels['products_val'] }}</div>
+            <div class="ph-sub" style="margin-top: 4px; color:#1e293b; line-height: 1.5;">
+                {{ $g('المنتجات المشمولة في الحساب') }}: 
+                @if(!empty($labels['products_val']) && is_array($labels['products_val']))
+                    @foreach($labels['products_val'] as $pName)
+                        <span style="display:inline-block; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px; margin-bottom:4px;">{{ $pName }}</span>
+                    @endforeach
+                @else
+                    {{ $g('الكل') }}
+                @endif
+            </div>
         </div>
     </div>
 </div>

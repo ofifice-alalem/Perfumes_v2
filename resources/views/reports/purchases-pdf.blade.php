@@ -102,11 +102,11 @@
             </td>
             <td style="padding: 14px 6px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
                 <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 4px;">{{ $labels['lbl_count'] }}</div>
-                <div style="font-size: 18px; font-weight: bold; color: #0f172a;">{{ $labels['invoices_count'] }}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #0f172a;">{{ $labels['purchases_count'] ?? $labels['invoices_count'] }}</div>
             </td>
             <td style="padding: 14px 6px; text-align: center; background: #f8fafc;">
                 <div style="font-size: 8px; color: #64748b; font-weight: bold; margin-bottom: 4px;">{{ $labels['lbl_total'] }}</div>
-                <div style="font-size: 18px; font-weight: bold; color: #0f172a;">{{ $labels['total_sales'] }}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #0f172a;">{{ $labels['total_purchases'] ?? $labels['total_sales'] }}</div>
             </td>
         </tr>
     </table>
@@ -125,15 +125,15 @@
     </div>
     <div class="summary-cell" style="border-right: none;">
         <div class="summary-label">{{ $labels['lbl_avg'] }}</div>
-        <div class="summary-value">{{ $labels['avg_invoice'] }}</div>
+        <div class="summary-value">{{ $labels['avg_invoice'] ?? $labels['avg_purchase'] }}</div>
     </div>
     <div class="summary-cell" style="border-right: none;">
         <div class="summary-label">{{ $labels['lbl_count'] }}</div>
-        <div class="summary-value">{{ $labels['invoices_count'] }}</div>
+        <div class="summary-value">{{ $labels['purchases_count'] ?? $labels['invoices_count'] }}</div>
     </div>
     <div class="summary-cell" style="border-right: none;">
         <div class="summary-label">{{ $labels['lbl_total'] }}</div>
-        <div class="summary-value">{{ $labels['total_sales'] }}</div>
+        <div class="summary-value">{{ $labels['total_purchases'] ?? $labels['total_sales'] }}</div>
     </div>
 </div>
 
@@ -164,8 +164,8 @@
     </tbody>
     <tfoot>
         <tr>
-            <td class="num">{{ $labels['total_sales'] }}</td>
-            <td class="num">{{ $labels['invoices_count'] }}</td>
+            <td class="num">{{ $labels['total_purchases'] ?? $labels['total_sales'] }}</td>
+            <td class="num">{{ $labels['purchases_count'] ?? $labels['invoices_count'] }}</td>
             <td style="color:#64748b;">{{ $g('الإجمالي') }}</td>
         </tr>
     </tfoot>
