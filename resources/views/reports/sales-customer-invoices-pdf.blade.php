@@ -18,15 +18,15 @@
         #page-header .ph-title { font-size: 13px; font-weight: bold; color: #0f172a; }
         #page-header .ph-sub   { font-size: 8.5px; color: #64748b; margin-top: 2px; }
 
-        .cover { page-break-after: always; padding: 40px; text-align: center; }
-        .cover-logo { margin-bottom: 24px; }
-        .cover-title { font-size: 20px; font-weight: bold; color: #0a2540; border-bottom: 3px solid #0a2540; padding-bottom: 10px; margin-bottom: 20px; }
-        .cover-table { width: 70%; border-collapse: collapse; direction: rtl; margin: 0 auto 16px; border: 2px solid #0a2540; }
-        .cover-table td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+        .cover { page-break-after: always; padding: 8px 20px; text-align: center; }
+        .cover-logo { margin-bottom: 10px; }
+        .cover-title { font-size: 20px; font-weight: bold; color: #0a2540; border-bottom: 3px solid #0a2540; padding-bottom: 8px; margin-bottom: 12px; }
+        .cover-table { width: 100%; border-collapse: collapse; direction: rtl; margin: 0 auto 12px; border: 2px solid #0a2540; }
+        .cover-table td { padding: 8px 14px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
         .cover-table td.ct-label { color: #64748b; font-weight: bold; text-align: left; width: 35%; border-right: 2px solid #0a2540; }
-        .cover-table td.ct-value { color: #0f172a; font-weight: bold; font-size: 13px; text-align: right; }
+        .cover-table td.ct-value { color: #0f172a; font-weight: bold; font-size: 13px; text-align: right; width: 65%; }
         .cover-table tr:last-child td { border-bottom: none; }
-        .cover-summary { width: 70%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0a2540; }
+        .cover-summary { width: 100%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0a2540; }
         .cover-summary td { padding: 12px 14px; text-align: center; border-left: 1px solid #e2e8f0; }
         .cover-summary td:last-child { border-left: none; }
         .cover-summary .cs-label { font-size: 8px; font-weight: bold; color: #64748b; display: block; margin-bottom: 4px; }
@@ -73,7 +73,7 @@
 {{-- Cover Page --}}
 <div class="cover">
     <div class="cover-logo">
-        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 120px; max-width: 260px;">
+        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 120px; max-width: 220px;">
     </div>
     <div class="cover-title">{{ $labels['title'] }}</div>
 

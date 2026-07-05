@@ -56,30 +56,30 @@
 </div>
 
 {{-- Cover Page --}}
-<div style="page-break-after: always; padding: 20px 40px; text-align: center;">
+<div style="page-break-after: always; padding: 8px 20px; text-align: center;">
 
-    <div style="margin-bottom: 20px;">
-        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 300px; max-width: 550px;">
+    <div style="margin-bottom: 10px;">
+        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 220px; max-width: 420px;">
     </div>
 
-    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px; width: 100%;">
+    <div style="border-bottom: 3px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; width: 100%;">
         <div style="font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">{{ $labels['title'] }}</div>
     </div>
 
-    <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0f172a;">
+    <table style="width: 100%; border-collapse: collapse; direction: rtl; margin: 0 auto; border: 2px solid #0f172a;">
         <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
             <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $g('معلومات الفلتر') }} &#x2014;</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_from_val'] }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('من تاريخ') }}</td>
+            <td style="padding: 10px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; width: 65%;">{{ $labels['date_from_val'] }}</td>
+            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('من تاريخ') }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_to_val'] }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('إلى تاريخ') }}</td>
+            <td style="padding: 10px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_to_val'] }}</td>
+            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $g('إلى تاريخ') }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">
+            <td style="padding: 10px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">
                 @if(!empty($labels['products_val']) && is_array($labels['products_val']))
                     @foreach($labels['products_val'] as $pName)
                         <span style="display:inline-block; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px; margin-bottom:4px;">{{ $pName }}</span>
@@ -88,11 +88,11 @@
                     {{ $g('الكل') }}
                 @endif
             </td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
+            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['category_val'] }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('التصنيف المختار') }}</td>
+            <td style="padding: 10px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['category_val'] }}</td>
+            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('التصنيف المختار') }}</td>
         </tr>
         <tr>
             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['low_stock_label'] }}</td>
