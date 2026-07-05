@@ -162,10 +162,10 @@
         @endphp
         <tr class="{{ $i % 2 !== 0 ? 'row-even' : '' }}">
             <td class="num">{{ $fmtN($m['balance']) }}</td>
-            <td style="color:#3b82f6; font-weight:bold;">{{ $m['reference'] }}</td>
+            <td style="color:#3b82f6; font-weight:bold; direction:rtl; unicode-bidi:bidi-override;">{{ $g($m['reference']) }}</td>
             <td class="num">{{ $m['unit_price'] !== null ? $fmtN($m['unit_price']) : '—' }}</td>
             <td class="num {{ $isIn ? 'in' : 'out' }}">{{ ($isIn ? '+' : '-') . $fmtN($qty) }}</td>
-            <td class="{{ $isIn ? 'in' : 'out' }}">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
+            <td class="{{ $isIn ? 'in' : 'out' }}" style="direction:rtl; unicode-bidi:bidi-override;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
             <td>{{ \Carbon\Carbon::parse($m['date'])->format('Y-m-d') }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
