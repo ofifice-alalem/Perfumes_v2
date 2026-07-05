@@ -766,7 +766,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->setRightToLeft(true);
         $sheet->setTitle($showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي');
 
-        $productNames = (!empty($filterProductIds) || !empty($searchName)) ? collect($data)->pluck('name')->toArray() : [];
+        $productNames = (!empty($filterProductIds) || !empty($searchName) || $compactView) ? collect($data)->pluck('name')->toArray() : [];
         $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
 
         $isWhole = fn($n) => $n == floor($n);
@@ -941,7 +941,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
 
-        $productNames = (!empty($filterProductIds) || !empty($searchName)) ? collect($data)->pluck('name')->toArray() : [];
+        $productNames = (!empty($filterProductIds) || !empty($searchName) || $compactView) ? collect($data)->pluck('name')->toArray() : [];
         $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
 
         $totalProfit = null;
@@ -3847,7 +3847,7 @@ class ReportRepository implements ReportRepositoryInterface
             $m['profit'] = round($m['profit'], 2);
         }
 
-        $includedProducts = DB::table('products')->whereIn('id', $productIds)->get(['id', 'name']);
+        $includedProducts = $this->getIncludedProducts($productIds, $searchName);
 
         return [
             'total_profit' => round($totalProfit, 2),
