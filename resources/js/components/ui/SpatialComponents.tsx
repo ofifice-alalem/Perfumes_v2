@@ -249,6 +249,7 @@ export function ModernMultiSelect({
   placeholder = 'اختر...',
   onSelect,
   defaultValues = [],
+  allowFreeText = false,
 }: {
   label: string;
   options: { value: string; label: string; meta?: string; badge?: string; searchKey?: string }[];
@@ -256,6 +257,7 @@ export function ModernMultiSelect({
   placeholder?: string;
   onSelect?: (values: string[]) => void;
   defaultValues?: string[];
+  allowFreeText?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(defaultValues);
@@ -297,12 +299,29 @@ export function ModernMultiSelect({
     onSelect?.(next);
   };
 
+  const showFreeTextOption = allowFreeText && search.trim() && !options.some(o => o.label.toLowerCase() === search.trim().toLowerCase());
+
   const optionsList = (size: 'sm' | 'lg') => (
     <ul className={`overflow-y-auto p-2 ${size === 'sm' ? 'max-h-52' : 'flex-1'}`}>
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !showFreeTextOption ? (
         <li className="px-4 py-4 text-center text-sm font-bold text-slate-400 dark:text-white/30">لا توجد نتائج</li>
       ) : (
-        filtered.map((opt, idx) => {
+        <>
+          {showFreeTextOption && (
+            <div key="free-text">
+              <li
+                onClick={() => { toggleOption(search.trim()); setSearch(''); searchRef.current?.focus(); }}
+                className={`flex items-center justify-between gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} text-primary hover:bg-black/5 dark:hover:bg-white/8`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-[6px] border-2 border-slate-300 dark:border-white/20 flex items-center justify-center transition-all"></div>
+                  إضافة "{search.trim()}"
+                </div>
+              </li>
+              {filtered.length > 0 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+            </div>
+          )}
+          {filtered.map((opt, idx) => {
           const isSelected = selected.includes(opt.value);
           return (
             <div key={opt.value}>
@@ -328,7 +347,8 @@ export function ModernMultiSelect({
               {idx < filtered.length - 1 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
             </div>
           );
-        })
+        })}
+        </>
       )}
     </ul>
   );

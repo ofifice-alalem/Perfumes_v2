@@ -428,8 +428,19 @@ class ReportRepository implements ReportRepositoryInterface
         };
 
         $query = DB::table('products')
-            ->when(!empty($filterProductIds), fn($q) => $q->whereIn('products.id', $filterProductIds))
-            ->when($searchName, fn($q) => $q->where('products.name', 'like', '%' . $searchName . '%'))
+            ->when(!empty($filterProductIds) || $searchName, function ($q) use ($filterProductIds, $searchName) {
+                $q->where(function ($sq) use ($filterProductIds, $searchName) {
+                    if (!empty($filterProductIds)) {
+                        $sq->whereIn('products.id', $filterProductIds);
+                    }
+                    if ($searchName) {
+                        $searchNames = explode(',', $searchName);
+                        foreach ($searchNames as $name) {
+                            $sq->orWhere('products.name', 'like', '%' . trim($name) . '%');
+                        }
+                    }
+                });
+            })
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->leftJoin('price_tiers', 'price_tiers.id', '=', 'products.price_tier_id')
             ->when($categoryId,   fn($q) => $q->where('products.category_id', $categoryId))
@@ -755,7 +766,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->setRightToLeft(true);
         $sheet->setTitle($showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي');
 
-        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $productNames = (!empty($filterProductIds) || !empty($searchName)) ? collect($data)->pluck('name')->toArray() : [];
         $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
 
         $isWhole = fn($n) => $n == floor($n);
@@ -765,7 +776,7 @@ class ReportRepository implements ReportRepositoryInterface
             [$showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
             ['التصنيف',     $categoryName ?: 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
@@ -929,7 +940,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
 
-        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $productNames = (!empty($filterProductIds) || !empty($searchName)) ? collect($data)->pluck('name')->toArray() : [];
         $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
 
         $totalProfit = null;
@@ -3397,9 +3408,17 @@ class ReportRepository implements ReportRepositoryInterface
     public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
         if ($searchName) {
-            $matchedIds = DB::table('products')->where('name', 'like', '%' . $searchName . '%')->pluck('id')->toArray();
+            $searchNames = explode(',', $searchName);
+            $q = DB::table('products');
+            $q->where(function ($sub) use ($searchNames) {
+                foreach ($searchNames as $name) {
+                    $sub->orWhere('name', 'like', '%' . trim($name) . '%');
+                }
+            });
+            $matchedIds = $q->pluck('id')->toArray();
+
             if ($filterProductIds !== null) {
-                $filterProductIds = array_intersect($filterProductIds, $matchedIds);
+                $filterProductIds = array_unique(array_merge($filterProductIds, $matchedIds));
                 if (empty($filterProductIds)) $filterProductIds = [0];
             } else {
                 $filterProductIds = empty($matchedIds) ? [0] : $matchedIds;
@@ -3432,7 +3451,7 @@ class ReportRepository implements ReportRepositoryInterface
         $productIds = array_unique(array_merge($soldProductIds, $returnedProductIds));
         
         if (empty($productIds)) {
-            return ['total_profit' => 0, 'monthly' => [], 'daily' => []];
+            return ['total_profit' => 0, 'monthly' => [], 'daily' => [], 'included_products' => collect([])];
         }
 
         $previousSnapshotId = null;
@@ -3607,10 +3626,13 @@ class ReportRepository implements ReportRepositoryInterface
             $m['profit'] = round($m['profit'], 2);
         }
 
+        $includedProducts = DB::table('products')->whereIn('id', $productIds)->get(['id', 'name']);
+
         return [
             'total_profit' => round($totalProfit, 2),
             'monthly' => array_values($monthlyData),
-            'daily' => $daily
+            'daily' => $daily,
+            'included_products' => $includedProducts
         ];
     }
 
@@ -3618,7 +3640,7 @@ class ReportRepository implements ReportRepositoryInterface
     {
         $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
 
-        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $productNames = collect($data['included_products'])->pluck('name')->toArray();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -3633,7 +3655,7 @@ class ReportRepository implements ReportRepositoryInterface
             ['تحليل الأرباح الشامل', ''],
             ['من تاريخ',   $dateFrom ?? 'البداية'],
             ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
+            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? implode('، ', $productNames) : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
             ['', ''],
             ['إجمالي صافي المبيعات', $fmtN(array_sum(array_column($data['monthly'], 'net_sales')))],
@@ -3719,7 +3741,7 @@ class ReportRepository implements ReportRepositoryInterface
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 
-        $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
+        $productNames = collect($data['included_products'])->pluck('name')->toArray();
 
         $labels = [
             'title'        => $g('تحليل الأرباح الشامل'),

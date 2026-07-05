@@ -29,6 +29,7 @@ interface ProfitSummary {
     total_profit: number;
     monthly: MonthlyProfit[];
     daily: DailyProfit[];
+    included_products: Product[];
 }
 
 interface ProductStock {
@@ -84,15 +85,22 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
     // فلاتر التاب الأول
     const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '');
     const [dateTo,   setDateTo]   = useState(filters.dateTo ?? '');
-    const [productIds, setProductIds] = useState<number[]>(filters.productIds ?? []);
-    const [searchName, setSearchName] = useState(filters.searchName ?? '');
+    const initMultiSearch = [
+        ...(filters.productIds?.map(String) || []),
+        ...(filters.searchName ? filters.searchName.split(',') : [])
+    ].filter(Boolean);
+    const [multiSearch, setMultiSearch] = useState<string[]>(initMultiSearch);
 
     // فلاتر التاب الثاني
     const [stockDateFrom,   setStockDateFrom]   = useState(filters.stockDateFrom ?? '');
     const [stockDateTo,     setStockDateTo]     = useState(filters.stockDateTo ?? '');
     const [stockCategoryId, setStockCategoryId] = useState(filters.stockCategoryId ? String(filters.stockCategoryId) : '');
-    const [stockProductIds, setStockProductIds] = useState<number[]>(filters.stockProductIds ?? []);
-    const [stockSearchName, setStockSearchName] = useState(filters.stockSearchName ?? '');
+
+    const initStockMultiSearch = [
+        ...(filters.stockProductIds?.map(String) || []),
+        ...(filters.stockSearchName ? filters.stockSearchName.split(',') : [])
+    ].filter(Boolean);
+    const [stockMultiSearch, setStockMultiSearch] = useState<string[]>(initStockMultiSearch);
     const [compactView,     setCompactView]     = useState(false);
 
     const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
@@ -106,51 +114,67 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
     }
 
     function searchDaily() {
+        const pIds = multiSearch.filter(v => !isNaN(Number(v)));
+        const sNames = multiSearch.filter(v => isNaN(Number(v)));
+        const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
+        const stockSNames = stockMultiSearch.filter(v => isNaN(Number(v)));
+
         router.get('/reports/profit-analysis', {
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
-            product_ids:       productIds.length ? productIds.join(',') : undefined,
-            search_name:       searchName       || undefined,
+            product_ids:       pIds.length ? pIds.join(',') : undefined,
+            search_name:       sNames.length ? sNames.join(',') : undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
-            stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
-            stock_search_name: stockSearchName  || undefined,
+            stock_product_ids: stockPIds.length ? stockPIds.join(',') : undefined,
+            stock_search_name: stockSNames.length ? stockSNames.join(',') : undefined,
             active_tab:        'daily',
         }, { preserveScroll: true });
     }
 
     function searchStock() {
+        const pIds = multiSearch.filter(v => !isNaN(Number(v)));
+        const sNames = multiSearch.filter(v => isNaN(Number(v)));
+        const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
+        const stockSNames = stockMultiSearch.filter(v => isNaN(Number(v)));
+
         router.get('/reports/profit-analysis', {
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
-            product_ids:       productIds.length ? productIds.join(',') : undefined,
-            search_name:       searchName       || undefined,
+            product_ids:       pIds.length ? pIds.join(',') : undefined,
+            search_name:       sNames.length ? sNames.join(',') : undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
-            stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
-            stock_search_name: stockSearchName  || undefined,
+            stock_product_ids: stockPIds.length ? stockPIds.join(',') : undefined,
+            stock_search_name: stockSNames.length ? stockSNames.join(',') : undefined,
             active_tab:        'stock_profit',
         }, { preserveScroll: true });
     }
 
     function buildDailyExportUrl(format: 'excel' | 'pdf') {
+        const pIds = multiSearch.filter(v => !isNaN(Number(v)));
+        const sNames = multiSearch.filter(v => isNaN(Number(v)));
+
         const p = new URLSearchParams();
         if (dateFrom) p.set('date_from', dateFrom);
         if (dateTo) p.set('date_to', dateTo);
-        if (productIds.length) p.set('product_ids', productIds.join(','));
-        if (searchName) p.set('search_name', searchName);
+        if (pIds.length) p.set('product_ids', pIds.join(','));
+        if (sNames.length) p.set('search_name', sNames.join(','));
         return `/reports/profit-analysis/${format}?${p.toString()}`;
     }
 
     function buildStockExportUrl(format: 'excel' | 'pdf') {
+        const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
+        const stockSNames = stockMultiSearch.filter(v => isNaN(Number(v)));
+
         const p = new URLSearchParams();
         if (stockCategoryId) p.set('category_id', stockCategoryId);
         if (stockDateFrom) p.set('date_from', stockDateFrom);
         if (stockDateTo) p.set('date_to', stockDateTo);
-        if (stockProductIds.length) p.set('product_ids', stockProductIds.join(','));
-        if (stockSearchName) p.set('search_name', stockSearchName);
+        if (stockPIds.length) p.set('product_ids', stockPIds.join(','));
+        if (stockSNames.length) p.set('search_name', stockSNames.join(','));
         p.set('show_purchased', '1');
         p.set('show_sold', '1');
         p.set('show_wasted', '1');
@@ -191,6 +215,18 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                             <p className="text-sm font-black text-primary uppercase tracking-widest">صافي الربح للفترة المحددة</p>
                             <p className="text-4xl font-black text-primary">{fmt(profitSummary.total_profit)} <span className="text-lg">د.ل</span></p>
                         </div>
+
+                        {profitSummary.included_products && profitSummary.included_products.length > 0 && (
+                            <SpatialCard title={`المنتجات المشمولة في الحساب (${profitSummary.included_products.length})`} icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-wrap gap-2">
+                                    {profitSummary.included_products.map(p => (
+                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                            {p.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </SpatialCard>
+                        )}
 
                         {/* Daily Table */}
                         <SpatialCard 
@@ -300,6 +336,18 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                             </p>
                         </div>
 
+                        {displayData && displayData.length > 0 && (
+                            <SpatialCard title={`المنتجات المشمولة في الحساب (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
+                                <div className="flex flex-wrap gap-2">
+                                    {displayData.map(p => (
+                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                            {p.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </SpatialCard>
+                        )}
+
                         <SpatialCard 
                             title={`تقرير الأرباح (${displayData.length})`} 
                             icon={<FileText className="w-4 h-4" />}
@@ -399,20 +447,13 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                         {activeTab === 'daily' ? (
                             <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                                 <div className="flex flex-col gap-4">
-                                    <ModernSelect
-                                        label="البحث باسم المنتج"
-                                        placeholder="الكل (اختر أو اكتب للبحث)"
-                                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                                        defaultValue={searchName}
-                                        onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
-                                        allowFreeText={true}
-                                    />
                                     <ModernMultiSelect
-                                        label="المنتجات"
-                                        placeholder="الكل"
+                                        label="البحث أو تحديد المنتجات"
+                                        placeholder="الكل (اختر أو اكتب للبحث...)"
                                         options={products.map(p => ({ value: String(p.id), label: p.name }))}
-                                        defaultValues={productIds.map(String)}
-                                        onSelect={(vals) => setProductIds(vals.map(Number))}
+                                        defaultValues={multiSearch}
+                                        onSelect={setMultiSearch}
+                                        allowFreeText={true}
                                     />
                                     <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
                                     <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
@@ -420,8 +461,8 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(dateFrom || dateTo || productIds.length > 0 || searchName) && (
-                                        <button onClick={() => { setDateFrom(''); setDateTo(''); setProductIds([]); setSearchName(''); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined, stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined, stock_search_name: stockSearchName || undefined, active_tab: 'daily' }); }}
+                                    {(dateFrom || dateTo || multiSearch.length > 0) && (
+                                        <button onClick={() => { setDateFrom(''); setDateTo(''); setMultiSearch([]); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined, stock_product_ids: stockMultiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined, stock_search_name: stockMultiSearch.filter(v => isNaN(Number(v))).join(',') || undefined, active_tab: 'daily' }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>
@@ -432,14 +473,6 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                             <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                                 <div className="flex flex-col gap-4">
                                     <ModernSelect
-                                        label="البحث باسم المنتج"
-                                        placeholder="الكل (اختر أو اكتب للبحث)"
-                                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                                        defaultValue={stockSearchName}
-                                        onSelect={val => setStockSearchName(val === 'الكل' ? '' : val)}
-                                        allowFreeText={true}
-                                    />
-                                    <ModernSelect
                                         label="التصنيف"
                                         placeholder="الكل"
                                         options={[{ label: 'الكل' }, ...categories.map(c => ({ label: c.name }))]}
@@ -447,11 +480,12 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         onSelect={val => setStockCategoryId(val === 'الكل' ? '' : String(categories.find(c => c.name === val)?.id ?? ''))}
                                     />
                                     <ModernMultiSelect
-                                        label="المنتجات"
-                                        placeholder="الكل"
+                                        label="البحث أو تحديد المنتجات"
+                                        placeholder="الكل (اختر أو اكتب للبحث...)"
                                         options={products.map(p => ({ value: String(p.id), label: p.name }))}
-                                        defaultValues={stockProductIds.map(String)}
-                                        onSelect={(vals) => setStockProductIds(vals.map(Number))}
+                                        defaultValues={stockMultiSearch}
+                                        onSelect={setStockMultiSearch}
+                                        allowFreeText={true}
                                     />
                                     <DateFilterInput label="من تاريخ" value={stockDateFrom} onChange={setStockDateFrom} />
                                     <DateFilterInput label="إلى تاريخ" value={stockDateTo} onChange={setStockDateTo} />
@@ -466,8 +500,8 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(stockDateFrom || stockDateTo || stockCategoryId || stockProductIds.length > 0 || stockSearchName) && (
-                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); setStockProductIds([]); setStockSearchName(''); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined, product_ids: productIds.length ? productIds.join(',') : undefined, search_name: searchName || undefined, active_tab: 'stock_profit' }); }}
+                                    {(stockDateFrom || stockDateTo || stockCategoryId || stockMultiSearch.length > 0) && (
+                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); setStockMultiSearch([]); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined, product_ids: multiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined, search_name: multiSearch.filter(v => isNaN(Number(v))).join(',') || undefined, active_tab: 'stock_profit' }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>

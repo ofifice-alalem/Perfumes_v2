@@ -74,7 +74,7 @@
         </tr>
         <tr>
             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">{{ !empty($productNames) ? $g(implode('، ', $productNames)) : $g('الكل') }}</td>
-            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المحددة') }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
         </tr>
     </table>
 
