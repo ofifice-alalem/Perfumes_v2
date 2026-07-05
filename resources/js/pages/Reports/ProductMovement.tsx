@@ -10,7 +10,7 @@ interface Product   { id: number; name: string; stock: string; category: Categor
 
 interface Movement {
     date: string;
-    type: 'purchase' | 'sale' | 'return_in' | 'return_out' | 'waste';
+    type: 'purchase' | 'sale' | 'return_in' | 'return_out' | 'waste' | 'opening_balance';
     quantity: number;
     unit_price: number | null;
     reference: string;
@@ -45,6 +45,7 @@ const typeConfig: Record<string, { label: string; color: string }> = {
     return_in:  { label: 'مرتجع عميل',   color: 'text-blue-500 dark:text-blue-400' },
     return_out: { label: 'مرتجع مورد',   color: 'text-orange-500 dark:text-orange-400' },
     waste:      { label: 'تالف',          color: 'text-slate-500 dark:text-white/40' },
+    opening_balance: { label: 'رصيد افتتاحي', color: 'text-indigo-500 dark:text-indigo-400' },
 };
 
 function fmt(n: number | null, unit?: string): string {
@@ -281,10 +282,10 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className={`flex items-center gap-1 font-black whitespace-nowrap ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+                                                            <div className={`flex items-center gap-1 font-black whitespace-nowrap ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : (m.quantity === 0 ? 'text-slate-500 dark:text-white/40' : 'text-red-500 dark:text-red-400')}`}>
                                                                 {m.quantity > 0
                                                                     ? <ArrowUp className="w-3.5 h-3.5" />
-                                                                    : <ArrowDown className="w-3.5 h-3.5" />}
+                                                                    : (m.quantity === 0 ? null : <ArrowDown className="w-3.5 h-3.5" />)}
                                                                 {fmt(Math.abs(m.quantity))} {product!.category.unit}
                                                             </div>
                                                         </td>
@@ -314,8 +315,8 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                                 <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
                                                     <div className="flex justify-between">
                                                         <span className="font-bold text-slate-400 dark:text-white/40">الكمية</span>
-                                                        <span className={`font-black flex items-center gap-1 ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
-                                                            {m.quantity > 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
+                                                        <span className={`font-black flex items-center gap-1 ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : (m.quantity === 0 ? 'text-slate-500 dark:text-white/40' : 'text-red-500')}`}>
+                                                            {m.quantity > 0 ? <ArrowUp className="w-3 h-3" /> : (m.quantity === 0 ? null : <ArrowDown className="w-3 h-3" />)}
                                                             {fmt(Math.abs(m.quantity))} {product!.category.unit}
                                                         </span>
                                                     </div>

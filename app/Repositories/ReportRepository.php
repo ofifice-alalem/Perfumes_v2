@@ -20,51 +20,47 @@ class ReportRepository implements ReportRepositoryInterface
         // ── حساب رصيد أول الفترة ──────────────────────────────────────────
         $currentStock = DB::table('products')->where('id', $productId)->value('stock') ?? 0;
 
-        // كل الحركات من date_from حتى الآن (لطرحها من الرصيد الحالي)
-        if ($dateFrom) {
-            $purchasesAfter = DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $productId)
-                ->where('purchases.created_at', '>=', $dateFrom)
-                ->sum('purchase_items.quantity');
+        // كل الحركات من date_from (أو من البداية) حتى الآن (لطرحها من الرصيد الحالي)
+        $purchasesAfter = DB::table('purchase_items')
+            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+            ->whereNull('purchases.deleted_at')
+            ->where('purchase_items.product_id', $productId)
+            ->when($dateFrom, fn($q) => $q->where('purchases.created_at', '>=', $dateFrom))
+            ->sum('purchase_items.quantity');
 
-            $salesAfter = DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $productId)
-                ->where('invoices.created_at', '>=', $dateFrom)
-                ->sum('invoice_items.quantity');
+        $salesAfter = DB::table('invoice_items')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->where('invoice_items.product_id', $productId)
+            ->when($dateFrom, fn($q) => $q->where('invoices.created_at', '>=', $dateFrom))
+            ->sum('invoice_items.quantity');
 
-            $returnInAfter = DB::table('invoice_return_items')
-                ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
-                ->whereNull('invoice_returns.deleted_at')
-                ->where('invoice_return_items.product_id', $productId)
-                ->where('invoice_returns.created_at', '>=', $dateFrom)
-                ->sum('invoice_return_items.quantity');
+        $returnInAfter = DB::table('invoice_return_items')
+            ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->where('invoice_return_items.product_id', $productId)
+            ->when($dateFrom, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFrom))
+            ->sum('invoice_return_items.quantity');
 
-            $returnOutAfter = DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->whereNull('purchase_returns.deleted_at')
-                ->where('purchase_return_items.product_id', $productId)
-                ->where('purchase_returns.created_at', '>=', $dateFrom)
-                ->sum('purchase_return_items.quantity');
+        $returnOutAfter = DB::table('purchase_return_items')
+            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+            ->whereNull('purchase_returns.deleted_at')
+            ->where('purchase_return_items.product_id', $productId)
+            ->when($dateFrom, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFrom))
+            ->sum('purchase_return_items.quantity');
 
-            $wasteAfter = DB::table('waste_items')
-                ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
-                ->where('waste_items.product_id', $productId)
-                ->where('waste_logs.created_at', '>=', $dateFrom)
-                ->sum('waste_items.quantity');
+        $wasteAfter = DB::table('waste_items')
+            ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
+            ->where('waste_items.product_id', $productId)
+            ->when($dateFrom, fn($q) => $q->where('waste_logs.created_at', '>=', $dateFrom))
+            ->sum('waste_items.quantity');
 
-            $openingStock = $currentStock
-                - $purchasesAfter
-                + $salesAfter
-                - $returnInAfter
-                + $returnOutAfter
-                + $wasteAfter;
-        } else {
-            $openingStock = 0;
-        }
+        $openingStock = $currentStock
+            - $purchasesAfter
+            + $salesAfter
+            - $returnInAfter
+            + $returnOutAfter
+            + $wasteAfter;
 
         // ── جمع الحركات ───────────────────────────────────────────────────
         $movements = collect();
@@ -165,7 +161,37 @@ class ReportRepository implements ReportRepositoryInterface
 
         // ── ترتيب زمني + حساب الرصيد التراكمي ───────────────────────────
         $sorted  = $movements->sortBy('date')->values();
-        $balance = (float) $openingStock;
+        
+        $openingDate = $dateFrom;
+        $openingRef = 'رصيد افتتاحي';
+
+        if (!$dateFrom) {
+            $latestSnapshot = DB::table('period_snapshots')
+                ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
+                ->orderBy('period_snapshots.id', 'desc')
+                ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
+                ->first();
+            
+            if ($latestSnapshot) {
+                $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
+                $openingRef = 'إقفال ' . $latestSnapshot->name;
+            } else {
+                $firstMovementDate = $sorted->first()->date ?? now()->format('Y-m-d H:i:s');
+                $openingDate = \Carbon\Carbon::parse($firstMovementDate)->subSecond()->format('Y-m-d H:i:s');
+            }
+        } else {
+            $openingDate = \Carbon\Carbon::parse($dateFrom)->subSecond()->format('Y-m-d H:i:s');
+        }
+
+        $sorted->prepend((object)[
+            'date' => $openingDate,
+            'type' => 'opening_balance',
+            'quantity' => (float) $openingStock,
+            'unit_price' => null,
+            'reference' => $openingRef
+        ]);
+
+        $balance = 0.0;
 
         $result = $sorted->map(function ($row) use (&$balance) {
             $balance += (float) $row->quantity;
@@ -204,6 +230,7 @@ class ReportRepository implements ReportRepositoryInterface
             'return_in'  => 'مرتجع عميل',
             'return_out' => 'مرتجع مورد',
             'waste'      => 'تالف',
+            'opening_balance' => 'رصيد افتتاحي',
         ];
 
         $spreadsheet = new Spreadsheet();
@@ -323,6 +350,7 @@ class ReportRepository implements ReportRepositoryInterface
             'return_in'  => 'مرتجع عميل',
             'return_out' => 'مرتجع مورد',
             'waste'      => 'تالف',
+            'opening_balance' => 'رصيد افتتاحي',
         ];
 
         $labels = [
