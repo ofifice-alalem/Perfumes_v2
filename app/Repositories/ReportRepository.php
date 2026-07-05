@@ -164,30 +164,54 @@ class ReportRepository implements ReportRepositoryInterface
         
         $openingDate = $dateFrom;
         $openingRef = 'رصيد افتتاحي';
+        $openingUnitPrice = null;
 
         if (!$dateFrom) {
             $latestSnapshot = DB::table('period_snapshots')
                 ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
                 ->orderBy('period_snapshots.id', 'desc')
-                ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
+                ->select('period_snapshots.id', 'accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
                 ->first();
             
             if ($latestSnapshot) {
                 $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
                 $openingRef = 'إقفال ' . $latestSnapshot->name;
+
+                $snapshotProfit = DB::table('period_snapshot_stock_profits')
+                    ->where('snapshot_id', $latestSnapshot->id)
+                    ->where('product_id', $productId)
+                    ->first();
+                if ($snapshotProfit && $snapshotProfit->avg_purchase_cost !== null) {
+                    $openingUnitPrice = (float) $snapshotProfit->avg_purchase_cost;
+                }
             } else {
                 $firstMovementDate = $sorted->first()->date ?? now()->format('Y-m-d H:i:s');
                 $openingDate = \Carbon\Carbon::parse($firstMovementDate)->subSecond()->format('Y-m-d H:i:s');
             }
         } else {
             $openingDate = \Carbon\Carbon::parse($dateFrom)->subSecond()->format('Y-m-d H:i:s');
+
+            $latestSnapshotBeforeDate = DB::table('period_snapshots')
+                ->where('created_at', '<=', $dateFrom . ' 23:59:59')
+                ->orderBy('id', 'desc')
+                ->first();
+            
+            if ($latestSnapshotBeforeDate) {
+                $snapshotProfit = DB::table('period_snapshot_stock_profits')
+                    ->where('snapshot_id', $latestSnapshotBeforeDate->id)
+                    ->where('product_id', $productId)
+                    ->first();
+                if ($snapshotProfit && $snapshotProfit->avg_purchase_cost !== null) {
+                    $openingUnitPrice = (float) $snapshotProfit->avg_purchase_cost;
+                }
+            }
         }
 
         $sorted->prepend((object)[
             'date' => $openingDate,
             'type' => 'opening_balance',
             'quantity' => (float) $openingStock,
-            'unit_price' => null,
+            'unit_price' => $openingUnitPrice,
             'reference' => $openingRef
         ]);
 
