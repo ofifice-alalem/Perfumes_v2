@@ -2346,12 +2346,12 @@ class ReportRepository implements ReportRepositoryInterface
 
         $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
         $pdf->render();
         $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
 
         return $pdf->stream('sales-customer-invoices-' . now()->format('Y-m-d') . '.pdf');
@@ -2549,6 +2549,8 @@ class ReportRepository implements ReportRepositoryInterface
         $labels = [
             'title'          => $g('تقرير المشتريات'),
             'generated_at'   => now()->format('Y-m-d H:i'),
+            'filter_info'    => $g('معلومات التقرير'),
+            'summary_label'  => $g('ملخص'),
             'products_val'   => !empty($productNames) ? array_map($g, $productNames) : [],
             'label_date_from'=> $g('من تاريخ'),
             'date_from_val'  => $dateFrom ?? $g('البداية'),
@@ -2556,7 +2558,9 @@ class ReportRepository implements ReportRepositoryInterface
             'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
             'total_purchases'=> $fmtN($data['totalPurchases']),
             'purchases_count'=> $data['purchasesCount'],
+            'invoices_count' => $data['purchasesCount'],
             'avg_purchase'   => $fmtN($data['avgPurchase']),
+            'avg_invoice'    => $fmtN($data['avgPurchase']),
             'total_paid'     => $fmtN($data['totalPaid']),
             'total_due'      => $fmtN($data['totalDue']),
             'col_month'      => $g('الشهر'),
@@ -2861,12 +2865,12 @@ class ReportRepository implements ReportRepositoryInterface
 
         $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
         $pdf->render();
         $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
 
         return $pdf->stream('purchases-supplier-invoices-' . now()->format('Y-m-d') . '.pdf');
