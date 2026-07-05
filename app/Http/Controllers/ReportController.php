@@ -128,16 +128,17 @@ class ReportController extends Controller
         $showSold     = $request->boolean('show_sold');
         $showWasted   = $request->boolean('show_wasted');
         $showPurchased = $request->boolean('show_purchased');
+        $searchName   = $request->input('search_name');
 
         $dateFrom     = $request->input('date_from');
         $dateTo       = $request->input('date_to');
 
-        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo);
+        $data = $this->reports->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, null, null, $searchName);
 
         return Inertia::render('Reports/StockStatus', [
             'categories' => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'   => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id']),
-            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted', 'showPurchased', 'dateFrom', 'dateTo'),
+            'filters'    => compact('categoryId', 'sellingType', 'lowStockOnly', 'showSold', 'showWasted', 'showPurchased', 'dateFrom', 'dateTo', 'searchName'),
             'data'       => $data,
         ]);
     }
@@ -158,7 +159,8 @@ class ReportController extends Controller
             $request->input('date_from'),
             $request->input('date_to'),
             $request->boolean('compact_view'),
-            $productIds
+            $productIds,
+            $request->input('search_name')
         );
     }
 
@@ -178,7 +180,8 @@ class ReportController extends Controller
             $request->input('date_from'),
             $request->input('date_to'),
             $request->boolean('compact_view'),
-            $productIds
+            $productIds,
+            $request->input('search_name')
         );
     }
 

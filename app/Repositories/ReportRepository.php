@@ -419,7 +419,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Stock Status ──────────────────────────────────────────────────────────
 
-    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null): array
+    public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
         $scopePeriod = function ($q, string $table) use ($periodId) {
             if ($periodId) {
@@ -429,6 +429,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         $query = DB::table('products')
             ->when(!empty($filterProductIds), fn($q) => $q->whereIn('products.id', $filterProductIds))
+            ->when($searchName, fn($q) => $q->where('products.name', 'like', '%' . $searchName . '%'))
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->leftJoin('price_tiers', 'price_tiers.id', '=', 'products.price_tier_id')
             ->when($categoryId,   fn($q) => $q->where('products.category_id', $categoryId))
@@ -741,9 +742,9 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
-    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null): void
+    public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
+        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds, null, $searchName);
 
         if ($compactView) {
             $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));
@@ -912,12 +913,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null): \Illuminate\Http\Response
+    public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds);
+        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds, null, $searchName);
         
         if ($compactView) {
             $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));

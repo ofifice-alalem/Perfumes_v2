@@ -36,7 +36,7 @@ interface ProductStock {
 interface Props {
     categories: Category[];
     products: Product[];
-    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean; showPurchased?: boolean; dateFrom: string; dateTo: string };
+    filters: { categoryId: number | null; sellingType: string; lowStockOnly: boolean; showSold: boolean; showWasted: boolean; showPurchased?: boolean; dateFrom: string; dateTo: string; searchName?: string };
     data: ProductStock[];
 }
 
@@ -70,9 +70,10 @@ export default function StockStatus({ categories, products, filters, data }: Pro
     const [showWasted,    setShowWasted]    = useState(filters.showWasted ?? false);
     const [dateFrom,      setDateFrom]      = useState(filters.dateFrom ?? '');
     const [dateTo,        setDateTo]        = useState(filters.dateTo ?? '');
+    const [searchName,    setSearchName]    = useState(filters.searchName ?? '');
     const [compactView,   setCompactView]   = useState(false);
 
-    const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted || dateFrom || dateTo;
+    const hasFilter = categoryId || sellingType || lowStockOnly || showSold || showWasted || dateFrom || dateTo || searchName;
 
     function search() {
         router.get('/reports/stock-status', {
@@ -84,11 +85,12 @@ export default function StockStatus({ categories, products, filters, data }: Pro
             show_purchased: (activeTab === 'stock_profit') ? 1 : undefined,
             date_from:      dateFrom      || undefined,
             date_to:        dateTo        || undefined,
+            search_name:    searchName    || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false); setDateFrom(''); setDateTo('');
+        setCategoryId(''); setSellingType(''); setLowStockOnly(false); setShowSold(false); setShowWasted(false); setDateFrom(''); setDateTo(''); setSearchName('');
         router.get('/reports/stock-status', {}, { preserveScroll: true });
     }
 
@@ -102,6 +104,7 @@ export default function StockStatus({ categories, products, filters, data }: Pro
         if (dateFrom)     p.set('date_from', dateFrom);
         if (dateTo)       p.set('date_to', dateTo);
         if (activeTab === 'stock_profit') p.set('show_purchased', '1');
+        if (searchName)   p.set('search_name', searchName);
         if (compactView) p.set('compact_view', '1');
         return `/reports/stock-status/${format}?${p.toString()}`;
     }
@@ -122,6 +125,14 @@ export default function StockStatus({ categories, products, filters, data }: Pro
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
+            <ModernSelect
+                label="البحث باسم المنتج"
+                placeholder="الكل (اختر أو اكتب للبحث)"
+                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                defaultValue={searchName}
+                onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                allowFreeText={true}
+            />
             <ModernSelect
                 label="التصنيف"
                 placeholder="الكل"

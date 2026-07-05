@@ -81,6 +81,7 @@ export function ModernSelect({
   placeholder = 'اختر...',
   onSelect,
   defaultValue = '',
+  allowFreeText = false,
 }: {
   label: string;
   options: string[] | { label: string; meta?: string; badge?: string; searchKey?: string }[];
@@ -88,6 +89,7 @@ export function ModernSelect({
   placeholder?: string;
   onSelect?: (value: string) => void;
   defaultValue?: string;
+  allowFreeText?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState(defaultValue);
@@ -129,8 +131,20 @@ export function ModernSelect({
 
   const optionsList = (size: 'sm' | 'lg') => (
     <ul className={`overflow-y-auto p-2 ${size === 'sm' ? 'max-h-52' : 'flex-1'}`}>
+      {allowFreeText && search && (
+        <div key="freetext">
+          <li
+            onClick={() => { setSelected(search); onSelect?.(search); setIsOpen(false); setSearch(''); }}
+            className={`flex items-center gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} text-primary dark:text-primary-light hover:bg-primary/10 dark:hover:bg-primary/20`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            البحث عن "{search}"
+          </li>
+          {filtered.length > 0 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+        </div>
+      )}
       {filtered.length === 0 ? (
-        <li className="px-4 py-4 text-center text-sm font-bold text-slate-400 dark:text-white/30">لا توجد نتائج</li>
+        (!allowFreeText || !search) ? <li className="px-4 py-4 text-center text-sm font-bold text-slate-400 dark:text-white/30">لا توجد نتائج</li> : null
       ) : (
         filtered.map((opt, idx) => (
           <div key={opt.label}>
@@ -168,6 +182,14 @@ export function ModernSelect({
       <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث سريع..."
         className="w-full rounded-[14px] pr-11 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-11 text-[14px]"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+            if (e.key === 'Enter' && allowFreeText && search) {
+                setSelected(search);
+                onSelect?.(search);
+                setIsOpen(false);
+                setSearch('');
+            }
+        }}
       />
     </div>
   );
