@@ -2100,31 +2100,34 @@ class ReportRepository implements ReportRepositoryInterface
                     ->join('products', 'products.id', '=', 'invoice_items.product_id')
                     ->where('invoice_items.invoice_id', $inv->id)
                     ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                    ->when(!empty($filterProductIds) || !empty($searchName), function($q) use ($filterProductIds, $searchName) {
-                        $q->where(function($sub) use ($filterProductIds, $searchName) {
-                            if (!empty($filterProductIds)) {
-                                $sub->whereIn('products.id', $filterProductIds);
-                            }
-                            if ($searchName) {
-                                $terms = explode(',', $searchName);
-                                foreach ($terms as $term) {
-                                    $term = trim($term);
-                                    if ($term !== '') {
-                                        $sub->orWhere('products.name', 'like', '%' . $term . '%');
-                                    }
-                                }
-                            }
-                        });
-                    })
                     ->select(
+                        'products.id as product_id',
                         'products.name as product_name',
                         'invoice_items.unit_price',
                         DB::raw('MIN(invoice_items.quantity) as quantity'),
                         DB::raw('COUNT(*) as count'),
                         DB::raw('SUM(invoice_items.line_total) as line_total')
                     )
-                    ->groupBy('products.name', 'invoice_items.unit_price')
+                    ->groupBy('products.id', 'products.name', 'invoice_items.unit_price')
                     ->get();
+
+                foreach ($items as $item) {
+                    $isMatched = false;
+                    if (!empty($filterProductIds) || !empty($searchName)) {
+                        if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                            $isMatched = true;
+                        } elseif (!empty($searchName)) {
+                            $terms = explode(',', $searchName);
+                            foreach ($terms as $term) {
+                                if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                                    $isMatched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    $item->is_matched = $isMatched;
+                }
 
                 $invoicesList[] = [
                     'id'          => $inv->id,
@@ -2222,7 +2225,7 @@ class ReportRepository implements ReportRepositoryInterface
                     $item = (array) $item;
                     $sheet->fromArray([
                         $item['count'] > 1 ? $item['count'] : '',
-                        $item['product_name'],
+                        ($item['is_matched'] ? '★ ' : '') . $item['product_name'],
                         $fmtN($item['quantity']),
                         $fmtN($item['unit_price']),
                         $fmtN($item['line_total']),
@@ -2235,6 +2238,14 @@ class ReportRepository implements ReportRepositoryInterface
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
                             'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
                             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                        ]);
+                    }
+                    if ($item['is_matched']) {
+                        $sheet->getStyle('B' . $row)->applyFromArray([
+                            'font' => ['color' => ['rgb' => 'D97706']], // amber color for text
+                        ]);
+                        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']], // amber-50 background
                         ]);
                     }
                     $row++;
@@ -2290,6 +2301,7 @@ class ReportRepository implements ReportRepositoryInterface
                         'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
                         'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
                         'line_total'   => is_array($i) ? $i['line_total'] : $i->line_total,
+                        'is_matched'   => is_array($i) ? ($i['is_matched'] ?? false) : ($i->is_matched ?? false),
                     ], $inv['items']),
                 ], $entry['invoices']),
             ];
@@ -2619,30 +2631,33 @@ class ReportRepository implements ReportRepositoryInterface
                     ->join('products', 'products.id', '=', 'purchase_items.product_id')
                     ->where('purchase_items.purchase_id', $p->id)
                     ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                    ->when(!empty($filterProductIds) || !empty($searchName), function($q) use ($filterProductIds, $searchName) {
-                        $q->where(function($sub) use ($filterProductIds, $searchName) {
-                            if (!empty($filterProductIds)) {
-                                $sub->whereIn('products.id', $filterProductIds);
-                            }
-                            if ($searchName) {
-                                $terms = explode(',', $searchName);
-                                foreach ($terms as $term) {
-                                    $term = trim($term);
-                                    if ($term !== '') {
-                                        $sub->orWhere('products.name', 'like', '%' . $term . '%');
-                                    }
-                                }
-                            }
-                        });
-                    })
                     ->select(
+                        'products.id as product_id',
                         'products.name as product_name',
                         'purchase_items.unit_cost',
                         DB::raw('MIN(purchase_items.quantity) as quantity'),
                         DB::raw('COUNT(*) as count')
                     )
-                    ->groupBy('products.name', 'purchase_items.unit_cost')
+                    ->groupBy('products.id', 'products.name', 'purchase_items.unit_cost')
                     ->get();
+
+                foreach ($items as $item) {
+                    $isMatched = false;
+                    if (!empty($filterProductIds) || !empty($searchName)) {
+                        if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                            $isMatched = true;
+                        } elseif (!empty($searchName)) {
+                            $terms = explode(',', $searchName);
+                            foreach ($terms as $term) {
+                                if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                                    $isMatched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    $item->is_matched = $isMatched;
+                }
 
                 $purchasesList[] = [
                     'id'    => $p->id,
@@ -2730,7 +2745,7 @@ class ReportRepository implements ReportRepositoryInterface
                     $item = (array) $item;
                     $sheet->fromArray([
                         $item['count'] > 1 ? $item['count'] : '',
-                        $item['product_name'],
+                        ($item['is_matched'] ? '★ ' : '') . $item['product_name'],
                         $fmtN($item['quantity']),
                         $fmtN($item['unit_cost']),
                         $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
@@ -2743,6 +2758,14 @@ class ReportRepository implements ReportRepositoryInterface
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
                             'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
                             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+                        ]);
+                    }
+                    if ($item['is_matched']) {
+                        $sheet->getStyle('B' . $row)->applyFromArray([
+                            'font' => ['color' => ['rgb' => 'D97706']],
+                        ]);
+                        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
                         ]);
                     }
                     $row++;
@@ -2793,6 +2816,7 @@ class ReportRepository implements ReportRepositoryInterface
                         'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
                         'unit_cost'    => is_array($i) ? $i['unit_cost'] : $i->unit_cost,
                         'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
+                        'is_matched'   => is_array($i) ? ($i['is_matched'] ?? false) : ($i->is_matched ?? false),
                     ], $p['items']),
                 ], $entry['purchases']),
             ];

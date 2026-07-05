@@ -170,7 +170,12 @@
             <td class="num">{{ $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']) }}</td>
             <td class="num">{{ $fmtN($item['unit_cost']) }}</td>
             <td class="num">{{ $fmtN($item['quantity']) }}</td>
-            <td>{{ $item['product_name'] }}</td>
+            <td>
+                @if($item['is_matched'])
+                    <span style="color:#eab308; font-size:10px;">★ </span>
+                @endif
+                {{ $item['product_name'] }}
+            </td>
             <td class="num" style="color:{{ $item['count'] > 1 ? '#1565C0' : '#94a3b8' }}; font-weight:{{ $item['count'] > 1 ? 'bold' : 'normal' }};">{{ $item['count'] > 1 ? $item['count'] : '—' }}</td>
         </tr>
         @endforeach
