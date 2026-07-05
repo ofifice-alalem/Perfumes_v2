@@ -63,6 +63,9 @@ interface Props {
         stockCategoryId: number | null;
         productIds: number[];
         stockProductIds: number[];
+        searchName?: string;
+        stockSearchName?: string;
+        activeTab?: 'daily' | 'stock_profit';
     }
 }
 
@@ -75,19 +78,21 @@ function fmt(n: number | null): string {
 }
 
 export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, products, filters }: Props) {
-    const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>('daily');
+    const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>(filters.activeTab ?? 'daily');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
     // فلاتر التاب الأول
     const [dateFrom, setDateFrom] = useState(filters.dateFrom ?? '');
     const [dateTo,   setDateTo]   = useState(filters.dateTo ?? '');
     const [productIds, setProductIds] = useState<number[]>(filters.productIds ?? []);
+    const [searchName, setSearchName] = useState(filters.searchName ?? '');
 
     // فلاتر التاب الثاني
     const [stockDateFrom,   setStockDateFrom]   = useState(filters.stockDateFrom ?? '');
     const [stockDateTo,     setStockDateTo]     = useState(filters.stockDateTo ?? '');
     const [stockCategoryId, setStockCategoryId] = useState(filters.stockCategoryId ? String(filters.stockCategoryId) : '');
     const [stockProductIds, setStockProductIds] = useState<number[]>(filters.stockProductIds ?? []);
+    const [stockSearchName, setStockSearchName] = useState(filters.stockSearchName ?? '');
     const [compactView,     setCompactView]     = useState(false);
 
     const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
@@ -105,10 +110,13 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
             product_ids:       productIds.length ? productIds.join(',') : undefined,
+            search_name:       searchName       || undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
             stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
+            stock_search_name: stockSearchName  || undefined,
+            active_tab:        'daily',
         }, { preserveScroll: true });
     }
 
@@ -117,10 +125,13 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
             date_from:         dateFrom         || undefined,
             date_to:           dateTo           || undefined,
             product_ids:       productIds.length ? productIds.join(',') : undefined,
+            search_name:       searchName       || undefined,
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
             stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined,
+            stock_search_name: stockSearchName  || undefined,
+            active_tab:        'stock_profit',
         }, { preserveScroll: true });
     }
 
@@ -129,6 +140,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         if (dateFrom) p.set('date_from', dateFrom);
         if (dateTo) p.set('date_to', dateTo);
         if (productIds.length) p.set('product_ids', productIds.join(','));
+        if (searchName) p.set('search_name', searchName);
         return `/reports/profit-analysis/${format}?${p.toString()}`;
     }
 
@@ -138,6 +150,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         if (stockDateFrom) p.set('date_from', stockDateFrom);
         if (stockDateTo) p.set('date_to', stockDateTo);
         if (stockProductIds.length) p.set('product_ids', stockProductIds.join(','));
+        if (stockSearchName) p.set('search_name', stockSearchName);
         p.set('show_purchased', '1');
         p.set('show_sold', '1');
         p.set('show_wasted', '1');
@@ -386,6 +399,14 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                         {activeTab === 'daily' ? (
                             <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                                 <div className="flex flex-col gap-4">
+                                    <ModernSelect
+                                        label="البحث باسم المنتج"
+                                        placeholder="الكل (اختر أو اكتب للبحث)"
+                                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                                        defaultValue={searchName}
+                                        onSelect={val => setSearchName(val === 'الكل' ? '' : val)}
+                                        allowFreeText={true}
+                                    />
                                     <ModernMultiSelect
                                         label="المنتجات"
                                         placeholder="الكل"
@@ -399,8 +420,8 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(dateFrom || dateTo || productIds.length > 0) && (
-                                        <button onClick={() => { setDateFrom(''); setDateTo(''); setProductIds([]); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined, stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined }); }}
+                                    {(dateFrom || dateTo || productIds.length > 0 || searchName) && (
+                                        <button onClick={() => { setDateFrom(''); setDateTo(''); setProductIds([]); setSearchName(''); router.get('/reports/profit-analysis', { stock_date_from: stockDateFrom || undefined, stock_date_to: stockDateTo || undefined, stock_category_id: stockCategoryId || undefined, stock_product_ids: stockProductIds.length ? stockProductIds.join(',') : undefined, stock_search_name: stockSearchName || undefined, active_tab: 'daily' }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>
@@ -410,6 +431,14 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                         ) : (
                             <SpatialCard title="فلترة" icon={<FileText className="w-4 h-4" />}>
                                 <div className="flex flex-col gap-4">
+                                    <ModernSelect
+                                        label="البحث باسم المنتج"
+                                        placeholder="الكل (اختر أو اكتب للبحث)"
+                                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                                        defaultValue={stockSearchName}
+                                        onSelect={val => setStockSearchName(val === 'الكل' ? '' : val)}
+                                        allowFreeText={true}
+                                    />
                                     <ModernSelect
                                         label="التصنيف"
                                         placeholder="الكل"
@@ -437,8 +466,8 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                                         <Search className="w-4 h-4" /> عرض التقرير
                                     </button>
-                                    {(stockDateFrom || stockDateTo || stockCategoryId || stockProductIds.length > 0) && (
-                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); setStockProductIds([]); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined, product_ids: productIds.length ? productIds.join(',') : undefined }); }}
+                                    {(stockDateFrom || stockDateTo || stockCategoryId || stockProductIds.length > 0 || stockSearchName) && (
+                                        <button onClick={() => { setStockDateFrom(''); setStockDateTo(''); setStockCategoryId(''); setStockProductIds([]); setStockSearchName(''); router.get('/reports/profit-analysis', { date_from: dateFrom || undefined, date_to: dateTo || undefined, product_ids: productIds.length ? productIds.join(',') : undefined, search_name: searchName || undefined, active_tab: 'stock_profit' }); }}
                                             className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
                                             إعادة تعيين
                                         </button>

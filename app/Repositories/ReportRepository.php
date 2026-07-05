@@ -3334,8 +3334,17 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
-    public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?int $periodId = null): array
+    public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
+        if ($searchName) {
+            $matchedIds = DB::table('products')->where('name', 'like', '%' . $searchName . '%')->pluck('id')->toArray();
+            if ($filterProductIds !== null) {
+                $filterProductIds = array_intersect($filterProductIds, $matchedIds);
+                if (empty($filterProductIds)) $filterProductIds = [0];
+            } else {
+                $filterProductIds = empty($matchedIds) ? [0] : $matchedIds;
+            }
+        }
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : now()->startOfMonth()->toDateTimeString();
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : now()->endOfMonth()->toDateTimeString();
 
@@ -3545,9 +3554,9 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
-    public function exportProfitAnalysisExcel(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null): void
+    public function exportProfitAnalysisExcel(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds);
+        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
 
         $productNames = !empty($filterProductIds) ? DB::table('products')->whereIn('id', $filterProductIds)->pluck('name')->toArray() : [];
 
@@ -3641,12 +3650,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportProfitAnalysisPdf(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null): \Illuminate\Http\Response
+    public function exportProfitAnalysisPdf(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds);
+        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
 

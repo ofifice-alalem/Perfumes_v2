@@ -26,6 +26,8 @@ class ReportController extends Controller
         $stockCategoryId = $request->integer('stock_category_id') ?: null;
         $productIds      = $request->input('product_ids', []);
         $stockProductIds = $request->input('stock_product_ids', []);
+        $searchName      = $request->input('search_name');
+        $stockSearchName = $request->input('stock_search_name');
         
         if (is_string($productIds)) $productIds = explode(',', $productIds);
         if (is_string($stockProductIds)) $stockProductIds = explode(',', $stockProductIds);
@@ -33,15 +35,15 @@ class ReportController extends Controller
         $productIds = array_filter(array_map('intval', (array)$productIds));
         $stockProductIds = array_filter(array_map('intval', (array)$stockProductIds));
 
-        $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds);
-        $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds);
+        $profitSummary   = $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds, null, $searchName);
+        $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds, null, $stockSearchName);
 
         return Inertia::render('Reports/ProfitAnalysis', [
             'profitSummary'   => $profitSummary,
             'stockProfitData' => $stockProfitData,
             'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'        => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId', 'productIds', 'stockProductIds'),
+            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId', 'productIds', 'stockProductIds', 'searchName', 'stockSearchName') + ['activeTab' => $request->input('active_tab', 'daily')],
         ]);
     }
 
@@ -54,7 +56,8 @@ class ReportController extends Controller
         $this->reports->exportProfitAnalysisExcel(
             $request->input('date_from'),
             $request->input('date_to'),
-            $productIds
+            $productIds,
+            $request->input('search_name')
         );
     }
 
@@ -67,7 +70,8 @@ class ReportController extends Controller
         return $this->reports->exportProfitAnalysisPdf(
             $request->input('date_from'),
             $request->input('date_to'),
-            $productIds
+            $productIds,
+            $request->input('search_name')
         );
     }
 
