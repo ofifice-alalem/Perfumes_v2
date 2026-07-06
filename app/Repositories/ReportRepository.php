@@ -258,6 +258,7 @@ class ReportRepository implements ReportRepositoryInterface
         ];
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('حركة المنتج');
@@ -279,7 +280,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->setCellValue('B' . $row, $info[1]);
             $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -291,7 +292,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -332,7 +333,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->mergeCells('A' . $row . ':F' . $row);
         $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
-            'font'    => ['bold' => true, 'size' => 11],
+            'font'    => ['bold' => true, 'size' => 15],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
@@ -762,6 +763,7 @@ class ReportRepository implements ReportRepositoryInterface
         }
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle($showPurchased ? 'تقرير الأرباح' : 'المخزون الحالي');
@@ -794,7 +796,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -817,7 +819,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -906,7 +908,7 @@ class ReportRepository implements ReportRepositoryInterface
             }
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
-                'font'      => ['bold' => true, 'color' => ['rgb' => '0F172A'], 'size' => 11],
+                'font'      => ['bold' => true, 'color' => ['rgb' => '0F172A'], 'size' => 15],
                 'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
@@ -1007,6 +1009,7 @@ class ReportRepository implements ReportRepositoryInterface
         $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('نموذج الجرد');
@@ -1018,7 +1021,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -1291,6 +1294,7 @@ class ReportRepository implements ReportRepositoryInterface
             : 'جميع العملاء';
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('ديون العملاء');
@@ -1314,7 +1318,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->setCellValue('B' . $row, $info[1]);
             $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -1326,7 +1330,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -1351,7 +1355,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->fromArray($movHeaders, null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '1E3A5F']],
+                'font'    => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1E3A5F']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -1371,7 +1375,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $typeColors = ['invoice' => '334155', 'payment' => '16A34A', 'settlement' => '3B82F6', 'return' => 'D97706'];
                 $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $sheet->getStyle('B' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => '3B82F6']]]);
@@ -1385,7 +1389,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray(['', 'الإجمالي', $fmtN($totalDebt)], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
-            'font'    => ['bold' => true, 'size' => 11],
+            'font'    => ['bold' => true, 'size' => 15],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
@@ -1631,6 +1635,7 @@ class ReportRepository implements ReportRepositoryInterface
             : 'جميع الموردين';
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('ديون الموردين');
@@ -1652,19 +1657,19 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->setCellValue('B' . $row, $info[1]);
             $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
         }
         $row++;
 
-        $headers = ['#', 'المورد', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم'];
+        $headers = ['#', 'المورد', 'إجمالي الدين'];
         $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -1673,22 +1678,19 @@ class ReportRepository implements ReportRepositoryInterface
         foreach ($data as $i => $s) {
             $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
             $sheet->fromArray([
-                $i + 1, $s['supplier_name'], $fmtN($s['total_debt']),
-                $fmtN($s['current']), $fmtN($s['days_30_60']), $fmtN($s['days_60_90']), $fmtN($s['over_90']),
+                $i + 1, $s['supplier_name'], $fmtN($s['total_debt'])
             ], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
                 'font'    => ['bold' => true],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
-            if ($s['over_90'] > 0)
-                $sheet->getStyle('G' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']]]);
             $row++;
 
-            $sheet->fromArray(['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'العمر', 'الرصيد'], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+            $sheet->fromArray(['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'الرصيد'], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '1E3A5F']],
+                'font'    => ['bold' => true, 'size' => 13, 'color' => ['rgb' => '1E3A5F']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -1698,13 +1700,12 @@ class ReportRepository implements ReportRepositoryInterface
                     '', $m['ref'], $typeLabels[$m['type']] ?? $m['type'],
                     $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--',
                     ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']),
-                    $m['days_old'] !== null ? $m['days_old'] . ' يوم' : '—',
                     $fmtN($m['balance']),
                 ], null, 'A' . $row);
                 $typeColors = ['purchase' => '334155', 'payment' => '16A34A', 'settlement' => '3B82F6', 'return' => 'D97706'];
-                $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $sheet->getStyle('B' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => '3B82F6']]]);
@@ -1714,15 +1715,14 @@ class ReportRepository implements ReportRepositoryInterface
         }
 
         $totalDebt   = array_sum(array_column($data, 'total_debt'));
-        $totalOver90 = array_sum(array_column($data, 'over_90'));
-        $sheet->fromArray(['', 'الإجمالي', number_format($totalDebt, 2), '', '', '', number_format($totalOver90, 2)], null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+        $sheet->fromArray(['', 'الإجمالي', number_format($totalDebt, 2)], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
-            'font'    => ['bold' => true, 'size' => 11],
+            'font'    => ['bold' => true, 'size' => 15],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
-        foreach (range('A', 'G') as $col)
+        foreach (range('A', $lastCol) as $col)
             $sheet->getColumnDimension($col)->setAutoSize(true);
 
         $filename = 'supplier-aging-' . now()->format('Y-m-d') . '.xlsx';
@@ -1931,6 +1931,7 @@ class ReportRepository implements ReportRepositoryInterface
         $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('تقرير المبيعات');
@@ -1960,7 +1961,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -1972,7 +1973,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -1993,7 +1994,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $row++;
@@ -2004,7 +2005,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray(['الإجمالي', $data['invoicesCount'], $fmtN($data['totalSales'])], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
-            'font'    => ['bold' => true, 'size' => 11],
+            'font'    => ['bold' => true, 'size' => 15],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
@@ -2200,6 +2201,7 @@ class ReportRepository implements ReportRepositoryInterface
         $productNames = collect($includedProducts)->pluck('name')->toArray();
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('فواتير العملاء');
@@ -2218,7 +2220,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -2234,7 +2236,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->mergeCells('A' . $row . ':E' . $row);
             $sheet->getStyle('A' . $row)->applyFromArray([
                 'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
                 'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
@@ -2295,7 +2297,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row += 2;
@@ -2495,6 +2497,7 @@ class ReportRepository implements ReportRepositoryInterface
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('تقرير المشتريات');
@@ -2519,7 +2522,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -2529,7 +2532,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray(['الشهر', 'عدد الفواتير', 'إجمالي المشتريات'], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -2548,7 +2551,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $row++;
@@ -2558,7 +2561,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray(['الإجمالي', $data['purchasesCount'], $fmtN($data['totalPurchases'])], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
-            'font'    => ['bold' => true, 'size' => 11],
+            'font'    => ['bold' => true, 'size' => 15],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
 
@@ -2733,6 +2736,7 @@ class ReportRepository implements ReportRepositoryInterface
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('فواتير الموردين');
@@ -2751,7 +2755,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -2763,7 +2767,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->mergeCells('A' . $row . ':E' . $row);
             $sheet->getStyle('A' . $row)->applyFromArray([
                 'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0a2540']],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
                 'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
@@ -2821,7 +2825,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row += 2;
@@ -3070,6 +3074,7 @@ class ReportRepository implements ReportRepositoryInterface
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('تقرير المرتجعات');
@@ -3095,7 +3100,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -3107,7 +3112,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->mergeCells('A' . $row . ':C' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DC2626']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -3132,7 +3137,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $row++;
@@ -3145,7 +3150,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->mergeCells('A' . $row . ':C' . $row);
         $sheet->getStyle('A' . $row)->applyFromArray([
             'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D97706']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
@@ -3170,7 +3175,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $sheet->fromArray(['  ' . $d['date'], $d['count'], $fmtN($d['total'])], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
-                    'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
+                    'font'    => ['size' => 13, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 ]);
                 $row++;
@@ -3378,6 +3383,7 @@ class ReportRepository implements ReportRepositoryInterface
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setRightToLeft(true);
         $sheet->setTitle('تفاصيل المرتجعات');
@@ -3394,7 +3400,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->setCellValue('B' . $row, $info[1]);
             $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF2F2']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row++;
@@ -3409,7 +3415,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->mergeCells('A' . $row . ':E' . $row);
             $sheet->getStyle('A' . $row)->applyFromArray([
                 'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $color]],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 12],
+                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
                 'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
             ]);
@@ -3457,7 +3463,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 11],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
             $row += 2;
@@ -3929,7 +3935,7 @@ class ReportRepository implements ReportRepositoryInterface
             $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 10],
+                'font'    => ['bold' => true, 'size' => 15],
                 'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
             ]);
             $row++;
@@ -3942,7 +3948,7 @@ class ReportRepository implements ReportRepositoryInterface
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
             'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
             'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
