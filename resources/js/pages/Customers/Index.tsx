@@ -16,6 +16,7 @@ interface Customer {
     total_returns: string;
     total_settlements: string;
     total_debt: string;
+    opening_balance: string;
 }
 
 interface Props {
@@ -178,7 +179,7 @@ export default function CustomersIndex({ customers, flash }: Props) {
                                 <table className="w-full text-[16px]">
                                     <thead>
                                         <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {['الاسم', 'الهاتف', 'إجمالي المشتريات', 'المدفوع', 'المرتجع', 'التسويات', 'الدين', 'الحالة', 'الإجراءات'].map(h => (
+                                            {['الاسم', 'الهاتف', 'إجمالي المشتريات', 'المدفوع', 'المرتجع', 'التسويات', 'رصيد سابق', 'الدين', 'الحالة', 'الإجراءات'].map(h => (
                                                 <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap first:rounded-r-[14px] last:rounded-l-[14px]">{h}</th>
                                             ))}
                                         </tr>
@@ -187,7 +188,7 @@ export default function CustomersIndex({ customers, flash }: Props) {
                                         {filtered.map(customer => (
                                             editingId === customer.id ? (
                                                 <tr key={`edit-${customer.id}`}>
-                                                    <td colSpan={9} className="px-4 py-4">
+                                                    <td colSpan={10} className="px-4 py-4">
                                                         <div className="flex flex-col gap-3 p-4 rounded-[16px] bg-primary/5 dark:bg-primary/10 border border-primary/20">
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div className="flex flex-col gap-1.5">
@@ -248,6 +249,9 @@ export default function CustomersIndex({ customers, flash }: Props) {
                                                     </td>
                                                     <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-black text-purple-500 dark:text-purple-400">{fmt(customer.total_settlements)}</span>
+                                                    </td>
+                                                    <td className="px-4 py-4 whitespace-nowrap">
+                                                        <span className="font-black text-slate-500 dark:text-white/60">{fmt(customer.opening_balance)}</span>
                                                     </td>
                                                     <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className={`font-black ${parseFloat(customer.total_debt) > 0 ? 'text-red-500' : 'text-slate-400 dark:text-white/40'}`}>
@@ -366,6 +370,10 @@ export default function CustomersIndex({ customers, flash }: Props) {
                                                 <div className="flex items-center justify-between py-3">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">التسويات</span>
                                                     <span className="font-black text-purple-500 dark:text-purple-400">{fmt(customer.total_settlements)}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-3">
+                                                    <span className="text-sm font-bold text-slate-400 dark:text-white/40">رصيد سابق</span>
+                                                    <span className="font-black text-slate-500 dark:text-white/60">{fmt(customer.opening_balance)}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between py-3">
                                                     <span className="text-sm font-bold text-slate-400 dark:text-white/40">الدين</span>

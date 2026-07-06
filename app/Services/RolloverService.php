@@ -265,7 +265,7 @@ class RolloverService
                     'total_returns'     => $s->total_returns,
                     'total_paid'        => $s->total_paid,
                     'total_settlements' => $s->total_settlements,
-                    'total_debt'        => max(0, $debt),
+                    'total_debt'        => $debt,
                 ]);
             }
 
@@ -296,7 +296,7 @@ class RolloverService
                     'total_returns'     => $s->total_returns,
                     'total_paid'        => $s->total_paid,
                     'total_settlements' => $s->total_settlements,
-                    'total_debt'        => max(0, $debt),
+                    'total_debt'        => $debt,
                 ]);
             }
         });
