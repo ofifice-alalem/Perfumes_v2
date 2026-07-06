@@ -390,10 +390,10 @@ class RolloverService
         $totalWaste = WasteItem::where(fn($q) => $this->scopePeriod($q, $periodId))
             ->join('products', 'waste_items.product_id', '=', 'products.id')
             ->leftJoin(
-                DB::raw('(SELECT product_id, MAX(unit_cost) as unit_cost FROM purchase_items GROUP BY product_id) as last_cost'),
-                'waste_items.product_id', '=', 'last_cost.product_id'
+                DB::raw('(SELECT product_id, SUM(quantity * unit_cost) / NULLIF(SUM(quantity), 0) as avg_cost FROM purchase_items GROUP BY product_id) as wavg_cost'),
+                'waste_items.product_id', '=', 'wavg_cost.product_id'
             )
-            ->selectRaw('SUM(waste_items.quantity * COALESCE(last_cost.unit_cost, 0)) as total')
+            ->selectRaw('SUM(waste_items.quantity * COALESCE(wavg_cost.avg_cost, 0)) as total')
             ->value('total') ?? 0;
 
         return [
