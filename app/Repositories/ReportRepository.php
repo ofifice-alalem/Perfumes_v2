@@ -1466,14 +1466,16 @@ class ReportRepository implements ReportRepositoryInterface
         $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
+        $openingDate = null;
         $openingRef = 'رصيد سابق';
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
             ->orderBy('period_snapshots.id', 'desc')
-            ->select('accounting_periods.name')
+            ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
             ->first();
         if ($latestSnapshot) {
             $openingRef = 'إقفال دورة ' . $latestSnapshot->name;
+            $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
         }
 
         $suppliersQuery = DB::table('suppliers')
