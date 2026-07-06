@@ -184,12 +184,24 @@ class RolloverService
                 \App\Models\PeriodSnapshotStockProfit::insert($stockProfitRows);
             }
 
-            // Step 3: Update opening balances
+            // Step 3: Update opening balances and reset totals for the new period
             foreach ($customerBalances as $row) {
-                Customer::where('id', $row['id'])->update(['opening_balance' => $row['balance']]);
+                Customer::where('id', $row['id'])->update([
+                    'opening_balance'   => $row['balance'],
+                    'total_purchases'   => 0,
+                    'total_paid'        => 0,
+                    'total_returns'     => 0,
+                    'total_settlements' => 0,
+                ]);
             }
             foreach ($supplierBalances as $row) {
-                Supplier::where('id', $row['id'])->update(['opening_balance' => $row['balance']]);
+                Supplier::where('id', $row['id'])->update([
+                    'opening_balance'   => $row['balance'],
+                    'total_purchases'   => 0,
+                    'total_paid'        => 0,
+                    'total_returns'     => 0,
+                    'total_settlements' => 0,
+                ]);
             }
 
             // Step 4: Close current period
