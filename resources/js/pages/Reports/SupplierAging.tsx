@@ -99,9 +99,6 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
     }
 
     const totalDebt   = data.reduce((s, c) => s + c.total_debt,   0);
-    const totalOver90 = data.reduce((s, c) => s + c.over_90,      0);
-    const total30_60  = data.reduce((s, c) => s + c.days_30_60,   0);
-    const total60_90  = data.reduce((s, c) => s + c.days_60_90,   0);
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
@@ -158,22 +155,10 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
 
                         {/* Summary + Export */}
                         <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="spatial-card p-4 flex flex-col gap-1">
                                     <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">إجمالي الديون</p>
                                     <p className="text-2xl font-black text-slate-800 dark:text-white">{fmt(totalDebt)}</p>
-                                </div>
-                                <div className="spatial-card p-4 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-amber-500 uppercase tracking-widest">30-60 يوم</p>
-                                    <p className="text-2xl font-black text-amber-500">{fmt(total30_60)}</p>
-                                </div>
-                                <div className="spatial-card p-4 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-amber-600 uppercase tracking-widest">60-90 يوم</p>
-                                    <p className="text-2xl font-black text-amber-600">{fmt(total60_90)}</p>
-                                </div>
-                                <div className="spatial-card p-4 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-red-500 uppercase tracking-widest">أكثر 90 يوم</p>
-                                    <p className="text-2xl font-black text-red-500">{fmt(totalOver90)}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
@@ -202,7 +187,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                         <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['المورد', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم', 'الحركات', ''].map(h => (
+                                                    {['المورد', 'إجمالي الدين', 'الحركات', ''].map(h => (
                                                         <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -213,10 +198,6 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                         <tr key={c.supplier_id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
                                                             <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{c.supplier_name}</td>
                                                             <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(c.total_debt)}</td>
-                                                            <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
-                                                            <td className={`px-4 py-3 whitespace-nowrap ${c.days_30_60 > 0 ? 'text-amber-500 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_30_60)}</td>
-                                                            <td className={`px-4 py-3 whitespace-nowrap ${c.days_60_90 > 0 ? 'text-amber-600 font-bold' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.days_60_90)}</td>
-                                                            <td className={`px-4 py-3 whitespace-nowrap ${c.over_90 > 0 ? 'text-red-500 font-black' : 'text-slate-400 dark:text-white/30'}`}>{fmt(c.over_90)}</td>
                                                             <td className="px-4 py-4 text-center font-bold text-slate-500 dark:text-white/50">{c.movements.length}</td>
                                                             <td className="px-4 py-4">
                                                                 <button onClick={() => toggleExpand(c.supplier_id)}
@@ -228,7 +209,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                         </tr>
                                                         {expanded.has(c.supplier_id) && (
                                                             <tr key={`${c.supplier_id}-detail`}>
-                                                                <td colSpan={8} className="px-6 py-4 bg-black/2 dark:bg-white/2">
+                                                                <td colSpan={4} className="px-6 py-4 bg-black/2 dark:bg-white/2">
                                                                     <table className="w-full text-[15px]">
                                                                         <thead>
                                                                             <tr className="border-b border-black/5 dark:border-white/5">
@@ -236,7 +217,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                                                 <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">النوع</th>
                                                                                 <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">التاريخ</th>
                                                                                 <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الإجمالي</th>
-                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">العمر</th>
+
                                                                                 <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الرصيد</th>
                                                                             </tr>
                                                                         </thead>
@@ -249,9 +230,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                                                     <td className={`py-3 px-4 ${typeConfig[m.type].amountClass}`}>
                                                                                         {m.amount > 0 ? '+' : ''}{fmt(m.amount)}
                                                                                     </td>
-                                                                                    <td className={`py-3 px-4 ${m.days_old !== null ? agingClass(m.days_old) : 'text-slate-400 dark:text-white/30'}`}>
-                                                                                        {m.days_old !== null ? `${m.days_old} يوم` : '—'}
-                                                                                    </td>
+
                                                                                     <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(m.balance)}</td>
                                                                                 </tr>
                                                                             ))}
@@ -275,22 +254,6 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                     <span className="font-black text-slate-800 dark:text-white text-sm">{fmt(c.total_debt)}</span>
                                                 </div>
                                                 <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">أقل 30 يوم</span>
-                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{fmt(c.current)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">30-60 يوم</span>
-                                                        <span className={c.days_30_60 > 0 ? 'font-bold text-amber-500' : 'font-bold text-slate-400 dark:text-white/30'}>{fmt(c.days_30_60)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">60-90 يوم</span>
-                                                        <span className={c.days_60_90 > 0 ? 'font-bold text-amber-600' : 'font-bold text-slate-400 dark:text-white/30'}>{fmt(c.days_60_90)}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">أكثر 90 يوم</span>
-                                                        <span className={c.over_90 > 0 ? 'font-black text-red-500' : 'font-bold text-slate-400 dark:text-white/30'}>{fmt(c.over_90)}</span>
-                                                    </div>
                                                     <button onClick={() => toggleExpand(c.supplier_id)}
                                                         className="flex items-center gap-1 text-xs font-bold text-primary mt-1">
                                                         <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />

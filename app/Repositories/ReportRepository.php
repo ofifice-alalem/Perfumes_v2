@@ -1321,7 +1321,7 @@ class ReportRepository implements ReportRepositoryInterface
         }
         $row++;
 
-        $headers = ['#', 'العميل', 'إجمالي الدين', 'أقل 30 يوم', '30-60 يوم', '60-90 يوم', 'أكثر 90 يوم'];
+        $headers = ['#', 'العميل', 'إجمالي الدين'];
         $lastCol = chr(ord('A') + count($headers) - 1);
         $sheet->fromArray($headers, null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
@@ -1337,26 +1337,19 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->fromArray([
                 $i + 1,
                 $c['customer_name'],
-                $fmtN($c['total_debt']),
-                $fmtN($c['current']),
-                $fmtN($c['days_30_60']),
-                $fmtN($c['days_60_90']),
-                $fmtN($c['over_90']),
+                $fmtN($c['total_debt'])
             ], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
                 'font'    => ['bold' => true],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
             ]);
-            if ($c['over_90'] > 0) {
-                $sheet->getStyle('G' . $row)->applyFromArray(['font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']]]);
-            }
             $row++;
 
             // رأس الحركات
-            $movHeaders = ['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'العمر', 'الرصيد'];
+            $movHeaders = ['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ', 'الرصيد'];
             $sheet->fromArray($movHeaders, null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+            $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
                 'font'    => ['bold' => true, 'size' => 9, 'color' => ['rgb' => '1E3A5F']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1366,7 +1359,6 @@ class ReportRepository implements ReportRepositoryInterface
             // الحركات
             foreach ($c['movements'] as $m) {
                 $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
-                $ageFmt    = $m['days_old'] !== null ? $m['days_old'] . ' يوم' : '—';
                 $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
                 $sheet->fromArray([
                     '',
@@ -1374,11 +1366,10 @@ class ReportRepository implements ReportRepositoryInterface
                     $typeLabels[$m['type']] ?? $m['type'],
                     $dateFmt,
                     $amountFmt,
-                    $ageFmt,
                     $fmtN($m['balance']),
                 ], null, 'A' . $row);
                 $typeColors = ['invoice' => '334155', 'payment' => '16A34A', 'settlement' => '3B82F6', 'return' => 'D97706'];
-                $sheet->getStyle('A' . $row . ':G' . $row)->applyFromArray([
+                $sheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F8FAFC']],
                     'font'    => ['size' => 9, 'color' => ['rgb' => '64748B']],
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
@@ -1391,8 +1382,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         // صف الإجمالي
         $totalDebt   = array_sum(array_column($data, 'total_debt'));
-        $totalOver90 = array_sum(array_column($data, 'over_90'));
-        $sheet->fromArray(['', 'الإجمالي', $fmtN($totalDebt), '', '', '', $fmtN($totalOver90)], null, 'A' . $row);
+        $sheet->fromArray(['', 'الإجمالي', $fmtN($totalDebt)], null, 'A' . $row);
         $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
             'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']],
             'font'    => ['bold' => true, 'size' => 11],

@@ -90,16 +90,12 @@
 
     <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 12px auto 0; border: 2px solid #0f172a;">
         <tr style="background: #f8fafc; border-bottom: 2px solid #0f172a;">
-            <td colspan="3" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
+            <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none; letter-spacing: 1px;">&#x2014; {{ $labels['summary_label'] }} &#x2014;</td>
         </tr>
         <tr>
             <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
                 <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('إجمالي الديون') }}</div>
                 <div style="font-size: 20px; font-weight: bold; color: #0f172a;">{{ $labels['total_debt'] }}</div>
-            </td>
-            <td style="padding: 16px 8px; text-align: center; border-left: 2px solid #0f172a; background: #f8fafc;">
-                <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('أكثر من 90 يوم') }}</div>
-                <div style="font-size: 20px; font-weight: bold; color: #dc2626;">{{ $labels['total_over90'] }}</div>
             </td>
             <td style="padding: 16px 8px; text-align: center; background: #f8fafc;">
                 <div style="font-size: 9px; color: #64748b; font-weight: bold; margin-bottom: 6px;">{{ $g('عدد العملاء') }}</div>
@@ -112,15 +108,11 @@
 
 {{-- Summary Cards --}}
 <div class="summary-tbl">
-    <div class="summary-cell">
+    <div class="summary-cell" style="width: 50%;">
         <div class="summary-label">{{ $g('إجمالي الديون') }}</div>
         <div class="summary-value">{{ $labels['total_debt'] }}</div>
     </div>
-    <div class="summary-cell" style="border-right: none; border-left: none;">
-        <div class="summary-label">{{ $g('أكثر من 90 يوم') }}</div>
-        <div class="summary-value" style="color: #dc2626;">{{ $labels['total_over90'] }}</div>
-    </div>
-    <div class="summary-cell">
+    <div class="summary-cell" style="width: 50%; border-right: none;">
         <div class="summary-label">{{ $g('عدد العملاء') }}</div>
         <div class="summary-value">{{ $labels['suppliers_count'] }}</div>
     </div>
@@ -137,45 +129,34 @@
 <table class="main">
     <thead>
         <tr>
-            <th style="width:7%; text-align:center">{{ $labels['col_invoices'] }}</th>
-            <th style="width:13%">{{ $labels['col_over90'] }}</th>
-            <th style="width:13%">{{ $labels['col_60_90'] }}</th>
-            <th style="width:13%">{{ $labels['col_30_60'] }}</th>
-            <th style="width:13%">{{ $labels['col_current'] }}</th>
-            <th style="width:14%">{{ $labels['col_total'] }}</th>
-            <th style="width:22%">{{ $labels['col_supplier'] }}</th>
+            <th style="width:10%; text-align:center">{{ $labels['col_invoices'] }}</th>
+            <th style="width:25%">{{ $labels['col_total'] }}</th>
+            <th style="width:60%">{{ $labels['col_supplier'] }}</th>
             <th style="width:5%; text-align:center">#</th>
         </tr>
     </thead>
     <tbody>
         <tr>
             <td class="idx">{{ count($c['movements']) }}</td>
-            <td class="num {{ $c['over_90'] > 0 ? 'over90-val' : '' }}">{{ $fmtN($c['over_90']) }}</td>
-            <td class="num {{ $c['days_60_90'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_60_90']) }}</td>
-            <td class="num {{ $c['days_30_60'] > 0 ? 'warn-val' : '' }}">{{ $fmtN($c['days_30_60']) }}</td>
-            <td class="num">{{ $fmtN($c['current']) }}</td>
             <td class="num">{{ $fmtN($c['total_debt']) }}</td>
             <td style="font-weight: bold; color: #0f172a; direction:rtl;">{{ $g($c['supplier_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
         @if(count($c['movements']) > 0)
         <tr>
-            <td colspan="8" style="padding: 0; border: none; background: #fff;">
+            <td colspan="4" style="padding: 0; border: none; background: #fff;">
                 <table class="invoices">
                     <tr style="background: #eff6ff;">
                         <td style="width:25%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('الرصيد') }}</td>
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('العمر') }}</td>
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المبلغ') }}</td>
-                        <td style="width:18%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('التاريخ') }}</td>
-                        <td style="width:12%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
-                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
+                        <td style="width:20%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المبلغ') }}</td>
+                        <td style="width:20%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('التاريخ') }}</td>
+                        <td style="width:15%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('النوع') }}</td>
+                        <td style="width:20%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('المرجع') }}</td>
                     </tr>
                     @foreach($c['movements'] as $m)
                     <tr>
                         <td class="num-cell">{{ $fmtN($m['balance']) }}</td>
-                        <td class="{{ $m['days_old'] !== null && $m['days_old'] >= 90 ? 'over90' : ($m['days_old'] !== null && $m['days_old'] >= 30 ? 'warn' : '') }}" style="direction:ltr;">
-                            {{ $m['days_old'] !== null ? $m['days_old'] . ' ' . $g('يوم') : '--' }}
-                        </td>
+
                         <td class="num-cell" style="color: {{ $m['amount'] > 0 ? '#dc2626' : '#16a34a' }};">{{ ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']) }}</td>
                         <td>{{ $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--' }}</td>
                         <td style="color: {{ $typeColors[$m['type']] ?? '#334155' }}; font-weight:bold;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
@@ -199,23 +180,15 @@
 <table class="main" style="margin-top: 10px;">
     <thead>
         <tr>
-            <th style="width:7%; text-align:center">{{ $labels['col_invoices'] }}</th>
-            <th style="width:13%">{{ $labels['col_over90'] }}</th>
-            <th style="width:13%">{{ $labels['col_60_90'] }}</th>
-            <th style="width:13%">{{ $labels['col_30_60'] }}</th>
-            <th style="width:13%">{{ $labels['col_current'] }}</th>
-            <th style="width:14%">{{ $labels['col_total'] }}</th>
-            <th style="width:22%">{{ $labels['col_supplier'] }}</th>
+            <th style="width:10%; text-align:center">{{ $labels['col_invoices'] }}</th>
+            <th style="width:25%">{{ $labels['col_total'] }}</th>
+            <th style="width:60%">{{ $labels['col_supplier'] }}</th>
             <th style="width:5%; text-align:center">#</th>
         </tr>
     </thead>
     <tfoot>
         <tr>
             <td class="idx">{{ array_sum(array_map(fn($c) => count($c['movements']), $data)) }}</td>
-            <td class="num over90-val">{{ $labels['total_over90'] }}</td>
-            <td class="num">{{ number_format(array_sum(array_column($data, 'days_60_90')), 2) }}</td>
-            <td class="num">{{ number_format(array_sum(array_column($data, 'days_30_60')), 2) }}</td>
-            <td class="num">{{ number_format(array_sum(array_column($data, 'current')), 2) }}</td>
             <td class="num">{{ $labels['total_debt'] }}</td>
             <td style="text-align: right; color: #64748b; font-weight:bold; direction:rtl;">{{ $g('الإجمالي') }}</td>
             <td class="idx"></td>
