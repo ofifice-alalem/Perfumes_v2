@@ -30,6 +30,16 @@ class InventoryLogController extends Controller
         ]);
     }
 
+    public function destroy(int $id)
+    {
+        $log = InventoryLog::findOrFail($id);
+        $log->items()->delete();
+        $log->delete();
+
+        return redirect()->route('inventory-logs.index')
+            ->with('success', 'تم حذف الجرد بنجاح');
+    }
+
     public function pdf(int $id)
     {
         $log = InventoryLog::with(['user', 'items.product.category'])->findOrFail($id);

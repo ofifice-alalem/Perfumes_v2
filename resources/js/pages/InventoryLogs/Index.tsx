@@ -1,13 +1,25 @@
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { FileText, Eye, Printer, PackageOpen, Calendar } from 'lucide-react';
+import { FileText, Eye, Printer, PackageOpen, Calendar, Trash2, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
 
 interface User { id: number; name: string; }
 interface InventoryLog { id: number; notes: string; created_at: string; user: User; }
 interface Props { logs: { data: InventoryLog[]; links: any[] } }
 
 export default function InventoryLogsIndex({ logs }: Props) {
+    const [confirmId, setConfirmId] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDelete = () => {
+        if (!confirmId) return;
+        setDeleting(true);
+        router.delete(`/inventory-logs/${confirmId}`, {
+            onFinish: () => { setDeleting(false); setConfirmId(null); },
+        });
+    };
+
     return (
         <AppShell pageTitle="أرشيف الجرد">
             <div className="flex flex-col gap-6 pb-32 lg:pb-6">
@@ -55,7 +67,7 @@ export default function InventoryLogsIndex({ logs }: Props) {
                                         </div>
 
                                         <div className="flex gap-2 mt-auto">
-                                            <Link href={`/inventory-logs/${log.id}`} 
+                                            <Link href={`/inventory-logs/${log.id}`}
                                                 className="flex-1 h-10 rounded-[12px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 font-bold text-slate-700 dark:text-white">
                                                 <Eye className="w-4 h-4" /> عرض
                                             </Link>
@@ -63,6 +75,13 @@ export default function InventoryLogsIndex({ logs }: Props) {
                                                 className="flex-1 h-10 rounded-[12px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2 font-bold">
                                                 <Printer className="w-4 h-4" /> PDF
                                             </a>
+                                            <button
+                                                onClick={() => setConfirmId(log.id)}
+                                                className="w-10 h-10 rounded-[12px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"
+                                                title="حذف الجرد"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 )
@@ -71,6 +90,43 @@ export default function InventoryLogsIndex({ logs }: Props) {
                     )}
                 </SpatialCard>
             </div>
+
+            {/* Confirm Delete Modal */}
+            {confirmId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 w-full max-w-sm flex flex-col gap-5">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="font-black text-slate-800 dark:text-white text-lg">حذف الجرد #{confirmId}</p>
+                                <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">هذا الإجراء لا يمكن التراجع عنه</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-white/60 font-bold bg-red-50 dark:bg-red-500/10 rounded-xl p-3">
+                            سيتم حذف جميع بيانات هذا الجرد نهائياً، بما في ذلك جميع المنتجات المسجلة فيه.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setConfirmId(null)}
+                                disabled={deleting}
+                                className="flex-1 h-11 rounded-[12px] bg-black/5 dark:bg-white/5 font-bold text-slate-700 dark:text-white hover:bg-black/10 transition-all"
+                            >
+                                إلغاء
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="flex-1 h-11 rounded-[12px] bg-red-500 text-white font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                {deleting ? 'جارٍ الحذف...' : 'تأكيد الحذف'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppShell>
     );
 }

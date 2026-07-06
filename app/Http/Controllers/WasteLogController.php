@@ -77,15 +77,18 @@ class WasteLogController extends Controller
 
     public function destroy(int $id): RedirectResponse
     {
-        $wasteLog = $this->wasteLogs->find($id);
+        $wasteLog = $this->wasteLogs->findWithRelations($id);
 
         DB::transaction(function () use ($wasteLog) {
-            // Observer will automatically restore stock when items are deleted
-            // CASCADE delete will handle items deletion
+            // Delete each item individually via Eloquent so WasteItemObserver fires
+            // and restores stock for each product
+            foreach ($wasteLog->items as $item) {
+                $item->delete();
+            }
             $wasteLog->delete();
         });
 
         return redirect()->route('waste-logs.index')
-            ->with('success', 'تم حذف سجل التالف بنجاح');
+            ->with('success', 'تم حذف سجل التالف وإعادة الكميات للمخزن بنجاح');
     }
 }
