@@ -237,6 +237,68 @@ class RolloverService
             foreach ($tables as $table) {
                 DB::table($table)->where('period_id', $periodId)->delete();
             }
+
+            // ── Recalculate customer totals from remaining live data ──────────
+            $customerStats = DB::table('customers')
+                ->leftJoin(DB::raw('(SELECT customer_id, SUM(total) as t FROM invoices WHERE deleted_at IS NULL GROUP BY customer_id) as inv'), 'customers.id', '=', 'inv.customer_id')
+                ->leftJoin(DB::raw('(SELECT customer_id, SUM(total) as t FROM invoice_returns WHERE deleted_at IS NULL GROUP BY customer_id) as ret'), 'customers.id', '=', 'ret.customer_id')
+                ->leftJoin(DB::raw('(SELECT customer_id, SUM(amount) as t FROM payments GROUP BY customer_id) as pay'), 'customers.id', '=', 'pay.customer_id')
+                ->leftJoin(DB::raw('(SELECT customer_id, SUM(amount) as t FROM settlements GROUP BY customer_id) as set_'), 'customers.id', '=', 'set_.customer_id')
+                ->select(
+                    'customers.id',
+                    DB::raw('COALESCE(inv.t, 0) as total_purchases'),
+                    DB::raw('COALESCE(ret.t, 0) as total_returns'),
+                    DB::raw('COALESCE(pay.t, 0) as total_paid'),
+                    DB::raw('COALESCE(set_.t, 0) as total_settlements')
+                )
+                ->get();
+
+            foreach ($customerStats as $s) {
+                $debt = $s->total_purchases
+                    - $s->total_returns
+                    - $s->total_paid
+                    - $s->total_settlements
+                    + (float) DB::table('customers')->where('id', $s->id)->value('opening_balance');
+
+                DB::table('customers')->where('id', $s->id)->update([
+                    'total_purchases'   => $s->total_purchases,
+                    'total_returns'     => $s->total_returns,
+                    'total_paid'        => $s->total_paid,
+                    'total_settlements' => $s->total_settlements,
+                    'total_debt'        => max(0, $debt),
+                ]);
+            }
+
+            // ── Recalculate supplier totals from remaining live data ──────────
+            $supplierStats = DB::table('suppliers')
+                ->leftJoin(DB::raw('(SELECT supplier_id, SUM(total) as t FROM purchases WHERE deleted_at IS NULL GROUP BY supplier_id) as pur'), 'suppliers.id', '=', 'pur.supplier_id')
+                ->leftJoin(DB::raw('(SELECT supplier_id, SUM(total) as t FROM purchase_returns WHERE deleted_at IS NULL GROUP BY supplier_id) as ret'), 'suppliers.id', '=', 'ret.supplier_id')
+                ->leftJoin(DB::raw('(SELECT supplier_id, SUM(amount) as t FROM supplier_payments GROUP BY supplier_id) as pay'), 'suppliers.id', '=', 'pay.supplier_id')
+                ->leftJoin(DB::raw('(SELECT supplier_id, SUM(amount) as t FROM supplier_settlements GROUP BY supplier_id) as set_'), 'suppliers.id', '=', 'set_.supplier_id')
+                ->select(
+                    'suppliers.id',
+                    DB::raw('COALESCE(pur.t, 0) as total_purchases'),
+                    DB::raw('COALESCE(ret.t, 0) as total_returns'),
+                    DB::raw('COALESCE(pay.t, 0) as total_paid'),
+                    DB::raw('COALESCE(set_.t, 0) as total_settlements')
+                )
+                ->get();
+
+            foreach ($supplierStats as $s) {
+                $debt = $s->total_purchases
+                    - $s->total_returns
+                    - $s->total_paid
+                    - $s->total_settlements
+                    + (float) DB::table('suppliers')->where('id', $s->id)->value('opening_balance');
+
+                DB::table('suppliers')->where('id', $s->id)->update([
+                    'total_purchases'   => $s->total_purchases,
+                    'total_returns'     => $s->total_returns,
+                    'total_paid'        => $s->total_paid,
+                    'total_settlements' => $s->total_settlements,
+                    'total_debt'        => max(0, $debt),
+                ]);
+            }
         });
     }
 
