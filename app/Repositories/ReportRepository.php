@@ -1111,12 +1111,24 @@ class ReportRepository implements ReportRepositoryInterface
         $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
+        $openingRef = 'رصيد سابق';
+        $openingDate = null;
+        $latestSnapshot = DB::table('period_snapshots')
+            ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
+            ->orderBy('period_snapshots.id', 'desc')
+            ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
+            ->first();
+        if ($latestSnapshot) {
+            $openingRef = 'إقفال دورة ' . $latestSnapshot->name;
+            $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
+        }
+
         $customersQuery = DB::table('customers')
             ->when($customerId, fn($q) => $q->where('id', $customerId))
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return $customersQuery->map(function ($customer) use ($dateFrom, $dateTo, $dateToCarbon) {
+        return $customersQuery->map(function ($customer) use ($dateFrom, $dateTo, $dateToCarbon, $openingRef, $openingDate) {
 
             $totalInvoiced = (float) DB::table('invoices')
                 ->whereNull('deleted_at')->where('customer_id', $customer->id)
@@ -1142,10 +1154,22 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
-            $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned);
+            $openingBalance = (float) DB::table('customers')->where('id', $customer->id)->value('opening_balance');
+            $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned) + $openingBalance;
 
             // جمع كل الحركات
             $movements = collect();
+
+            if ($openingBalance != 0) {
+                $movements->push([
+                    'type'     => 'opening_balance',
+                    'ref'      => $openingRef,
+                    'ref_id'   => null,
+                    'amount'   => $openingBalance,
+                    'date'     => $openingDate ?: ($dateFrom ?: '2000-01-01 00:00:00'),
+                    'days_old' => null,
+                ]);
+            }
 
             // فواتير (+)
             DB::table('invoices')->whereNull('deleted_at')
@@ -1448,12 +1472,22 @@ class ReportRepository implements ReportRepositoryInterface
         $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
 
+        $openingRef = 'رصيد سابق';
+        $latestSnapshot = DB::table('period_snapshots')
+            ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
+            ->orderBy('period_snapshots.id', 'desc')
+            ->select('accounting_periods.name')
+            ->first();
+        if ($latestSnapshot) {
+            $openingRef = 'إقفال دورة ' . $latestSnapshot->name;
+        }
+
         $suppliersQuery = DB::table('suppliers')
             ->when($supplierId, fn($q) => $q->where('id', $supplierId))
             ->orderBy('name')
             ->get(['id', 'name']);
 
-        return $suppliersQuery->map(function ($supplier) use ($dateFrom, $dateTo, $dateToCarbon) {
+        return $suppliersQuery->map(function ($supplier) use ($dateFrom, $dateTo, $dateToCarbon, $openingRef, $openingDate) {
 
             $totalPurchased = (float) DB::table('purchases')
                 ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
@@ -1475,9 +1509,21 @@ class ReportRepository implements ReportRepositoryInterface
                 ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
                 ->where('created_at', '<=', $dateTo)->sum('total');
 
-            $totalDebt = ($totalPurchased + $totalSettled) - ($totalPaid + $totalReturned);
+            $openingBalance = (float) DB::table('suppliers')->where('id', $supplier->id)->value('opening_balance');
+            $totalDebt = ($totalPurchased + $totalSettled) - ($totalPaid + $totalReturned) + $openingBalance;
 
             $movements = collect();
+
+            if ($openingBalance != 0) {
+                $movements->push([
+                    'type'     => 'opening_balance',
+                    'ref'      => $openingRef,
+                    'ref_id'   => null,
+                    'amount'   => $openingBalance,
+                    'date'     => $openingDate ?: ($dateFrom ?: '2000-01-01 00:00:00'),
+                    'days_old' => null,
+                ]);
+            }
 
             // مشتريات (+)
             DB::table('purchases')->whereNull('deleted_at')

@@ -8,7 +8,7 @@ import { Users, SlidersHorizontal, ChevronDown, Search, FileSpreadsheet, FileTex
 interface Customer { id: number; name: string; }
 
 interface Movement {
-    type: 'invoice' | 'payment' | 'settlement' | 'return';
+    type: 'invoice' | 'payment' | 'settlement' | 'return' | 'opening_balance';
     ref: string;
     ref_id: number;
     amount: number;
@@ -57,6 +57,7 @@ const typeConfig = {
     payment:    { label: 'دفعة',     class: 'text-emerald-600 dark:text-emerald-400',     amountClass: 'text-emerald-600 dark:text-emerald-400 font-bold' },
     settlement: { label: 'تسوية',    class: 'text-blue-500',                              amountClass: 'text-blue-500 font-bold' },
     return:     { label: 'مرتجع',    class: 'text-amber-500',                             amountClass: 'text-amber-500 font-bold' },
+    opening_balance: { label: 'رصيد سابق', class: 'text-purple-600 dark:text-purple-400', amountClass: 'text-purple-600 dark:text-purple-400 font-bold' },
 };
 
 export default function CustomerAging({ customers, filters, data }: Props) {

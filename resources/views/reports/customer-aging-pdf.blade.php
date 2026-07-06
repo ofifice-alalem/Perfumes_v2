@@ -128,8 +128,8 @@
 
 {{-- جدول العملاء --}}
 @php
-    $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
-    $typeColors = ['invoice' => '#334155', 'payment' => '#16a34a', 'settlement' => '#3b82f6', 'return' => '#d97706'];
+    $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع', 'opening_balance' => 'رصيد سابق'];
+    $typeColors = ['invoice' => '#334155', 'payment' => '#16a34a', 'settlement' => '#3b82f6', 'return' => '#d97706', 'opening_balance' => '#9333ea'];
 @endphp
 
 @foreach($data as $i => $c)
@@ -179,7 +179,11 @@
                         <td class="num-cell" style="color: {{ $m['amount'] > 0 ? '#dc2626' : '#16a34a' }};">{{ ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']) }}</td>
                         <td>{{ $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--' }}</td>
                         <td style="color: {{ $typeColors[$m['type']] ?? '#334155' }}; font-weight:bold;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
+                        @if($m['type'] === 'opening_balance')
+                        <td class="inv-ref" style="direction:rtl; unicode-bidi:normal;">{{ $g($m['ref']) }}</td>
+                        @else
                         <td class="inv-ref">{{ $m['ref'] }}</td>
+                        @endif
                     </tr>
                     @endforeach
                 </table>
