@@ -142,9 +142,9 @@
             <td style="font-weight: bold; color: #0f172a; direction:rtl;">{{ $g($c['customer_name']) }}</td>
             <td class="idx">{{ $i + 1 }}</td>
         </tr>
+    </tbody>
+</table>
         @if(count($c['movements']) > 0)
-        <tr>
-            <td colspan="4" style="padding: 0; border: none; background: #fff;">
                 <table class="invoices">
                     <tr style="background: #eff6ff;">
                         <td style="width:25%; font-weight:bold; color:#1e3a5f; font-size:8px;">{{ $g('الرصيد') }}</td>
@@ -168,11 +168,7 @@
                     </tr>
                     @endforeach
                 </table>
-            </td>
-        </tr>
         @endif
-    </tbody>
-</table>
 </div>
 @endforeach
 
