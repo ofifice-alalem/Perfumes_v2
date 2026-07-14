@@ -122,9 +122,11 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       <div className={`flex items-center w-full mb-4 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
         {isOpen && (
           <div className="flex items-center animate-in fade-in pl-2">
-            <span className="text-[22px] font-black whitespace-nowrap truncate bg-gradient-to-r from-yellow-400 via-amber-500 to-yellow-600 bg-clip-text text-transparent drop-shadow-sm">
-              طيب التاجوري
-            </span>
+            <img 
+              src="/images/uzba80.png" 
+              alt="طيب التاجوري" 
+              className="h-10 w-auto object-contain drop-shadow-sm"
+            />
           </div>
         )}
         <button onClick={onToggle} className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-slate-800 dark:hover:text-white transition-all focus:outline-none">
