@@ -631,7 +631,7 @@ class ReportRepository implements ReportRepositoryInterface
                 ->sum('invoice_return_items.line_total');
 
             $netSaleQty       = $totalSoldQty - $totalReturnInQty;
-            $avgSalePrice     = $netSaleQty > 0 ? (($totalSaleValue - $totalReturnInValue) / $netSaleQty) : null;
+            $avgSalePrice     = $netSaleQty > 0 ? (($totalSaleValue - $totalReturnInValue) / $netSaleQty) : ($totalSoldQty > 0 ? ($totalSaleValue / $totalSoldQty) : null);
             $avgReturnInPrice = $totalReturnInQty > 0 ? ($totalReturnInValue / $totalReturnInQty) : null;
 
             $lastSalePrice = DB::table('invoice_items')
@@ -660,7 +660,7 @@ class ReportRepository implements ReportRepositoryInterface
 
             // حساب الربح يومياً بنفس منطق dailyProfitSummary
             $profit = null;
-            if ($netSaleQty > 0) {
+            if ($totalSoldQty > 0 || $totalReturnInQty > 0) {
                 // جلب كل مشتريات المنتج حتى نهاية الفترة
                 $allPurchases = DB::table('purchase_items')
                     ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')

@@ -368,8 +368,8 @@ export default function PeriodsRollover({ currentPeriod, preview, profitSummary,
                                         {preview.stock_profit_data.map(p => (
                                             <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
                                                 <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost || 0)}</td>
-                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price || 0)}</td>
+                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{p.avg_purchase_cost !== null ? fmt(p.avg_purchase_cost) : '—'}</td>
+                                                <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{p.avg_sale_price !== null ? fmt(p.avg_sale_price) : '—'}</td>
                                                 <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty || 0)} {p.unit}</td>
                                                 <td className="px-4 py-4 font-black whitespace-nowrap">
                                                     <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
