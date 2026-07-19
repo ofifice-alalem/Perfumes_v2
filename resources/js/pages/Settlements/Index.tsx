@@ -14,7 +14,7 @@ interface PaymentMethod { id: number; name: string; }
 interface Settlement {
     id: number;
     customer: Customer | null;
-    invoice: { id: number } | null;
+    invoice_return: { id: number } | null;
     payment_method: { name: string };
     amount: string;
     notes: string | null;
@@ -89,7 +89,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
     }
 
     const form = useForm({
-        customer_id: '', invoice_id: '', payment_method_id: '', amount: '', notes: '',
+        customer_id: '', invoice_return_id: '', payment_method_id: '', amount: '', notes: '',
     });
 
     const customerOptions      = customers.filter(c => c.is_active !== 0 && c.is_active !== false).map(c => ({ label: c.name, meta: fmt(c.total_debt) }));
@@ -254,7 +254,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                         <table className="w-full text-[16px]">
                                             <thead>
                                                 <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'العميل', 'الفاتورة', 'وسيلة التسوية', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
+                                                    {['#', 'العميل', 'المرتجع', 'وسيلة التسوية', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
                                                         <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                     ))}
                                                 </tr>
@@ -265,7 +265,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                         <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{s.id}</td>
                                                         <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{s.customer?.name ?? '—'}</td>
                                                         <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60">
-                                                            {s.invoice ? <Link href={`/invoices/${s.invoice.id}`} className="hover:text-primary transition-colors">#{s.invoice.id}</Link> : '—'}
+                                                            {s.invoice_return ? <Link href={`/invoice-returns/${s.invoice_return.id}`} className="hover:text-primary transition-colors">#{s.invoice_return.id}</Link> : '—'}
                                                         </td>
                                                         <td className="px-4 py-4 font-bold text-slate-600 dark:text-white/70">{s.payment_method.name}</td>
                                                         <td className="px-4 py-4 font-black text-purple-500 whitespace-nowrap">{fmt(s.amount)}</td>
@@ -310,10 +310,10 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
-                                                    {s.invoice && (
+                                                    {s.invoice_return && (
                                                         <div className="flex items-center justify-between py-3">
-                                                            <span className="text-sm font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
-                                                            <Link href={`/invoices/${s.invoice.id}`} className="font-bold text-primary hover:underline">#{s.invoice.id}</Link>
+                                                            <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
+                                                            <Link href={`/invoice-returns/${s.invoice_return.id}`} className="font-bold text-primary hover:underline">#{s.invoice_return.id}</Link>
                                                         </div>
                                                     )}
                                                     <div className="flex items-center justify-between py-3">

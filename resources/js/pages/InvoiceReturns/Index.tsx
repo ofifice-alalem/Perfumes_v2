@@ -4,7 +4,8 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
-import { Plus, Eye, Trash2, RotateCcw, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
+import { Plus, Eye, Trash2, RotateCcw, SlidersHorizontal, ChevronDown, Search, AlertTriangle, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 interface Customer { id: number; name: string; }
 interface Product  { id: number; name: string; }
@@ -19,6 +20,7 @@ interface InvoiceReturn {
     recovery_status: 'unpaid' | 'partial' | 'paid';
     created_at: string;
     deleted_at: string | null;
+    settlements_total: string | null;
 }
 interface Paginated<T> {
     data: T[]; current_page: number; last_page: number; total: number;
@@ -49,7 +51,107 @@ function fmtDate(v: string | null) {
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
+function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
+    value: boolean; onChange: (v: boolean) => void;
+    yesLabel: string; yesDesc: string; noLabel: string; noDesc: string;
+}) {
+    return (
+        <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(true)}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
+                    {value && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{yesLabel}</span>
+                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">{yesDesc}</span>
+                </div>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(false)}>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
+                    {!value && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+                <div className="flex flex-col">
+                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{noLabel}</span>
+                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">{noDesc}</span>
+                </div>
+            </label>
+        </div>
+    );
+}
+
+function CancelReturnModal({ ret, onClose }: { ret: InvoiceReturn; onClose: () => void }) {
+    const [deleteSettlements, setDeleteSettlements] = useState(false);
+
+    const isCash           = ret.customer?.id === 1;
+    const settlementsTotal = parseFloat(ret.settlements_total ?? '0');
+    const hasSettlements   = !isCash && settlementsTotal > 0;
+
+    function confirm() {
+        router.delete(`/invoice-returns/${ret.id}`, {
+            data: { delete_settlements: isCash ? true : deleteSettlements },
+            onSuccess: onClose,
+        });
+    }
+
+    return createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative w-full sm:max-w-md rounded-[28px] p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200
+                border border-black/10 dark:border-white/[0.12]
+                bg-gradient-to-br from-white to-slate-100
+                dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
+                backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
+
+                <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <button onClick={onClose}
+                        className="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                    <h3 className="text-lg font-black text-slate-800 dark:text-white">إلغاء المرتجع</h3>
+                    <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                        سيتم إلغاء المرتجع واستعادة المخزون.
+                    </p>
+                </div>
+
+                {hasSettlements && (
+                    <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">التسويات المرتبطة بهذا المرتجع</span>
+                            <span className="font-black text-purple-500 text-sm">{fmt(String(settlementsTotal))}</span>
+                        </div>
+                        <div className="h-px bg-black/8 dark:bg-white/8" />
+                        <RadioGroup
+                            value={deleteSettlements} onChange={setDeleteSettlements}
+                            yesLabel="نعم، احذف التسويات معه" yesDesc="المبلغ لم يُسترد فعلاً"
+                            noLabel="لا، أبقِ التسويات كرصيد مستقل" noDesc="المبلغ استُرد فعلاً وسيبقى في سجل العميل"
+                        />
+                    </div>
+                )}
+
+                <div className="flex items-center gap-3">
+                    <button onClick={onClose}
+                        className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+                        إلغاء
+                    </button>
+                    <button onClick={confirm}
+                        className="flex-1 h-11 rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30">
+                        <Trash2 className="w-4 h-4" /> تأكيد الإلغاء
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
 export default function InvoiceReturnsIndex({ returns: data, customers, products, paymentMethods, flash }: Props) {
+    const [cancelTarget, setCancelTarget] = useState<InvoiceReturn | null>(null);
     const [filterOpen, setFilterOpen] = useState(false);
     const [activeTab,  setActiveTab]  = useState<'active' | 'deleted'>('active');
 
@@ -199,7 +301,7 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                                                         <RotateCcw className="w-3 h-3" /> استعادة
                                                                     </button>
                                                                 ) : (
-                                                                    <button onClick={() => router.delete(`/invoice-returns/${ret.id}`)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
+                                                                    <button onClick={() => setCancelTarget(ret)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
                                                                         <Trash2 className="w-3 h-3" /> إلغاء
                                                                     </button>
                                                                 )}
@@ -263,7 +365,7 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                                                             <RotateCcw className="w-4 h-4" /> استعادة
                                                         </button>
                                                     ) : (
-                                                        <button onClick={() => router.delete(`/invoice-returns/${ret.id}`)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
+                                                        <button onClick={() => setCancelTarget(ret)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
                                                             <Trash2 className="w-4 h-4" /> إلغاء
                                                         </button>
                                                     )}
@@ -297,6 +399,10 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
                     </div>
                 </div>
             </div>
+
+            {cancelTarget && (
+                <CancelReturnModal ret={cancelTarget} onClose={() => setCancelTarget(null)} />
+            )}
         </AppShell>
     );
 }
