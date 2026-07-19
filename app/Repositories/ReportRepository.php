@@ -1108,68 +1108,92 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Customer Aging ────────────────────────────────────────────────────────
 
-    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo): array
+    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): array
     {
-        $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
-        $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
-        $dateToCarbon = \Carbon\Carbon::parse($dateTo);
-
-        $openingRef = 'رصيد سابق';
-        $openingDate = null;
+        // If not showing all history and no dateFrom provided, default to the latest snapshot date
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
             ->orderBy('period_snapshots.id', 'desc')
             ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
             ->first();
-        if ($latestSnapshot) {
-            $openingRef = 'إقفال دورة ' . $latestSnapshot->name;
-            $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
+
+        $rolloverDate = $latestSnapshot ? ($latestSnapshot->closed_at ?? $latestSnapshot->created_at) : null;
+
+        if (!$showAllHistory && !$dateFrom && $rolloverDate) {
+            $dateFrom = \Carbon\Carbon::parse($rolloverDate)->toDateString();
         }
+
+        $dateFromQuery = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateToQuery   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
+        $dateToCarbon  = \Carbon\Carbon::parse($dateToQuery);
 
         $customersQuery = DB::table('customers')
             ->when($customerId, fn($q) => $q->where('id', $customerId))
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'opening_balance']);
 
-        return $customersQuery->map(function ($customer) use ($dateFrom, $dateTo, $dateToCarbon, $openingRef, $openingDate) {
+        return $customersQuery->map(function ($customer) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
 
-            $totalInvoiced = (float) DB::table('invoices')
-                ->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('total');
+            // 1. Calculate True Current Debt
+            // True Current Debt = DB opening_balance + Operations AFTER rollover date
+            $dbOpeningBalance = (float) $customer->opening_balance;
+            
+            $newInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
+            $newPaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
+            $newSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
+            $newReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
 
-            $totalPaid = (float) DB::table('payments')
-                ->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
-                ->sum('amount');
+            $trueCurrentDebt = $dbOpeningBalance + ($newInvoiced + $newSettled) - ($newPaid + $newReturned);
 
-            $totalSettled = (float) DB::table('settlements')
-                ->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
-                ->sum('amount');
+            // 2. Sum operations in the Report's Date Range
+            $totalInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)->sum('total');
+            $totalPaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
+            $totalSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
+            $totalReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)->sum('total');
 
-            $totalReturned = (float) DB::table('invoice_returns')
-                ->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('total');
+            // 3. To find Report Opening Balance, we need sum of ALL operations >= dateFromQuery (up to current)
+            $futureInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
+            $futurePaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
+            $futureSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
+            $futureReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
 
-            $openingBalance = (float) DB::table('customers')->where('id', $customer->id)->value('opening_balance');
-            $totalDebt = ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned) + $openingBalance;
+            $netFutureOperations = ($futureInvoiced + $futureSettled) - ($futurePaid + $futureReturned);
+            $reportOpeningBalance = $trueCurrentDebt - $netFutureOperations;
+
+            $totalDebt = $reportOpeningBalance + ($totalInvoiced + $totalSettled) - ($totalPaid + $totalReturned);
 
             // جمع كل الحركات
             $movements = collect();
 
-            if ($openingBalance != 0) {
+            if (round($reportOpeningBalance, 2) != 0) {
+                // Determine reference text
+                $refText = 'رصيد سابق';
+                if ($latestSnapshot && (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00')) {
+                    $refText = 'إقفال دورة ' . $latestSnapshot->name;
+                }
+
                 $movements->push([
                     'type'     => 'opening_balance',
-                    'ref'      => $openingRef,
+                    'ref'      => $refText,
                     'ref_id'   => null,
-                    'amount'   => $openingBalance,
-                    'date'     => $openingDate ?: ($dateFrom ?: '2000-01-01 00:00:00'),
+                    'amount'   => $reportOpeningBalance,
+                    'date'     => $dateFromQuery ?: '2000-01-01 00:00:00',
                     'days_old' => null,
                 ]);
             }
@@ -1177,8 +1201,8 @@ class ReportRepository implements ReportRepositoryInterface
             // فواتير (+)
             DB::table('invoices')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'invoice',
@@ -1192,8 +1216,8 @@ class ReportRepository implements ReportRepositoryInterface
             // دفعات (-)
             DB::table('payments')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'payment',
@@ -1207,8 +1231,8 @@ class ReportRepository implements ReportRepositoryInterface
             // تسويات (+)
             DB::table('settlements')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'settlement',
@@ -1222,8 +1246,8 @@ class ReportRepository implements ReportRepositoryInterface
             // مرتجعات (-)
             DB::table('invoice_returns')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'   => 'return',
@@ -1246,8 +1270,8 @@ class ReportRepository implements ReportRepositoryInterface
             $unpaidInvoices = DB::table('invoices')->whereNull('deleted_at')
                 ->where('customer_id', $customer->id)
                 ->whereIn('payment_status', ['unpaid', 'partial'])
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->orderBy('created_at')
                 ->get(['total', 'paid_amount', 'created_at']);
 
@@ -1285,9 +1309,9 @@ class ReportRepository implements ReportRepositoryInterface
         })->filter()->values()->toArray();
     }
 
-    public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo): void
+    public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        $data = $this->customerAging($customerId, $dateFrom, $dateTo);
+        $data = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory);
 
         $customerName = $customerId
             ? DB::table('customers')->where('id', $customerId)->value('name')
@@ -1405,12 +1429,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response
+    public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->customerAging($customerId, $dateFrom, $dateTo);
+        $data    = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -1460,72 +1484,98 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Supplier Aging ────────────────────────────────────────────────────
 
-    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo): array
+    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): array
     {
-        $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
-        $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
-        $dateToCarbon = \Carbon\Carbon::parse($dateTo);
-
-        $openingDate = null;
-        $openingRef = 'رصيد سابق';
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
             ->orderBy('period_snapshots.id', 'desc')
             ->select('accounting_periods.name', 'accounting_periods.closed_at', 'period_snapshots.created_at')
             ->first();
-        if ($latestSnapshot) {
-            $openingRef = 'إقفال دورة ' . $latestSnapshot->name;
-            $openingDate = $latestSnapshot->closed_at ?? $latestSnapshot->created_at;
+
+        $rolloverDate = $latestSnapshot ? ($latestSnapshot->closed_at ?? $latestSnapshot->created_at) : null;
+
+        if (!$showAllHistory && !$dateFrom && $rolloverDate) {
+            $dateFrom = \Carbon\Carbon::parse($rolloverDate)->toDateString();
         }
+
+        $dateFromQuery = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateToQuery   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
+        $dateToCarbon  = \Carbon\Carbon::parse($dateToQuery);
 
         $suppliersQuery = DB::table('suppliers')
             ->when($supplierId, fn($q) => $q->where('id', $supplierId))
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'opening_balance']);
 
-        return $suppliersQuery->map(function ($supplier) use ($dateFrom, $dateTo, $dateToCarbon, $openingRef, $openingDate) {
+        return $suppliersQuery->map(function ($supplier) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
 
-            $totalPurchased = (float) DB::table('purchases')
-                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('total');
+            // 1. Calculate True Current Debt
+            $dbOpeningBalance = (float) $supplier->opening_balance;
+            
+            $newPurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
+            $newPaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
+            $newSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
+            $newReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
 
-            $totalPaid = (float) DB::table('supplier_payments')
-                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))->sum('amount');
+            $trueCurrentDebt = $dbOpeningBalance + ($newPurchased + $newSettled) - ($newPaid + $newReturned);
 
-            $totalSettled = (float) DB::table('supplier_settlements')
-                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))->sum('amount');
+            // 2. Sum operations in the Report's Date Range
+            $totalPurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)->sum('total');
+            $totalPaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
+            $totalSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
+            $totalReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)->sum('total');
 
-            $totalReturned = (float) DB::table('purchase_returns')
-                ->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)->sum('total');
+            // 3. To find Report Opening Balance
+            $futurePurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
+            $futurePaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
+            $futureSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
+            $futureReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
 
-            $openingBalance = (float) DB::table('suppliers')->where('id', $supplier->id)->value('opening_balance');
-            $totalDebt = ($totalPurchased + $totalSettled) - ($totalPaid + $totalReturned) + $openingBalance;
+            $netFutureOperations = ($futurePurchased + $futureSettled) - ($futurePaid + $futureReturned);
+            $reportOpeningBalance = $trueCurrentDebt - $netFutureOperations;
+
+            $totalDebt = $reportOpeningBalance + ($totalPurchased + $totalSettled) - ($totalPaid + $totalReturned);
 
             $movements = collect();
 
-            if ($openingBalance != 0) {
+            if (round($reportOpeningBalance, 2) != 0) {
+                $refText = 'رصيد سابق';
+                if ($latestSnapshot && (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00')) {
+                    $refText = 'إقفال دورة ' . $latestSnapshot->name;
+                }
+
                 $movements->push([
-                    'type'     => 'opening_balance',
-                    'ref'      => $openingRef,
-                    'ref_id'   => null,
-                    'amount'   => $openingBalance,
-                    'date'     => $openingDate ?: ($dateFrom ?: '2000-01-01 00:00:00'),
-                    'days_old' => null,
+                    'type'   => 'opening_balance',
+                    'ref'    => $refText,
+                    'ref_id' => null,
+                    'amount' => $reportOpeningBalance,
+                    'date'   => $dateFromQuery ?: '2000-01-01 00:00:00',
                 ]);
             }
+
+
 
             // مشتريات (+)
             DB::table('purchases')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'purchase',
@@ -1539,8 +1589,8 @@ class ReportRepository implements ReportRepositoryInterface
             // دفعات (-)
             DB::table('supplier_payments')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'payment',
@@ -1554,8 +1604,8 @@ class ReportRepository implements ReportRepositoryInterface
             // تسويات (+)
             DB::table('supplier_settlements')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateTo))
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
                 ->select('id as ref_id', 'amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'settlement',
@@ -1569,8 +1619,8 @@ class ReportRepository implements ReportRepositoryInterface
             // مرتجعات (-)
             DB::table('purchase_returns')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->select('id as ref_id', 'total as amount', 'created_at')
                 ->get()->each(fn($r) => $movements->push([
                     'type'     => 'return',
@@ -1591,8 +1641,8 @@ class ReportRepository implements ReportRepositoryInterface
             $unpaidPurchases = DB::table('purchases')->whereNull('deleted_at')
                 ->where('supplier_id', $supplier->id)
                 ->whereIn('payment_status', ['unpaid', 'partial'])
-                ->when($dateFrom, fn($q) => $q->where('created_at', '>=', $dateFrom))
-                ->where('created_at', '<=', $dateTo)
+                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                ->where('created_at', '<=', $dateToQuery)
                 ->orderBy('created_at')
                 ->get(['total', 'paid_amount', 'created_at']);
 
@@ -1628,9 +1678,9 @@ class ReportRepository implements ReportRepositoryInterface
         })->filter()->values()->toArray();
     }
 
-    public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo): void
+    public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo);
+        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory);
 
         $supplierName = $supplierId
             ? DB::table('suppliers')->where('id', $supplierId)->value('name')
@@ -1735,12 +1785,12 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo): \Illuminate\Http\Response
+    public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo);
+        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

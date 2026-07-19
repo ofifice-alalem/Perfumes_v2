@@ -325,11 +325,12 @@ class ReportController extends Controller
         $customerId = $request->integer('customer_id') ?: null;
         $dateFrom   = $request->input('date_from');
         $dateTo     = $request->input('date_to');
+        $showAllHistory = $request->boolean('show_all_history');
 
         return Inertia::render('Reports/CustomerAging', [
             'customers' => \App\Models\Customer::orderBy('name')->get(['id', 'name']),
-            'filters'   => compact('customerId', 'dateFrom', 'dateTo'),
-            'data'      => $this->reports->customerAging($customerId, $dateFrom, $dateTo),
+            'filters'   => compact('customerId', 'dateFrom', 'dateTo', 'showAllHistory'),
+            'data'      => $this->reports->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory),
         ]);
     }
 
@@ -339,6 +340,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->input('date_from'),
             $request->input('date_to'),
+            $request->boolean('show_all_history')
         );
     }
 
@@ -348,6 +350,7 @@ class ReportController extends Controller
             $request->integer('customer_id') ?: null,
             $request->input('date_from'),
             $request->input('date_to'),
+            $request->boolean('show_all_history')
         );
     }
 
@@ -356,11 +359,12 @@ class ReportController extends Controller
         $supplierId = $request->integer('supplier_id') ?: null;
         $dateFrom   = $request->input('date_from');
         $dateTo     = $request->input('date_to');
+        $showAllHistory = $request->boolean('show_all_history');
 
         return Inertia::render('Reports/SupplierAging', [
             'suppliers' => \App\Models\Supplier::orderBy('name')->get(['id', 'name']),
-            'filters'   => compact('supplierId', 'dateFrom', 'dateTo'),
-            'data'      => $this->reports->supplierAging($supplierId, $dateFrom, $dateTo),
+            'filters'   => compact('supplierId', 'dateFrom', 'dateTo', 'showAllHistory'),
+            'data'      => $this->reports->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory),
         ]);
     }
 
@@ -370,6 +374,7 @@ class ReportController extends Controller
             $request->integer('supplier_id') ?: null,
             $request->input('date_from'),
             $request->input('date_to'),
+            $request->boolean('show_all_history')
         );
     }
 
@@ -379,6 +384,7 @@ class ReportController extends Controller
             $request->integer('supplier_id') ?: null,
             $request->input('date_from'),
             $request->input('date_to'),
+            $request->boolean('show_all_history')
         );
     }
 

@@ -34,7 +34,7 @@ interface SupplierAging {
 
 interface Props {
     suppliers: Supplier[];
-    filters: { supplierId: number | null; dateFrom: string | null; dateTo: string | null };
+    filters: { supplierId: number | null; dateFrom: string | null; dateTo: string | null; showAllHistory: boolean | null };
     data: SupplierAging[];
 }
 
@@ -65,20 +65,22 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
     const [supplierId, setSupplierId] = useState(filters.supplierId ? String(filters.supplierId) : '');
     const [dateFrom,   setDateFrom]   = useState(filters.dateFrom ?? '');
     const [dateTo,     setDateTo]     = useState(filters.dateTo ?? '');
+    const [showAllHistory, setShowAllHistory] = useState(filters.showAllHistory ?? false);
     const [expanded,   setExpanded]   = useState<Set<number>>(new Set());
 
-    const hasFilter = supplierId || dateFrom || dateTo;
+    const hasFilter = supplierId || dateFrom || dateTo || showAllHistory;
 
     function search() {
         router.get('/reports/supplier-aging', {
             supplier_id: supplierId || undefined,
             date_from:   dateFrom   || undefined,
             date_to:     dateTo     || undefined,
+            show_all_history: showAllHistory || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setSupplierId(''); setDateFrom(''); setDateTo('');
+        setSupplierId(''); setDateFrom(''); setDateTo(''); setShowAllHistory(false);
         router.get('/reports/supplier-aging', {}, { preserveScroll: true });
     }
 
@@ -87,6 +89,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
         if (supplierId) params.set('supplier_id', supplierId);
         if (dateFrom)   params.set('date_from', dateFrom);
         if (dateTo)     params.set('date_to', dateTo);
+        if (showAllHistory) params.set('show_all_history', '1');
         return `/reports/supplier-aging/${format}?${params.toString()}`;
     }
 
@@ -111,6 +114,15 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
             />
             <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
+            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                <input 
+                    type="checkbox" 
+                    checked={showAllHistory} 
+                    onChange={e => setShowAllHistory(e.target.checked)}
+                    className="w-5 h-5 rounded-[6px] border-black/20 text-primary focus:ring-primary/30"
+                />
+                <span className="text-sm font-bold text-slate-700 dark:text-white/80">عرض جميع الحركات السابقة</span>
+            </label>
             <button onClick={search}
                 className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
                 <Search className="w-4 h-4" /> عرض التقرير
