@@ -67,11 +67,21 @@ class PurchaseItemObserver
         $supplier = \App\Models\Supplier::find($supplierId);
         if (!$supplier || $supplier->id === 1) return;
 
-        $supplier->total_purchases   = \App\Models\Purchase::where('supplier_id', $supplierId)->sum('total');
-        $supplier->total_paid        = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->sum('amount');
-        $supplier->total_returns     = \App\Models\PurchaseReturn::where('supplier_id', $supplierId)->sum('total');
-        $supplier->total_settlements = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->sum('amount');
-        $supplier->total_debt        = $supplier->total_purchases
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+        $periodScope = function ($query) use ($periodId) {
+            if ($periodId) {
+                $query->where(function ($q) use ($periodId) {
+                    $q->where('period_id', $periodId)->orWhereNull('period_id');
+                });
+            }
+        };
+
+        $supplier->total_purchases   = \App\Models\Purchase::where('supplier_id', $supplierId)->where($periodScope)->sum('total');
+        $supplier->total_paid        = \App\Models\SupplierPayment::where('supplier_id', $supplierId)->where($periodScope)->sum('amount');
+        $supplier->total_returns     = \App\Models\PurchaseReturn::where('supplier_id', $supplierId)->where($periodScope)->sum('total');
+        $supplier->total_settlements = \App\Models\SupplierSettlement::where('supplier_id', $supplierId)->where($periodScope)->sum('amount');
+        $supplier->total_debt        = $supplier->opening_balance
+                                     + $supplier->total_purchases
                                      - $supplier->total_paid
                                      + $supplier->total_settlements
                                      - $supplier->total_returns;

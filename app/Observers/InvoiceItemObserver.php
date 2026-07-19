@@ -73,11 +73,21 @@ class InvoiceItemObserver
         $customer = \App\Models\Customer::find($customerId);
         if (!$customer) return;
 
-        $customer->total_purchases  = \App\Models\Invoice::where('customer_id', $customerId)->sum('total');
-        $customer->total_paid       = \App\Models\Payment::where('customer_id', $customerId)->sum('amount');
-        $customer->total_returns    = \App\Models\InvoiceReturn::where('customer_id', $customerId)->sum('total');
-        $customer->total_settlements = \App\Models\Settlement::where('customer_id', $customerId)->sum('amount');
-        $customer->total_debt       = $customer->total_purchases
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+        $periodScope = function ($query) use ($periodId) {
+            if ($periodId) {
+                $query->where(function ($q) use ($periodId) {
+                    $q->where('period_id', $periodId)->orWhereNull('period_id');
+                });
+            }
+        };
+
+        $customer->total_purchases  = \App\Models\Invoice::where('customer_id', $customerId)->where($periodScope)->sum('total');
+        $customer->total_paid       = \App\Models\Payment::where('customer_id', $customerId)->where($periodScope)->sum('amount');
+        $customer->total_returns    = \App\Models\InvoiceReturn::where('customer_id', $customerId)->where($periodScope)->sum('total');
+        $customer->total_settlements = \App\Models\Settlement::where('customer_id', $customerId)->where($periodScope)->sum('amount');
+        $customer->total_debt       = $customer->opening_balance
+                                    + $customer->total_purchases
                                     - $customer->total_paid
                                     + $customer->total_settlements
                                     - $customer->total_returns;

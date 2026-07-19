@@ -23,9 +23,19 @@ class SupplierRepository extends Repository implements SupplierRepositoryInterfa
             ->map(function ($supplier) {
                 // Recalculate live for cash supplier (id=1) since observers skip it
                 if ($supplier->id === 1) {
-                    $supplier->total_purchases = \App\Models\Purchase::where('supplier_id', 1)->sum('total');
-                    $supplier->total_paid      = \App\Models\SupplierPayment::where('supplier_id', 1)->sum('amount');
-                    $supplier->total_returns   = \App\Models\PurchaseReturn::where('supplier_id', 1)->sum('total');
+                    $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+                    $periodScope = function ($query) use ($periodId) {
+                        if ($periodId) {
+                            $query->where(function ($q) use ($periodId) {
+                                $q->where('period_id', $periodId)->orWhereNull('period_id');
+                            });
+                        }
+                    };
+
+                    $supplier->total_purchases   = \App\Models\Purchase::where('supplier_id', 1)->where($periodScope)->sum('total');
+                    $supplier->total_paid        = \App\Models\SupplierPayment::where('supplier_id', 1)->where($periodScope)->sum('amount');
+                    $supplier->total_returns     = \App\Models\PurchaseReturn::where('supplier_id', 1)->where($periodScope)->sum('total');
+                    $supplier->total_settlements = \App\Models\SupplierSettlement::where('supplier_id', 1)->where($periodScope)->sum('amount');
                 }
                 return $supplier;
             });
