@@ -1119,11 +1119,12 @@ class ReportRepository implements ReportRepositoryInterface
 
         $rolloverDate = $latestSnapshot ? ($latestSnapshot->closed_at ?? $latestSnapshot->created_at) : null;
 
-        if (!$showAllHistory && !$dateFrom && $rolloverDate) {
-            $dateFrom = \Carbon\Carbon::parse($rolloverDate)->toDateString();
+        $dateFromQuery = null;
+        if ($dateFrom) {
+            $dateFromQuery = $dateFrom . ' 00:00:00';
+        } elseif (!$showAllHistory && $rolloverDate) {
+            $dateFromQuery = $rolloverDate;
         }
-
-        $dateFromQuery = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateToQuery   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon  = \Carbon\Carbon::parse($dateToQuery);
 
@@ -1186,7 +1187,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $balanceDate = $dateFromQuery ?: ($customer->created_at ?: '2000-01-01 00:00:00');
 
                 if ($latestSnapshot) {
-                    if (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
+                    if (!$showAllHistory || $dateFromQuery == $rolloverDate || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
                         $isRolloverBalance = true;
                         if (!$dateFromQuery) $balanceDate = $rolloverDate;
                     } elseif (!$dateFromQuery && $showAllHistory) {
@@ -1506,11 +1507,12 @@ class ReportRepository implements ReportRepositoryInterface
 
         $rolloverDate = $latestSnapshot ? ($latestSnapshot->closed_at ?? $latestSnapshot->created_at) : null;
 
-        if (!$showAllHistory && !$dateFrom && $rolloverDate) {
-            $dateFrom = \Carbon\Carbon::parse($rolloverDate)->toDateString();
+        $dateFromQuery = null;
+        if ($dateFrom) {
+            $dateFromQuery = $dateFrom . ' 00:00:00';
+        } elseif (!$showAllHistory && $rolloverDate) {
+            $dateFromQuery = $rolloverDate;
         }
-
-        $dateFromQuery = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateToQuery   = $dateTo   ? $dateTo   . ' 23:59:59' : now()->toDateTimeString();
         $dateToCarbon  = \Carbon\Carbon::parse($dateToQuery);
 
@@ -1571,7 +1573,7 @@ class ReportRepository implements ReportRepositoryInterface
                 $balanceDate = $dateFromQuery ?: ($supplier->created_at ?: '2000-01-01 00:00:00');
 
                 if ($latestSnapshot) {
-                    if (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
+                    if (!$showAllHistory || $dateFromQuery == $rolloverDate || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
                         $isRolloverBalance = true;
                         if (!$dateFromQuery) $balanceDate = $rolloverDate;
                     } elseif (!$dateFromQuery && $showAllHistory) {
