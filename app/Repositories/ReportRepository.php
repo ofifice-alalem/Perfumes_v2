@@ -1130,7 +1130,7 @@ class ReportRepository implements ReportRepositoryInterface
         $customersQuery = DB::table('customers')
             ->when($customerId, fn($q) => $q->where('id', $customerId))
             ->orderBy('name')
-            ->get(['id', 'name', 'opening_balance']);
+            ->get(['id', 'name', 'opening_balance', 'created_at']);
 
         return $customersQuery->map(function ($customer) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
 
@@ -1182,18 +1182,30 @@ class ReportRepository implements ReportRepositoryInterface
             $movements = collect();
 
             if (round($reportOpeningBalance, 2) != 0) {
-                // Determine reference text
-                $refText = 'رصيد سابق';
-                if ($latestSnapshot && (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00')) {
-                    $refText = 'إقفال دورة ' . $latestSnapshot->name;
+                $isRolloverBalance = false;
+                $balanceDate = $dateFromQuery ?: ($customer->created_at ?: '2000-01-01 00:00:00');
+
+                if ($latestSnapshot) {
+                    if (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
+                        $isRolloverBalance = true;
+                        if (!$dateFromQuery) $balanceDate = $rolloverDate;
+                    } elseif (!$dateFromQuery && $showAllHistory) {
+                        $netNewOperations = ($newInvoiced + $newSettled) - ($newPaid + $newReturned);
+                        if (round($netFutureOperations, 2) == round($netNewOperations, 2) && round($reportOpeningBalance, 2) == round($dbOpeningBalance, 2)) {
+                            $isRolloverBalance = true;
+                            $balanceDate = $rolloverDate;
+                        }
+                    }
                 }
+
+                $refText = $isRolloverBalance ? 'إقفال دورة ' . $latestSnapshot->name : 'رصيد سابق';
 
                 $movements->push([
                     'type'     => 'opening_balance',
                     'ref'      => $refText,
                     'ref_id'   => null,
                     'amount'   => $reportOpeningBalance,
-                    'date'     => $dateFromQuery ?: '2000-01-01 00:00:00',
+                    'date'     => $balanceDate,
                     'days_old' => null,
                 ]);
             }
@@ -1505,7 +1517,7 @@ class ReportRepository implements ReportRepositoryInterface
         $suppliersQuery = DB::table('suppliers')
             ->when($supplierId, fn($q) => $q->where('id', $supplierId))
             ->orderBy('name')
-            ->get(['id', 'name', 'opening_balance']);
+            ->get(['id', 'name', 'opening_balance', 'created_at']);
 
         return $suppliersQuery->map(function ($supplier) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
 
@@ -1555,17 +1567,30 @@ class ReportRepository implements ReportRepositoryInterface
             $movements = collect();
 
             if (round($reportOpeningBalance, 2) != 0) {
-                $refText = 'رصيد سابق';
-                if ($latestSnapshot && (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00')) {
-                    $refText = 'إقفال دورة ' . $latestSnapshot->name;
+                $isRolloverBalance = false;
+                $balanceDate = $dateFromQuery ?: ($supplier->created_at ?: '2000-01-01 00:00:00');
+
+                if ($latestSnapshot) {
+                    if (!$showAllHistory || $dateFromQuery == \Carbon\Carbon::parse($rolloverDate)->toDateString() . ' 00:00:00') {
+                        $isRolloverBalance = true;
+                        if (!$dateFromQuery) $balanceDate = $rolloverDate;
+                    } elseif (!$dateFromQuery && $showAllHistory) {
+                        $netNewOperations = ($newPurchased + $newSettled) - ($newPaid + $newReturned);
+                        if (round($netFutureOperations, 2) == round($netNewOperations, 2) && round($reportOpeningBalance, 2) == round($dbOpeningBalance, 2)) {
+                            $isRolloverBalance = true;
+                            $balanceDate = $rolloverDate;
+                        }
+                    }
                 }
+
+                $refText = $isRolloverBalance ? 'إقفال دورة ' . $latestSnapshot->name : 'رصيد سابق';
 
                 $movements->push([
                     'type'   => 'opening_balance',
                     'ref'    => $refText,
                     'ref_id' => null,
                     'amount' => $reportOpeningBalance,
-                    'date'   => $dateFromQuery ?: '2000-01-01 00:00:00',
+                    'date'   => $balanceDate,
                 ]);
             }
 
