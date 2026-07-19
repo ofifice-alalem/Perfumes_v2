@@ -32,7 +32,7 @@ class SupplierPaymentController extends Controller
 
     public function show(int $id): Response
     {
-        $payment = \App\Models\SupplierPayment::with(['supplier', 'purchase', 'paymentMethod'])->findOrFail($id);
+        $payment = \App\Models\SupplierPayment::withTrashed()->with(['supplier', 'purchase', 'paymentMethod'])->findOrFail($id);
 
         return Inertia::render('SupplierPayments/Show', [
             'payment' => $payment,
@@ -69,5 +69,16 @@ class SupplierPaymentController extends Controller
 
         return ($purchaseId ? redirect()->route('purchases.show', $purchaseId) : back())
             ->with('success', 'تم حذف الدفعة بنجاح');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $payment = \App\Models\SupplierPayment::withTrashed()->findOrFail($id);
+        $purchaseId = $payment->purchase_id;
+
+        $payment->restore();
+
+        return ($purchaseId ? redirect()->route('purchases.show', $purchaseId) : back())
+            ->with('success', 'تم استعادة الدفعة بنجاح');
     }
 }

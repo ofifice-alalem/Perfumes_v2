@@ -31,7 +31,7 @@ class SupplierSettlementController extends Controller
 
     public function show(int $id): Response
     {
-        $settlement = \App\Models\SupplierSettlement::with(['supplier', 'purchase', 'purchaseReturn', 'paymentMethod'])->findOrFail($id);
+        $settlement = \App\Models\SupplierSettlement::withTrashed()->with(['supplier', 'purchase', 'purchaseReturn', 'paymentMethod'])->findOrFail($id);
 
         return Inertia::render('SupplierSettlements/Show', [
             'settlement' => $settlement,
@@ -71,5 +71,16 @@ class SupplierSettlementController extends Controller
 
         return ($purchaseId ? redirect()->route('purchases.show', $purchaseId) : back())
             ->with('success', 'تم حذف التسوية بنجاح');
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        $settlement = \App\Models\SupplierSettlement::withTrashed()->findOrFail($id);
+        $purchaseId = $settlement->purchase_id;
+
+        $settlement->restore();
+
+        return ($purchaseId ? redirect()->route('purchases.show', $purchaseId) : back())
+            ->with('success', 'تم استعادة التسوية بنجاح');
     }
 }

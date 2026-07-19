@@ -146,12 +146,14 @@ Route::middleware('auth')->group(function () {
         Route::get('supplier-payments/{id}', [SupplierPaymentController::class, 'show'])->name('supplier-payments.show');
         Route::post('supplier-payments', [SupplierPaymentController::class, 'store'])->name('supplier-payments.store');
         Route::delete('supplier-payments/{id}', [SupplierPaymentController::class, 'destroy'])->name('supplier-payments.destroy');
+        Route::post('supplier-payments/{id}/restore', [SupplierPaymentController::class, 'restore'])->name('supplier-payments.restore');
 
         // Supplier Settlements
         Route::get('supplier-settlements', [SupplierSettlementController::class, 'index'])->name('supplier-settlements.index');
         Route::get('supplier-settlements/{id}', [SupplierSettlementController::class, 'show'])->name('supplier-settlements.show');
         Route::post('supplier-settlements', [SupplierSettlementController::class, 'store'])->name('supplier-settlements.store');
         Route::delete('supplier-settlements/{id}', [SupplierSettlementController::class, 'destroy'])->name('supplier-settlements.destroy');
+        Route::post('supplier-settlements/{id}/restore', [SupplierSettlementController::class, 'restore'])->name('supplier-settlements.restore');
 
         // Purchase Returns
         Route::get('purchase-returns', [PurchaseReturnController::class, 'index'])->name('purchase-returns.index');
