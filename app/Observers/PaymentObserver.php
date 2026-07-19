@@ -32,6 +32,12 @@ class PaymentObserver
         $this->syncCustomer($payment);
     }
 
+    public function restored(Payment $payment): void
+    {
+        $this->syncInvoice($payment);
+        $this->syncCustomer($payment);
+    }
+
     private function syncInvoice(Payment $payment): void
     {
         if (!$payment->invoice_id) return;

@@ -32,6 +32,12 @@ class SettlementObserver
         $this->syncCustomer($settlement);
     }
 
+    public function restored(Settlement $settlement): void
+    {
+        $this->syncInvoiceReturn($settlement);
+        $this->syncCustomer($settlement);
+    }
+
     private function syncInvoiceReturn(Settlement $settlement): void
     {
         if (!$settlement->invoice_return_id) return;

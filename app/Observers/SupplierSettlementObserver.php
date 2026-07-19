@@ -19,6 +19,12 @@ class SupplierSettlementObserver
         $this->syncSupplier($settlement);
     }
 
+    public function restored(SupplierSettlement $settlement): void
+    {
+        $this->syncPurchaseReturn($settlement);
+        $this->syncSupplier($settlement);
+    }
+
     private function syncPurchaseReturn(SupplierSettlement $settlement): void
     {
         if (!$settlement->purchase_return_id) return;

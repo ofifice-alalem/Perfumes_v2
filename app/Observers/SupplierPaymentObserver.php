@@ -32,6 +32,12 @@ class SupplierPaymentObserver
         $this->syncSupplier($payment);
     }
 
+    public function restored(SupplierPayment $payment): void
+    {
+        $this->syncPurchase($payment);
+        $this->syncSupplier($payment);
+    }
+
     private function syncPurchase(SupplierPayment $payment): void
     {
         if (!$payment->purchase_id) return;
