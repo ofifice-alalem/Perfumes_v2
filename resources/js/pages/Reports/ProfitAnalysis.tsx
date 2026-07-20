@@ -103,8 +103,12 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
     ].filter(Boolean);
     const [stockMultiSearch, setStockMultiSearch] = useState<string[]>(initStockMultiSearch);
     const [compactView,     setCompactView]     = useState(false);
+    const [stockPage,       setStockPage]       = useState(1);
+    const stockPerPage = 50;
 
     const displayData = compactView ? stockProfitData.filter(p => p.avg_sale_price !== null) : stockProfitData;
+    const totalStockPages = Math.ceil(displayData.length / stockPerPage);
+    const paginatedStockData = displayData.slice((stockPage - 1) * stockPerPage, stockPage * stockPerPage);
 
     function toggleExpand(month: string) {
         setExpanded(prev => {
@@ -135,6 +139,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
     }
 
     function searchStock() {
+        setStockPage(1);
         const pIds = multiSearch.filter(v => !isNaN(Number(v)));
         const sNames = multiSearch.filter(v => isNaN(Number(v)));
         const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
@@ -395,7 +400,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {displayData.map(p => (
+                                            {paginatedStockData.map(p => (
                                                 <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
                                                     <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
                                                     {compactView ? (<>
@@ -426,7 +431,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                 </div>
                                 {/* Mobile */}
                                 <div className="flex flex-col gap-3 lg:hidden">
-                                    {displayData.map(p => (
+                                    {paginatedStockData.map(p => (
                                         <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
                                             <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                 <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
@@ -451,6 +456,31 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                                         </div>
                                     ))}
                                 </div>
+                                {/* Pagination Controls */}
+                                {totalStockPages > 1 && (
+                                    <div className="flex items-center justify-between px-4 py-4 border-t border-black/5 dark:border-white/5">
+                                        <div className="text-sm font-bold text-slate-500 dark:text-white/50">
+                                            عرض {((stockPage - 1) * stockPerPage) + 1} إلى {Math.min(stockPage * stockPerPage, displayData.length)} من أصل {displayData.length} منتج
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={() => setStockPage(p => Math.max(1, p - 1))}
+                                                disabled={stockPage === 1}
+                                                className="px-4 py-2 rounded-[10px] bg-black/5 dark:bg-white/5 text-slate-700 dark:text-white font-bold text-sm hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            >
+                                                السابق
+                                            </button>
+                                            <span className="text-sm font-black text-primary px-2">{stockPage} / {totalStockPages}</span>
+                                            <button 
+                                                onClick={() => setStockPage(p => Math.min(totalStockPages, p + 1))}
+                                                disabled={stockPage === totalStockPages}
+                                                className="px-4 py-2 rounded-[10px] bg-black/5 dark:bg-white/5 text-slate-700 dark:text-white font-bold text-sm hover:bg-black/10 dark:hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            >
+                                                التالي
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </SpatialCard>
                         </>)}
                     </>)}
