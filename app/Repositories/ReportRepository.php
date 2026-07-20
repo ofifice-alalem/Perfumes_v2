@@ -2730,104 +2730,121 @@ class ReportRepository implements ReportRepositoryInterface
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
-        $suppliersQuery = DB::table('suppliers')
-            ->when($supplierId, fn($q) => $q->where('id', $supplierId))
-            ->orderBy('name')->get(['id', 'name']);
+        // 1. Fetch Purchases First
+        $purchasesQuery = DB::table('purchases')
+            ->whereNull('purchases.deleted_at')
+            ->when($supplierId, fn($q) => $q->where('purchases.supplier_id', $supplierId))
+            ->when($df,     fn($q) => $q->where('purchases.created_at', '>=', $df))
+            ->when($dt,     fn($q) => $q->where('purchases.created_at', '<=', $dt))
+            ->when($userId, fn($q) => $q->where('purchases.user_id', $userId));
 
-        $result = [];
-        foreach ($suppliersQuery as $supplier) {
-            $purchasesQuery = DB::table('purchases')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchases.supplier_id', $supplier->id)
-                ->when($df,     fn($q) => $q->where('purchases.created_at', '>=', $df))
-                ->when($dt,     fn($q) => $q->where('purchases.created_at', '<=', $dt))
-                ->when($userId, fn($q) => $q->where('purchases.user_id', $userId));
+        if ($categoryId) {
+            $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where('products.category_id', $categoryId));
+        }
 
-            if ($categoryId) {
-                $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
-                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
-                    ->whereColumn('purchase_items.purchase_id', 'purchases.id')
-                    ->where('products.category_id', $categoryId));
-            }
-
-            if (!empty($filterProductIds) || !empty($searchName)) {
-                $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
-                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
-                    ->whereColumn('purchase_items.purchase_id', 'purchases.id')
-                    ->where(function($sub) use ($filterProductIds, $searchName) {
-                        if (!empty($filterProductIds)) {
-                            $sub->whereIn('products.id', $filterProductIds);
-                        }
-                        if ($searchName) {
-                            $terms = explode(',', $searchName);
-                            foreach ($terms as $term) {
-                                $term = trim($term);
-                                if ($term !== '') {
-                                    $sub->orWhere('products.name', 'like', '%' . $term . '%');
-                                }
-                            }
-                        }
-                    }));
-            }
-
-            $purchases = $purchasesQuery
-                ->select('purchases.id', 'purchases.total', 'purchases.created_at')
-                ->orderBy('purchases.created_at')->get();
-
-            if ($purchases->isEmpty()) continue;
-
-            $purchasesList = [];
-            foreach ($purchases as $p) {
-                $items = DB::table('purchase_items')
-                    ->join('products', 'products.id', '=', 'purchase_items.product_id')
-                    ->where('purchase_items.purchase_id', $p->id)
-                    ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                    ->select(
-                        'products.id as product_id',
-                        'products.name as product_name',
-                        'purchase_items.unit_cost',
-                        DB::raw('MIN(purchase_items.quantity) as quantity'),
-                        DB::raw('COUNT(*) as count')
-                    )
-                    ->groupBy('products.id', 'products.name', 'purchase_items.unit_cost')
-                    ->get();
-
-                foreach ($items as $item) {
-                    $isMatched = false;
-                    if (!empty($filterProductIds) || !empty($searchName)) {
-                        if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
-                            $isMatched = true;
-                        } elseif (!empty($searchName)) {
-                            $terms = explode(',', $searchName);
-                            foreach ($terms as $term) {
-                                if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
-                                    $isMatched = true;
-                                    break;
-                                }
+        if (!empty($filterProductIds) || !empty($searchName)) {
+            $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where(function($sub) use ($filterProductIds, $searchName) {
+                    if (!empty($filterProductIds)) {
+                        $sub->whereIn('products.id', $filterProductIds);
+                    }
+                    if ($searchName) {
+                        $terms = explode(',', $searchName);
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if ($term !== '') {
+                                $sub->orWhere('products.name', 'like', '%' . $term . '%');
                             }
                         }
                     }
-                    $item->is_matched = $isMatched;
-                }
-
-                $purchasesList[] = [
-                    'id'    => $p->id,
-                    'total' => (float) $p->total,
-                    'date'  => $p->created_at,
-                    'items' => $items->toArray(),
-                ];
-            }
-
-            $result[] = [
-                'supplier_id'    => $supplier->id,
-                'supplier_name'  => $supplier->name,
-                'purchase_count' => count($purchasesList),
-                'total_amount'   => round(array_sum(array_column($purchasesList, 'total')), 2),
-                'purchases'      => $purchasesList,
-            ];
+                }));
         }
 
+        $purchases = $purchasesQuery
+            ->join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')
+            ->select('purchases.id', 'purchases.total', 'purchases.created_at', 'suppliers.id as supplier_id', 'suppliers.name as supplier_name')
+            ->orderBy('purchases.created_at')
+            ->get();
+
+        if ($purchases->isEmpty()) return [];
+
+        $purchaseIds = $purchases->pluck('id')->toArray();
+
+        // 2. Fetch ALL matching items for these purchases in ONE query
+        $itemsQuery = DB::table('purchase_items')
+            ->join('products', 'products.id', '=', 'purchase_items.product_id')
+            ->whereIn('purchase_items.purchase_id', $purchaseIds)
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->select(
+                'purchase_items.purchase_id',
+                'products.id as product_id',
+                'products.name as product_name',
+                'purchase_items.unit_cost',
+                DB::raw('MIN(purchase_items.quantity) as quantity'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('purchase_items.purchase_id', 'products.id', 'products.name', 'purchase_items.unit_cost')
+            ->get();
+
+        $itemsByPurchase = [];
+        foreach ($itemsQuery as $item) {
+            $isMatched = false;
+            if (!empty($filterProductIds) || !empty($searchName)) {
+                if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                    $isMatched = true;
+                } elseif (!empty($searchName)) {
+                    $terms = explode(',', $searchName);
+                    foreach ($terms as $term) {
+                        if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                            $isMatched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $item->is_matched = $isMatched;
+            
+            $itemsByPurchase[$item->purchase_id][] = (array)$item;
+        }
+
+        $suppliersData = [];
+        foreach ($purchases as $p) {
+            $sid = $p->supplier_id;
+            if (!isset($suppliersData[$sid])) {
+                $suppliersData[$sid] = [
+                    'supplier_id'    => $sid,
+                    'supplier_name'  => $p->supplier_name,
+                    'purchase_count' => 0,
+                    'total_amount'   => 0,
+                    'purchases'      => []
+                ];
+            }
+            
+            $pItems = $itemsByPurchase[$p->id] ?? [];
+            if (empty($pItems) && $categoryId) {
+                // If category filter was applied, and this purchase has NO items for that category, skip adding to result
+                continue;
+            }
+
+            $suppliersData[$sid]['purchases'][] = [
+                'id'    => $p->id,
+                'total' => (float) $p->total,
+                'date'  => $p->created_at,
+                'items' => $pItems,
+            ];
+            
+            $suppliersData[$sid]['purchase_count']++;
+            $suppliersData[$sid]['total_amount'] += (float)$p->total;
+        }
+
+        $result = array_values($suppliersData);
         usort($result, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+
         return $result;
     }
 
