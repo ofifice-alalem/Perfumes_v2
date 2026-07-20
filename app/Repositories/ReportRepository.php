@@ -460,16 +460,14 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('products.name')
             ->get();
 
+        $productIds = $query->pluck('id')->toArray();
+        if (empty($productIds)) return [];
+
         $previousSnapshotId = null;
         if ($periodId) {
-            $previousSnapshotId = DB::table('period_snapshots')
-                ->where('period_id', '<', $periodId)
-                ->orderBy('period_id', 'desc')
-                ->value('id');
+            $previousSnapshotId = DB::table('period_snapshots')->where('period_id', '<', $periodId)->orderBy('period_id', 'desc')->value('id');
         } else {
-            $previousSnapshotId = DB::table('period_snapshots')
-                ->orderBy('id', 'desc')
-                ->value('id');
+            $previousSnapshotId = DB::table('period_snapshots')->orderBy('id', 'desc')->value('id');
         }
 
         $fallbackCosts = [];
@@ -477,97 +475,184 @@ class ReportRepository implements ReportRepositoryInterface
         if ($previousSnapshotId) {
             $stockProfits = DB::table('period_snapshot_stock_profits')
                 ->where('snapshot_id', $previousSnapshotId)
+                ->whereIn('product_id', $productIds)
                 ->get(['product_id', 'avg_purchase_cost', 'stock']);
-
             foreach ($stockProfits as $sp) {
-                if ($sp->avg_purchase_cost !== null) {
-                    $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
-                }
+                if ($sp->avg_purchase_cost !== null) $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
                 $fallbackStocks[$sp->product_id] = (float) $sp->stock;
             }
         }
 
+        $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        // Fetch Aggregated data in 5 queries instead of 18,000
+        $purchasedAgg = DB::table('purchase_items')
+            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+            ->whereNull('purchases.deleted_at')
+            ->whereIn('purchase_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'purchases'))
+            ->select('purchase_items.product_id', DB::raw('SUM(purchase_items.quantity) as qty'), DB::raw('SUM(purchase_items.line_total) as val'),
+                DB::raw('SUM(CASE WHEN '.($dateFromFull ? "'$dateFromFull' <= purchases.created_at" : '1').' THEN purchase_items.quantity ELSE 0 END) as qty_in_range'),
+                DB::raw('SUM(CASE WHEN '.($dateFromFull ? "'$dateFromFull' <= purchases.created_at" : '1').' THEN purchase_items.line_total ELSE 0 END) as val_in_range')
+            )
+            ->groupBy('purchase_items.product_id')
+            ->get()->keyBy('product_id');
+
+        $returnOutAgg = DB::table('purchase_return_items')
+            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+            ->whereNull('purchase_returns.deleted_at')
+            ->whereIn('purchase_return_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
+            ->select('purchase_return_items.product_id', DB::raw('SUM(purchase_return_items.quantity) as qty'), DB::raw('SUM(purchase_return_items.line_total) as val'),
+                DB::raw('SUM(CASE WHEN '.($dateFromFull ? "'$dateFromFull' <= purchase_returns.created_at" : '1').' THEN purchase_return_items.quantity ELSE 0 END) as qty_in_range'),
+                DB::raw('SUM(CASE WHEN '.($dateFromFull ? "'$dateFromFull' <= purchase_returns.created_at" : '1').' THEN purchase_return_items.line_total ELSE 0 END) as val_in_range')
+            )
+            ->groupBy('purchase_return_items.product_id')
+            ->get()->keyBy('product_id');
+
+        $soldAgg = DB::table('invoice_items')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereIn('invoice_items.product_id', $productIds)
+            ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
+            ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'invoices'))
+            ->select('invoice_items.product_id', DB::raw('SUM(invoice_items.quantity) as qty'), DB::raw('SUM(invoice_items.line_total) as val'))
+            ->groupBy('invoice_items.product_id')
+            ->get()->keyBy('product_id');
+
+        $returnInAgg = DB::table('invoice_return_items')
+            ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->whereIn('invoice_return_items.product_id', $productIds)
+            ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
+            ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
+            ->select('invoice_return_items.product_id', DB::raw('SUM(invoice_return_items.quantity) as qty'), DB::raw('SUM(invoice_return_items.line_total) as val'))
+            ->groupBy('invoice_return_items.product_id')
+            ->get()->keyBy('product_id');
+
+        $wastedAgg = null;
+        if ($showWasted) {
+            $wastedAgg = DB::table('waste_items')
+                ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
+                ->whereIn('waste_items.product_id', $productIds)
+                ->when($dateFromFull, fn($q) => $q->where('waste_logs.created_at', '>=', $dateFromFull))
+                ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
+                ->tap(fn($q) => $scopePeriod($q, 'waste_logs'))
+                ->select('waste_items.product_id', DB::raw('SUM(waste_items.quantity) as qty'))
+                ->groupBy('waste_items.product_id')
+                ->get()->keyBy('product_id');
+        }
+
+        // Timeline for Profit and Last Prices
+        $events = [];
+        $purchasesForProfit = DB::table('purchase_items')
+            ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
+            ->whereNull('purchases.deleted_at')
+            ->whereIn('purchase_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'purchases'))
+            ->select('purchase_items.product_id as pid', 'purchase_items.quantity as qty', 'purchase_items.line_total as val', 'purchases.created_at as date', 'purchases.id')
+            ->get();
+        foreach ($purchasesForProfit as $row) $events[] = ['date' => $row->date, 'type' => 1, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
+
+        $salesForProfit = DB::table('invoice_items')
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->whereNull('invoices.deleted_at')
+            ->whereIn('invoice_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'invoices'))
+            ->select('invoice_items.product_id as pid', 'invoice_items.quantity as qty', 'invoice_items.line_total as val', 'invoice_items.unit_price', 'invoices.created_at as date', 'invoices.id')
+            ->get();
+        foreach ($salesForProfit as $row) $events[] = ['date' => $row->date, 'type' => 2, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'unit_price' => (float)$row->unit_price, 'id' => $row->id];
+
+        $returnsInForProfit = DB::table('invoice_return_items')
+            ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
+            ->whereNull('invoice_returns.deleted_at')
+            ->whereIn('invoice_return_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
+            ->select('invoice_return_items.product_id as pid', 'invoice_return_items.quantity as qty', 'invoice_return_items.line_total as val', 'invoice_returns.created_at as date', 'invoice_returns.id')
+            ->get();
+        foreach ($returnsInForProfit as $row) $events[] = ['date' => $row->date, 'type' => 3, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
+
+        $returnsOutForProfit = DB::table('purchase_return_items')
+            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+            ->whereNull('purchase_returns.deleted_at')
+            ->whereIn('purchase_return_items.product_id', $productIds)
+            ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
+            ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
+            ->select('purchase_return_items.product_id as pid', 'purchase_return_items.quantity as qty', 'purchase_return_items.line_total as val', 'purchase_returns.created_at as date', 'purchase_returns.id')
+            ->get();
+        foreach ($returnsOutForProfit as $row) $events[] = ['date' => $row->date, 'type' => 4, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
+
+        usort($events, function($a, $b) {
+            if ($a['date'] != $b['date']) return $a['date'] <=> $b['date'];
+            if ($a['type'] != $b['type']) return $a['type'] <=> $b['type'];
+            return $a['id'] <=> $b['id'];
+        });
+
+        $productProfits = [];
+        $lastPurchaseCosts = [];
+        $lastSalePrices = [];
+        $state = [];
+
+        foreach ($events as $e) {
+            $pid = $e['pid'];
+            if (!isset($state[$pid])) {
+                $state[$pid] = ['qty' => $fallbackStocks[$pid] ?? 0.0, 'val' => ($fallbackStocks[$pid] ?? 0.0) * ($fallbackCosts[$pid] ?? 0.0), 'cost' => $fallbackCosts[$pid] ?? 0.0];
+                $productProfits[$pid] = 0;
+            }
+            $st = &$state[$pid];
+            $inRange = (!$dateFromFull || $e['date'] >= $dateFromFull);
+
+            if ($e['type'] === 1) { // Buy
+                $st['qty'] += $e['qty'];
+                $st['val'] += $e['val'];
+                if ($st['qty'] > 0) $st['cost'] = $st['val'] / $st['qty'];
+                if ($inRange) $lastPurchaseCosts[$pid] = $e['val'] / $e['qty'];
+            } elseif ($e['type'] === 4) { // Buy Return
+                $st['qty'] -= $e['qty'];
+                $st['val'] -= $e['qty'] * ($e['val'] / $e['qty']);
+                if ($st['qty'] > 0) $st['cost'] = $st['val'] / $st['qty'];
+            } elseif ($e['type'] === 2) { // Sale
+                $cogs = $e['qty'] * $st['cost'];
+                $st['qty'] -= $e['qty'];
+                $st['val'] -= $cogs;
+                if ($inRange) {
+                    $productProfits[$pid] += $e['val'] - $cogs;
+                    $lastSalePrices[$pid] = $e['unit_price'];
+                }
+            } elseif ($e['type'] === 3) { // Sale Return
+                $cor = $e['qty'] * $st['cost'];
+                $st['qty'] += $e['qty'];
+                $st['val'] += $cor;
+                if ($inRange) $productProfits[$pid] -= $e['val'] - $cor;
+            }
+        }
+
         return $query->map(function ($p) use (
-            $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $scopePeriod,
-            $fallbackCosts, $fallbackStocks
+            $showSold, $showWasted, $showPurchased, $purchasedAgg, $returnOutAgg, $soldAgg, $returnInAgg, $wastedAgg,
+            $fallbackCosts, $fallbackStocks, $productProfits, $lastPurchaseCosts, $lastSalePrices
         ) {
-            $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
-            $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+            $pId = $p->id;
 
-            // 1. Purchase Calculations (Weighted Average)
-            $totalPurchasedQty = (float) DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                ->sum('purchase_items.quantity');
+            $totalPurchasedQty = (float)($purchasedAgg[$pId]->qty_in_range ?? 0);
+            $totalPurchaseValue = (float)($purchasedAgg[$pId]->val_in_range ?? 0);
+            $totalReturnOutQty = (float)($returnOutAgg[$pId]->qty_in_range ?? 0);
+            $totalReturnOutValue = (float)($returnOutAgg[$pId]->val_in_range ?? 0);
 
-            $totalPurchaseValue = (float) DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                ->sum('purchase_items.line_total');
+            $histPurchasedQty = (float)($purchasedAgg[$pId]->qty ?? 0);
+            $histPurchaseValue = (float)($purchasedAgg[$pId]->val ?? 0);
+            $histReturnOutQty = (float)($returnOutAgg[$pId]->qty ?? 0);
+            $histReturnOutValue = (float)($returnOutAgg[$pId]->val ?? 0);
 
-            $totalReturnOutQty = (float) DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->whereNull('purchase_returns.deleted_at')
-                ->where('purchase_return_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
-                ->sum('purchase_return_items.quantity');
-
-            $totalReturnOutValue = (float) DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->whereNull('purchase_returns.deleted_at')
-                ->where('purchase_return_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchase_returns.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
-                ->sum('purchase_return_items.line_total');
-
-            $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
-
-            // Historical Calculations for Average Cost (ignores dateFrom)
-            $histPurchasedQty = (float) DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                ->sum('purchase_items.quantity');
-
-            $histPurchaseValue = (float) DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                ->sum('purchase_items.line_total');
-
-            $histReturnOutQty = (float) DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->whereNull('purchase_returns.deleted_at')
-                ->where('purchase_return_items.product_id', $p->id)
-                ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
-                ->sum('purchase_return_items.quantity');
-
-            $histReturnOutValue = (float) DB::table('purchase_return_items')
-                ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                ->whereNull('purchase_returns.deleted_at')
-                ->where('purchase_return_items.product_id', $p->id)
-                ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
-                ->sum('purchase_return_items.line_total');
-
-            $openingQty = $fallbackStocks[$p->id] ?? 0.0;
-            $openingCost = $fallbackCosts[$p->id] ?? 0.0;
+            $openingQty = $fallbackStocks[$pId] ?? 0.0;
+            $openingCost = $fallbackCosts[$pId] ?? 0.0;
 
             $netHistPurchaseQty = $histPurchasedQty - $histReturnOutQty + $openingQty;
             $totalHistValue = ($histPurchaseValue - $histReturnOutValue) + ($openingQty * $openingCost);
@@ -579,70 +664,18 @@ class ReportRepository implements ReportRepositoryInterface
                 $avgPurchaseCost = $openingCost;
             }
 
-            $lastPurchaseCost = DB::table('purchase_items')
-                ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                ->whereNull('purchases.deleted_at')
-                ->where('purchase_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('purchases.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                ->orderByDesc('purchases.created_at')
-                ->value('purchase_items.unit_cost');
-                
-            if ($lastPurchaseCost === null && $openingCost > 0) {
-                $lastPurchaseCost = $openingCost;
-            }
+            $lastPurchaseCost = $lastPurchaseCosts[$pId] ?? ($openingCost > 0 ? $openingCost : null);
+            $lastSalePrice = $lastSalePrices[$pId] ?? null;
 
-            // 2. Sales Calculations (Weighted Average)
-            $totalSoldQty = (float) DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
-                ->sum('invoice_items.quantity');
-
-            $totalSaleValue = (float) DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
-                ->sum('invoice_items.line_total');
-
-            $totalReturnInQty = (float) DB::table('invoice_return_items')
-                ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
-                ->whereNull('invoice_returns.deleted_at')
-                ->where('invoice_return_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
-                ->sum('invoice_return_items.quantity');
-
-            $totalReturnInValue = (float) DB::table('invoice_return_items')
-                ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
-                ->whereNull('invoice_returns.deleted_at')
-                ->where('invoice_return_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
-                ->sum('invoice_return_items.line_total');
+            $totalSoldQty = (float)($soldAgg[$pId]->qty ?? 0);
+            $totalSaleValue = (float)($soldAgg[$pId]->val ?? 0);
+            $totalReturnInQty = (float)($returnInAgg[$pId]->qty ?? 0);
+            $totalReturnInValue = (float)($returnInAgg[$pId]->val ?? 0);
 
             $netSaleQty       = $totalSoldQty - $totalReturnInQty;
             $avgSalePrice     = $netSaleQty > 0 ? (($totalSaleValue - $totalReturnInValue) / $netSaleQty) : ($totalSoldQty > 0 ? ($totalSaleValue / $totalSoldQty) : null);
             $avgReturnInPrice = $totalReturnInQty > 0 ? ($totalReturnInValue / $totalReturnInQty) : null;
-
-            $lastSalePrice = DB::table('invoice_items')
-                ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoice_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'invoices'))
-                ->orderByDesc('invoices.created_at')
-                ->value('invoice_items.unit_price');
+            $avgReturnOutPrice = $totalReturnOutQty > 0 ? ($totalReturnOutValue / $totalReturnOutQty) : null;
 
             $status = match(true) {
                 (float)$p->stock <= 0                     => 'critical',
@@ -650,82 +683,8 @@ class ReportRepository implements ReportRepositoryInterface
                 default                                   => 'ok',
             };
 
-            $totalWasted = $showWasted ? (float) DB::table('waste_items')
-                ->join('waste_logs', 'waste_logs.id', '=', 'waste_items.waste_log_id')
-                ->where('waste_items.product_id', $p->id)
-                ->when($dateFromFull, fn($q) => $q->where('waste_logs.created_at', '>=', $dateFromFull))
-                ->when($dateToFull,   fn($q) => $q->where('waste_logs.created_at', '<=', $dateToFull))
-                ->tap(fn($q) => $scopePeriod($q, 'waste_logs'))
-                ->sum('waste_items.quantity') : null;
-
-            // حساب الربح يومياً بنفس منطق dailyProfitSummary
-            $profit = null;
-            if ($totalSoldQty > 0 || $totalReturnInQty > 0) {
-                // جلب كل مشتريات المنتج حتى نهاية الفترة
-                $allPurchases = DB::table('purchase_items')
-                    ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
-                    ->whereNull('purchases.deleted_at')
-                    ->where('purchase_items.product_id', $p->id)
-                    ->when($dateToFull, fn($q) => $q->where('purchases.created_at', '<=', $dateToFull))
-                    ->tap(fn($q) => $scopePeriod($q, 'purchases'))
-                    ->select('purchase_items.quantity', 'purchase_items.line_total', DB::raw('DATE(purchases.created_at) as date'))
-                    ->get();
-
-                $allPurchaseReturns = DB::table('purchase_return_items')
-                    ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-                    ->whereNull('purchase_returns.deleted_at')
-                    ->where('purchase_return_items.product_id', $p->id)
-                    ->when($dateToFull, fn($q) => $q->where('purchase_returns.created_at', '<=', $dateToFull))
-                    ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
-                    ->select('purchase_return_items.quantity', 'purchase_return_items.line_total', DB::raw('DATE(purchase_returns.created_at) as date'))
-                    ->get();
-
-                $getAvgCostAtDate = function ($targetDate) use ($allPurchases, $allPurchaseReturns, $openingQty, $openingCost) {
-                    $qty = $openingQty; 
-                    $val = $openingQty * $openingCost;
-                    
-                    foreach ($allPurchases as $pur) {
-                        if ($pur->date <= $targetDate) { $qty += (float)$pur->quantity; $val += (float)$pur->line_total; }
-                    }
-                    foreach ($allPurchaseReturns as $pr) {
-                        if ($pr->date <= $targetDate) { $qty -= (float)$pr->quantity; $val -= (float)$pr->line_total; }
-                    }
-                    return $qty > 0 ? ($val / $qty) : ($openingCost > 0 ? $openingCost : 0);
-                };
-
-                $dailySales = DB::table('invoice_items')
-                    ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-                    ->whereNull('invoices.deleted_at')
-                    ->where('invoice_items.product_id', $p->id)
-                    ->when($dateFromFull, fn($q) => $q->where('invoices.created_at', '>=', $dateFromFull))
-                    ->when($dateToFull,   fn($q) => $q->where('invoices.created_at', '<=', $dateToFull))
-                    ->tap(fn($q) => $scopePeriod($q, 'invoices'))
-                    ->select(DB::raw('DATE(invoices.created_at) as date'), DB::raw('SUM(invoice_items.quantity) as qty'), DB::raw('SUM(invoice_items.line_total) as total'))
-                    ->groupBy(DB::raw('DATE(invoices.created_at)'))
-                    ->get();
-
-                $dailyReturns = DB::table('invoice_return_items')
-                    ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
-                    ->whereNull('invoice_returns.deleted_at')
-                    ->where('invoice_return_items.product_id', $p->id)
-                    ->when($dateFromFull, fn($q) => $q->where('invoice_returns.created_at', '>=', $dateFromFull))
-                    ->when($dateToFull,   fn($q) => $q->where('invoice_returns.created_at', '<=', $dateToFull))
-                    ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
-                    ->select(DB::raw('DATE(invoice_returns.created_at) as date'), DB::raw('SUM(invoice_return_items.quantity) as qty'), DB::raw('SUM(invoice_return_items.line_total) as total'))
-                    ->groupBy(DB::raw('DATE(invoice_returns.created_at)'))
-                    ->get();
-
-                $netProfit = 0;
-                foreach ($dailySales as $sale) {
-                    $cost = $getAvgCostAtDate($sale->date);
-                    $netProfit += (float)$sale->total - ((float)$sale->qty * $cost);
-                }
-                foreach ($dailyReturns as $ret) {
-                    $cost = $getAvgCostAtDate($ret->date);
-                    $netProfit -= (float)$ret->total - ((float)$ret->qty * $cost);
-                }
-                $profit = round($netProfit, 2);
-            }
+            $totalWasted = $showWasted ? (float)($wastedAgg[$pId]->qty ?? 0) : null;
+            $profit = round($productProfits[$pId] ?? 0, 2);
 
             return [
                 'id'                 => $p->id,
@@ -3900,14 +3859,9 @@ class ReportRepository implements ReportRepositoryInterface
 
         $previousSnapshotId = null;
         if ($periodId) {
-            $previousSnapshotId = DB::table('period_snapshots')
-                ->where('period_id', '<', $periodId)
-                ->orderBy('period_id', 'desc')
-                ->value('id');
+            $previousSnapshotId = DB::table('period_snapshots')->where('period_id', '<', $periodId)->orderBy('period_id', 'desc')->value('id');
         } else {
-            $previousSnapshotId = DB::table('period_snapshots')
-                ->orderBy('id', 'desc')
-                ->value('id');
+            $previousSnapshotId = DB::table('period_snapshots')->orderBy('id', 'desc')->value('id');
         }
 
         $fallbackCosts = [];
@@ -3919,126 +3873,109 @@ class ReportRepository implements ReportRepositoryInterface
                 ->get(['product_id', 'avg_purchase_cost', 'stock']);
 
             foreach ($stockProfits as $sp) {
-                if ($sp->avg_purchase_cost !== null) {
-                    $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
-                }
+                if ($sp->avg_purchase_cost !== null) $fallbackCosts[$sp->product_id] = (float) $sp->avg_purchase_cost;
                 $fallbackStocks[$sp->product_id] = (float) $sp->stock;
             }
         }
 
-        // 2. Fetch ALL purchases and returns for these products up to $dt
+        // 2. Fetch ALL Events up to $dt for Timeline
+        $events = [];
+
         $purchases = DB::table('purchase_items')
             ->join('purchases', 'purchases.id', '=', 'purchase_items.purchase_id')
             ->whereNull('purchases.deleted_at')
             ->whereIn('purchase_items.product_id', $productIds)
             ->where('purchases.created_at', '<=', $dt)
-            ->select(
-                'purchase_items.product_id',
-                'purchase_items.quantity',
-                'purchase_items.line_total',
-                DB::raw('DATE(purchases.created_at) as date')
-            )
+            ->select('purchase_items.product_id as pid', 'purchase_items.quantity as qty', 'purchase_items.line_total as val', 'purchases.created_at as date', 'purchases.id')
             ->get();
+        foreach ($purchases as $row) $events[] = ['date' => $row->date, 'type' => 1, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
 
-        $purchaseReturns = DB::table('purchase_return_items')
-            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
-            ->whereNull('purchase_returns.deleted_at')
-            ->whereIn('purchase_return_items.product_id', $productIds)
-            ->where('purchase_returns.created_at', '<=', $dt)
-            ->select(
-                'purchase_return_items.product_id',
-                'purchase_return_items.quantity',
-                'purchase_return_items.line_total',
-                DB::raw('DATE(purchase_returns.created_at) as date')
-            )
-            ->get();
-
-        $avgCostCache = [];
-        $getAvgCost = function ($pid, $targetDate) use ($purchases, $purchaseReturns, &$avgCostCache, $fallbackCosts, $fallbackStocks) {
-            $cacheKey = $pid . '_' . $targetDate;
-            if (isset($avgCostCache[$cacheKey])) {
-                return $avgCostCache[$cacheKey];
-            }
-
-            $openingQty = $fallbackStocks[$pid] ?? 0.0;
-            $openingCost = $fallbackCosts[$pid] ?? 0.0;
-
-            $qty = $openingQty;
-            $val = $openingQty * $openingCost;
-
-            foreach ($purchases as $p) {
-                if ($p->product_id == $pid && $p->date <= $targetDate) {
-                    $qty += (float)$p->quantity;
-                    $val += (float)$p->line_total;
-                }
-            }
-
-            foreach ($purchaseReturns as $pr) {
-                if ($pr->product_id == $pid && $pr->date <= $targetDate) {
-                    $qty -= (float)$pr->quantity;
-                    $val -= (float)$pr->line_total;
-                }
-            }
-
-            $cost = $qty > 0 ? ($val / $qty) : ($openingCost > 0 ? $openingCost : 0);
-            $avgCostCache[$cacheKey] = $cost;
-            return $cost;
-        };
-
-        // 3. Process daily sales
         $sales = DB::table('invoice_items')
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->whereNull('invoices.deleted_at')
             ->whereIn('invoice_items.product_id', $productIds)
-            ->whereBetween('invoices.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoices.period_id', $periodId)->orWhereNull('invoices.period_id')))
-            ->select(
-                DB::raw('DATE(invoices.created_at) as date'),
-                'invoice_items.product_id',
-                'invoice_items.quantity',
-                'invoice_items.line_total'
-            )
+            ->where('invoices.created_at', '<=', $dt)
+            ->select('invoice_items.product_id as pid', 'invoice_items.quantity as qty', 'invoice_items.line_total as val', 'invoices.created_at as date', 'invoices.id')
             ->get();
+        foreach ($sales as $row) $events[] = ['date' => $row->date, 'type' => 2, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
 
-        // 4. Process daily returns
-        $returns = DB::table('invoice_return_items')
+        $returnsIn = DB::table('invoice_return_items')
             ->join('invoice_returns', 'invoice_returns.id', '=', 'invoice_return_items.invoice_return_id')
             ->whereNull('invoice_returns.deleted_at')
             ->whereIn('invoice_return_items.product_id', $productIds)
-            ->whereBetween('invoice_returns.created_at', [$df, $dt])
-            ->when($periodId, fn($q) => $q->where(fn($sub) => $sub->where('invoice_returns.period_id', $periodId)->orWhereNull('invoice_returns.period_id')))
-            ->select(
-                DB::raw('DATE(invoice_returns.created_at) as date'),
-                'invoice_return_items.product_id',
-                'invoice_return_items.quantity',
-                'invoice_return_items.line_total'
-            )
+            ->where('invoice_returns.created_at', '<=', $dt)
+            ->select('invoice_return_items.product_id as pid', 'invoice_return_items.quantity as qty', 'invoice_return_items.line_total as val', 'invoice_returns.created_at as date', 'invoice_returns.id')
             ->get();
+        foreach ($returnsIn as $row) $events[] = ['date' => $row->date, 'type' => 3, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
 
+        $returnsOut = DB::table('purchase_return_items')
+            ->join('purchase_returns', 'purchase_returns.id', '=', 'purchase_return_items.purchase_return_id')
+            ->whereNull('purchase_returns.deleted_at')
+            ->whereIn('purchase_return_items.product_id', $productIds)
+            ->where('purchase_returns.created_at', '<=', $dt)
+            ->select('purchase_return_items.product_id as pid', 'purchase_return_items.quantity as qty', 'purchase_return_items.line_total as val', 'purchase_returns.created_at as date', 'purchase_returns.id')
+            ->get();
+        foreach ($returnsOut as $row) $events[] = ['date' => $row->date, 'type' => 4, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
+
+        // 3. Sort Events (Timeline logic)
+        usort($events, function($a, $b) {
+            if ($a['date'] != $b['date']) return $a['date'] <=> $b['date'];
+            if ($a['type'] != $b['type']) return $a['type'] <=> $b['type'];
+            return $a['id'] <=> $b['id'];
+        });
+
+        // 4. Run Timeline Simulation
+        $state = [];
         $dailyData = [];
+        $totalProfit = 0;
 
-        foreach ($sales as $sale) {
-            $date = $sale->date;
-            if (!isset($dailyData[$date])) {
-                $dailyData[$date] = ['date' => $date, 'sales' => 0, 'returns' => 0, 'cost_of_sales' => 0, 'cost_of_returns' => 0];
+        foreach ($events as $e) {
+            $pid = $e['pid'];
+            if (!isset($state[$pid])) {
+                $state[$pid] = [
+                    'qty' => $fallbackStocks[$pid] ?? 0.0,
+                    'val' => ($fallbackStocks[$pid] ?? 0.0) * ($fallbackCosts[$pid] ?? 0.0),
+                    'cost' => $fallbackCosts[$pid] ?? 0.0
+                ];
             }
-            $dailyData[$date]['sales'] += (float)$sale->line_total;
-            $dailyData[$date]['cost_of_sales'] += (float)$sale->quantity * $getAvgCost($sale->product_id, $date);
-        }
+            $st = &$state[$pid];
+            $dateOnly = substr($e['date'], 0, 10);
+            $inRange = ($e['date'] >= $df);
 
-        foreach ($returns as $ret) {
-            $date = $ret->date;
-            if (!isset($dailyData[$date])) {
-                $dailyData[$date] = ['date' => $date, 'sales' => 0, 'returns' => 0, 'cost_of_sales' => 0, 'cost_of_returns' => 0];
+            if ($inRange && !isset($dailyData[$dateOnly])) {
+                $dailyData[$dateOnly] = ['date' => $dateOnly, 'sales' => 0, 'returns' => 0, 'cost_of_sales' => 0, 'cost_of_returns' => 0];
             }
-            $dailyData[$date]['returns'] += (float)$ret->line_total;
-            $dailyData[$date]['cost_of_returns'] += (float)$ret->quantity * $getAvgCost($ret->product_id, $date);
+
+            if ($e['type'] === 1) { // Buy
+                $st['qty'] += $e['qty'];
+                $st['val'] += $e['val'];
+                if ($st['qty'] > 0) $st['cost'] = $st['val'] / $st['qty'];
+            } elseif ($e['type'] === 4) { // Buy Return
+                $st['qty'] -= $e['qty'];
+                $st['val'] -= $e['qty'] * ($e['val'] / $e['qty']);
+                if ($st['qty'] > 0) $st['cost'] = $st['val'] / $st['qty'];
+            } elseif ($e['type'] === 2) { // Sale
+                $cogs = $e['qty'] * $st['cost'];
+                $st['qty'] -= $e['qty'];
+                $st['val'] -= $cogs;
+                if ($inRange) {
+                    $dailyData[$dateOnly]['sales'] += $e['val'];
+                    $dailyData[$dateOnly]['cost_of_sales'] += $cogs;
+                }
+            } elseif ($e['type'] === 3) { // Sale Return
+                $cor = $e['qty'] * $st['cost'];
+                $st['qty'] += $e['qty'];
+                $st['val'] += $cor;
+                if ($inRange) {
+                    $dailyData[$dateOnly]['returns'] += $e['val'];
+                    $dailyData[$dateOnly]['cost_of_returns'] += $cor;
+                }
+            }
         }
 
         ksort($dailyData);
         $daily = [];
         $monthlyData = [];
-        $totalProfit = 0;
 
         foreach ($dailyData as $date => $data) {
             $netSales = $data['sales'] - $data['returns'];
