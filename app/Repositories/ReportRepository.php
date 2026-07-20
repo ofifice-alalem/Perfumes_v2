@@ -2115,118 +2115,133 @@ class ReportRepository implements ReportRepositoryInterface
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
-        $customersQuery = DB::table('customers')
-            ->when($customerId, fn($q) => $q->where('id', $customerId))
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        // 1. Fetch Invoices First
+        $invoicesQuery = DB::table('invoices')
+            ->whereNull('invoices.deleted_at')
+            ->when($customerId, fn($q) => $q->where('invoices.customer_id', $customerId))
+            ->when($df,     fn($q) => $q->where('invoices.created_at', '>=', $df))
+            ->when($dt,     fn($q) => $q->where('invoices.created_at', '<=', $dt))
+            ->when($userId, fn($q) => $q->where('invoices.user_id', $userId));
 
-        $result = [];
+        if ($paymentMethodId) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('payments')
+                ->whereColumn('payments.invoice_id', 'invoices.id')
+                ->whereNull('payments.deleted_at')
+                ->where('payments.payment_method_id', $paymentMethodId));
+        }
 
-        foreach ($customersQuery as $customer) {
-            $invoicesQuery = DB::table('invoices')
-                ->whereNull('invoices.deleted_at')
-                ->where('invoices.customer_id', $customer->id)
-                ->when($df,     fn($q) => $q->where('invoices.created_at', '>=', $df))
-                ->when($dt,     fn($q) => $q->where('invoices.created_at', '<=', $dt))
-                ->when($userId, fn($q) => $q->where('invoices.user_id', $userId));
+        if ($categoryId) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where('products.category_id', $categoryId));
+        }
 
-            if ($paymentMethodId) {
-                $invoicesQuery->whereExists(fn($q) => $q->from('payments')
-                    ->whereColumn('payments.invoice_id', 'invoices.id')
-                    ->whereNull('payments.deleted_at')
-                    ->where('payments.payment_method_id', $paymentMethodId));
-            }
-
-            if ($categoryId) {
-                $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
-                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
-                    ->whereColumn('invoice_items.invoice_id', 'invoices.id')
-                    ->where('products.category_id', $categoryId));
-            }
-
-            if (!empty($filterProductIds) || !empty($searchName)) {
-                $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
-                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
-                    ->whereColumn('invoice_items.invoice_id', 'invoices.id')
-                    ->where(function($sub) use ($filterProductIds, $searchName) {
-                        if (!empty($filterProductIds)) {
-                            $sub->whereIn('products.id', $filterProductIds);
-                        }
-                        if ($searchName) {
-                            $terms = explode(',', $searchName);
-                            foreach ($terms as $term) {
-                                $term = trim($term);
-                                if ($term !== '') {
-                                    $sub->orWhere('products.name', 'like', '%' . $term . '%');
-                                }
-                            }
-                        }
-                    }));
-            }
-
-            $invoices = $invoicesQuery
-                ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at')
-                ->orderBy('invoices.created_at')
-                ->get();
-
-            if ($invoices->isEmpty()) continue;
-
-            $invoicesList = [];
-            foreach ($invoices as $inv) {
-                $items = DB::table('invoice_items')
-                    ->join('products', 'products.id', '=', 'invoice_items.product_id')
-                    ->where('invoice_items.invoice_id', $inv->id)
-                    ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                    ->select(
-                        'products.id as product_id',
-                        'products.name as product_name',
-                        'invoice_items.unit_price',
-                        DB::raw('MIN(invoice_items.quantity) as quantity'),
-                        DB::raw('COUNT(*) as count'),
-                        DB::raw('SUM(invoice_items.line_total) as line_total')
-                    )
-                    ->groupBy('products.id', 'products.name', 'invoice_items.unit_price')
-                    ->get();
-
-                foreach ($items as $item) {
-                    $isMatched = false;
-                    if (!empty($filterProductIds) || !empty($searchName)) {
-                        if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
-                            $isMatched = true;
-                        } elseif (!empty($searchName)) {
-                            $terms = explode(',', $searchName);
-                            foreach ($terms as $term) {
-                                if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
-                                    $isMatched = true;
-                                    break;
-                                }
+        if (!empty($filterProductIds) || !empty($searchName)) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where(function($sub) use ($filterProductIds, $searchName) {
+                    if (!empty($filterProductIds)) {
+                        $sub->whereIn('products.id', $filterProductIds);
+                    }
+                    if ($searchName) {
+                        $terms = explode(',', $searchName);
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if ($term !== '') {
+                                $sub->orWhere('products.name', 'like', '%' . $term . '%');
                             }
                         }
                     }
-                    $item->is_matched = $isMatched;
-                }
-
-                $invoicesList[] = [
-                    'id'          => $inv->id,
-                    'total'       => (float) $inv->total,
-                    'paid_amount' => (float) $inv->paid_amount,
-                    'due_amount'  => (float) $inv->due_amount,
-                    'date'        => $inv->created_at,
-                    'items'       => $items->toArray(),
-                ];
-            }
-
-            $result[] = [
-                'customer_id'   => $customer->id,
-                'customer_name' => $customer->name,
-                'invoice_count' => count($invoicesList),
-                'total_amount'  => round(array_sum(array_column($invoicesList, 'total')), 2),
-                'total_paid'    => round(array_sum(array_column($invoicesList, 'paid_amount')), 2),
-                'total_due'     => round(array_sum(array_column($invoicesList, 'due_amount')), 2),
-                'invoices'      => $invoicesList,
-            ];
+                }));
         }
 
+        $invoices = $invoicesQuery
+            ->join('customers', 'customers.id', '=', 'invoices.customer_id')
+            ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at', 'customers.id as customer_id', 'customers.name as customer_name')
+            ->orderBy('invoices.created_at')
+            ->get();
+
+        if ($invoices->isEmpty()) return [];
+
+        $invoiceIds = $invoices->pluck('id')->toArray();
+
+        // 2. Fetch ALL matching items for these invoices in ONE query
+        $itemsQuery = DB::table('invoice_items')
+            ->join('products', 'products.id', '=', 'invoice_items.product_id')
+            ->whereIn('invoice_items.invoice_id', $invoiceIds)
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->select(
+                'invoice_items.invoice_id',
+                'products.id as product_id',
+                'products.name as product_name',
+                'invoice_items.unit_price',
+                DB::raw('MIN(invoice_items.quantity) as quantity'),
+                DB::raw('COUNT(*) as count'),
+                DB::raw('SUM(invoice_items.line_total) as line_total')
+            )
+            ->groupBy('invoice_items.invoice_id', 'products.id', 'products.name', 'invoice_items.unit_price')
+            ->get();
+
+        $itemsByInvoice = [];
+        foreach ($itemsQuery as $item) {
+            $isMatched = false;
+            if (!empty($filterProductIds) || !empty($searchName)) {
+                if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                    $isMatched = true;
+                } elseif (!empty($searchName)) {
+                    $terms = explode(',', $searchName);
+                    foreach ($terms as $term) {
+                        if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                            $isMatched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $item->is_matched = $isMatched;
+            
+            $itemsByInvoice[$item->invoice_id][] = (array)$item;
+        }
+
+        $customersData = [];
+        foreach ($invoices as $inv) {
+            $cid = $inv->customer_id;
+            if (!isset($customersData[$cid])) {
+                $customersData[$cid] = [
+                    'customer_id'   => $cid,
+                    'customer_name' => $inv->customer_name,
+                    'invoice_count' => 0,
+                    'total_amount'  => 0,
+                    'total_paid'    => 0,
+                    'total_due'     => 0,
+                    'invoices'      => []
+                ];
+            }
+            
+            $invItems = $itemsByInvoice[$inv->id] ?? [];
+            if (empty($invItems) && $categoryId) {
+                // If category filter was applied, and this invoice has NO items for that category, skip adding to result
+                continue;
+            }
+
+            $customersData[$cid]['invoices'][] = [
+                'id'          => $inv->id,
+                'total'       => (float) $inv->total,
+                'paid_amount' => (float) $inv->paid_amount,
+                'due_amount'  => (float) $inv->due_amount,
+                'date'        => $inv->created_at,
+                'items'       => $invItems,
+            ];
+            
+            $customersData[$cid]['invoice_count']++;
+            $customersData[$cid]['total_amount'] += (float)$inv->total;
+            $customersData[$cid]['total_paid'] += (float)$inv->paid_amount;
+            $customersData[$cid]['total_due'] += (float)$inv->due_amount;
+        }
+
+        $result = array_values($customersData);
         usort($result, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
 
         return $result;
