@@ -1092,46 +1092,103 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('name')
             ->get(['id', 'name', 'opening_balance', 'created_at']);
 
-        return $customersQuery->map(function ($customer) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
+        if ($customersQuery->isEmpty()) return [];
+
+        $customerIds = $customersQuery->pluck('id')->toArray();
+
+        // Helper function to safely get chunks
+        $getChunkedSums = function($table, $sumColumn, $dateCondition = null) use ($customerIds) {
+            $sums = [];
+            foreach (array_chunk($customerIds, 1000) as $chunk) {
+                $query = DB::table($table)->whereNull('deleted_at')->whereIn('customer_id', $chunk);
+                if ($dateCondition) $dateCondition($query);
+                $query->groupBy('customer_id')->selectRaw("customer_id, SUM($sumColumn) as sum_val");
+                foreach ($query->pluck('sum_val', 'customer_id') as $cid => $sum) {
+                    $sums[$cid] = ($sums[$cid] ?? 0) + (float)$sum;
+                }
+            }
+            return $sums;
+        };
+
+        // 1. True Current Debt (>= rolloverDate)
+        $newInvoicedSums = $getChunkedSums('invoices', 'total', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newPaidSums = $getChunkedSums('payments', 'amount', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newSettledSums = $getChunkedSums('settlements', 'amount', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newReturnedSums = $getChunkedSums('invoice_returns', 'total', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+
+        // 2. Report Date Range
+        $totalInvoicedSums = $getChunkedSums('invoices', 'total', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $totalPaidSums = $getChunkedSums('payments', 'amount', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $totalSettledSums = $getChunkedSums('settlements', 'amount', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $totalReturnedSums = $getChunkedSums('invoice_returns', 'total', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+
+        // 3. Future Operations (>= dateFromQuery)
+        $futureInvoicedSums = $getChunkedSums('invoices', 'total', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futurePaidSums = $getChunkedSums('payments', 'amount', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futureSettledSums = $getChunkedSums('settlements', 'amount', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futureReturnedSums = $getChunkedSums('invoice_returns', 'total', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+
+        // Get movements
+        $getChunkedMovements = function($table, $dateCondition) use ($customerIds) {
+            $items = collect();
+            foreach (array_chunk($customerIds, 1000) as $chunk) {
+                $query = DB::table($table)->whereNull('deleted_at')->whereIn('customer_id', $chunk);
+                if ($dateCondition) $dateCondition($query);
+                $query->select('id as ref_id', 'customer_id', ($table == 'payments' || $table == 'settlements' ? 'amount' : 'total as amount'), 'created_at');
+                $items = $items->merge($query->get());
+            }
+            return $items->groupBy('customer_id');
+        };
+
+        $invoicesMovements = $getChunkedMovements('invoices', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $paymentsMovements = $getChunkedMovements('payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $settlementsMovements = $getChunkedMovements('settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $returnsMovements = $getChunkedMovements('invoice_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+
+        // Get Unpaid invoices for aging buckets
+        $unpaidInvoices = collect();
+        foreach (array_chunk($customerIds, 1000) as $chunk) {
+            $unpaidInvoices = $unpaidInvoices->merge(
+                DB::table('invoices')->whereNull('deleted_at')
+                    ->whereIn('customer_id', $chunk)
+                    ->whereIn('payment_status', ['unpaid', 'partial'])
+                    ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                    ->where('created_at', '<=', $dateToQuery)
+                    ->orderBy('created_at')
+                    ->get(['customer_id', 'total', 'paid_amount', 'created_at'])
+            );
+        }
+        $unpaidByCustomer = $unpaidInvoices->groupBy('customer_id');
+
+        return $customersQuery->map(function ($customer) use (
+            $dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory,
+            $newInvoicedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
+            $totalInvoicedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
+            $futureInvoicedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
+            $invoicesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidByCustomer
+        ) {
+            $cid = $customer->id;
 
             // 1. Calculate True Current Debt
-            // True Current Debt = DB opening_balance + Operations AFTER rollover date
             $dbOpeningBalance = (float) $customer->opening_balance;
-            
-            $newInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
-            $newPaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
-            $newSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
-            $newReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
+            $newInvoiced = $newInvoicedSums[$cid] ?? 0.0;
+            $newPaid = $newPaidSums[$cid] ?? 0.0;
+            $newSettled = $newSettledSums[$cid] ?? 0.0;
+            $newReturned = $newReturnedSums[$cid] ?? 0.0;
 
             $trueCurrentDebt = $dbOpeningBalance + ($newInvoiced + $newSettled) - ($newPaid + $newReturned);
 
             // 2. Sum operations in the Report's Date Range
-            $totalInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)->sum('total');
-            $totalPaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
-            $totalSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
-            $totalReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)->sum('total');
+            $totalInvoiced = $totalInvoicedSums[$cid] ?? 0.0;
+            $totalPaid = $totalPaidSums[$cid] ?? 0.0;
+            $totalSettled = $totalSettledSums[$cid] ?? 0.0;
+            $totalReturned = $totalReturnedSums[$cid] ?? 0.0;
 
-            // 3. To find Report Opening Balance, we need sum of ALL operations >= dateFromQuery (up to current)
-            $futureInvoiced = (float) DB::table('invoices')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
-            $futurePaid = (float) DB::table('payments')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
-            $futureSettled = (float) DB::table('settlements')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
-            $futureReturned = (float) DB::table('invoice_returns')->whereNull('deleted_at')->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
+            // 3. Future Operations
+            $futureInvoiced = $futureInvoicedSums[$cid] ?? 0.0;
+            $futurePaid = $futurePaidSums[$cid] ?? 0.0;
+            $futureSettled = $futureSettledSums[$cid] ?? 0.0;
+            $futureReturned = $futureReturnedSums[$cid] ?? 0.0;
 
             $netFutureOperations = ($futureInvoiced + $futureSettled) - ($futurePaid + $futureReturned);
             $reportOpeningBalance = $trueCurrentDebt - $netFutureOperations;
@@ -1170,65 +1227,57 @@ class ReportRepository implements ReportRepositoryInterface
                 ]);
             }
 
-            // فواتير (+)
-            DB::table('invoices')->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->select('id as ref_id', 'total as amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'invoice',
-                    'ref'      => 'INV#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => (float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
-                ]));
+            if (isset($invoicesMovements[$cid])) {
+                foreach ($invoicesMovements[$cid] as $r) {
+                    $movements->push([
+                        'type'     => 'invoice',
+                        'ref'      => 'INV#' . $r->ref_id,
+                        'ref_id'   => $r->ref_id,
+                        'amount'   => (float)$r->amount,
+                        'date'     => $r->created_at,
+                        'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    ]);
+                }
+            }
 
-            // دفعات (-)
-            DB::table('payments')->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
-                ->select('id as ref_id', 'amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'payment',
-                    'ref'      => 'PAY#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => -(float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
-                ]));
+            if (isset($paymentsMovements[$cid])) {
+                foreach ($paymentsMovements[$cid] as $r) {
+                    $movements->push([
+                        'type'     => 'payment',
+                        'ref'      => 'PAY#' . $r->ref_id,
+                        'ref_id'   => $r->ref_id,
+                        'amount'   => -(float)$r->amount,
+                        'date'     => $r->created_at,
+                        'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                    ]);
+                }
+            }
 
-            // تسويات (+)
-            DB::table('settlements')->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
-                ->select('id as ref_id', 'amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'settlement',
-                    'ref'      => 'SET#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => +(float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
-                ]));
+            if (isset($settlementsMovements[$cid])) {
+                foreach ($settlementsMovements[$cid] as $r) {
+                    $movements->push([
+                        'type'     => 'settlement',
+                        'ref'      => 'SET#' . $r->ref_id,
+                        'ref_id'   => $r->ref_id,
+                        'amount'   => +(float)$r->amount,
+                        'date'     => $r->created_at,
+                        'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                    ]);
+                }
+            }
 
-            // مرتجعات (-)
-            DB::table('invoice_returns')->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->select('id as ref_id', 'total as amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'   => 'return',
-                    'ref'    => 'RET#' . $r->ref_id,
-                    'ref_id' => $r->ref_id,
-                    'amount' => -(float)$r->amount,
-                    'date'   => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
-                ]));
+            if (isset($returnsMovements[$cid])) {
+                foreach ($returnsMovements[$cid] as $r) {
+                    $movements->push([
+                        'type'     => 'return',
+                        'ref'      => 'RET#' . $r->ref_id,
+                        'ref_id'   => $r->ref_id,
+                        'amount'   => -(float)$r->amount,
+                        'date'     => $r->created_at,
+                        'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    ]);
+                }
+            }
 
             // ترتيب زمني + رصيد متحرك
             $sorted  = $movements->sortBy('date')->values();
@@ -1238,30 +1287,23 @@ class ReportRepository implements ReportRepositoryInterface
                 return array_merge($m, ['balance' => round($balance, 2)]);
             })->values()->toArray();
 
-            // تصنيف عمر الدين — توزيع الدين الحقيقي على الفواتير من الأقدم للأحدث
-            $unpaidInvoices = DB::table('invoices')->whereNull('deleted_at')
-                ->where('customer_id', $customer->id)
-                ->whereIn('payment_status', ['unpaid', 'partial'])
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->orderBy('created_at')
-                ->get(['total', 'paid_amount', 'created_at']);
-
+            // تصنيف عمر الدين
             $current = $days30_60 = $days60_90 = $over90 = 0.0;
-            $remainingDebt = $totalDebt; // الدين الحقيقي للتوزيع
+            $remainingDebt = $totalDebt;
 
-            foreach ($unpaidInvoices as $inv) {
-                if ($remainingDebt <= 0) break;
-                $due  = min((float)$inv->total - (float)$inv->paid_amount, $remainingDebt);
-                if ($due <= 0) continue;
-                $days = (int) \Carbon\Carbon::parse($inv->created_at)->diffInDays($dateToCarbon);
-                if      ($days < 30) $current   += $due;
-                elseif  ($days < 60) $days30_60 += $due;
-                elseif  ($days < 90) $days60_90 += $due;
-                else                 $over90    += $due;
-                $remainingDebt -= $due;
+            if (isset($unpaidByCustomer[$cid])) {
+                foreach ($unpaidByCustomer[$cid] as $inv) {
+                    if ($remainingDebt <= 0) break;
+                    $due  = min((float)$inv->total - (float)$inv->paid_amount, $remainingDebt);
+                    if ($due <= 0) continue;
+                    $days = (int) \Carbon\Carbon::parse($inv->created_at)->diffInDays($dateToCarbon);
+                    if      ($days < 30) $current   += $due;
+                    elseif  ($days < 60) $days30_60 += $due;
+                    elseif  ($days < 90) $days60_90 += $due;
+                    else                 $over90    += $due;
+                    $remainingDebt -= $due;
+                }
             }
-            // أي رصيد متبقي لم يُغطَّ بفاتورة unpaid يُضاف لـ current
             if ($remainingDebt > 0) $current += $remainingDebt;
 
             return [
@@ -1480,45 +1522,103 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('name')
             ->get(['id', 'name', 'opening_balance', 'created_at']);
 
-        return $suppliersQuery->map(function ($supplier) use ($dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory) {
+        if ($suppliersQuery->isEmpty()) return [];
+
+        $supplierIds = $suppliersQuery->pluck('id')->toArray();
+
+        // Helper function to safely get chunks
+        $getChunkedSums = function($table, $sumColumn, $dateCondition = null) use ($supplierIds) {
+            $sums = [];
+            foreach (array_chunk($supplierIds, 1000) as $chunk) {
+                $query = DB::table($table)->whereNull('deleted_at')->whereIn('supplier_id', $chunk);
+                if ($dateCondition) $dateCondition($query);
+                $query->groupBy('supplier_id')->selectRaw("supplier_id, SUM($sumColumn) as sum_val");
+                foreach ($query->pluck('sum_val', 'supplier_id') as $sid => $sum) {
+                    $sums[$sid] = ($sums[$sid] ?? 0) + (float)$sum;
+                }
+            }
+            return $sums;
+        };
+
+        // 1. True Current Debt (>= rolloverDate)
+        $newPurchasedSums = $getChunkedSums('purchases', 'total', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newPaidSums = $getChunkedSums('supplier_payments', 'amount', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newSettledSums = $getChunkedSums('supplier_settlements', 'amount', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+        $newReturnedSums = $getChunkedSums('purchase_returns', 'total', fn($q) => $rolloverDate ? $q->where('created_at', '>=', $rolloverDate) : null);
+
+        // 2. Report Date Range
+        $totalPurchasedSums = $getChunkedSums('purchases', 'total', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $totalPaidSums = $getChunkedSums('supplier_payments', 'amount', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $totalSettledSums = $getChunkedSums('supplier_settlements', 'amount', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $totalReturnedSums = $getChunkedSums('purchase_returns', 'total', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+
+        // 3. Future Operations (>= dateFromQuery)
+        $futurePurchasedSums = $getChunkedSums('purchases', 'total', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futurePaidSums = $getChunkedSums('supplier_payments', 'amount', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futureSettledSums = $getChunkedSums('supplier_settlements', 'amount', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+        $futureReturnedSums = $getChunkedSums('purchase_returns', 'total', fn($q) => $dateFromQuery ? $q->where('created_at', '>=', $dateFromQuery) : null);
+
+        // Get movements
+        $getChunkedMovements = function($table, $dateCondition) use ($supplierIds) {
+            $items = collect();
+            foreach (array_chunk($supplierIds, 1000) as $chunk) {
+                $query = DB::table($table)->whereNull('deleted_at')->whereIn('supplier_id', $chunk);
+                if ($dateCondition) $dateCondition($query);
+                $query->select('id as ref_id', 'supplier_id', ($table == 'supplier_payments' || $table == 'supplier_settlements' ? 'amount' : 'total as amount'), 'created_at');
+                $items = $items->merge($query->get());
+            }
+            return $items->groupBy('supplier_id');
+        };
+
+        $purchasesMovements = $getChunkedMovements('purchases', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $paymentsMovements = $getChunkedMovements('supplier_payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $settlementsMovements = $getChunkedMovements('supplier_settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $returnsMovements = $getChunkedMovements('purchase_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+
+        // Get Unpaid purchases for aging buckets
+        $unpaidPurchases = collect();
+        foreach (array_chunk($supplierIds, 1000) as $chunk) {
+            $unpaidPurchases = $unpaidPurchases->merge(
+                DB::table('purchases')->whereNull('deleted_at')
+                    ->whereIn('supplier_id', $chunk)
+                    ->whereIn('payment_status', ['unpaid', 'partial'])
+                    ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
+                    ->where('created_at', '<=', $dateToQuery)
+                    ->orderBy('created_at')
+                    ->get(['supplier_id', 'total', 'paid_amount', 'created_at'])
+            );
+        }
+        $unpaidBySupplier = $unpaidPurchases->groupBy('supplier_id');
+
+        return $suppliersQuery->map(function ($supplier) use (
+            $dateFromQuery, $dateToQuery, $dateToCarbon, $latestSnapshot, $rolloverDate, $showAllHistory,
+            $newPurchasedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
+            $totalPurchasedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
+            $futurePurchasedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
+            $purchasesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidBySupplier
+        ) {
+            $sid = $supplier->id;
 
             // 1. Calculate True Current Debt
             $dbOpeningBalance = (float) $supplier->opening_balance;
-            
-            $newPurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
-            $newPaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
-            $newSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('amount');
-            $newReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($rolloverDate, fn($q) => $q->where('created_at', '>=', $rolloverDate))->sum('total');
+            $newPurchased = $newPurchasedSums[$sid] ?? 0.0;
+            $newPaid = $newPaidSums[$sid] ?? 0.0;
+            $newSettled = $newSettledSums[$sid] ?? 0.0;
+            $newReturned = $newReturnedSums[$sid] ?? 0.0;
 
             $trueCurrentDebt = $dbOpeningBalance + ($newPurchased + $newSettled) - ($newPaid + $newReturned);
 
             // 2. Sum operations in the Report's Date Range
-            $totalPurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)->sum('total');
-            $totalPaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
-            $totalSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))->sum('amount');
-            $totalReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)->sum('total');
+            $totalPurchased = $totalPurchasedSums[$sid] ?? 0.0;
+            $totalPaid = $totalPaidSums[$sid] ?? 0.0;
+            $totalSettled = $totalSettledSums[$sid] ?? 0.0;
+            $totalReturned = $totalReturnedSums[$sid] ?? 0.0;
 
-            // 3. To find Report Opening Balance
-            $futurePurchased = (float) DB::table('purchases')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
-            $futurePaid = (float) DB::table('supplier_payments')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
-            $futureSettled = (float) DB::table('supplier_settlements')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('amount');
-            $futureReturned = (float) DB::table('purchase_returns')->whereNull('deleted_at')->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->sum('total');
+            // 3. Future Operations
+            $futurePurchased = $futurePurchasedSums[$sid] ?? 0.0;
+            $futurePaid = $futurePaidSums[$sid] ?? 0.0;
+            $futureSettled = $futureSettledSums[$sid] ?? 0.0;
+            $futureReturned = $futureReturnedSums[$sid] ?? 0.0;
 
             $netFutureOperations = ($futurePurchased + $futureSettled) - ($futurePaid + $futureReturned);
             $reportOpeningBalance = $trueCurrentDebt - $netFutureOperations;
@@ -1552,70 +1652,61 @@ class ReportRepository implements ReportRepositoryInterface
                     'ref_id' => null,
                     'amount' => $reportOpeningBalance,
                     'date'   => $balanceDate,
+                    'days_old' => null,
                 ]);
             }
 
+            if (isset($purchasesMovements[$sid])) {
+                foreach ($purchasesMovements[$sid] as $r) {
+                    $movements->push([
+                        'type'   => 'purchase',
+                        'ref'    => 'PUR#' . $r->ref_id,
+                        'ref_id' => $r->ref_id,
+                        'amount' => (float)$r->amount,
+                        'date'   => $r->created_at,
+                        'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    ]);
+                }
+            }
 
+            if (isset($paymentsMovements[$sid])) {
+                foreach ($paymentsMovements[$sid] as $r) {
+                    $movements->push([
+                        'type'   => 'payment',
+                        'ref'    => 'PAY#' . $r->ref_id,
+                        'ref_id' => $r->ref_id,
+                        'amount' => -(float)$r->amount,
+                        'date'   => $r->created_at,
+                        'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                    ]);
+                }
+            }
 
-            // مشتريات (+)
-            DB::table('purchases')->whereNull('deleted_at')
-                ->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->select('id as ref_id', 'total as amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'purchase',
-                    'ref'      => 'PO#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => (float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
-                ]));
+            if (isset($settlementsMovements[$sid])) {
+                foreach ($settlementsMovements[$sid] as $r) {
+                    $movements->push([
+                        'type'   => 'settlement',
+                        'ref'    => 'SET#' . $r->ref_id,
+                        'ref_id' => $r->ref_id,
+                        'amount' => +(float)$r->amount,
+                        'date'   => $r->created_at,
+                        'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
+                    ]);
+                }
+            }
 
-            // دفعات (-)
-            DB::table('supplier_payments')->whereNull('deleted_at')
-                ->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
-                ->select('id as ref_id', 'amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'payment',
-                    'ref'      => 'PAY#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => -(float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
-                ]));
-
-            // تسويات (+)
-            DB::table('supplier_settlements')->whereNull('deleted_at')
-                ->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))
-                ->select('id as ref_id', 'amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'settlement',
-                    'ref'      => 'SET#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => +(float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => $r->created_at ? (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon) : null,
-                ]));
-
-            // مرتجعات (-)
-            DB::table('purchase_returns')->whereNull('deleted_at')
-                ->where('supplier_id', $supplier->id)
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->select('id as ref_id', 'total as amount', 'created_at')
-                ->get()->each(fn($r) => $movements->push([
-                    'type'     => 'return',
-                    'ref'      => 'RET#' . $r->ref_id,
-                    'ref_id'   => $r->ref_id,
-                    'amount'   => -(float)$r->amount,
-                    'date'     => $r->created_at,
-                    'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
-                ]));
+            if (isset($returnsMovements[$sid])) {
+                foreach ($returnsMovements[$sid] as $r) {
+                    $movements->push([
+                        'type'   => 'return',
+                        'ref'    => 'RET#' . $r->ref_id,
+                        'ref_id' => $r->ref_id,
+                        'amount' => -(float)$r->amount,
+                        'date'   => $r->created_at,
+                        'days_old' => (int) \Carbon\Carbon::parse($r->created_at)->diffInDays($dateToCarbon),
+                    ]);
+                }
+            }
 
             $sorted  = $movements->sortBy('date')->values();
             $balance = 0.0;
@@ -1624,26 +1715,21 @@ class ReportRepository implements ReportRepositoryInterface
                 return array_merge($m, ['balance' => round($balance, 2)]);
             })->values()->toArray();
 
-            $unpaidPurchases = DB::table('purchases')->whereNull('deleted_at')
-                ->where('supplier_id', $supplier->id)
-                ->whereIn('payment_status', ['unpaid', 'partial'])
-                ->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))
-                ->where('created_at', '<=', $dateToQuery)
-                ->orderBy('created_at')
-                ->get(['total', 'paid_amount', 'created_at']);
-
             $current = $days30_60 = $days60_90 = $over90 = 0.0;
             $remainingDebt = $totalDebt;
-            foreach ($unpaidPurchases as $p) {
-                if ($remainingDebt <= 0) break;
-                $due  = min((float)$p->total - (float)$p->paid_amount, $remainingDebt);
-                if ($due <= 0) continue;
-                $days = (int) \Carbon\Carbon::parse($p->created_at)->diffInDays($dateToCarbon);
-                if      ($days < 30) $current   += $due;
-                elseif  ($days < 60) $days30_60 += $due;
-                elseif  ($days < 90) $days60_90 += $due;
-                else                 $over90    += $due;
-                $remainingDebt -= $due;
+            
+            if (isset($unpaidBySupplier[$sid])) {
+                foreach ($unpaidBySupplier[$sid] as $p) {
+                    if ($remainingDebt <= 0) break;
+                    $due  = min((float)$p->total - (float)$p->paid_amount, $remainingDebt);
+                    if ($due <= 0) continue;
+                    $days = (int) \Carbon\Carbon::parse($p->created_at)->diffInDays($dateToCarbon);
+                    if      ($days < 30) $current   += $due;
+                    elseif  ($days < 60) $days30_60 += $due;
+                    elseif  ($days < 90) $days60_90 += $due;
+                    else                 $over90    += $due;
+                    $remainingDebt -= $due;
+                }
             }
             if ($remainingDebt > 0) $current += $remainingDebt;
 
