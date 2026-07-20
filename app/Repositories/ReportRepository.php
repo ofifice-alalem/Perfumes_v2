@@ -2293,6 +2293,25 @@ class ReportRepository implements ReportRepositoryInterface
             ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
+        $isWhole = fn($n) => $n == floor($n);
+        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $matchedTotal = 0;
+        foreach ($data as $entry) {
+            foreach ($entry['invoices'] as $inv) {
+                foreach ($inv['items'] as $item) {
+                    $itemArray = (array) $item;
+                    if (!empty($itemArray['is_matched'])) {
+                        $matchedTotal += (float) $itemArray['line_total'];
+                    }
+                }
+            }
+        }
+
+        if ($matchedTotal > 0) {
+            $infoRows[] = ['إجمالي نتائج البحث', $fmtN($matchedTotal)];
+        }
+
         foreach ($infoRows as $info) {
             $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
             $sheet->fromArray($cells, null, 'A' . $row);
@@ -2306,8 +2325,6 @@ class ReportRepository implements ReportRepositoryInterface
         }
         $row++;
 
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
         foreach ($data as $entry) {
             // رأس العميل
@@ -2382,6 +2399,26 @@ class ReportRepository implements ReportRepositoryInterface
             $row += 2;
         }
 
+        if ($matchedTotal > 0) {
+            $sheet->fromArray(['إجمالي نتائج البحث', '', '', '', $fmtN($matchedTotal)], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                'font'    => ['bold' => true, 'color' => ['rgb' => 'D97706'], 'size' => 15],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $sheet->fromArray(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
+            'font'    => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+        $row++;
+
+
         foreach (range('A', 'E') as $col)
             $sheet->getColumnDimension($col)->setAutoSize(true);
 
@@ -2430,6 +2467,18 @@ class ReportRepository implements ReportRepositoryInterface
         $grandAmount = array_sum(array_column($data, 'total_amount'));
         $grandCount  = array_sum(array_column($data, 'invoice_count'));
 
+        $matchedTotal = 0;
+        foreach ($data as $entry) {
+            foreach ($entry['invoices'] as $inv) {
+                foreach ($inv['items'] as $item) {
+                    $itemArray = (array) $item;
+                    if (!empty($itemArray['is_matched'])) {
+                        $matchedTotal += (float) $itemArray['line_total'];
+                    }
+                }
+            }
+        }
+
         $labels = [
             'title'          => $g('فواتير العملاء التفصيلية'),
             'dateFrom'       => $dateFrom ?? $g('البداية'),
@@ -2458,6 +2507,8 @@ class ReportRepository implements ReportRepositoryInterface
             'invoices_label' => $g('عدد الفواتير'),
             'customers_label'=> $g('عدد العملاء'),
             'date_label'     => $g('التاريخ'),
+            'matchedTotal'   => $matchedTotal,
+            'matchedTotalLabel' => $g('إجمالي نتائج البحث'),
             'totalPages'     => 1,
         ];
 
@@ -2828,6 +2879,22 @@ class ReportRepository implements ReportRepositoryInterface
             ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
+        $matchedTotal = 0;
+        foreach ($data as $entry) {
+            foreach ($entry['purchases'] as $inv) {
+                foreach ($inv['items'] as $item) {
+                    $itemArray = (array) $item;
+                    if (!empty($itemArray['is_matched'])) {
+                        $matchedTotal += (float) ($itemArray['quantity'] * $itemArray['count'] * $itemArray['unit_cost']);
+                    }
+                }
+            }
+        }
+
+        if ($matchedTotal > 0) {
+            $infoRows[] = ['إجمالي نتائج البحث', $fmtN($matchedTotal)];
+        }
+
         foreach ($infoRows as $info) {
             $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
             $sheet->fromArray($cells, null, 'A' . $row);
@@ -2910,6 +2977,25 @@ class ReportRepository implements ReportRepositoryInterface
             $row += 2;
         }
 
+        if ($matchedTotal > 0) {
+            $sheet->fromArray(['إجمالي نتائج البحث', '', '', '', $fmtN($matchedTotal)], null, 'A' . $row);
+            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
+                'font'    => ['bold' => true, 'color' => ['rgb' => 'D97706'], 'size' => 15],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+            ]);
+            $row++;
+        }
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $sheet->fromArray(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], null, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
+            'font'    => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
+        ]);
+        $row++;
+
         foreach (range('A', 'E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -2953,6 +3039,18 @@ class ReportRepository implements ReportRepositoryInterface
 
         $grandAmount = array_sum(array_column($data, 'total_amount'));
         $grandCount  = array_sum(array_column($data, 'purchase_count'));
+
+        $matchedTotal = 0;
+        foreach ($data as $entry) {
+            foreach ($entry['purchases'] as $inv) {
+                foreach ($inv['items'] as $item) {
+                    $itemArray = (array) $item;
+                    if (!empty($itemArray['is_matched'])) {
+                        $matchedTotal += (float) ($itemArray['quantity'] * $itemArray['count'] * $itemArray['unit_cost']);
+                    }
+                }
+            }
+        }
 
         $labels = [
             'title'           => $g('فواتير الموردين التفصيلية'),

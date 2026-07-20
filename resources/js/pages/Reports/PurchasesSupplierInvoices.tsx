@@ -9,7 +9,7 @@ interface User     { id: number; name: string; }
 interface Supplier { id: number; name: string; }
 interface Category { id: number; name: string; }
 
-interface PurchaseItem { product_name: string; quantity: number; unit_cost: number; count: number; }
+interface PurchaseItem { product_name: string; quantity: number; unit_cost: number; count: number; is_matched?: boolean; }
 interface Purchase     { id: number; total: number; date: string; items: PurchaseItem[]; }
 interface SupplierEntry {
     supplier_id: number; supplier_name: string;
@@ -80,6 +80,15 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
 
     const grandTotal = data.reduce((s, e) => s + e.total_amount, 0);
     const grandCount = data.reduce((s, e) => s + e.purchase_count, 0);
+
+    const hasMatchedItems = data.some(s => s.purchases.some(p => p.items.some(item => item.is_matched)));
+    const matchedTotal = data.reduce((sum, supplier) => 
+        sum + supplier.purchases.reduce((pSum, p) => 
+            pSum + p.items.reduce((itemSum, item) => 
+                itemSum + (item.is_matched ? (Number(item.quantity) * Number(item.count) * Number(item.unit_cost)) : 0)
+            , 0)
+        , 0)
+    , 0);
 
     const FilterPanel = () => (
         <div className="flex flex-col gap-4">
@@ -164,7 +173,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                             </SpatialCard>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className={`grid ${hasMatchedItems ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
                             <div className="spatial-card p-4 flex flex-col gap-1">
                                 <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد الموردين</p>
                                 <p className="text-2xl font-black text-slate-800 dark:text-white">{data.length}</p>
@@ -173,6 +182,12 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                 <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد الفواتير</p>
                                 <p className="text-2xl font-black text-slate-800 dark:text-white">{grandCount}</p>
                             </div>
+                            {hasMatchedItems && (
+                                <div className="spatial-card p-4 flex flex-col gap-1 bg-amber-500/10 border-amber-500/20">
+                                    <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1"><Star className="w-3.5 h-3.5 fill-amber-500" /> إجمالي نتائج البحث</p>
+                                    <p className="text-2xl font-black text-amber-700 dark:text-amber-300">{fmt(matchedTotal)}</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -308,6 +323,12 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                         </div>
                                     ))}
 
+                                    {hasMatchedItems && (
+                                        <div className="flex items-center justify-between px-4 py-3 bg-amber-50/50 dark:bg-amber-500/10 border-b border-black/5 dark:border-white/5">
+                                            <p className="font-black text-amber-600 dark:text-amber-400 text-xs uppercase flex items-center gap-1.5"><Star className="w-3.5 h-3.5 fill-amber-500" /> إجمالي نتائج البحث</p>
+                                            <p className="font-black text-amber-700 dark:text-amber-300">{fmt(matchedTotal)}</p>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between px-4 py-3 bg-black/3 dark:bg-white/3">
                                         <p className="font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي الكلي</p>
                                         <p className="font-black text-slate-800 dark:text-white">{fmt(grandTotal)}</p>

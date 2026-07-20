@@ -130,6 +130,12 @@
 
     <table class="cover-summary">
         <tr>
+            @if(isset($labels['matchedTotal']) && $labels['matchedTotal'] > 0)
+            <td style="background-color: #FEF3C7; border-left: 1px solid #e2e8f0;">
+                <span class="cs-label" style="color: #D97706;">★ {{ $labels['matchedTotalLabel'] }}</span>
+                <span class="cs-value" style="color: #B45309;">{{ $fmtN($labels['matchedTotal']) }}</span>
+            </td>
+            @endif
             <td>
                 <span class="cs-label">{{ $labels['total'] }}</span>
                 <span class="cs-value">{{ $fmtN($labels['grandAmount']) }}</span>
