@@ -2166,23 +2166,29 @@ class ReportRepository implements ReportRepositoryInterface
         if ($invoices->isEmpty()) return [];
 
         $invoiceIds = $invoices->pluck('id')->toArray();
+        $invoiceIdChunks = array_chunk($invoiceIds, 5000);
 
-        // 2. Fetch ALL matching items for these invoices in ONE query
-        $itemsQuery = DB::table('invoice_items')
-            ->join('products', 'products.id', '=', 'invoice_items.product_id')
-            ->whereIn('invoice_items.invoice_id', $invoiceIds)
-            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-            ->select(
-                'invoice_items.invoice_id',
-                'products.id as product_id',
-                'products.name as product_name',
-                'invoice_items.unit_price',
-                DB::raw('MIN(invoice_items.quantity) as quantity'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(invoice_items.line_total) as line_total')
-            )
-            ->groupBy('invoice_items.invoice_id', 'products.id', 'products.name', 'invoice_items.unit_price')
-            ->get();
+        // 2. Fetch ALL matching items for these invoices in chunked queries
+        $itemsQuery = collect();
+        foreach ($invoiceIdChunks as $chunk) {
+            $chunkItems = DB::table('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereIn('invoice_items.invoice_id', $chunk)
+                ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                ->select(
+                    'invoice_items.invoice_id',
+                    'products.id as product_id',
+                    'products.name as product_name',
+                    'invoice_items.unit_price',
+                    DB::raw('MIN(invoice_items.quantity) as quantity'),
+                    DB::raw('COUNT(*) as count'),
+                    DB::raw('SUM(invoice_items.line_total) as line_total')
+                )
+                ->groupBy('invoice_items.invoice_id', 'products.id', 'products.name', 'invoice_items.unit_price')
+                ->get();
+            
+            $itemsQuery = $itemsQuery->merge($chunkItems);
+        }
 
         $itemsByInvoice = [];
         foreach ($itemsQuery as $item) {
@@ -2774,22 +2780,28 @@ class ReportRepository implements ReportRepositoryInterface
         if ($purchases->isEmpty()) return [];
 
         $purchaseIds = $purchases->pluck('id')->toArray();
+        $purchaseIdChunks = array_chunk($purchaseIds, 5000);
 
-        // 2. Fetch ALL matching items for these purchases in ONE query
-        $itemsQuery = DB::table('purchase_items')
-            ->join('products', 'products.id', '=', 'purchase_items.product_id')
-            ->whereIn('purchase_items.purchase_id', $purchaseIds)
-            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-            ->select(
-                'purchase_items.purchase_id',
-                'products.id as product_id',
-                'products.name as product_name',
-                'purchase_items.unit_cost',
-                DB::raw('MIN(purchase_items.quantity) as quantity'),
-                DB::raw('COUNT(*) as count')
-            )
-            ->groupBy('purchase_items.purchase_id', 'products.id', 'products.name', 'purchase_items.unit_cost')
-            ->get();
+        // 2. Fetch ALL matching items for these purchases in chunked queries
+        $itemsQuery = collect();
+        foreach ($purchaseIdChunks as $chunk) {
+            $chunkItems = DB::table('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereIn('purchase_items.purchase_id', $chunk)
+                ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+                ->select(
+                    'purchase_items.purchase_id',
+                    'products.id as product_id',
+                    'products.name as product_name',
+                    'purchase_items.unit_cost',
+                    DB::raw('MIN(purchase_items.quantity) as quantity'),
+                    DB::raw('COUNT(*) as count')
+                )
+                ->groupBy('purchase_items.purchase_id', 'products.id', 'products.name', 'purchase_items.unit_cost')
+                ->get();
+                
+            $itemsQuery = $itemsQuery->merge($chunkItems);
+        }
 
         $itemsByPurchase = [];
         foreach ($itemsQuery as $item) {
