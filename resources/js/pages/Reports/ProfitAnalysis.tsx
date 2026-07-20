@@ -67,7 +67,8 @@ interface Props {
         searchName?: string;
         stockSearchName?: string;
         activeTab?: 'daily' | 'stock_profit';
-    }
+    };
+    hasSearched: boolean;
 }
 
 function fmt(n: number | null): string {
@@ -78,7 +79,7 @@ function fmt(n: number | null): string {
         : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, products, filters }: Props) {
+export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, products, filters, hasSearched }: Props) {
     const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>(filters.activeTab ?? 'daily');
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -211,233 +212,247 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                     <div className="flex-1 min-w-0 flex flex-col gap-6">
 
                     {activeTab === 'daily' && (<>
-                        <div className="spatial-card p-6 flex flex-col gap-2 border border-primary/20 bg-primary/5">
-                            <p className="text-sm font-black text-primary uppercase tracking-widest">صافي الربح للفترة المحددة</p>
-                            <p className="text-4xl font-black text-primary">{fmt(profitSummary.total_profit)} <span className="text-lg">د.ل</span></p>
-                        </div>
+                        {!hasSearched ? (
+                            <div className="flex flex-col items-center justify-center py-32 text-slate-400 dark:text-white/30 gap-4">
+                                <Search className="w-16 h-16 opacity-30" />
+                                <p className="font-black text-xl">الرجاء تحديد التواريخ والضغط على "عرض التقرير"</p>
+                            </div>
+                        ) : (<>
+                            <div className="spatial-card p-6 flex flex-col gap-2 border border-primary/20 bg-primary/5">
+                                <p className="text-sm font-black text-primary uppercase tracking-widest">صافي الربح للفترة المحددة</p>
+                                <p className="text-4xl font-black text-primary">{fmt(profitSummary.total_profit)} <span className="text-lg">د.ل</span></p>
+                            </div>
 
-                        {profitSummary.included_products && profitSummary.included_products.length > 0 && (
-                            <SpatialCard title={`المنتجات المشمولة في الحساب (${profitSummary.included_products.length})`} icon={<FileText className="w-4 h-4" />}>
-                                <div className="flex flex-wrap gap-2">
-                                    {profitSummary.included_products.map(p => (
-                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
-                                            {p.name}
-                                        </span>
-                                    ))}
-                                </div>
+                            {profitSummary.included_products && profitSummary.included_products.length > 0 && (
+                                <SpatialCard title={`المنتجات المشمولة في الحساب (${profitSummary.included_products.length})`} icon={<FileText className="w-4 h-4" />}>
+                                    <div className="flex flex-wrap gap-2">
+                                        {profitSummary.included_products.map(p => (
+                                            <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                                {p.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </SpatialCard>
+                            )}
+
+                            {/* Daily Table */}
+                            <SpatialCard 
+                                title={`التفصيل الشهري للأرباح (${profitSummary.monthly.length} شهر)`} 
+                                icon={<TrendingUp className="w-4 h-4" />}
+                                action={
+                                    <div className="flex items-center gap-2">
+                                        <a href={buildDailyExportUrl('excel')} target="_blank"
+                                            className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
+                                            title="تصدير إكسيل"
+                                        >
+                                            <FileSpreadsheet className="w-4 h-4" />
+                                        </a>
+                                        <a href={buildDailyExportUrl('pdf')} target="_blank"
+                                            className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
+                                            title="تصدير PDF"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                }
+                            >
+                                {profitSummary.monthly.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
+                                        <TrendingUp className="w-12 h-12 opacity-30" />
+                                        <p className="font-bold">لا توجد مبيعات في هذه الفترة</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-[16px]">
+                                            <thead>
+                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                    {['الشهر', 'صافي المبيعات', 'الربح', ''].map(h => (
+                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                {profitSummary.monthly.map(m => (
+                                                    <React.Fragment key={m.month}>
+                                                        <tr className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
+                                                            <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{m.month}</td>
+                                                            <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(m.net_sales)}</td>
+                                                            <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">{fmt(m.profit)}</td>
+                                                            <td className="px-4 py-4">
+                                                                <button onClick={() => toggleExpand(m.month)}
+                                                                    className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
+                                                                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(m.month) ? 'rotate-90' : ''}`} />
+                                                                    تفاصيل
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                        {expanded.has(m.month) && (
+                                                            <tr>
+                                                                <td colSpan={4} className="px-6 py-4 bg-black/2 dark:bg-white/2 rounded-[16px] my-2">
+                                                                    <table className="w-full text-[15px]">
+                                                                        <thead>
+                                                                            <tr className="border-b border-black/5 dark:border-white/5">
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">التاريخ</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">المبيعات</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">المرتجعات</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">صافي البيع</th>
+                                                                                <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الربح</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                                                            {m.days.map((d, i) => (
+                                                                                <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
+                                                                                    <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
+                                                                                    <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.sales)}</td>
+                                                                                    <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.returns)}</td>
+                                                                                    <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(d.net_sales)}</td>
+                                                                                    <td className={`py-3 px-4 font-black ${d.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{fmt(d.profit)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </React.Fragment>
+                                                ))}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="border-t-2 border-black/10 dark:border-white/10">
+                                                    <td className="px-4 py-4 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">
+                                                        {fmt(profitSummary.monthly.reduce((a, b) => a + b.net_sales, 0))}
+                                                    </td>
+                                                    <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">
+                                                        {fmt(profitSummary.total_profit)}
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                )}
                             </SpatialCard>
-                        )}
+                        </>)}
+                    </>)}
 
-                        {/* Daily Table */}
-                        <SpatialCard 
-                            title={`التفصيل الشهري للأرباح (${profitSummary.monthly.length} شهر)`} 
-                            icon={<TrendingUp className="w-4 h-4" />}
-                            action={
-                                <div className="flex items-center gap-2">
-                                    <a href={buildDailyExportUrl('excel')} target="_blank"
-                                        className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
-                                        title="تصدير إكسيل"
-                                    >
-                                        <FileSpreadsheet className="w-4 h-4" />
-                                    </a>
-                                    <a href={buildDailyExportUrl('pdf')} target="_blank"
-                                        className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
-                                        title="تصدير PDF"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                    </a>
-                                </div>
-                            }
-                        >
-                            {profitSummary.monthly.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
-                                    <TrendingUp className="w-12 h-12 opacity-30" />
-                                    <p className="font-bold">لا توجد مبيعات في هذه الفترة</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
+                    {activeTab === 'stock_profit' && (<>
+                        {!hasSearched ? (
+                            <div className="flex flex-col items-center justify-center py-32 text-slate-400 dark:text-white/30 gap-4">
+                                <Search className="w-16 h-16 opacity-30" />
+                                <p className="font-black text-xl">الرجاء تحديد الفلاتر والضغط على "عرض التقرير"</p>
+                            </div>
+                        ) : (<>
+                            <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 rounded-[16px]">
+                                <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
+                                <p className="text-xl font-black text-primary">
+                                    {fmt(stockProfitData.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
+                                </p>
+                            </div>
+
+                            {displayData && displayData.length > 0 && (
+                                <SpatialCard title={`المنتجات المشمولة في الحساب (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
+                                    <div className="flex flex-wrap gap-2">
+                                        {displayData.map(p => (
+                                            <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                                                {p.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </SpatialCard>
+                            )}
+
+                            <SpatialCard 
+                                title={`تقرير الأرباح (${displayData.length})`} 
+                                icon={<FileText className="w-4 h-4" />}
+                                action={
+                                    <div className="flex items-center gap-2">
+                                        <a href={buildStockExportUrl('excel')} target="_blank"
+                                            className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
+                                            title="تصدير إكسيل"
+                                        >
+                                            <FileSpreadsheet className="w-4 h-4" />
+                                        </a>
+                                        <a href={buildStockExportUrl('pdf')} target="_blank"
+                                            className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
+                                            title="تصدير PDF"
+                                        >
+                                            <Download className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                }
+                            >
+                                <div className="hidden lg:block overflow-x-auto">
                                     <table className="w-full text-[16px]">
                                         <thead>
                                             <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                {['الشهر', 'صافي المبيعات', 'الربح', ''].map(h => (
-                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
+                                                {(compactView
+                                                    ? ['المنتج','متوسط شراء','متوسط بيع','صافي كمية المبيعات','الربح']
+                                                    : ['المنتج','اجمالي المشتراه','اجمالي المخزون','اجمالي المبيعات','اجمالي التالف','مرتجع مورد','متوسط ارجاع المورد','مرتجع زبائن','متوسط ارجاع الزبائن','متوسط شراء','متوسط بيع','الربح']
+                                                ).map(h => (
+                                                    <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {profitSummary.monthly.map(m => (
-                                                <React.Fragment key={m.month}>
-                                                    <tr className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
-                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{m.month}</td>
-                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{fmt(m.net_sales)}</td>
-                                                        <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">{fmt(m.profit)}</td>
-                                                        <td className="px-4 py-4">
-                                                            <button onClick={() => toggleExpand(m.month)}
-                                                                className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
-                                                                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(m.month) ? 'rotate-90' : ''}`} />
-                                                                تفاصيل
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    {expanded.has(m.month) && (
-                                                        <tr>
-                                                            <td colSpan={4} className="px-6 py-4 bg-black/2 dark:bg-white/2 rounded-[16px] my-2">
-                                                                <table className="w-full text-[15px]">
-                                                                    <thead>
-                                                                        <tr className="border-b border-black/5 dark:border-white/5">
-                                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">التاريخ</th>
-                                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">المبيعات</th>
-                                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">المرتجعات</th>
-                                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">صافي البيع</th>
-                                                                            <th className="text-right py-3 px-4 font-black text-slate-500 dark:text-white/40 text-sm uppercase tracking-widest">الربح</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                                        {m.days.map((d, i) => (
-                                                                            <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group">
-                                                                                <td className="py-3 px-4 font-bold text-slate-600 dark:text-white/60">{d.date}</td>
-                                                                                <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.sales)}</td>
-                                                                                <td className="py-3 px-4 font-bold text-slate-500 dark:text-white/50">{fmt(d.returns)}</td>
-                                                                                <td className="py-3 px-4 font-black text-slate-800 dark:text-white">{fmt(d.net_sales)}</td>
-                                                                                <td className={`py-3 px-4 font-black ${d.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>{fmt(d.profit)}</td>
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                            </td>
-                                                        </tr>
-                                                    )}
-                                                </React.Fragment>
+                                            {displayData.map(p => (
+                                                <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
+                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
+                                                    {compactView ? (<>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                        <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty)} {p.unit}</td>
+                                                    </>) : (<>
+                                                        <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
+                                                        <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
+                                                    </>)}
+                                                    <td className="px-4 py-4 font-black whitespace-nowrap">
+                                                        <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
+                                                            {p.profit !== null ? fmt(p.profit) : '—'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
                                             ))}
                                         </tbody>
-                                        <tfoot>
-                                            <tr className="border-t-2 border-black/10 dark:border-white/10">
-                                                <td className="px-4 py-4 font-black text-slate-500 dark:text-white/40 text-xs uppercase">الإجمالي</td>
-                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">
-                                                    {fmt(profitSummary.monthly.reduce((a, b) => a + b.net_sales, 0))}
-                                                </td>
-                                                <td className="px-4 py-4 font-black text-emerald-600 dark:text-emerald-400">
-                                                    {fmt(profitSummary.total_profit)}
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        </tfoot>
                                     </table>
                                 </div>
-                            )}
-                        </SpatialCard>
-                    </>)}
-
-                    {activeTab === 'stock_profit' && (<>
-                        <div className="spatial-card px-5 h-12 flex items-center justify-between gap-4 border border-primary/20 bg-primary/5 rounded-[16px]">
-                            <p className="text-sm font-black text-primary uppercase tracking-widest">إجمالي الربح:</p>
-                            <p className="text-xl font-black text-primary">
-                                {fmt(stockProfitData.reduce((sum, p) => sum + (p.profit ?? 0), 0))} <span className="text-xs">د.ل</span>
-                            </p>
-                        </div>
-
-                        {displayData && displayData.length > 0 && (
-                            <SpatialCard title={`المنتجات المشمولة في الحساب (${displayData.length})`} icon={<FileText className="w-4 h-4" />}>
-                                <div className="flex flex-wrap gap-2">
+                                {/* Mobile */}
+                                <div className="flex flex-col gap-3 lg:hidden">
                                     {displayData.map(p => (
-                                        <span key={p.id} className="px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
-                                            {p.name}
-                                        </span>
+                                        <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
+                                            <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
+                                                <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
+                                                <span className={`font-black text-sm ${p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}`}>
+                                                    {p.profit !== null ? fmt(p.profit) : '—'}
+                                                </span>
+                                            </div>
+                                            <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
+                                                {[
+                                                    ['اجمالي المشتراه', `${fmt(p.total_purchased)} ${p.unit}`, 'text-blue-600 dark:text-blue-400'],
+                                                    ['اجمالي المخزون', `${fmt(p.stock)} ${p.unit}`, 'text-slate-800 dark:text-white'],
+                                                    ['اجمالي المبيعات', `${fmt(p.total_sold)} ${p.unit}`, 'text-emerald-600 dark:text-emerald-400'],
+                                                    ['متوسط شراء', fmt(p.avg_purchase_cost), 'text-slate-500 dark:text-white/50'],
+                                                    ['متوسط بيع', fmt(p.avg_sale_price), 'text-slate-500 dark:text-white/50'],
+                                                ].map(([label, value, cls]) => (
+                                                    <div key={label as string} className="flex justify-between">
+                                                        <span className="font-bold text-slate-400 dark:text-white/40">{label}</span>
+                                                        <span className={`font-bold ${cls}`}>{value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </SpatialCard>
-                        )}
-
-                        <SpatialCard 
-                            title={`تقرير الأرباح (${displayData.length})`} 
-                            icon={<FileText className="w-4 h-4" />}
-                            action={
-                                <div className="flex items-center gap-2">
-                                    <a href={buildStockExportUrl('excel')} target="_blank"
-                                        className="w-10 h-10 rounded-[14px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 flex items-center justify-center transition-colors"
-                                        title="تصدير إكسيل"
-                                    >
-                                        <FileSpreadsheet className="w-4 h-4" />
-                                    </a>
-                                    <a href={buildStockExportUrl('pdf')} target="_blank"
-                                        className="w-10 h-10 rounded-[14px] bg-rose-50 text-rose-600 hover:bg-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 flex items-center justify-center transition-colors"
-                                        title="تصدير PDF"
-                                    >
-                                        <Download className="w-4 h-4" />
-                                    </a>
-                                </div>
-                            }
-                        >
-                            <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-[16px]">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                            {(compactView
-                                                ? ['المنتج','متوسط شراء','متوسط بيع','صافي كمية المبيعات','الربح']
-                                                : ['المنتج','اجمالي المشتراه','اجمالي المخزون','اجمالي المبيعات','اجمالي التالف','مرتجع مورد','متوسط ارجاع المورد','مرتجع زبائن','متوسط ارجاع الزبائن','متوسط شراء','متوسط بيع','الربح']
-                                            ).map(h => (
-                                                <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {displayData.map(p => (
-                                            <tr key={p.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
-                                                <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{p.name}</td>
-                                                {compactView ? (<>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
-                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.net_sale_qty)} {p.unit}</td>
-                                                </>) : (<>
-                                                    <td className="px-4 py-4 font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">{fmt(p.total_purchased)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(p.stock)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(p.total_sold)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-red-500 whitespace-nowrap">{fmt(p.total_wasted)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-amber-500 whitespace-nowrap">{fmt(p.total_return_out)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_out_price)}</td>
-                                                    <td className="px-4 py-4 font-bold text-orange-500 whitespace-nowrap">{fmt(p.total_return_in)} {p.unit}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_return_in_price)}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_purchase_cost)}</td>
-                                                    <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/50 whitespace-nowrap">{fmt(p.avg_sale_price)}</td>
-                                                </>)}
-                                                <td className="px-4 py-4 font-black whitespace-nowrap">
-                                                    <span className={p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}>
-                                                        {p.profit !== null ? fmt(p.profit) : '—'}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {/* Mobile */}
-                            <div className="flex flex-col gap-3 lg:hidden">
-                                {displayData.map(p => (
-                                    <div key={p.id} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
-                                        <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                            <span className="font-black text-slate-800 dark:text-white text-sm">{p.name}</span>
-                                            <span className={`font-black text-sm ${p.profit !== null ? (p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500') : 'text-slate-400'}`}>
-                                                {p.profit !== null ? fmt(p.profit) : '—'}
-                                            </span>
-                                        </div>
-                                        <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                            {[
-                                                ['اجمالي المشتراه', `${fmt(p.total_purchased)} ${p.unit}`, 'text-blue-600 dark:text-blue-400'],
-                                                ['اجمالي المخزون', `${fmt(p.stock)} ${p.unit}`, 'text-slate-800 dark:text-white'],
-                                                ['اجمالي المبيعات', `${fmt(p.total_sold)} ${p.unit}`, 'text-emerald-600 dark:text-emerald-400'],
-                                                ['متوسط شراء', fmt(p.avg_purchase_cost), 'text-slate-500 dark:text-white/50'],
-                                                ['متوسط بيع', fmt(p.avg_sale_price), 'text-slate-500 dark:text-white/50'],
-                                            ].map(([label, value, cls]) => (
-                                                <div key={label as string} className="flex justify-between">
-                                                    <span className="font-bold text-slate-400 dark:text-white/40">{label}</span>
-                                                    <span className={`font-bold ${cls}`}>{value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </SpatialCard>
+                        </>)}
                     </>)}
 
                     </div>

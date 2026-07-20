@@ -35,17 +35,25 @@ class ReportController extends Controller
         $productIds = array_filter(array_map('intval', (array)$productIds));
         $stockProductIds = array_filter(array_map('intval', (array)$stockProductIds));
 
-        $cacheKeyDaily = 'profit_daily_' . md5(json_encode([$dateFrom, $dateTo, $productIds, $searchName]));
-        $profitSummary = \Illuminate\Support\Facades\Cache::remember($cacheKeyDaily, now()->addHours(1), function() use ($dateFrom, $dateTo, $productIds, $searchName) {
-            return $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds, null, $searchName);
-        });
+        $isSearch = count($request->except('active_tab')) > 0;
 
-        $cacheKeyStock = 'profit_stock_' . md5(json_encode([$stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName]));
-        $stockProfitData = \Illuminate\Support\Facades\Cache::remember($cacheKeyStock, now()->addHours(1), function() use ($stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName) {
-            return $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds, null, $stockSearchName);
-        });
+        if ($isSearch) {
+            $cacheKeyDaily = 'profit_daily_' . md5(json_encode([$dateFrom, $dateTo, $productIds, $searchName]));
+            $profitSummary = \Illuminate\Support\Facades\Cache::remember($cacheKeyDaily, now()->addHours(1), function() use ($dateFrom, $dateTo, $productIds, $searchName) {
+                return $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds, null, $searchName);
+            });
+
+            $cacheKeyStock = 'profit_stock_' . md5(json_encode([$stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName]));
+            $stockProfitData = \Illuminate\Support\Facades\Cache::remember($cacheKeyStock, now()->addHours(1), function() use ($stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName) {
+                return $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds, null, $stockSearchName);
+            });
+        } else {
+            $profitSummary = ['total_profit' => 0, 'monthly' => [], 'daily' => [], 'included_products' => []];
+            $stockProfitData = [];
+        }
 
         return Inertia::render('Reports/ProfitAnalysis', [
+            'hasSearched'     => $isSearch,
             'profitSummary'   => $profitSummary,
             'stockProfitData' => $stockProfitData,
             'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
