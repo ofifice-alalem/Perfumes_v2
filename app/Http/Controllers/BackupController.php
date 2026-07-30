@@ -60,10 +60,11 @@ class BackupController extends Controller
         ]);
     }
 
-    public function create(Request $request)
+    public function create(Request $request): RedirectResponse
     {
         set_time_limit(300);
         ini_set('memory_limit', '512M');
+        session_write_close();
 
         if (!is_dir($this->backupDir)) {
             mkdir($this->backupDir, 0755, true);
@@ -77,9 +78,14 @@ class BackupController extends Controller
         $pdo    = DB::connection()->getPdo();
         $dbName = DB::connection()->getDatabaseName();
 
-        $sql  = "-- Backup: {$filename}\n";
-        $sql .= "-- Generated: " . now()->toDateTimeString() . "\n\n";
-        $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
+        $handle = fopen($sqlTmpPath, 'w');
+        if (!$handle) {
+            return back()->with('error', 'تعذّر إنشاء ملف التخزين المؤقت');
+        }
+
+        fwrite($handle, "-- Backup: {$filename}\n");
+        fwrite($handle, "-- Generated: " . now()->toDateTimeString() . "\n\n");
+        fwrite($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
 
         $tables = $pdo->query('SHOW TABLES')->fetchAll(\PDO::FETCH_COLUMN);
 
@@ -87,10 +93,10 @@ class BackupController extends Controller
             // CREATE TABLE
             $createRow = $pdo->query("SHOW CREATE TABLE `{$table}`")->fetch(\PDO::FETCH_ASSOC);
             $createSql = array_values($createRow)[1];
-            $sql .= "DROP TABLE IF EXISTS `{$table}`;\n";
-            $sql .= $createSql . ";\n\n";
+            fwrite($handle, "DROP TABLE IF EXISTS `{$table}`;\n");
+            fwrite($handle, $createSql . ";\n\n");
 
-            // INSERT DATA بالدفعات
+            // INSERT DATA بالدفعات والكتابة المباشرة في الملف
             $count = (int) $pdo->query("SELECT COUNT(*) FROM `{$table}`")->fetchColumn();
             if ($count > 0) {
                 $offset = 0;
@@ -107,38 +113,40 @@ class BackupController extends Controller
                         }, array_values($row));
                         $values[] = '(' . implode(', ', $vals) . ')';
                     }
-                    $sql .= "INSERT INTO `{$table}` ({$cols}) VALUES\n" . implode(",\n", $values) . ";\n";
+                    fwrite($handle, "INSERT INTO `{$table}` ({$cols}) VALUES\n" . implode(",\n", $values) . ";\n");
                     $offset += $chunk;
                 }
-                $sql .= "\n";
+                fwrite($handle, "\n");
             }
         }
 
-        $sql .= "SET FOREIGN_KEY_CHECKS=1;\n";
-
-        file_put_contents($sqlTmpPath, $sql);
+        fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+        fclose($handle);
 
         $zip = new ZipArchive();
-        $zip->open($zipPath, ZipArchive::CREATE);
-        $zip->addFile($sqlTmpPath, 'database.sql');
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+            $zip->addFile($sqlTmpPath, 'database.sql');
 
-        $note = trim($request->input('note', ''));
-        if ($note !== '') {
-            $zip->addFromString('note.txt', $note);
+            $note = trim($request->input('note', ''));
+            if ($note !== '') {
+                $zip->addFromString('note.txt', $note);
+            }
+
+            $zip->close();
         }
 
-        $zip->close();
-        unlink($sqlTmpPath);
+        if (file_exists($sqlTmpPath)) {
+            unlink($sqlTmpPath);
+        }
 
-        return response()->download($zipPath, $filename, [
-            'Content-Type' => 'application/zip',
-        ])->deleteFileAfterSend(false);
+        return back()->with('success', 'تم إنشاء النسخة الاحتياطية بنجاح');
     }
 
     public function restore(string $filename): RedirectResponse
     {
         set_time_limit(0);
         ini_set('memory_limit', '1G');
+        session_write_close();
 
         $zipPath = $this->backupDir . '/' . basename($filename);
 

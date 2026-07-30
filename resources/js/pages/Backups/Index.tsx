@@ -29,34 +29,14 @@ function CreateModal({ onClose }: { onClose: () => void }) {
 
     function submit() {
         setLoading(true);
-
-        // إنشاء form وإرساله مباشرة لتحميل الملف
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/backups/create';
-        form.style.display = 'none';
-
-        const csrfInput = document.createElement('input');
-        csrfInput.name = '_token';
-        csrfInput.value = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content ?? '';
-        form.appendChild(csrfInput);
-
-        if (note.trim()) {
-            const noteInput = document.createElement('input');
-            noteInput.name = 'note';
-            noteInput.value = note;
-            form.appendChild(noteInput);
-        }
-
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-
-        setTimeout(() => {
-            setLoading(false);
-            onClose();
-            router.reload();
-        }, 2000);
+        router.post('/backups/create', { note }, {
+            onSuccess: () => {
+                onClose();
+            },
+            onFinish: () => {
+                setLoading(false);
+            },
+        });
     }
 
     return createPortal(
