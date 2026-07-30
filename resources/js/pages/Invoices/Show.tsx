@@ -10,7 +10,7 @@ import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Ed
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
 interface Customer      { id: number; name: string; total_debt: string; }
-interface Size          { id: number; label: string; }
+interface Size          { id: number; label: string; value: string; }
 
 interface InvoiceItem {
     id: number; product: Product; size: Size | null;
@@ -243,10 +243,13 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                     <SpatialCard title={`الأصناف (${invoice.items.length})`} icon={<Package className="w-4 h-4" />}>
                         {(() => {
                             const groups = invoice.items.reduce((acc, item) => {
-                                const sizeLabel = item.size?.label ?? ((item.sale_type === 'tier_decant' || item.sale_type === 'unit_decant') ? `${parseFloat(item.quantity)} مل` : null);
-                                const key = `${item.product.id}-${sizeLabel ?? 'null'}-${item.sale_type}-${item.unit_price}`;
+                                // استخدم label فقط من العلاقة — لا تستخدم item.quantity كاحتياطي للحجم
+                                const sizeLabel = item.size?.label ?? null;
+                                // قيمة الحجم الفردي (مل) لحساب عدد التعبئات لاحقاً
+                                const sizeValue = item.size?.value ? parseFloat(item.size.value) : null;
+                                const key = `${item.product.id}-${item.size?.id ?? 'null'}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
-                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: sizeLabel, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
+                                    acc[key] = { name: item.product.name, sale_type: item.sale_type, size_label: sizeLabel, size_value: sizeValue, unit_price: item.unit_price, count: 1, quantity: parseFloat(item.quantity), total: parseFloat(item.line_total) };
                                 } else {
                                     acc[key].count++;
                                     acc[key].quantity += parseFloat(item.quantity);
@@ -266,7 +269,10 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         <span className="text-center">الإجمالي</span>
                                     </div>
                                     {Object.values(groups).map((g: any, idx: number) => {
-                                        const displayCount = g.sale_type === 'unit_based' ? g.quantity : g.count;
+                                        // للوحدات: الكمية مباشرة. لبقية الأنواع: عدد التعبئات = الكمية ÷ حجم الوحدة
+                                        const displayCount = g.sale_type === 'unit_based'
+                                            ? g.quantity
+                                            : (g.size_value && g.size_value > 0 ? Math.round(g.quantity / g.size_value) : g.count);
                                         return (
                                         <div key={idx}>
                                             {/* Desktop */}
