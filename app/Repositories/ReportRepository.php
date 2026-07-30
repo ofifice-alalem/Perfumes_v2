@@ -2263,6 +2263,7 @@ class ReportRepository implements ReportRepositoryInterface
         foreach ($invoiceIdChunks as $chunk) {
             $chunkItems = DB::table('invoice_items')
                 ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->leftJoin('sizes', 'sizes.id', '=', 'invoice_items.size_id')
                 ->whereIn('invoice_items.invoice_id', $chunk)
                 ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
                 ->select(
@@ -2270,11 +2271,19 @@ class ReportRepository implements ReportRepositoryInterface
                     'products.id as product_id',
                     'products.name as product_name',
                     'invoice_items.unit_price',
-                    DB::raw('MIN(invoice_items.quantity) as quantity'),
-                    DB::raw('COUNT(*) as count'),
+                    'invoice_items.sale_type',
+                    'sizes.value as size_value',
+                    DB::raw('SUM(invoice_items.quantity) as total_quantity'),
                     DB::raw('SUM(invoice_items.line_total) as line_total')
                 )
-                ->groupBy('invoice_items.invoice_id', 'products.id', 'products.name', 'invoice_items.unit_price')
+                ->groupBy(
+                    'invoice_items.invoice_id',
+                    'products.id',
+                    'products.name',
+                    'invoice_items.unit_price',
+                    'invoice_items.sale_type',
+                    'sizes.value'
+                )
                 ->get();
             
             $itemsQuery = $itemsQuery->merge($chunkItems);
@@ -2297,6 +2306,23 @@ class ReportRepository implements ReportRepositoryInterface
                 }
             }
             $item->is_matched = $isMatched;
+
+            if ($item->sale_type !== 'unit_based' && !empty($item->size_value) && (float)$item->size_value > 0) {
+                $singleSize = (float)$item->size_value;
+                $calculatedCount = (int)round($item->total_quantity / $singleSize);
+                $calculatedQty = $singleSize;
+            } else {
+                if ($item->sale_type === 'unit_based') {
+                    $calculatedCount = (float)$item->total_quantity;
+                    $calculatedQty = 1.0;
+                } else {
+                    $calculatedCount = 1;
+                    $calculatedQty = (float)$item->total_quantity;
+                }
+            }
+
+            $item->count = $calculatedCount;
+            $item->quantity = $calculatedQty;
             
             $itemsByInvoice[$item->invoice_id][] = (array)$item;
         }
