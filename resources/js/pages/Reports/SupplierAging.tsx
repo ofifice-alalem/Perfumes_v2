@@ -210,13 +210,19 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                         <tr key={c.supplier_id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
                                                             <td className="px-4 py-4 font-black text-slate-800 dark:text-white">{c.supplier_name}</td>
                                                             <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">{fmt(c.total_debt)}</td>
-                                                            <td className="px-4 py-4 text-center font-bold text-slate-500 dark:text-white/50">{c.movements.length}</td>
+                                                            <td className="px-4 py-4 text-center font-bold text-slate-500 dark:text-white/50">
+                                                                {filters.supplierId ? c.movements.length : '--'}
+                                                            </td>
                                                             <td className="px-4 py-4">
-                                                                <button onClick={() => toggleExpand(c.supplier_id)}
-                                                                    className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
-                                                                    <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />
-                                                                    تفاصيل
-                                                                </button>
+                                                                {filters.supplierId ? (
+                                                                    <button onClick={() => toggleExpand(c.supplier_id)}
+                                                                        className="flex items-center gap-1 text-xs font-bold text-primary hover:text-primary/70 transition-colors">
+                                                                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />
+                                                                        تفاصيل
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-xs text-slate-400">اختر مورداً للتفاصيل</span>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                         {expanded.has(c.supplier_id) && (
@@ -266,11 +272,15 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                     <span className="font-black text-slate-800 dark:text-white text-sm">{fmt(c.total_debt)}</span>
                                                 </div>
                                                 <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                                    <button onClick={() => toggleExpand(c.supplier_id)}
-                                                        className="flex items-center gap-1 text-xs font-bold text-primary mt-1">
-                                                        <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />
-                                                        {expanded.has(c.supplier_id) ? 'إخفاء الحركات' : `${c.movements.length} حركة`}
-                                                    </button>
+                                                    {filters.supplierId ? (
+                                                        <button onClick={() => toggleExpand(c.supplier_id)}
+                                                            className="flex items-center gap-1 text-xs font-bold text-primary mt-1">
+                                                            <ChevronRight className={`w-3.5 h-3.5 transition-transform ${expanded.has(c.supplier_id) ? 'rotate-90' : ''}`} />
+                                                            {expanded.has(c.supplier_id) ? 'إخفاء الحركات' : `${c.movements.length} حركة`}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-xs text-slate-400 mt-1">قم بفلترة التقرير برقم المورد لرؤية الحركات التفصيلية</span>
+                                                    )}
                                                     {expanded.has(c.supplier_id) && c.movements.map((m, i) => (
                                                         <div key={i} className="flex justify-between text-xs border-t border-black/5 dark:border-white/5 pt-1.5 mt-0.5">
                                                             <span className="font-black text-primary">{m.ref}</span>

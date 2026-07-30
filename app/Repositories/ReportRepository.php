@@ -1140,10 +1140,12 @@ class ReportRepository implements ReportRepositoryInterface
             return $items->groupBy('customer_id');
         };
 
-        $invoicesMovements = $getChunkedMovements('invoices', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
-        $paymentsMovements = $getChunkedMovements('payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
-        $settlementsMovements = $getChunkedMovements('settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
-        $returnsMovements = $getChunkedMovements('invoice_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $loadMovements = $customerId !== null;
+
+        $invoicesMovements = $loadMovements ? $getChunkedMovements('invoices', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
+        $paymentsMovements = $loadMovements ? $getChunkedMovements('payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
+        $settlementsMovements = $loadMovements ? $getChunkedMovements('settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
+        $returnsMovements = $loadMovements ? $getChunkedMovements('invoice_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
 
         // Get Unpaid invoices for aging buckets
         $unpaidInvoices = collect();
@@ -1165,7 +1167,7 @@ class ReportRepository implements ReportRepositoryInterface
             $newInvoicedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
             $totalInvoicedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
             $futureInvoicedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
-            $invoicesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidByCustomer
+            $invoicesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidByCustomer, $loadMovements
         ) {
             $cid = $customer->id;
 
@@ -1198,7 +1200,7 @@ class ReportRepository implements ReportRepositoryInterface
             // جمع كل الحركات
             $movements = collect();
 
-            if (round($reportOpeningBalance, 2) != 0) {
+            if ($loadMovements && round($reportOpeningBalance, 2) != 0) {
                 $isRolloverBalance = false;
                 $balanceDate = $dateFromQuery ?: ($customer->created_at ?: '2000-01-01 00:00:00');
 
@@ -1570,10 +1572,12 @@ class ReportRepository implements ReportRepositoryInterface
             return $items->groupBy('supplier_id');
         };
 
-        $purchasesMovements = $getChunkedMovements('purchases', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
-        $paymentsMovements = $getChunkedMovements('supplier_payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
-        $settlementsMovements = $getChunkedMovements('supplier_settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
-        $returnsMovements = $getChunkedMovements('purchase_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $loadMovements = $supplierId !== null;
+
+        $purchasesMovements = $loadMovements ? $getChunkedMovements('purchases', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
+        $paymentsMovements = $loadMovements ? $getChunkedMovements('supplier_payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
+        $settlementsMovements = $loadMovements ? $getChunkedMovements('supplier_settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
+        $returnsMovements = $loadMovements ? $getChunkedMovements('purchase_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
 
         // Get Unpaid purchases for aging buckets
         $unpaidPurchases = collect();
@@ -1595,7 +1599,7 @@ class ReportRepository implements ReportRepositoryInterface
             $newPurchasedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
             $totalPurchasedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
             $futurePurchasedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
-            $purchasesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidBySupplier
+            $purchasesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidBySupplier, $loadMovements
         ) {
             $sid = $supplier->id;
 
@@ -1627,7 +1631,7 @@ class ReportRepository implements ReportRepositoryInterface
 
             $movements = collect();
 
-            if (round($reportOpeningBalance, 2) != 0) {
+            if ($loadMovements && round($reportOpeningBalance, 2) != 0) {
                 $isRolloverBalance = false;
                 $balanceDate = $dateFromQuery ?: ($supplier->created_at ?: '2000-01-01 00:00:00');
 
