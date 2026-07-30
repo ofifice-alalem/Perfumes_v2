@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
 import {
     BookOpen, Layers, Ruler, Tags, Package, ShieldCheck,
-    CheckCircle2, Sparkles, AlertCircle, Info, ChevronLeft,
-    Droplets, Box, HelpCircle, FileText, Search, ArrowRight, Zap
+    CheckCircle2, Sparkles, AlertCircle, Info,
+    Droplets, Box, Zap, CreditCard, DollarSign, Wallet,
+    Clock, AlertTriangle, Users, Truck, ArrowRight, ShieldAlert
 } from 'lucide-react';
 
 interface PolicySection {
@@ -18,7 +18,6 @@ interface PolicySection {
 export default function PolicyIndex() {
     const [activeSection, setActiveSection] = useState<string>('products-entry');
     const [activeSub, setActiveSub] = useState<string>('oil-perfumes');
-    const [searchTerm, setSearchTerm] = useState<string>('');
 
     const sections: PolicySection[] = [
         {
@@ -33,10 +32,14 @@ export default function PolicyIndex() {
             ]
         },
         {
-            id: 'sales-invoices',
-            title: '2. إدارة المبيعات والفواتير التجميعية',
-            icon: <FileText className="w-5 h-5" />,
-            badge: 'قريباً',
+            id: 'payment-methods-credit',
+            title: '2. سياسة المبيعات والمشتريات وأنواع السداد',
+            icon: <CreditCard className="w-5 h-5" />,
+            badge: 'الخطوة الثانية',
+            subsections: [
+                { id: 'credit-sales-purchases', title: '2.1 البيع والشراء بالآجل (الذمم)' },
+                { id: 'cash-immediate-payment', title: '2.2 التعامل النقدي والالتزام بالدفع اللحظي' },
+            ]
         },
         {
             id: 'inventory-waste',
@@ -52,7 +55,8 @@ export default function PolicyIndex() {
         },
     ];
 
-    const scrollTo = (id: string) => {
+    const scrollTo = (id: string, mainId?: string) => {
+        if (mainId) setActiveSection(mainId);
         setActiveSub(id);
         const el = document.getElementById(id);
         if (el) {
@@ -121,7 +125,14 @@ export default function PolicyIndex() {
                                 {sections.map((section) => (
                                     <div key={section.id} className="flex flex-col gap-1">
                                         <button
-                                            onClick={() => setActiveSection(section.id)}
+                                            onClick={() => {
+                                                setActiveSection(section.id);
+                                                if (section.subsections && section.subsections.length > 0) {
+                                                    scrollTo(section.subsections[0].id, section.id);
+                                                } else {
+                                                    scrollTo(section.id, section.id);
+                                                }
+                                            }}
                                             className={`flex items-center justify-between p-3 rounded-[16px] text-right font-bold text-sm transition-all duration-200 ${
                                                 activeSection === section.id
                                                     ? 'bg-primary text-white shadow-md shadow-primary/25 font-black'
@@ -151,7 +162,7 @@ export default function PolicyIndex() {
                                                 {section.subsections.map((sub) => (
                                                     <button
                                                         key={sub.id}
-                                                        onClick={() => scrollTo(sub.id)}
+                                                        onClick={() => scrollTo(sub.id, section.id)}
                                                         className={`text-right text-xs font-bold py-1.5 px-3 rounded-[10px] transition-all ${
                                                             activeSub === sub.id
                                                                 ? 'text-primary dark:text-primary-light font-black bg-primary/10'
@@ -181,7 +192,7 @@ export default function PolicyIndex() {
                     </div>
 
                     {/* Main Content Body */}
-                    <div className="lg:col-span-8 xl:col-span-9 space-y-8">
+                    <div className="lg:col-span-8 xl:col-span-9 space-y-12">
 
                         {/* SECTION 1: Product Entry & Usage */}
                         <div id="products-entry" className="scroll-mt-6 space-y-6">
@@ -378,6 +389,134 @@ export default function PolicyIndex() {
                                         يتطلب إدخال المنتجات العادية فقط: **اسم المنتج، سعر التكلفة، سعر البيع المباشر، والكمية المتوفرة بالقطعة (Unit Based)** دون أي إعدادات مسبقة للأحجام أو التيرات.
                                     </div>
                                 </div>
+                            </div>
+
+                        </div>
+
+                        {/* SECTION 2: Payment Policies & Credit/Cash Rules */}
+                        <div id="payment-methods-credit" className="scroll-mt-6 space-y-6 pt-6 border-t border-black/10 dark:border-white/10">
+                            
+                            {/* Section Title */}
+                            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                                        <CreditCard className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                                            2. سياسة المبيعات والمشتريات وأنواع السداد
+                                        </h2>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                            الضوابط المالية للتعاملات النقدية والآجلة مع العملاء والموردين
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 2.1: Credit Sales & Purchases */}
+                            <div id="credit-sales-purchases" className="scroll-mt-6 rounded-[24px] p-6 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center font-black">
+                                            2.1
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <Clock className="w-5 h-5 text-blue-500" />
+                                            البيع والشراء بالآجل (الذمم والأرصدة)
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-black">
+                                        مرونة في السداد والذمم
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                    يدعم النظام إدارة التعاملات بالآجل (الدين) سواء في فواتير **المبيعات للعملاء** أو **المشتريات من الموردين** لتوثيق الأرصدة وحفظ الحقوق المالية:
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    
+                                    {/* Credit Sales */}
+                                    <div className="p-5 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-3">
+                                        <div className="flex items-center gap-2 text-blue-500 font-black text-sm">
+                                            <Users className="w-4 h-4" />
+                                            <span>أولاً: المبيعات بالآجل (للعملاء)</span>
+                                        </div>
+                                        <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
+                                            <li>يمكن إخراج الفاتورة دون اشتراط دفع كامل المبلغ وقت البيع.</li>
+                                            <li>يتم تدوين المتبقي تلقائياً كـ **"دين على العميل"** ويضاف إلى حسابه الشخصي.</li>
+                                            <li>تتم متابعة الديون في تقارير الذمم وتُسدد لاحقاً عبر شاشة "دفعات العملاء" أو "تسويات العملاء".</li>
+                                        </ul>
+                                    </div>
+
+                                    {/* Credit Purchases */}
+                                    <div className="p-5 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-3">
+                                        <div className="flex items-center gap-2 text-purple-500 font-black text-sm">
+                                            <Truck className="w-4 h-4" />
+                                            <span>ثانياً: المشتريات بالآجل (من الموردين)</span>
+                                        </div>
+                                        <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
+                                            <li>يمكن إدخال بضائع ومشتريات جديدة دون الدفع الكامل للمورد فوراً.</li>
+                                            <li>يُسجل المتبقي كـ **"مستحقات واجبة السداد للمورد"** وتضاف لرصيده.</li>
+                                            <li>تتم متابعتها في كشوفات الموردين وتقارير الذمم وتُسدد عبر "مدفوعات الموردين".</li>
+                                        </ul>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 2.2: Cash Policy & Immediate Payment */}
+                            <div id="cash-immediate-payment" className="scroll-mt-6 rounded-[24px] p-6 border border-rose-500/20 bg-rose-500/5 dark:bg-rose-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-black">
+                                            2.2
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <Wallet className="w-5 h-5 text-rose-500" />
+                                            التعامل النقدي والالتزام بالدفع اللحظي
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-black">
+                                        شرط حازم للدفع الفوري
+                                    </span>
+                                </div>
+
+                                {/* Warning Callout Box */}
+                                <div className="p-5 rounded-[20px] bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 flex items-start gap-4 shadow-sm">
+                                    <ShieldAlert className="w-6 h-6 shrink-0 text-rose-500 mt-0.5" />
+                                    <div className="space-y-2">
+                                        <h4 className="font-black text-sm text-rose-600 dark:text-rose-400">
+                                            ملاحظة وإلزام قانوني وحسابي مهم جداً:
+                                        </h4>
+                                        <p className="text-xs font-bold leading-relaxed">
+                                            عند تحديد نوع الفاتورة كـ <span className="underline decoration-2 font-black text-rose-700 dark:text-rose-300 font-mono text-sm px-1">"نقدي"</span>، يلزم **السداد الفوري واللحظي الكامل** لصافي قيمة الفاتورة أثناء إنشاء الفاتورة واعتتمادها.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    
+                                    <div className="p-4 rounded-[18px] bg-white/70 dark:bg-slate-900/70 border border-black/5 dark:border-white/10 flex items-start gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                        <div className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                            <span className="font-black text-slate-900 dark:text-white block mb-0.5">منع الآجل في النقدية:</span>
+                                            لا يُسمح إطلاقاً بتسجيل أي جزء متبقي كـ "دين" أو "ذمة" في الفواتير ذات المسمى النقدي.
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 rounded-[18px] bg-white/70 dark:bg-slate-900/70 border border-black/5 dark:border-white/10 flex items-start gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                                        <div className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                            <span className="font-black text-slate-900 dark:text-white block mb-0.5">انضباط رصيد الصندوق:</span>
+                                            يضمن هذا الشرط مطابقة رصيد الصندوق النقدي في المنظومة مع المبالغ الفعلية المتوفرة في درج النقدية في نفس اللحظة.
+                                        </div>
+                                    </div>
+
+                                </div>
+
                             </div>
 
                         </div>
