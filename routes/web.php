@@ -24,6 +24,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PolicyController;
 
 use App\Http\Controllers\LicenseController;
 
@@ -48,6 +49,9 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard — super-admin فقط
     Route::get('/', [DashboardController::class, 'index'])->middleware('role:super-admin');
+
+    // Policy & Documentation — متاح لجميع المستخدمين المسجلين
+    Route::get('/policy', [PolicyController::class, 'index'])->name('policy.index');
 
     // ── النسخ الاحتياطية — super-admin فقط ──────────────────────────────────
     Route::middleware('role:super-admin')->prefix('backups')->name('backups.')->group(function () {
@@ -77,7 +81,6 @@ Route::middleware('auth')->group(function () {
         Route::put('price-tiers/{id}/prices', [PriceTierController::class, 'updatePrices'])->name('price-tiers.prices');
         Route::resource('products', ProductController::class)->except(['create', 'edit', 'show']);
         Route::patch('products/{id}/qrcode', [ProductController::class, 'updateQrcode'])->name('products.qrcode');
-        Route::resource('payment-methods', PaymentMethodController::class)->except(['create', 'edit', 'show']);
         Route::resource('users', UserController::class)->except(['create', 'edit', 'show']);
 
         // Reports
