@@ -461,16 +461,34 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 ? `${selSize.replace('-custom-', '')} مل`
                 : (sizes.find(s => s.id === +selSize)?.label ?? '');
             const count = parseInt(selQty) || 1;
-            const newItems: CartItem[] = Array.from({ length: count }, () => ({
-                product_id: selectedProduct.id, product_name: selectedProduct.name,
-                sale_type: effectiveST, size_id: selSize, size_label: sizeLabel,
-                quantity: String(qty), unit_price: unitPrice,
-                line_total: resolveLineTotal(effectiveST, unitPrice, qty),
-            }));
+            const singleLineTotal = resolveLineTotal(effectiveST, unitPrice, qty);
+            const totalQty    = qty * count;
+            const totalLT     = singleLineTotal * count;
+            const sizeKey     = selSize && !selSize.startsWith('-custom-') ? selSize : selSize;
             setCart(prev => {
-                const newCart = [...prev, ...newItems];
+                // دمج مع عنصر موجود إذا كان نفس المنتج/الحجم/النوع/السعر
+                const existIdx = prev.findIndex(i =>
+                    i.product_id === selectedProduct.id &&
+                    i.size_id   === sizeKey &&
+                    i.sale_type === effectiveST &&
+                    i.unit_price === unitPrice
+                );
+                let newCart: CartItem[];
+                if (existIdx !== -1) {
+                    newCart = prev.map((item, i) => i === existIdx ? {
+                        ...item,
+                        quantity:   String(+item.quantity + totalQty),
+                        line_total: item.line_total + totalLT,
+                    } : item);
+                } else {
+                    newCart = [...prev, {
+                        product_id: selectedProduct.id, product_name: selectedProduct.name,
+                        sale_type: effectiveST, size_id: sizeKey, size_label: sizeLabel,
+                        quantity: String(totalQty), unit_price: unitPrice,
+                        line_total: totalLT,
+                    }];
+                }
                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                
                 if (!paymentManuallySet) {
                     if (prev.length === 0 && paymentMethods.length > 0) {
                         const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
@@ -479,7 +497,6 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
                     }
                 }
-                
                 return newCart;
             });
         }
@@ -1049,7 +1066,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         ) : (() => {
                             // group identical items
                             const groups = cart.reduce((acc, item, idx) => {
-                                const key = `${item.product_id}-${item.size_id}-${item.sale_type}`;
+                                const key = `${item.product_id}-${item.size_id}-${item.sale_type}-${item.unit_price}`;
                                 if (!acc[key]) {
                                     acc[key] = { ...item, count: 1, totalQty: +item.quantity, totalAmount: item.line_total, indices: [idx] };
                                 } else {
@@ -1073,7 +1090,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         <span className="text-center">حذف</span>
                                     </div>
                                     {Object.values(groups).map((g: any, idx) => {
-                                        const displayCount = g.sale_type === 'unit_based' ? g.totalQty : g.count;
+                                        // احسب عدد الوحدات من الكمية الإجمالية
+                                        const singleQty = g.sale_type !== 'unit_based'
+                                            ? resolveQuantity(products.find(p => p.id === g.product_id)!, g.sale_type, g.size_id || '', '1', sizes)
+                                            : 1;
+                                        const displayCount = g.sale_type === 'unit_based' ? g.totalQty : (singleQty > 0 ? Math.round(g.totalQty / singleQty) : g.count);
                                         return (
                                             <div key={idx}>
                                                 {/* Desktop view - Grid */}
@@ -1084,8 +1105,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                             const p = products.find(p => p.id === g.product_id);
                                                             const consumed = cart.filter((_, i) => !g.indices.includes(i)).filter(i => i.product_id === g.product_id).reduce((s, i) => s + +i.quantity, 0);
                                                             const stockLeft = p ? +p.stock - consumed : 0;
-                                                            const itemQty = +g.quantity;
-                                                            const cartMax = g.sale_type === 'unit_based' ? stockLeft : (itemQty > 0 ? Math.floor(stockLeft / itemQty) : 0);
+                                                            const cartMax = g.sale_type === 'unit_based' ? stockLeft : (singleQty > 0 ? Math.floor(stockLeft / singleQty) : 0);
                                                             openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(displayCount), newVal => {
                                                                 const newCount = parseInt(newVal) || 1;
                                                                 const product = products.find(p => p.id === g.product_id);
@@ -1094,17 +1114,15 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                     const without = prev.filter((_, i) => !g.indices.includes(i));
                                                                     const price = g.unit_price;
                                                                     if (g.sale_type === 'unit_based') {
-                                                                        // صف واحد بالكمية الجديدة
                                                                         const newCart = [...without, { ...prev[g.indices[0]], quantity: String(newCount), line_total: resolveLineTotal('unit_based', price, newCount) }];
                                                                         const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
                                                                         if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                         return newCart;
                                                                     }
-                                                                    let newCart = [...without];
-                                                                    for (let i = 0; i < newCount; i++) {
-                                                                        const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
-                                                                        if (qty && price) newCart.push({ ...prev[g.indices[0]], quantity: String(qty), line_total: resolveLineTotal(g.sale_type, price, qty) });
-                                                                    }
+                                                                    // سطر واحد بالكمية المجمّعة الجديدة
+                                                                    const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
+                                                                    const singleLT = resolveLineTotal(g.sale_type, price, qty);
+                                                                    const newCart = [...without, { ...prev[g.indices[0]], quantity: String(qty * newCount), line_total: singleLT * newCount }];
                                                                     const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
                                                                     if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                     return newCart;
@@ -1159,27 +1177,25 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                             const p = products.find(p => p.id === g.product_id);
                                                             const consumed = cart.filter((_, i) => !g.indices.includes(i)).filter(i => i.product_id === g.product_id).reduce((s, i) => s + +i.quantity, 0);
                                                             const stockLeft = p ? +p.stock - consumed : 0;
-                                                            const itemQty = +g.quantity;
-                                                            const cartMax = g.sale_type === 'unit_based' ? stockLeft : (itemQty > 0 ? Math.floor(stockLeft / itemQty) : 0);
+                                                            const cartMax = g.sale_type === 'unit_based' ? stockLeft : (singleQty > 0 ? Math.floor(stockLeft / singleQty) : 0);
                                                             openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(displayCount), newVal => {
                                                                 const newCount = parseInt(newVal) || 1;
                                                                 const product = products.find(p => p.id === g.product_id);
                                                                 if (!product) return;
                                                                 setCart(prev => {
-                                                                    let newCart = prev.filter((_, i) => !g.indices.includes(i));
-                                                                    for (let i = 0; i < newCount; i++) {
-                                                                        const qty   = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
-                                                                        const price = resolvePrice(product, g.sale_type, g.size_id, isVip);
-                                                                        if (qty && price) {
-                                                                            newCart.push({ product_id: product.id, product_name: product.name, sale_type: g.sale_type, size_id: g.size_id, size_label: g.size_label, quantity: String(qty), unit_price: price, line_total: resolveLineTotal(g.sale_type, price, qty) });
-                                                                        }
+                                                                    const without = prev.filter((_, i) => !g.indices.includes(i));
+                                                                    const price = g.unit_price;
+                                                                    if (g.sale_type === 'unit_based') {
+                                                                        const newCart = [...without, { ...prev[g.indices[0]], quantity: String(newCount), line_total: resolveLineTotal('unit_based', price, newCount) }];
+                                                                        const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
+                                                                        if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
+                                                                        return newCart;
                                                                     }
+                                                                    const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
+                                                                    const singleLT = resolveLineTotal(g.sale_type, price, qty);
+                                                                    const newCart = [...without, { ...prev[g.indices[0]], quantity: String(qty * newCount), line_total: singleLT * newCount }];
                                                                     const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
-                                                                    if (!paymentManuallySet && payments.length === 1) {
-                                                                        setTimeout(() => {
-                                                                            setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
-                                                                        }, 0);
-                                                                    }
+                                                                    if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                     return newCart;
                                                                 });
                                                             }, cartMax);
@@ -1460,7 +1476,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     </div>
                                 ) : (() => {
                                     const groups = cart.reduce((acc, item, idx) => {
-                                        const key = `${item.product_id}-${item.size_id}-${item.sale_type}`;
+                                        const key = `${item.product_id}-${item.size_id}-${item.sale_type}-${item.unit_price}`;
                                         if (!acc[key]) {
                                             acc[key] = { ...item, count: 1, totalQty: +item.quantity, totalAmount: item.line_total, indices: [idx] };
                                         } else {
@@ -1472,7 +1488,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     return (
                                         <div className="flex flex-col gap-2">
                                             {Object.values(groups).map((g: any, idx) => {
-                                                const displayCount = g.sale_type === 'unit_based' ? g.totalQty : g.count;
+                                                const mSingleQty = g.sale_type !== 'unit_based'
+                                                    ? resolveQuantity(products.find(p => p.id === g.product_id)!, g.sale_type, g.size_id || '', '1', sizes)
+                                                    : 1;
+                                                const displayCount = g.sale_type === 'unit_based' ? g.totalQty : (mSingleQty > 0 ? Math.round(g.totalQty / mSingleQty) : g.count);
                                                 return (
                                                     <div key={idx} className="flex flex-col gap-2 p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
                                                         <div className="flex items-start justify-between gap-2">
@@ -1490,8 +1509,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                 const p = products.find(p => p.id === g.product_id);
                                                                 const consumed = cart.filter((_, i) => !g.indices.includes(i)).filter(i => i.product_id === g.product_id).reduce((s, i) => s + +i.quantity, 0);
                                                                 const stockLeft = p ? +p.stock - consumed : 0;
-                                                                const itemQty = +g.quantity;
-                                                                const cartMax = g.sale_type === 'unit_based' ? stockLeft : (itemQty > 0 ? Math.floor(stockLeft / itemQty) : 0);
+                                                                const cartMax = g.sale_type === 'unit_based' ? stockLeft : (mSingleQty > 0 ? Math.floor(stockLeft / mSingleQty) : 0);
                                                                 openPad(g.sale_type === 'unit_based' ? 'الكمية' : 'العدد', String(displayCount), newVal => {
                                                                     const newCount = parseInt(newVal) || 1;
                                                                     const product = products.find(p => p.id === g.product_id);
@@ -1505,11 +1523,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                                             if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                             return newCart;
                                                                         }
-                                                                        let newCart = [...without];
-                                                                        for (let i = 0; i < newCount; i++) {
-                                                                            const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
-                                                                            if (qty && price) newCart.push({ ...prev[g.indices[0]], quantity: String(qty), line_total: resolveLineTotal(g.sale_type, price, qty) });
-                                                                        }
+                                                                        const qty = resolveQuantity(product, g.sale_type, g.size_id, '1', sizes);
+                                                                        const singleLT = resolveLineTotal(g.sale_type, price, qty);
+                                                                        const newCart = [...without, { ...prev[g.indices[0]], quantity: String(qty * newCount), line_total: singleLT * newCount }];
                                                                         const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
                                                                         if (!paymentManuallySet && payments.length === 1) setTimeout(() => setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]), 0);
                                                                         return newCart;
