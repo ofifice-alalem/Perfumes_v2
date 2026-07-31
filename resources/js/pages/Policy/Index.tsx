@@ -353,7 +353,7 @@ export default function PolicyIndex() {
 
                                         {/* Generic Cards Grid */}
                                         {sub.cardsGrid && sub.cardsGrid.length > 0 && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                                            <div className="grid grid-cols-1 gap-5">
                                                 {sub.cardsGrid.map((card, cIdx) => (
                                                     <div key={cIdx} className="p-5 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-3">
                                                         <div className="flex items-center justify-between">
@@ -378,11 +378,28 @@ export default function PolicyIndex() {
                                                             </p>
                                                         )}
                                                         {card.list && (
-                                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
-                                                                {card.list.map((item, lIdx) => (
-                                                                    <li key={lIdx}>{item}</li>
-                                                                ))}
-                                                            </ul>
+                                                            <div className="flex flex-col gap-2 pt-1">
+                                                                {card.list.map((item, lIdx) => {
+                                                                    const parts = item.split(':');
+                                                                    const hasColon = parts.length > 1;
+                                                                    const titlePart = hasColon ? parts[0].trim() : null;
+                                                                    const descPart = hasColon ? parts.slice(1).join(':').trim() : item;
+
+                                                                    return (
+                                                                        <div key={lIdx} className="p-2.5 rounded-[12px] bg-white/70 dark:bg-slate-900/60 border border-black/5 dark:border-white/8 flex items-start gap-2.5 transition-all hover:border-primary/30">
+                                                                            <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm shadow-primary/50" />
+                                                                            <div className="text-xs font-bold leading-relaxed text-slate-700 dark:text-white/80">
+                                                                                {titlePart && (
+                                                                                    <span className="font-black text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-white/20 pb-0.5 ml-1.5 inline-block">
+                                                                                        {titlePart}:
+                                                                                    </span>
+                                                                                )}
+                                                                                <span>{descPart}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 ))}
