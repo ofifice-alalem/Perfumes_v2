@@ -1,3 +1,35 @@
+export interface PolicyStep {
+    number: number;
+    title: string;
+    description: string;
+    iconName?: string;
+}
+
+export interface PolicyCard {
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    description?: string;
+    list?: string[];
+    variant?: 'blue' | 'purple' | 'amber' | 'emerald' | 'rose' | 'indigo' | 'slate';
+    iconName?: string;
+}
+
+export interface PolicyFeatureBox {
+    title: string;
+    badgeText?: string;
+    description: string;
+    iconName?: string;
+    variant?: 'emerald' | 'blue' | 'indigo' | 'purple' | 'amber' | 'rose';
+    subCards?: PolicyCard[];
+}
+
+export interface PolicyStatItem {
+    label: string;
+    description: string;
+    badge?: string;
+}
+
 export interface PolicySubsectionData {
     id: string;
     subNumber: string;
@@ -11,23 +43,10 @@ export interface PolicySubsectionData {
         title?: string;
         text: string;
     };
-    steps?: {
-        number: number;
-        title: string;
-        description: string;
-        iconName?: string;
-    }[];
-    cardsGrid?: {
-        title: string;
-        subtitle?: string;
-        badge?: string;
-        type?: 'default' | 'example' | 'warning' | 'comparison';
-        list?: string[];
-        description?: string;
-        iconName?: string;
-        variant?: 'blue' | 'purple' | 'amber' | 'emerald' | 'rose' | 'indigo' | 'slate';
-    }[];
-    customBlock?: 'split_payment_example' | 'profit_compact_vs_full';
+    steps?: PolicyStep[];
+    cardsGrid?: PolicyCard[];
+    featureBoxes?: PolicyFeatureBox[];
+    statsGrid?: PolicyStatItem[];
 }
 
 export interface PolicySectionData {
@@ -219,7 +238,20 @@ export const policySectionsData: PolicySectionData[] = [
                         iconName: 'PlusCircle'
                     }
                 ],
-                customBlock: 'split_payment_example'
+                featureBoxes: [
+                    {
+                        title: 'مثال تطبيقي: السداد المركب للفاتورة الواحدة (بقيمة 500 د.ل)',
+                        badgeText: 'سداد مقسم',
+                        variant: 'emerald',
+                        iconName: 'Receipt',
+                        description: 'يمكن سداد الفاتورة الواحدة باستخدام أكثر من وسيلة دفع على أجزاء متفرقة بشرط أن يكون مجموع الأجزاء مساوياً لإجمالي قيمة الفاتورة.',
+                        subCards: [
+                            { title: 'الدفعة 1 (نقداً)', subtitle: '200.00 د.ل', description: '💵 كاش الصندوق', variant: 'emerald' },
+                            { title: 'الدفعة 2 (إلكتروني)', subtitle: '150.00 د.ل', description: '📱 تطبيق سداد', variant: 'indigo' },
+                            { title: 'الدفعة 3 (مصرفي)', subtitle: '150.00 د.ل', description: '💳 بطاقة تداول', variant: 'purple' },
+                        ]
+                    }
+                ]
             }
         ]
     },
@@ -340,7 +372,7 @@ export const policySectionsData: PolicySectionData[] = [
         title: '5. التقارير وتحليل الأرباح',
         iconName: 'BarChart3',
         badge: 'الخطوة الخامسة',
-        subtitle: 'آلية عمل تقارير الأرباح وتحليل الأداء المالي اليومي والتاريخي',
+        subtitle: 'آلية عمل تقارير الأرباح وتحليل الأداء المالي اليومي والتاريخي وتتبع الحركة',
         introCallout: {
             type: 'info',
             title: 'خيارات التصدير القياسية لجميع التقارير:',
@@ -355,7 +387,89 @@ export const policySectionsData: PolicySectionData[] = [
                 badgeVariant: 'indigo',
                 iconName: 'BarChart3',
                 description: 'تحتوي شاشة "تحليل الأرباح الشامل" على تبويبين متكاملين يوفران رؤية مالية مزدوجة (تجميعية وهيكلية للزمن، وتفصيلية للمنتجات):',
-                customBlock: 'profit_compact_vs_full'
+                cardsGrid: [
+                    {
+                        title: 'التاب الأول: "تحليل يومي" (Daily Analysis)',
+                        subtitle: 'تجميع شهري ويومي متدرج',
+                        description: 'يقدم نظرة تجميعية لأداء المبيعات مقسمة حسب الأشهر مع إمكانية التوسع لرؤية أيام كل شهر بالتفصيل.',
+                        list: [
+                            'الفلاتر: اختيار النطاق الزمني (من/إلى) والفلترة حسب منتج أو عدة منتجات.',
+                            'المؤشرات: المبيعات، المرتجعات، صافي المبيعات، وصافي الأرباح.'
+                        ],
+                        variant: 'indigo',
+                        iconName: 'Calendar'
+                    },
+                    {
+                        title: 'التاب الثاني: "تقرير الأرباح (بالتاريخ)" (Stock Profit)',
+                        subtitle: 'تحليل تفصيلي للمنتجات والربحية',
+                        description: 'يقدم تحليلاً تفصيلياً لكل منتج لمعرفة حركة الكميات المباعة وأرباح الأصناف خلال الفترة المحددة.',
+                        list: [
+                            'الفلاتر: النطاق الزمني، التصنيف، والبحث ببيانات المنتج.',
+                            'المؤشرات: الرصيد، المباع، المتوسطات، وصافي الربح.'
+                        ],
+                        variant: 'emerald',
+                        iconName: 'TrendingDown'
+                    }
+                ],
+                featureBoxes: [
+                    {
+                        title: 'خاصية "عرض مختصر للربح" وأنماط عرض تقرير أرباح المنتجات',
+                        badgeText: 'مفتـاح تفاعلي',
+                        iconName: 'EyeOff',
+                        variant: 'emerald',
+                        description: 'يتيح هذا المفتاح التنقل بين نمطين للعرض بحسب مستوى التفاصيل المطلوب:',
+                        subCards: [
+                            {
+                                title: '1. العرض التفصيلي الشامل (الفلتر معطل OFF)',
+                                badge: '12 عموداً تفصيلياً',
+                                description: 'يعرض التقرير الشامل بكافة المؤشرات: (المنتج، إجمالي المشتراه، إجمالي المخزون، إجمالي المبيعات، إجمالي التالف، مرتجع مورد، متوسط ارجاع المورد، مرتجع زبائن، متوسط ارجاع الزبائن، متوسط شراء، متوسط بيع، والربح).',
+                                variant: 'emerald'
+                            },
+                            {
+                                title: '2. العرض المختصر المركّز (الفلتر مفعل ON)',
+                                badge: 'تصفية + ربح مقتضب',
+                                description: 'يخفي تلقائياً الأصناف التي لم تحقق أي مبيعات خلال الفترة، ويختصر الجدول على: (اسم المنتج، المخزون، المباع، متوسط الشراء، متوسط البيع، وصافي الربح).',
+                                variant: 'emerald'
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'product-movement-report',
+                subNumber: '5.2',
+                title: 'حركات المنتجات والمخزون (/reports/product-movement)',
+                badgeText: 'تتبع تاريخي وتدقيق 100%',
+                badgeVariant: 'blue',
+                iconName: 'Package',
+                description: 'يُخصص هذا التقرير لتتبع كافة حركات الدخول والخروج الخاصة بمنتج معين بالتفصيل والترتيب الزمني والتراكمي لبيان تطور رصيد المخزون:',
+                featureBoxes: [
+                    {
+                        title: 'آلية الاستعلام ودعم سكانر الباركود (Barcode Scanner)',
+                        badgeText: 'مسح تلقائي وسريع',
+                        iconName: 'Package',
+                        variant: 'blue',
+                        description: 'يلزم اختيار منتج واحد محدد لعرض حركته. يدعم التقرير الاستعلام السريع عبر مسح باركود المنتج (QR / Barcode) بقارئ الباركود؛ حيث يتعرف النظام آلياً على الصنف ويجلب السجل الكامل فوراً.'
+                    }
+                ],
+                statsGrid: [
+                    { label: '1. رصيد أول الفترة', description: 'الكمية المتوفرة في المخزون قبل بداية النطاق الزمني المحدد.' },
+                    { label: '2. عدد الحركات', description: 'إجمالي عدد العمليات التي طرأت على الصنف خلال الفترة.' },
+                    { label: '3. رصيد آخر الفترة والتغير', description: 'الرصيد المتبقي النهائي مع مؤشر تلقائي لنسبة التغير (زيادة / نقصان).' }
+                ],
+                cardsGrid: [
+                    { title: '1. مشتريات (Purchase)', badge: 'زيادة (+)', description: 'إضافة كميات جديدة للمخزون ناتجة عن شراء من مورد.', variant: 'emerald' },
+                    { title: '2. مبيعات (Sale)', badge: 'نقصان (-)', description: 'خصم كميات من المخزون بناءً على فواتير البيع للعملاء.', variant: 'rose' },
+                    { title: '3. مرتجع عميل (Return In)', badge: 'زيادة (+)', description: 'إعادة إدخال بضائع مرجعة من الزبائن للمخزون.', variant: 'blue' },
+                    { title: '4. مرتجع مورد (Return Out)', badge: 'نقصان (-)', description: 'خصم بضائع تم ردها وإعادتها للمورد.', variant: 'amber' },
+                    { title: '5. تالف (Waste)', badge: 'نقصان (-)', description: 'خصم الكميات الهالكة أو المكسورة أو عينات العرض.', variant: 'slate' },
+                    { title: '6. رصيد افتتاحي (Opening)', badge: 'نقطة بداية', description: 'الرصيد المنقول أو المبدئي عند بداية التتبع المحاسبي.', variant: 'purple' }
+                ],
+                callout: {
+                    type: 'info',
+                    title: 'أعمدة جدول السجل التراكمي:',
+                    text: 'يعرض التقرير الجدول بالتفصيل التراكمي شاملاً: (تاريخ الحركة، نوع الحركة باللون المخصص، الكمية المضافة أو المخصومة مع سهم الاتجاه، سعر الوحدة، رقم مرجع الفاتورة/السند، ورصيد المخزون التراكمي المتبقي فور العملية).'
+                }
             }
         ]
     }

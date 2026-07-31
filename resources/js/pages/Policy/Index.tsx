@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { policySectionsData, PolicySectionData, PolicySubsectionData } from '@/data/policyData';
+import { policySectionsData, PolicyCard, PolicyFeatureBox } from '@/data/policyData';
 import {
     BookOpen, Layers, Ruler, Tags, Package, ShieldCheck,
     CheckCircle2, Sparkles, AlertCircle, Info,
-    Droplets, Box, Zap, CreditCard, DollarSign, Wallet,
-    Clock, AlertTriangle, Users, Truck, ArrowRight, ShieldAlert,
-    Split, Banknote, Receipt, PlusCircle, RotateCcw, Scale,
+    Droplets, Box, CreditCard, Wallet, Clock, Users, Truck,
+    ShieldAlert, Split, Receipt, PlusCircle, RotateCcw, Scale,
     ArrowLeftRight, RefreshCw, UserCheck, Building, Trash2,
-    TrendingDown, AlertOctagon, ShieldX, BarChart3, Calendar,
-    FileSpreadsheet, FileText, Filter, EyeOff, Search
+    TrendingDown, AlertOctagon, BarChart3, Calendar, EyeOff, Search
 } from 'lucide-react';
 
 const iconMap: Record<string, JSX.Element> = {
@@ -37,6 +35,7 @@ const iconMap: Record<string, JSX.Element> = {
     Truck: <Truck className="w-4 h-4 text-purple-500" />,
     CheckCircle2: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
     PlusCircle: <PlusCircle className="w-4 h-4 text-emerald-500" />,
+    Receipt: <Receipt className="w-5 h-5 text-emerald-500" />,
     UserCheck: <UserCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
     Building: <Building className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
     Search: <Search className="w-4 h-4 text-emerald-500" />,
@@ -50,15 +49,15 @@ function renderIcon(name?: string, fallback: JSX.Element = <Package className="w
 
 function getBadgeStyle(variant?: string) {
     switch (variant) {
-        case 'amber': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
-        case 'indigo': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400';
-        case 'slate': return 'bg-slate-500/10 text-slate-600 dark:text-slate-400';
-        case 'blue': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
-        case 'purple': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400';
-        case 'emerald': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
-        case 'rose': return 'bg-rose-500/20 text-rose-700 dark:text-rose-300';
-        case 'red': return 'bg-red-500/10 text-red-600 dark:text-red-400';
-        default: return 'bg-primary/10 text-primary';
+        case 'amber': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+        case 'indigo': return 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20';
+        case 'slate': return 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20';
+        case 'blue': return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+        case 'purple': return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+        case 'emerald': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+        case 'rose': return 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/30';
+        case 'red': return 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+        default: return 'bg-primary/10 text-primary border-primary/20';
     }
 }
 
@@ -166,7 +165,7 @@ export default function PolicyIndex() {
                                             )}
                                         </button>
 
-                                        {/* Subsections if active */}
+                                        {/* Subsections Navigation */}
                                         {activeSection === section.id && section.subsections && (
                                             <div className="flex flex-col gap-1 pr-6 pt-1 pb-2 border-r-2 border-primary/30 mr-3">
                                                 {section.subsections.map((sub) => (
@@ -201,7 +200,7 @@ export default function PolicyIndex() {
                         </div>
                     </div>
 
-                    {/* Main Content Body */}
+                    {/* Main Dynamic Content Renderer */}
                     <div className="lg:col-span-8 xl:col-span-9 space-y-12">
                         {policySectionsData.map((section, idx) => (
                             <div 
@@ -243,7 +242,7 @@ export default function PolicyIndex() {
                                     </div>
                                 )}
 
-                                {/* Subsections rendering */}
+                                {/* Subsections Generic Renderer */}
                                 {section.subsections.map((sub) => (
                                     <div 
                                         key={sub.id} 
@@ -273,8 +272,8 @@ export default function PolicyIndex() {
                                             </p>
                                         )}
 
-                                        {/* Steps Grid if available */}
-                                        {sub.steps && (
+                                        {/* Generic Steps List */}
+                                        {sub.steps && sub.steps.length > 0 && (
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 {sub.steps.map((step) => (
                                                     <div key={step.number} className="p-4 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 flex flex-col gap-2 relative">
@@ -289,9 +288,72 @@ export default function PolicyIndex() {
                                             </div>
                                         )}
 
-                                        {/* Cards Grid if available */}
-                                        {sub.cardsGrid && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        {/* Generic Stats Grid */}
+                                        {sub.statsGrid && sub.statsGrid.length > 0 && (
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                {sub.statsGrid.map((stat, sIdx) => (
+                                                    <div key={sIdx} className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-1">
+                                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                                                        <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                                            {stat.description}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Generic Feature Boxes */}
+                                        {sub.featureBoxes && sub.featureBoxes.length > 0 && (
+                                            <div className="space-y-4">
+                                                {sub.featureBoxes.map((fbox, fIdx) => (
+                                                    <div key={fIdx} className={`p-5 rounded-[20px] border space-y-4 ${getBadgeStyle(fbox.variant)}`}>
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2 font-black text-sm text-slate-900 dark:text-white">
+                                                                {renderIcon(fbox.iconName)}
+                                                                <span>{fbox.title}</span>
+                                                            </div>
+                                                            {fbox.badgeText && (
+                                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-white/20 text-current border border-current/30">
+                                                                    {fbox.badgeText}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {fbox.description && (
+                                                            <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                                                {fbox.description}
+                                                            </p>
+                                                        )}
+
+                                                        {/* Feature Box SubCards */}
+                                                        {fbox.subCards && fbox.subCards.length > 0 && (
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                                                                {fbox.subCards.map((sc, scIdx) => (
+                                                                    <div key={scIdx} className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-black/8 dark:border-white/10 space-y-2 shadow-sm">
+                                                                        <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                                                                            <span className="font-black text-xs text-slate-900 dark:text-white">{sc.title}</span>
+                                                                            {sc.badge && (
+                                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary">{sc.badge}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        {sc.subtitle && (
+                                                                            <span className="text-xs font-black text-primary block">{sc.subtitle}</span>
+                                                                        )}
+                                                                        {sc.description && (
+                                                                            <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed">{sc.description}</p>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Generic Cards Grid */}
+                                        {sub.cardsGrid && sub.cardsGrid.length > 0 && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                                 {sub.cardsGrid.map((card, cIdx) => (
                                                     <div key={cIdx} className="p-5 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-3">
                                                         <div className="flex items-center justify-between">
@@ -300,7 +362,7 @@ export default function PolicyIndex() {
                                                                 <span>{card.title}</span>
                                                             </div>
                                                             {card.badge && (
-                                                                <span className="text-[11px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary">
+                                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${getBadgeStyle(card.variant)}`}>
                                                                     {card.badge}
                                                                 </span>
                                                             )}
@@ -327,7 +389,7 @@ export default function PolicyIndex() {
                                             </div>
                                         )}
 
-                                        {/* Subsection Callout */}
+                                        {/* Generic Subsection Callout */}
                                         {sub.callout && (
                                             <div className={`p-4 rounded-[20px] border flex items-start gap-3 ${
                                                 sub.callout.type === 'alert'
@@ -344,194 +406,6 @@ export default function PolicyIndex() {
                                             </div>
                                         )}
 
-                                        {/* Custom Blocks */}
-                                        {sub.customBlock === 'split_payment_example' && (
-                                            <div className="p-5 rounded-[20px] bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30 space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-black text-sm">
-                                                        <Receipt className="w-5 h-5" />
-                                                        <span>2. السداد المركب للفاتورة الواحدة (Split Payments)</span>
-                                                    </div>
-                                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-black">مثال تطبيقي</span>
-                                                </div>
-
-                                                <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
-                                                    يمكن سداد الفاتورة الواحدة باستخدام **أكثر من وسيلة دفع على أجزاء متفرقة** بشرط أن يكون مجموع الأجزاء مساوياً لإجمالي قيمة الفاتورة.
-                                                </p>
-
-                                                <div className="p-4 rounded-[18px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/20 space-y-3 shadow-md">
-                                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
-                                                        <span className="text-xs font-black text-slate-500 dark:text-white/50">نموذج فاتورة بقيمة:</span>
-                                                        <span className="text-base font-black text-emerald-600 dark:text-emerald-400">500.00 دينار</span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                        <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
-                                                            <span className="text-[11px] font-bold text-slate-400">الدفعة 1 (نقداً)</span>
-                                                            <span className="text-sm font-black text-slate-800 dark:text-white">200.00 د.ل</span>
-                                                            <span className="text-[10px] font-bold text-emerald-500">💵 كاش الصندوق</span>
-                                                        </div>
-                                                        <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
-                                                            <span className="text-[11px] font-bold text-slate-400">الدفعة 2 (إلكتروني)</span>
-                                                            <span className="text-sm font-black text-slate-800 dark:text-white">150.00 د.ل</span>
-                                                            <span className="text-[10px] font-bold text-indigo-500">📱 تطبيق سداد</span>
-                                                        </div>
-                                                        <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
-                                                            <span className="text-[11px] font-bold text-slate-400">الدفعة 3 (مصرفي)</span>
-                                                            <span className="text-sm font-black text-slate-800 dark:text-white">150.00 د.ل</span>
-                                                            <span className="text-[10px] font-bold text-purple-500">💳 بطاقة تداول</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/10 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                                                        <span className="flex items-center gap-1">
-                                                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                                            إجمالي المبالغ المسددة: 200 + 150 + 150 = 500 د.ل
-                                                        </span>
-                                                        <span className="font-black text-emerald-600 dark:text-emerald-400">مطابقة كاملة 100%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {sub.customBlock === 'profit_compact_vs_full' && (
-                                            <div className="space-y-6">
-                                                {/* TAB 1 */}
-                                                <div className="p-6 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-indigo-500/20 space-y-5 shadow-sm">
-                                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3">
-                                                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black text-base">
-                                                            <Calendar className="w-5 h-5" />
-                                                            <span>التاب الأول: "تحليل يومي" (Daily Analysis)</span>
-                                                        </div>
-                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                                            تجميع شهري ويومي متدرج
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
-                                                        يقدم هذا التاب نظرة تجميعية وتدرجية لأداء المبيعات وصافي الأرباح عبر مقاطع زمنية، حيث يتم تجميع البيانات تلقائياً على مستوى **الأشهر**، مع إمكانية التوسع التفاعلي لرؤية **الأيام التفصيلية** لكل شهر:
-                                                    </p>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
-                                                            <h4 className="font-black text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-                                                                <Filter className="w-4 h-4" />
-                                                                خيارات الفلترة والبحث:
-                                                            </h4>
-                                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
-                                                                <li><strong>نطاق الفترة الزمنية:</strong> فلترة الأرباح بين تاريخين محددين (من تاريخ / إلى تاريخ).</li>
-                                                                <li><strong>فلترة المنتجات (Multi-Select):</strong> إمكانية اختيار منتج واحد أو عدة منتجات محددة لحصر تحليل الأرباح عليها فقط.</li>
-                                                            </ul>
-                                                        </div>
-                                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
-                                                            <h4 className="font-black text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
-                                                                <BarChart3 className="w-4 h-4" />
-                                                                المؤشرات المالية المعروضة لكل شهر/يوم:
-                                                            </h4>
-                                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-1.5 list-disc list-inside leading-relaxed">
-                                                                <li><strong>المبيعات (Sales):</strong> إجمالي قيمة فواتير البيع الصادرة.</li>
-                                                                <li><strong>المرتجعات (Returns):</strong> إجمالي قيمة المبيعات المرتجعة من العملاء.</li>
-                                                                <li><strong>صافي المبيعات (Net Sales):</strong> (إجمالي المبيعات - المرتجعات).</li>
-                                                                <li><strong>صافي الربح (Profit):</strong> الربح الصافي المحقق بعد خصم التكلفة.</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* TAB 2 */}
-                                                <div className="p-6 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-emerald-500/20 space-y-5 shadow-sm">
-                                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3">
-                                                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-base">
-                                                            <TrendingDown className="w-5 h-5" />
-                                                            <span>التاب الثاني: "تقرير الأرباح (بالتاريخ)" (Stock Profit Report)</span>
-                                                        </div>
-                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                                                            تحليل تفصيلي للمنتجات والربحية
-                                                        </span>
-                                                    </div>
-
-                                                    <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
-                                                        يوفر هذا التاب تحليلاً تفصيلياً شاملاً لكل منتج على حدة، لمعرفة حركة الكميات المباعة ومعدلات الربح الصافي الناتجة عن كل صنف خلال الفترة المحددة:
-                                                    </p>
-
-                                                    <div className="p-5 rounded-[20px] bg-emerald-500/10 border border-emerald-500/30 space-y-4">
-                                                        <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-black text-sm">
-                                                            <EyeOff className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                                            <span>خاصية "عرض مختصر للربح" وأنماط عرض تقرير أرباح المنتجات:</span>
-                                                        </div>
-                                                        <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
-                                                            يتيح هذا المفتاح التفاعلي التنقل بين نمطين للعرض بحسب مستوى التفاصيل المطلوب:
-                                                        </p>
-
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                                            <div className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/30 space-y-2.5 shadow-sm">
-                                                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
-                                                                    <span className="font-black text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                                                                        <BarChart3 className="w-4 h-4 text-emerald-500" />
-                                                                        1. العرض التفصيلي الشامل (الفلتر معطل OFF)
-                                                                    </span>
-                                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">12 عموداً شاملاً</span>
-                                                                </div>
-                                                                <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed mb-2">
-                                                                    عند **عدم تمكين** خيار "عرض مختصر للربح"، يعرض النظام التقرير التفصيلي الشامل بكافة المؤشرات المخزنية والمالية للمنتج:
-                                                                </p>
-                                                                <ul className="text-[11px] font-bold text-slate-600 dark:text-white/70 space-y-1 list-disc list-inside leading-relaxed">
-                                                                    <li><strong>اسم المنتج والتصنيف والوحدة</strong></li>
-                                                                    <li><strong>إجمالي المشتراه</strong> (الكمية الإجمالية المشتراه)</li>
-                                                                    <li><strong>إجمالي المخزون</strong> (الرصيد المخزني الحالي)</li>
-                                                                    <li><strong>إجمالي المبيعات</strong> (الكمية المباعة)</li>
-                                                                    <li><strong>إجمالي التالف</strong> (الكميات المسجلة كـ هالك)</li>
-                                                                    <li><strong>مرتجع مورد</strong> & <strong>متوسط ارجاع المورد</strong></li>
-                                                                    <li><strong>مرتجع زبائن</strong> & <strong>متوسط ارجاع الزبائن</strong></li>
-                                                                    <li><strong>متوسط شراء</strong> (تكلفة الشراء)</li>
-                                                                    <li><strong>متوسط بيع</strong> (سعر البيع)</li>
-                                                                    <li><strong>الربح</strong> (صافي الربح المحقق للصنف)</li>
-                                                                </ul>
-                                                            </div>
-
-                                                            <div className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/30 space-y-2.5 shadow-sm">
-                                                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
-                                                                    <span className="font-black text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
-                                                                        <EyeOff className="w-4 h-4 text-emerald-500" />
-                                                                        2. العرض المختصر المركّز (الفلتر مفعل ON)
-                                                                    </span>
-                                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">تصفية + ربح مقتضب</span>
-                                                                </div>
-                                                                <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed mb-2">
-                                                                    عند **تمكين** خيار "عرض مختصر للربح"، يتم تصفية الجدول تلقائياً ليقتصر فقط على:
-                                                                </p>
-                                                                <ul className="text-[11px] font-bold text-slate-600 dark:text-white/70 space-y-1 list-disc list-inside leading-relaxed">
-                                                                    <li><strong>إخفاء جميع الأصناف التي لم تحقق مبيعات</strong> خلال الفترة المقاسة لتنظيف القائمة.</li>
-                                                                    <li><strong>اختصار الأعمدة</strong> للتركيز الفوري على: (اسم المنتج، المخزون، الكمية المباعة، متوسط الشراء، متوسط البيع، وصافي الربح).</li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
-                                                            <h4 className="font-black text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                                                                <Search className="w-4 h-4" />
-                                                                خيارات الفلترة والتخصيص:
-                                                            </h4>
-                                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
-                                                                <li><strong>الفترة الزمنية:</strong> فلترة البيانات حسب التاريخ من وإلى.</li>
-                                                                <li><strong>التصنيف (Category):</strong> عرض منتجات تصنيف معين فقط.</li>
-                                                                <li><strong>البحث والتحديد:</strong> فلترة القائمة باسم المنتج أو معرفاته.</li>
-                                                            </ul>
-                                                        </div>
-
-                                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
-                                                            <h4 className="font-black text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                                                                <CheckCircle2 className="w-4 h-4" />
-                                                                الغاية والهدف الإداري:
-                                                            </h4>
-                                                            <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
-                                                                يعطي العرض التفصيلي الشامل صورة دقيقة 100% لحركة المخزون والمرتجعات والتالف والتكاليف الكاملة للمنتج، بينما يوفر العرض المختصر تقريراً سريعاً ومباشراً لأرباح الأصناف المباعة للإدارة بضغطة زر.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 ))}
                             </div>
