@@ -7,7 +7,8 @@ import {
     Clock, AlertTriangle, Users, Truck, ArrowRight, ShieldAlert,
     Split, Banknote, Receipt, PlusCircle, RotateCcw, Scale,
     ArrowLeftRight, RefreshCw, UserCheck, Building, Trash2,
-    TrendingDown, AlertOctagon, ShieldX
+    TrendingDown, AlertOctagon, ShieldX, BarChart3, Calendar,
+    FileSpreadsheet, FileText, Filter, EyeOff, Search
 } from 'lucide-react';
 
 interface PolicySection {
@@ -63,14 +64,17 @@ export default function PolicyIndex() {
             badge: 'الخطوة الرابعة',
             subsections: [
                 { id: 'waste-concept-recording', title: '4.1 مفهوم التالف وإثبات الخسائر' },
-                { id: 'stock-cost-impact', title: '4.2 الأثر المخزني وتكلفة الخسارة' },
+                { id: 'stock-cost-impact', title: '4.2 الأثر المخزني للتالف' },
             ]
         },
         {
-            id: 'reports-closing',
-            title: '5. التقارير المالية والإقفال الدوري',
-            icon: <Zap className="w-5 h-5" />,
-            badge: 'قريباً',
+            id: 'reports-profit-analysis',
+            title: '5. التقارير وتحليل الأرباح',
+            icon: <BarChart3 className="w-5 h-5" />,
+            badge: 'الخطوة الخامسة',
+            subsections: [
+                { id: 'comprehensive-profit-analysis', title: '5.1 تحليل الأرباح الشامل' },
+            ]
         },
     ];
 
@@ -309,7 +313,7 @@ export default function PolicyIndex() {
                                     <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-500" />
                                     <div className="text-xs font-bold leading-relaxed">
                                         <span className="font-black text-sm block mb-1">النتيجة ووراثة الخصائص:</span>
-                                        عند إنشاء المنتج الزيتي وااختيار فئة السعر (Tier) الخاصة به، **يرث المنتج تلقائياً جميع الأحجام والأسعار** المعرفة في تلك الفئة. وأي تعديل مستقبلي في أسعار التير ينعكس فوراً على جميع المنتجات الزيتية المرتبطة به بدون الحاجة لتعديل كل منتج يدوياً.
+                                        عند إنشاء المنتج الزيتي واختيار فئة السعر (Tier) الخاصة به، **يرث المنتج تلقائياً جميع الأحجام والأسعار** المعرفة في تلك الفئة. وأي تعديل مستقبلي في أسعار التير ينعكس فوراً على جميع المنتجات الزيتية المرتبطة به بدون الحاجة لتعديل كل منتج يدوياً.
                                     </div>
                                 </div>
                             </div>
@@ -835,7 +839,7 @@ export default function PolicyIndex() {
                                 </div>
                             </div>
 
-                            {/* SUBSECTION 4.2: Stock & Cost Impact */}
+                            {/* SUBSECTION 4.2: Stock Impact */}
                             <div id="stock-cost-impact" className="scroll-mt-6 rounded-[24px] p-6 border border-red-500/20 bg-red-500/5 dark:bg-red-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
                                 
                                 <div className="flex items-center justify-between">
@@ -845,11 +849,11 @@ export default function PolicyIndex() {
                                         </div>
                                         <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
                                             <TrendingDown className="w-5 h-5 text-red-500" />
-                                            الأثر المخزني وتكلفة الخسارة
+                                            الأثر المخزني للتالف
                                         </h3>
                                     </div>
                                     <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-700 dark:text-red-300 text-xs font-black">
-                                        الأثر المحاسبي الصارم
+                                        تعديل رصيد المخزون
                                     </span>
                                 </div>
 
@@ -866,6 +870,213 @@ export default function PolicyIndex() {
                                     </div>
 
                                 </div>
+                            </div>
+
+                        </div>
+
+                        {/* SECTION 5: Reports & Profit Analysis Policy */}
+                        <div id="reports-profit-analysis" className="scroll-mt-6 space-y-6 pt-6 border-t border-black/10 dark:border-white/10">
+                            
+                            {/* Section Title */}
+                            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-[14px] bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
+                                        <BarChart3 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                                            5. التقارير وتحليل الأرباح
+                                        </h2>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                            آلية عمل تقارير الأرباح وتحليل الأداء المالي اليومي والتاريخي
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* General Export Policy Callout Box (Mentioned once for all reports) */}
+                            <div className="p-4 rounded-[20px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-900 dark:text-indigo-200 flex items-start gap-3">
+                                <FileSpreadsheet className="w-5 h-5 shrink-0 mt-0.5 text-indigo-500" />
+                                <div className="text-xs font-bold leading-relaxed">
+                                    <span className="font-black text-sm block mb-1">خيارات التصدير القياسية لجميع التقارير:</span>
+                                    تعتمد جميع تقارير المنظومة ميزة **التصدير المباشر والموحد إلى ملفات PDF أو Excel بضغطة زر واحدة**، مع إدراج جميع البيانات الإحصائية والفلاتر المحددة دون الحاجة لأي إعدادات إضافية.
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 5.1: Comprehensive Profit Analysis */}
+                            <div id="comprehensive-profit-analysis" className="scroll-mt-6 rounded-[24px] p-6 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center font-black">
+                                            5.1
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <BarChart3 className="w-5 h-5 text-indigo-500" />
+                                            تحليل الأرباح الشامل (/reports/profit-analysis)
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-black">
+                                        تبويبان للتحليل اليومي والتفصيلي
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                    تحتوي شاشة **"تحليل الأرباح الشامل"** على تبويبين متكاملين يوفران رؤية مالية مزدوجة (تجميعية وهيكلية للزمن، وتفصيلية للمنتجات):
+                                </p>
+
+                                {/* TAB 1 Inside Comprehensive Profit Analysis */}
+                                <div className="p-6 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-indigo-500/20 space-y-5 shadow-sm">
+                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3">
+                                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-black text-base">
+                                            <Calendar className="w-5 h-5" />
+                                            <span>التاب الأول: "تحليل يومي" (Daily Analysis)</span>
+                                        </div>
+                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                            تجميع شهري ويومي متدرج
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                        يقدم هذا التاب نظرة تجميعية وتدرجية لأداء المبيعات وصافي الأرباح عبر مقاطع زمنية، حيث يتم تجميع البيانات تلقائياً على مستوى **الأشهر**، مع إمكانية التوسع التفاعلي لرؤية **الأيام التفصيلية** لكل شهر:
+                                    </p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        
+                                        {/* Filters Card */}
+                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
+                                            <h4 className="font-black text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                                                <Filter className="w-4 h-4" />
+                                                خيارات الفلترة والبحث:
+                                            </h4>
+                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
+                                                <li><strong>نطاق الفترة الزمنية:</strong> فلترة الأرباح بين تاريخين محددين (من تاريخ / إلى تاريخ).</li>
+                                                <li><strong>فلترة المنتجات (Multi-Select):</strong> إمكانية اختيار منتج واحد أو عدة منتجات محددة لحصر تحليل الأرباح عليها فقط.</li>
+                                            </ul>
+                                        </div>
+
+                                        {/* Display Data Card */}
+                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
+                                            <h4 className="font-black text-xs text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                                                <BarChart3 className="w-4 h-4" />
+                                                المؤشرات المالية المعروضة لكل شهر/يوم:
+                                            </h4>
+                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-1.5 list-disc list-inside leading-relaxed">
+                                                <li><strong>المبيعات (Sales):</strong> إجمالي قيمة فواتير البيع الصادرة.</li>
+                                                <li><strong>المرتجعات (Returns):</strong> إجمالي قيمة المبيعات المرتجعة من العملاء.</li>
+                                                <li><strong>صافي المبيعات (Net Sales):</strong> (إجمالي المبيعات - المرتجعات).</li>
+                                                <li><strong>صافي الربح (Profit):</strong> الربح الصافي المحقق بعد خصم التكلفة.</li>
+                                            </ul>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                {/* TAB 2 Inside Comprehensive Profit Analysis */}
+                                <div className="p-6 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-emerald-500/20 space-y-5 shadow-sm">
+                                    <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3">
+                                        <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-base">
+                                            <TrendingDown className="w-5 h-5" />
+                                            <span>التاب الثاني: "تقرير الأرباح (بالتاريخ)" (Stock Profit Report)</span>
+                                        </div>
+                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                            تحليل تفصيلي للمنتجات والربحية
+                                        </span>
+                                    </div>
+
+                                    <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                        يوفر هذا التاب تحليلاً تفصيلياً شاملاً لكل منتج على حدة، لمعرفة حركة الكميات المباعة ومعدلات الربح الصافي الناتجة عن كل صنف خلال الفترة المحددة:
+                                    </p>
+
+                                    {/* HIGHLIGHT: Compact View vs Full Detailed View Feature Box */}
+                                    <div className="p-5 rounded-[20px] bg-emerald-500/10 border border-emerald-500/30 space-y-4">
+                                        <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-black text-sm">
+                                            <EyeOff className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                            <span>خاصية "عرض مختصر للربح" وأنماط عرض تقرير أرباح المنتجات:</span>
+                                        </div>
+                                        
+                                        <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                            يتيح هذا التغشيل مفتاحاً تفاعلياً للتنقل بين نمطين للعرض بحسب مستوى التفاصيل المطلوب:
+                                        </p>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                            
+                                            {/* Full Detailed View (Filter OFF) */}
+                                            <div className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/30 space-y-2.5 shadow-sm">
+                                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                                                    <span className="font-black text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                        <BarChart3 className="w-4 h-4 text-emerald-500" />
+                                                        1. العرض التفصيلي الشامل (الفلتر معطل OFF)
+                                                    </span>
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">12 عموداً شاملاً</span>
+                                                </div>
+                                                <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed mb-2">
+                                                    عند **عدم تمكين** خيار "عرض مختصر للربح"، يعرض النظام التقرير التفصيلي الشامل بكافة المؤشرات المخزنية والمالية للمنتج:
+                                                </p>
+                                                <ul className="text-[11px] font-bold text-slate-600 dark:text-white/70 space-y-1 list-disc list-inside leading-relaxed">
+                                                    <li><strong>اسم المنتج والتصنيف والوحدة</strong></li>
+                                                    <li><strong>إجمالي المشتراه</strong> (الكمية الإجمالية المشتراه)</li>
+                                                    <li><strong>إجمالي المخزون</strong> (الرصيد المخزني الحالي)</li>
+                                                    <li><strong>إجمالي المبيعات</strong> (الكمية المباعة)</li>
+                                                    <li><strong>إجمالي التالف</strong> (الكميات المسجلة كـ هالك)</li>
+                                                    <li><strong>مرتجع مورد</strong> & <strong>متوسط ارجاع المورد</strong></li>
+                                                    <li><strong>مرتجع زبائن</strong> & <strong>متوسط ارجاع الزبائن</strong></li>
+                                                    <li><strong>متوسط شراء</strong> (تكلفة الشراء)</li>
+                                                    <li><strong>متوسط بيع</strong> (سعر البيع)</li>
+                                                    <li><strong>الربح</strong> (صافي الربح المحقق للصنف)</li>
+                                                </ul>
+                                            </div>
+
+                                            {/* Compact View (Filter ON) */}
+                                            <div className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/30 space-y-2.5 shadow-sm">
+                                                <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                                                    <span className="font-black text-xs text-slate-900 dark:text-white flex items-center gap-1.5">
+                                                        <EyeOff className="w-4 h-4 text-emerald-500" />
+                                                        2. العرض المختصر المركّز (الفلتر مفعل ON)
+                                                    </span>
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">تصفية + ربح مقتضب</span>
+                                                </div>
+                                                <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed mb-2">
+                                                    عند **تمكين** خيار "عرض مختصر للربح"، يتم تصفية الجدول تلقائياً ليقتصر فقط على:
+                                                </p>
+                                                <ul className="text-[11px] font-bold text-slate-600 dark:text-white/70 space-y-1 list-disc list-inside leading-relaxed">
+                                                    <li><strong>إخفاء جميع الأصناف التي لم تحقق مبيعات</strong> خلال الفترة المقاسة لتنظيف القائمة.</li>
+                                                    <li><strong>اختصار الأعمدة</strong> للتركيز الفوري على: (اسم المنتج، المخزون، الكمية المباعة، متوسط الشراء، متوسط البيع، وصافي الربح).</li>
+                                                </ul>
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        
+                                        {/* Stock Filters Card */}
+                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
+                                            <h4 className="font-black text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                                <Search className="w-4 h-4" />
+                                                خيارات الفلترة والتخصيص:
+                                            </h4>
+                                            <ul className="text-xs font-bold text-slate-600 dark:text-white/70 space-y-2 list-disc list-inside leading-relaxed">
+                                                <li><strong>الفترة الزمنية:</strong> فلترة البيانات حسب التاريخ من وإلى.</li>
+                                                <li><strong>التصنيف (Category):</strong> عرض منتجات تصنيف معين فقط.</li>
+                                                <li><strong>البحث والتحديد:</strong> فلترة القائمة باسم المنتج أو معرفاته.</li>
+                                            </ul>
+                                        </div>
+
+                                        {/* Stock Summary Note */}
+                                        <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-3">
+                                            <h4 className="font-black text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                الغاية والهدف الإداري:
+                                            </h4>
+                                            <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                                يعطي العرض التفصيلي الشامل صورة دقيقة 100% لحركة المخزون والمرتجعات والتالف والتكاليف الكاملة للمنتج، بينما يوفر العرض المختصر تقريراً سريعاً ومباشراً لأرباح الأصناف المباعة للإدارة بضغطة زر.
+                                            </p>
+                                        </div>
+
+                                    </div>
+                                </div>
+
                             </div>
 
                         </div>
