@@ -8,7 +8,7 @@ import {
     ShieldAlert, Split, Receipt, PlusCircle, RotateCcw, Scale,
     ArrowLeftRight, RefreshCw, UserCheck, Building, Trash2,
     TrendingDown, AlertOctagon, BarChart3, Calendar, EyeOff, Search,
-    HardDrive, Database, Upload, History, ClipboardList, PackageOpen, TrendingUp, List, FileText, Plus
+    HardDrive, Database, Upload, History, ClipboardList, PackageOpen, TrendingUp, List, FileText, Plus, Eye
 } from 'lucide-react';
 
 const iconMap: Record<string, JSX.Element> = {
@@ -17,40 +17,41 @@ const iconMap: Record<string, JSX.Element> = {
     RotateCcw: <RotateCcw className="w-5 h-5" />,
     Trash2: <Trash2 className="w-5 h-5" />,
     BarChart3: <BarChart3 className="w-5 h-5" />,
-    Droplets: <Droplets className="w-5 h-5 text-amber-500" />,
-    Sparkles: <Sparkles className="w-5 h-5 text-indigo-500" />,
-    Box: <Box className="w-5 h-5 text-slate-500" />,
-    Clock: <Clock className="w-5 h-5 text-blue-500" />,
-    Wallet: <Wallet className="w-5 h-5 text-rose-500" />,
-    Split: <Split className="w-5 h-5 text-emerald-500" />,
-    RefreshCw: <RefreshCw className="w-5 h-5 text-purple-500" />,
-    Scale: <Scale className="w-5 h-5 text-amber-500" />,
-    ArrowLeftRight: <ArrowLeftRight className="w-5 h-5 text-purple-500" />,
-    AlertOctagon: <AlertOctagon className="w-5 h-5 text-red-500" />,
-    TrendingDown: <TrendingDown className="w-5 h-5 text-red-500" />,
-    Calendar: <Calendar className="w-5 h-5 text-indigo-500" />,
-    Layers: <Layers className="w-4 h-4 text-slate-400" />,
-    Ruler: <Ruler className="w-4 h-4 text-slate-400" />,
-    Tags: <Tags className="w-4 h-4 text-slate-400" />,
-    Users: <Users className="w-4 h-4 text-blue-500" />,
-    Truck: <Truck className="w-4 h-4 text-purple-500" />,
-    CheckCircle2: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-    PlusCircle: <PlusCircle className="w-4 h-4 text-emerald-500" />,
-    Receipt: <Receipt className="w-5 h-5 text-emerald-500" />,
-    UserCheck: <UserCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
-    Building: <Building className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
-    Search: <Search className="w-4 h-4 text-emerald-500" />,
-    EyeOff: <EyeOff className="w-5 h-5 text-emerald-500" />,
-    HardDrive: <HardDrive className="w-5 h-5 text-indigo-500" />,
-    Database: <Database className="w-5 h-5 text-primary" />,
-    Upload: <Upload className="w-5 h-5 text-emerald-500" />,
-    History: <History className="w-5 h-5 text-purple-500" />,
-    ClipboardList: <ClipboardList className="w-5 h-5 text-emerald-500" />,
-    PackageOpen: <PackageOpen className="w-5 h-5 text-blue-500" />,
-    TrendingUp: <TrendingUp className="w-5 h-5 text-emerald-500" />,
-    List: <List className="w-5 h-5 text-purple-500" />,
-    FileText: <FileText className="w-5 h-5 text-blue-500" />,
-    Plus: <Plus className="w-5 h-5 text-emerald-500" />,
+    Droplets: <Droplets className="w-5 h-5" />,
+    Sparkles: <Sparkles className="w-5 h-5" />,
+    Box: <Box className="w-5 h-5" />,
+    Clock: <Clock className="w-5 h-5" />,
+    Wallet: <Wallet className="w-5 h-5" />,
+    Split: <Split className="w-5 h-5" />,
+    RefreshCw: <RefreshCw className="w-5 h-5" />,
+    Scale: <Scale className="w-5 h-5" />,
+    ArrowLeftRight: <ArrowLeftRight className="w-5 h-5" />,
+    AlertOctagon: <AlertOctagon className="w-5 h-5" />,
+    TrendingDown: <TrendingDown className="w-5 h-5" />,
+    Calendar: <Calendar className="w-5 h-5" />,
+    Layers: <Layers className="w-4 h-4" />,
+    Ruler: <Ruler className="w-4 h-4" />,
+    Tags: <Tags className="w-4 h-4" />,
+    Users: <Users className="w-4 h-4" />,
+    Truck: <Truck className="w-4 h-4" />,
+    CheckCircle2: <CheckCircle2 className="w-4 h-4" />,
+    PlusCircle: <PlusCircle className="w-4 h-4" />,
+    Receipt: <Receipt className="w-5 h-5" />,
+    UserCheck: <UserCheck className="w-5 h-5" />,
+    Building: <Building className="w-5 h-5" />,
+    Search: <Search className="w-4 h-4" />,
+    EyeOff: <EyeOff className="w-5 h-5" />,
+    HardDrive: <HardDrive className="w-5 h-5" />,
+    Database: <Database className="w-5 h-5" />,
+    Upload: <Upload className="w-5 h-5" />,
+    History: <History className="w-5 h-5" />,
+    ClipboardList: <ClipboardList className="w-5 h-5" />,
+    PackageOpen: <PackageOpen className="w-5 h-5" />,
+    TrendingUp: <TrendingUp className="w-5 h-5" />,
+    List: <List className="w-5 h-5" />,
+    FileText: <FileText className="w-5 h-5" />,
+    Plus: <Plus className="w-5 h-5" />,
+    Eye: <Eye className="w-5 h-5" />,
 };
 
 function renderIcon(name?: string, fallback: JSX.Element = <Package className="w-5 h-5" />) {
@@ -109,7 +110,7 @@ export default function PolicyIndex() {
                                 </span>
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
-                                دليل وسياسات استخدام منظومة العطور
+                                دليل وسياسات استخدام منظومة العطور — لشركة "تقنية السحابة"
                             </h1>
                             <p className="text-sm sm:text-base font-bold text-white/70 max-w-2xl leading-relaxed">
                                 وثيقة تفصيلية توضح آلية عمل النظام، شروط إدخال البيانات، والقواعد المحاسبية لضمان دقة العمليات وحفظ حقوق المستهلك والمحل.
