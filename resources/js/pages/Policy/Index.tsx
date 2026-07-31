@@ -4,7 +4,10 @@ import {
     BookOpen, Layers, Ruler, Tags, Package, ShieldCheck,
     CheckCircle2, Sparkles, AlertCircle, Info,
     Droplets, Box, Zap, CreditCard, DollarSign, Wallet,
-    Clock, AlertTriangle, Users, Truck, ArrowRight, ShieldAlert
+    Clock, AlertTriangle, Users, Truck, ArrowRight, ShieldAlert,
+    Split, Banknote, Receipt, PlusCircle, RotateCcw, Scale,
+    ArrowLeftRight, RefreshCw, UserCheck, Building, Trash2,
+    TrendingDown, AlertOctagon, ShieldX
 } from 'lucide-react';
 
 interface PolicySection {
@@ -39,17 +42,33 @@ export default function PolicyIndex() {
             subsections: [
                 { id: 'credit-sales-purchases', title: '2.1 البيع والشراء بالآجل (الذمم)' },
                 { id: 'cash-immediate-payment', title: '2.2 التعامل النقدي والالتزام بالدفع اللحظي' },
+                { id: 'multi-payment-methods', title: '2.3 وسائل الدفع والسداد المركب للفاتورة' },
             ]
         },
         {
-            id: 'inventory-waste',
-            title: '3. إدارة المخزون والمرتجعات والتالف',
-            icon: <Box className="w-5 h-5" />,
-            badge: 'قريباً',
+            id: 'returns-settlements',
+            title: '3. سياسة المرتجعات والتسويات المالية',
+            icon: <RotateCcw className="w-5 h-5" />,
+            badge: 'الخطوة الثالثة',
+            subsections: [
+                { id: 'returns-and-settlements-rule', title: '3.1 قواعد إرجاع المبيعات والمشتريات' },
+                { id: 'unsettled-returns-impact', title: '3.2 أثر المرتجع بدون تسوية (رصيد مستحق)' },
+                { id: 'independent-settlements', title: '3.3 إنشاء التسويات المالية المنفصلة' },
+            ]
+        },
+        {
+            id: 'inventory-waste-loss',
+            title: '4. سياسة التالف والخسائر المخزنية',
+            icon: <Trash2 className="w-5 h-5" />,
+            badge: 'الخطوة الرابعة',
+            subsections: [
+                { id: 'waste-concept-recording', title: '4.1 مفهوم التالف وإثبات الخسائر' },
+                { id: 'stock-cost-impact', title: '4.2 الأثر المخزني وتكلفة الخسارة' },
+            ]
         },
         {
             id: 'reports-closing',
-            title: '4. التقارير المالية والإقفال الدوري',
+            title: '5. التقارير المالية والإقفال الدوري',
             icon: <Zap className="w-5 h-5" />,
             badge: 'قريباً',
         },
@@ -99,7 +118,7 @@ export default function PolicyIndex() {
                         <div className="flex items-center gap-3 shrink-0">
                             <div className="flex flex-col items-end text-left sm:text-right">
                                 <span className="text-xs font-black text-white/40 uppercase tracking-widest">تاريخ التحديث</span>
-                                <span className="text-sm font-bold text-white/90">30 يوليو 2026</span>
+                                <span className="text-sm font-bold text-white/90">31 يوليو 2026</span>
                             </div>
                         </div>
                     </div>
@@ -290,7 +309,7 @@ export default function PolicyIndex() {
                                     <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-emerald-500" />
                                     <div className="text-xs font-bold leading-relaxed">
                                         <span className="font-black text-sm block mb-1">النتيجة ووراثة الخصائص:</span>
-                                        عند إنشاء المنتج الزيتي واختيار فئة السعر (Tier) الخاصة به، **يرث المنتج تلقائياً جميع الأحجام والأسعار** المعرفة في تلك الفئة. وأي تعديل مستقبلي في أسعار التير ينعكس فوراً على جميع المنتجات الزيتية المرتبطة به بدون الحاجة لتعديل كل منتج يدوياً.
+                                        عند إنشاء المنتج الزيتي وااختيار فئة السعر (Tier) الخاصة به، **يرث المنتج تلقائياً جميع الأحجام والأسعار** المعرفة في تلك الفئة. وأي تعديل مستقبلي في أسعار التير ينعكس فوراً على جميع المنتجات الزيتية المرتبطة به بدون الحاجة لتعديل كل منتج يدوياً.
                                     </div>
                                 </div>
                             </div>
@@ -407,7 +426,7 @@ export default function PolicyIndex() {
                                             2. سياسة المبيعات والمشتريات وأنواع السداد
                                         </h2>
                                         <p className="text-xs font-bold text-slate-400 dark:text-white/40">
-                                            الضوابط المالية للتعاملات النقدية والآجلة مع العملاء والموردين
+                                            الضوابط المالية للتعاملات النقدية والآجلة وتعدد وسائل الدفع
                                         </p>
                                     </div>
                                 </div>
@@ -517,6 +536,336 @@ export default function PolicyIndex() {
 
                                 </div>
 
+                            </div>
+
+                            {/* SUBSECTION 2.3: Multi-Payment Methods & Split Payments */}
+                            <div id="multi-payment-methods" className="scroll-mt-6 rounded-[24px] p-6 border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black">
+                                            2.3
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <Split className="w-5 h-5 text-emerald-500" />
+                                            وسائل الدفع والسداد المركب للفاتورة الواحدة
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-black">
+                                        مرونة السداد بالتقسيم
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                    توفر المنظومة بيئة دفع مرنة ومتطورة تعطي الخيار لإدارة طرق سداد متعددة وتقسيم الفاتورة الواحدة على أكثر من وسيلة دفع في نفس المعاملة:
+                                </p>
+
+                                {/* Part A: Custom Payment Methods */}
+                                <div className="p-5 rounded-[20px] bg-white/70 dark:bg-slate-900/70 border border-black/8 dark:border-white/10 space-y-3">
+                                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-black text-sm">
+                                        <PlusCircle className="w-4 h-4" />
+                                        <span>1. إنشاء وتهيئة وسائل دفع متعددة</span>
+                                    </div>
+                                    <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                        يتيح النظام من شاشة **"وسائل الدفع"** إضافة وتهيئة عدد غير محدود من الوسائل النقدية والإلكترونية (مثلاً: <span className="font-black text-slate-900 dark:text-white">نقداً، سداد، تداول، بطاقة تداول، تحويل مصرفي، إلخ</span>) مع إمكانية تفعيل أو تجميد أي وسيلة دفع حسب حاجة العمل.
+                                    </p>
+                                </div>
+
+                                {/* Part B: Split Payment Case Example */}
+                                <div className="p-5 rounded-[20px] bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/30 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-black text-sm">
+                                            <Receipt className="w-5 h-5" />
+                                            <span>2. السداد المركب للفاتورة الواحدة (Split Payments)</span>
+                                        </div>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-black">مثال تطبيقي</span>
+                                    </div>
+
+                                    <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                        يمكن سداد الفاتورة الواحدة باستخدام **أكثر من وسيلة دفع على أجزاء متفرقة** بشرط أن يكون مجموع الأجزاء مساوياً لإجمالي قيمة الفاتورة.
+                                    </p>
+
+                                    {/* Practical Example Diagram Card */}
+                                    <div className="p-4 rounded-[18px] bg-white/90 dark:bg-slate-900/90 border border-emerald-500/20 space-y-3 shadow-md">
+                                        <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
+                                            <span className="text-xs font-black text-slate-500 dark:text-white/50">نموذج فاتورة بقيمة:</span>
+                                            <span className="text-base font-black text-emerald-600 dark:text-emerald-400">500.00 دينار</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            
+                                            <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
+                                                <span className="text-[11px] font-bold text-slate-400">الدفعة 1 (نقداً)</span>
+                                                <span className="text-sm font-black text-slate-800 dark:text-white">200.00 د.ل</span>
+                                                <span className="text-[10px] font-bold text-emerald-500">💵 كاش الصندوق</span>
+                                            </div>
+
+                                            <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
+                                                <span className="text-[11px] font-bold text-slate-400">الدفعة 2 (إلكتروني)</span>
+                                                <span className="text-sm font-black text-slate-800 dark:text-white">150.00 د.ل</span>
+                                                <span className="text-[10px] font-bold text-indigo-500">📱 تطبيق سداد</span>
+                                            </div>
+
+                                            <div className="p-3 rounded-xl bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-center">
+                                                <span className="text-[11px] font-bold text-slate-400">الدفعة 3 (مصرفي)</span>
+                                                <span className="text-sm font-black text-slate-800 dark:text-white">150.00 د.ل</span>
+                                                <span className="text-[10px] font-bold text-purple-500">💳 بطاقة تداول</span>
+                                            </div>
+
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/10 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                            <span className="flex items-center gap-1">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                                إجمالي المبالغ المسددة: 200 + 150 + 150 = 500 د.ل
+                                            </span>
+                                            <span className="font-black text-emerald-600 dark:text-emerald-400">مطابقة كاملة 100%</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {/* SECTION 3: Returns & Settlements Policy */}
+                        <div id="returns-settlements" className="scroll-mt-6 space-y-6 pt-6 border-t border-black/10 dark:border-white/10">
+                            
+                            {/* Section Title */}
+                            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-[14px] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500">
+                                        <RotateCcw className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                                            3. سياسة المرتجعات والتسويات المالية
+                                        </h2>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                            قواعد إرجاع الأصناف، المعالجة المحاسبية للأرصدة المعلقة، والتسويات المستقلة
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 3.1: Returns Rules */}
+                            <div id="returns-and-settlements-rule" className="scroll-mt-6 rounded-[24px] p-6 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center font-black">
+                                            3.1
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <RefreshCw className="w-5 h-5 text-purple-500" />
+                                            قواعد إرجاع المبيعات والمشتريات
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs font-black">
+                                        مرونة الإرجاع والتسوية
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                    عند تنفيذ أي عملية إرجاع (سواء **مرتجع مبيعات من زبون** أو **مرتجع مشتريات إلى مورد**)، يتيح النظام خيار التسوية المالية الفورية (تسوية المبلغ عبر أي وسيلة دفع معتمدة)، أو إبقاء المبلغ معلقاً كـ **رصيد دائن/مستحق**.
+                                </p>
+                            </div>
+
+                            {/* SUBSECTION 3.2: Unsettled Returns Impact */}
+                            <div id="unsettled-returns-impact" className="scroll-mt-6 rounded-[24px] p-6 border border-amber-500/20 bg-amber-500/5 dark:bg-amber-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black">
+                                            3.2
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <Scale className="w-5 h-5 text-amber-500" />
+                                            أثر المرتجع بدون تسوية (الأرصدة المستحقة)
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-black">
+                                        قاعدة حسابية جوهرية
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                    في حال تم تنفيذ عملية الإرجاع **دون إنشاء تسوية مالية فورية** (أي دون تسوية وتدفق المبلغ مالياً وقت المرتجع)، يترتب على ذلك الأثر المحاسبي التلقائي التالي:
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    
+                                    {/* Unsettled Customer Return */}
+                                    <div className="p-5 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-blue-500/30 flex flex-col gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-black text-sm">
+                                                <UserCheck className="w-5 h-5" />
+                                                <span>1. مرتجع مبيعات بدون تسوية</span>
+                                            </div>
+                                            <span className="text-[11px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">مرتجع من زبون</span>
+                                        </div>
+
+                                        <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 text-xs font-black">
+                                            الحالة المحاسبية: "الزبون يريد منك مبالغ" (رصيد مستحق للزبون)
+                                        </div>
+
+                                        <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                            يتحول قيمة المرتجع تلقائياً كـ **رصيد دائن لصالح الزبون**. يمكن للزبون استخدام هذا الرصيد لخصم قيمة مشترياته القادمة، أو استرداده عبر وسيلة السداد المناسبة لاحقاً عبر شاشة التسويات.
+                                        </p>
+                                    </div>
+
+                                    {/* Unsettled Supplier Return */}
+                                    <div className="p-5 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-amber-500/30 flex flex-col gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-black text-sm">
+                                                <Building className="w-5 h-5" />
+                                                <span>2. مرتجع مشتريات بدون تسوية</span>
+                                            </div>
+                                            <span className="text-[11px] font-black px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">مرتجع إلى مورد</span>
+                                        </div>
+
+                                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs font-black">
+                                            الحالة المحاسبية: "أنت تريد مبالغ من المورد" (رصيد مستحق للمحل)
+                                        </div>
+
+                                        <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                            يخصم قيمة المرتجع من ديون ومستحقات المورد، أو يُسجل كـ **رصيد مستحق للمحل لدى المورد** يُسوى في شحنات مشتريات قادمة أو يُسترد عبر وسيلة السداد المحددة وقت إجراء التسوية.
+                                        </p>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 3.3: Independent Settlements */}
+                            <div id="independent-settlements" className="scroll-mt-6 rounded-[24px] p-6 border border-purple-500/20 bg-purple-500/5 dark:bg-purple-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center font-black">
+                                            3.3
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <ArrowLeftRight className="w-5 h-5 text-purple-500" />
+                                            إنشاء التسويات المالية المنفصلة
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-700 dark:text-purple-300 text-xs font-black">
+                                        إغلاق وتصفية الأرصدة
+                                    </span>
+                                </div>
+
+                                <div className="p-5 rounded-[20px] bg-white/70 dark:bg-slate-900/70 border border-black/8 dark:border-white/10 space-y-3">
+                                    <h4 className="font-black text-sm text-slate-800 dark:text-white flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-purple-500" />
+                                        تصفية الأرصدة المعلقة عبر شاشة التسويات:
+                                    </h4>
+                                    <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                        يتيح النظام في أي وقت إنشاء **"تسويات منفصلة"** من شاشات *تسويات العملاء* أو *تسويات الموردين*. تُستخدم هذه الشاشات لتسجيل مبالغ التسوية وتصفية الأرصدة المعلقة (عبر وسيلة السداد المختارة وقت التنفيذ) الناتجة عن المرتجعات السابقة دون الحاجة لتعديل الفواتير الأصلية، مما يضمن دقة القيود والشفافية التامة أمام العميل والمورد.
+                                    </p>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        {/* SECTION 4: Inventory Waste & Loss Policy */}
+                        <div id="inventory-waste-loss" className="scroll-mt-6 space-y-6 pt-6 border-t border-black/10 dark:border-white/10">
+                            
+                            {/* Section Title */}
+                            <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+                                        <Trash2 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                                            4. سياسة التالف والخسائر المخزنية
+                                        </h2>
+                                        <p className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                            توثيق الهالك والكسر واستثنائه من المخزون والأرباح المحاسبية
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 4.1: Waste Concept & Recording */}
+                            <div id="waste-concept-recording" className="scroll-mt-6 rounded-[24px] p-6 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center font-black">
+                                            4.1
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <AlertOctagon className="w-5 h-5 text-red-500" />
+                                            مفهوم التالف وإثبات الخسائر
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-black">
+                                        سجلات التالف (Waste Logs)
+                                    </span>
+                                </div>
+
+                                <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                    تسمح المنظومة بإثبات وتوثيق أي أصناف أو كميات عطرية تعرضت للتلف أو الكسر أو انتهاء الصلاحية أو تم استهلاكها كـ **عينات تجريبية (Testers)** دون بيعها:
+                                </p>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-2">
+                                        <h4 className="font-black text-xs text-slate-800 dark:text-white">1. التوثيق والملاحظات</h4>
+                                        <p className="text-[11px] font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                                            تسجيل سبب التلف بالتفصيل (مثل: كسر عبوة، انسكاب زيت، عينة عرض) وحفظ اسم الموظف المنفذ.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-2">
+                                        <h4 className="font-black text-xs text-slate-800 dark:text-white">2. تحديد الحجم والكمية</h4>
+                                        <p className="text-[11px] font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                                            خصم الكمية إما بالقطعة (Unit) للمنتجات العادية، أو بالملي متر (Ml) للعطور الزيتية والأصلية.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-2">
+                                        <h4 className="font-black text-xs text-slate-800 dark:text-white">3. تتبع السجل التاريخي</h4>
+                                        <p className="text-[11px] font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                                            الاحتفاظ بسجل كامل للتالف مع إمكانية طباعته أو تصديره للمراجعة والتدقيق المحاسبي.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* SUBSECTION 4.2: Stock & Cost Impact */}
+                            <div id="stock-cost-impact" className="scroll-mt-6 rounded-[24px] p-6 border border-red-500/20 bg-red-500/5 dark:bg-red-950/20 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6">
+                                
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-600 dark:text-red-400 flex items-center justify-center font-black">
+                                            4.2
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                            <TrendingDown className="w-5 h-5 text-red-500" />
+                                            الأثر المخزني وتكلفة الخسارة
+                                        </h3>
+                                    </div>
+                                    <span className="px-3 py-1 rounded-full bg-red-500/20 text-red-700 dark:text-red-300 text-xs font-black">
+                                        الأثر المحاسبي الصارم
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-5">
+                                    
+                                    <div className="p-5 rounded-[20px] bg-white/80 dark:bg-slate-900/80 border border-black/8 dark:border-white/10 space-y-2">
+                                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-black text-sm">
+                                            <Box className="w-4 h-4" />
+                                            <span>الخصم المباشر من المخزون</span>
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                            تُخصم الكمية التالفة فوراً ولحظياً من رصيد المنتج الفعلي بالمنظومة، مما يضمن مطابقة الجرد الفعلي للمحل مع رصيد الشاشة 100%.
+                                        </p>
+                                    </div>
+
+                                </div>
                             </div>
 
                         </div>
