@@ -7,7 +7,8 @@ import {
     Droplets, Box, CreditCard, Wallet, Clock, Users, Truck,
     ShieldAlert, Split, Receipt, PlusCircle, RotateCcw, Scale,
     ArrowLeftRight, RefreshCw, UserCheck, Building, Trash2,
-    TrendingDown, AlertOctagon, BarChart3, Calendar, EyeOff, Search
+    TrendingDown, AlertOctagon, BarChart3, Calendar, EyeOff, Search,
+    HardDrive, Database, Upload, History, ClipboardList, PackageOpen, TrendingUp, List, FileText, Plus
 } from 'lucide-react';
 
 const iconMap: Record<string, JSX.Element> = {
@@ -40,6 +41,16 @@ const iconMap: Record<string, JSX.Element> = {
     Building: <Building className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
     Search: <Search className="w-4 h-4 text-emerald-500" />,
     EyeOff: <EyeOff className="w-5 h-5 text-emerald-500" />,
+    HardDrive: <HardDrive className="w-5 h-5 text-indigo-500" />,
+    Database: <Database className="w-5 h-5 text-primary" />,
+    Upload: <Upload className="w-5 h-5 text-emerald-500" />,
+    History: <History className="w-5 h-5 text-purple-500" />,
+    ClipboardList: <ClipboardList className="w-5 h-5 text-emerald-500" />,
+    PackageOpen: <PackageOpen className="w-5 h-5 text-blue-500" />,
+    TrendingUp: <TrendingUp className="w-5 h-5 text-emerald-500" />,
+    List: <List className="w-5 h-5 text-purple-500" />,
+    FileText: <FileText className="w-5 h-5 text-blue-500" />,
+    Plus: <Plus className="w-5 h-5 text-emerald-500" />,
 };
 
 function renderIcon(name?: string, fallback: JSX.Element = <Package className="w-5 h-5" />) {
