@@ -52,6 +52,8 @@ const iconMap: Record<string, JSX.Element> = {
     FileText: <FileText className="w-5 h-5" />,
     Plus: <Plus className="w-5 h-5" />,
     Eye: <Eye className="w-5 h-5" />,
+    ShieldCheck: <ShieldCheck className="w-5 h-5" />,
+    ShieldAlert: <ShieldAlert className="w-5 h-5" />,
 };
 
 function renderIcon(name?: string, fallback: JSX.Element = <Package className="w-5 h-5" />) {
