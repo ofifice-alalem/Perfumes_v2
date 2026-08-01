@@ -90,39 +90,39 @@ export default function PolicyIndex() {
 
     return (
         <AppShell pageTitle="سياسات ودليل النظام">
-            <div className="flex flex-col gap-6 pb-32 lg:pb-12 max-w-7xl mx-auto">
+            <div className="flex flex-col gap-6 pb-32 lg:pb-12 w-full">
                 
                 {/* Header Banner */}
-                <div className="relative overflow-hidden rounded-[28px] p-6 sm:p-8
+                <div className="relative overflow-hidden rounded-[28px] p-6 sm:p-10
                     border border-black/10 dark:border-white/[0.12]
                     bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900
                     text-white shadow-2xl shadow-black/20">
                     
-                    <div className="absolute top-0 right-0 -mt-12 -mr-12 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute top-0 right-0 -mt-12 -mr-12 w-80 h-80 bg-primary/20 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/20 border border-primary/30 text-primary-light text-xs font-black">
-                                    <ShieldCheck className="w-3.5 h-3.5" /> وثيقة رسمية ملزمة
+                                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary/20 border border-primary/30 text-primary-light text-sm font-black">
+                                    <ShieldCheck className="w-4 h-4" /> وثيقة رسمية ملزمة
                                 </span>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 text-white/70 text-xs font-bold">
+                                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/10 text-white/80 text-sm font-bold">
                                     إصدار المنظومة v2.0
                                 </span>
                             </div>
-                            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white mt-1">
+                            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white mt-1">
                                 دليل وسياسات استخدام منظومة العطور — لشركة "تقنية السحابة"
                             </h1>
-                            <p className="text-sm sm:text-base font-bold text-white/70 max-w-2xl leading-relaxed">
+                            <p className="text-base sm:text-lg font-bold text-white/80 max-w-4xl leading-relaxed">
                                 وثيقة تفصيلية توضح آلية عمل النظام، شروط إدخال البيانات، والقواعد المحاسبية لضمان دقة العمليات وحفظ حقوق المستهلك والمحل.
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3 shrink-0">
                             <div className="flex flex-col items-end text-left sm:text-right">
-                                <span className="text-xs font-black text-white/40 uppercase tracking-widest">تاريخ التحديث</span>
-                                <span className="text-sm font-bold text-white/90">31 يوليو 2026</span>
+                                <span className="text-xs font-black text-white/50 uppercase tracking-widest">تاريخ التحديث</span>
+                                <span className="text-base font-bold text-white">31 يوليو 2026</span>
                             </div>
                         </div>
                     </div>
@@ -133,18 +133,18 @@ export default function PolicyIndex() {
                     
                     {/* Sticky Sidebar Navigation (Index) */}
                     <div className="lg:col-span-4 xl:col-span-3 sticky top-6 z-20 space-y-4">
-                        <div className="rounded-[24px] p-5 border border-black/8 dark:border-white/10
+                        <div className="rounded-[24px] p-6 border border-black/8 dark:border-white/10
                             bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5">
                             
                             <div className="flex items-center justify-between pb-4 mb-4 border-b border-black/5 dark:border-white/8">
                                 <div className="flex items-center gap-2">
                                     <BookOpen className="w-5 h-5 text-primary" />
-                                    <h3 className="font-black text-slate-800 dark:text-white text-base">فهرس المحتويات</h3>
+                                    <h3 className="font-black text-slate-800 dark:text-white text-lg">فهرس المحتويات</h3>
                                 </div>
-                                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-primary/10 text-primary">الوثيقة</span>
+                                <span className="text-xs font-black px-2.5 py-1 rounded-md bg-primary/10 text-primary">الوثيقة</span>
                             </div>
 
-                            <nav className="flex flex-col gap-2">
+                            <nav className="flex flex-col gap-1.5 max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
                                 {policySectionsData.map((section) => (
                                     <div key={section.id} className="flex flex-col gap-1">
                                         <button
@@ -156,20 +156,20 @@ export default function PolicyIndex() {
                                                     scrollTo(section.id, section.id);
                                                 }
                                             }}
-                                            className={`flex items-center justify-between p-3 rounded-[16px] text-right font-bold text-sm transition-all duration-200 ${
+                                            className={`flex items-center justify-between p-3.5 rounded-[16px] text-right font-bold text-base transition-all duration-200 ${
                                                 activeSection === section.id
                                                     ? 'bg-primary text-white shadow-md shadow-primary/25 font-black'
                                                     : 'text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="flex items-center gap-3 min-w-0">
                                                 <span className={`${activeSection === section.id ? 'text-white' : 'text-slate-400 dark:text-white/40'}`}>
                                                     {renderIcon(section.iconName)}
                                                 </span>
                                                 <span className="truncate">{section.title}</span>
                                             </div>
                                             {section.badge && (
-                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                                                <span className={`text-xs font-black px-2.5 py-0.5 rounded-full shrink-0 ${
                                                     activeSection === section.id
                                                         ? 'bg-white/20 text-white'
                                                         : 'bg-black/5 dark:bg-white/10 text-slate-500 dark:text-white/40'
@@ -186,7 +186,7 @@ export default function PolicyIndex() {
                                                     <button
                                                         key={sub.id}
                                                         onClick={() => scrollTo(sub.id, section.id)}
-                                                        className={`text-right text-xs font-bold py-1.5 px-3 rounded-[10px] transition-all ${
+                                                        className={`text-right text-sm font-bold py-2 px-3 rounded-[10px] transition-all ${
                                                             activeSub === sub.id
                                                                 ? 'text-primary dark:text-primary-light font-black bg-primary/10'
                                                                 : 'text-slate-500 dark:text-white/50 hover:text-slate-800 dark:hover:text-white'
@@ -204,35 +204,35 @@ export default function PolicyIndex() {
 
                         {/* Quick Help Card */}
                         <div className="rounded-[24px] p-5 border border-primary/20 bg-primary/5 dark:bg-primary/10 flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-primary font-black text-sm">
-                                <Info className="w-4 h-4" />
+                            <div className="flex items-center gap-2 text-primary font-black text-base">
+                                <Info className="w-5 h-5" />
                                 <span>ملاحظة إرشادية</span>
                             </div>
-                            <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                            <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
                                 هذه السياسات تعتبر المرجع الأول المعتمد في إدارة العمليات المالية والمخزنية داخل المنظومة.
                             </p>
                         </div>
                     </div>
 
                     {/* Main Dynamic Content Renderer */}
-                    <div className="lg:col-span-8 xl:col-span-9 space-y-12">
+                    <div className="lg:col-span-8 xl:col-span-9 space-y-14">
                         {policySectionsData.map((section, idx) => (
                             <div 
                                 key={section.id} 
                                 id={section.id} 
-                                className={`scroll-mt-6 space-y-6 ${idx > 0 ? 'pt-6 border-t border-black/10 dark:border-white/10' : ''}`}
+                                className={`scroll-mt-6 space-y-7 ${idx > 0 ? 'pt-10 border-t border-black/10 dark:border-white/10' : ''}`}
                             >
                                 {/* Section Header */}
-                                <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-[14px] bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                <div className="flex items-center justify-between pb-5 border-b border-black/10 dark:border-white/10">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 rounded-[18px] bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                                             {renderIcon(section.iconName)}
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                                            <h2 className="text-3xl font-black text-slate-800 dark:text-white">
                                                 {section.title}
                                             </h2>
-                                            <p className="text-xs font-bold text-slate-400 dark:text-white/40">
+                                            <p className="text-base font-bold text-slate-400 dark:text-white/50 mt-1">
                                                 {section.subtitle}
                                             </p>
                                         </div>
@@ -241,16 +241,16 @@ export default function PolicyIndex() {
 
                                 {/* Section Intro Callout */}
                                 {section.introCallout && (
-                                    <div className={`p-4 rounded-[20px] border flex items-start gap-3 ${
+                                    <div className={`p-6 rounded-[24px] border flex items-start gap-4 ${
                                         section.introCallout.type === 'warning' 
                                             ? 'bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300' 
                                             : section.introCallout.type === 'alert'
                                             ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
                                             : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-900 dark:text-indigo-200'
                                     }`}>
-                                        {section.introCallout.type === 'warning' ? <AlertCircle className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" /> : <Info className="w-5 h-5 shrink-0 mt-0.5 text-indigo-500" />}
-                                        <div className="text-xs font-bold leading-relaxed">
-                                            {section.introCallout.title && <span className="font-black block text-sm mb-1">{section.introCallout.title}</span>}
+                                        {section.introCallout.type === 'warning' ? <AlertCircle className="w-7 h-7 shrink-0 mt-0.5 text-amber-500" /> : <Info className="w-7 h-7 shrink-0 mt-0.5 text-indigo-500" />}
+                                        <div className="text-base font-bold leading-relaxed">
+                                            {section.introCallout.title && <span className="font-black block text-lg mb-1">{section.introCallout.title}</span>}
                                             {section.introCallout.text}
                                         </div>
                                     </div>
@@ -261,42 +261,42 @@ export default function PolicyIndex() {
                                     <div 
                                         key={sub.id} 
                                         id={sub.id} 
-                                        className="scroll-mt-6 rounded-[24px] p-6 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-6"
+                                        className="scroll-mt-6 rounded-[30px] p-8 border border-black/8 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg shadow-black/5 space-y-8"
                                     >
                                         <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black ${getBadgeStyle(sub.badgeVariant)}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-lg ${getBadgeStyle(sub.badgeVariant)}`}>
                                                     {sub.subNumber}
                                                 </div>
-                                                <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                                <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
                                                     {renderIcon(sub.iconName)}
                                                     {sub.title}
                                                 </h3>
                                             </div>
                                             {sub.badgeText && (
-                                                <span className={`px-3 py-1 rounded-full text-xs font-black ${getBadgeStyle(sub.badgeVariant)}`}>
+                                                <span className={`px-4 py-1.5 rounded-full text-sm font-black ${getBadgeStyle(sub.badgeVariant)}`}>
                                                     {sub.badgeText}
                                                 </span>
                                             )}
                                         </div>
 
                                         {sub.description && (
-                                            <p className="text-sm font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                            <p className="text-lg font-bold text-slate-600 dark:text-white/80 leading-relaxed">
                                                 {sub.description}
                                             </p>
                                         )}
 
                                         {/* Generic Steps List */}
                                         {sub.steps && sub.steps.length > 0 && (
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 {sub.steps.map((step) => (
-                                                    <div key={step.number} className="p-4 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 flex flex-col gap-2 relative">
+                                                    <div key={step.number} className="p-6 rounded-[24px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 flex flex-col gap-3 relative">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="w-7 h-7 rounded-lg bg-primary/10 text-primary font-black text-xs flex items-center justify-center">{step.number}</span>
-                                                            {renderIcon(step.iconName, <Layers className="w-4 h-4 text-slate-400" />)}
+                                                            <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary font-black text-base flex items-center justify-center">{step.number}</span>
+                                                            {renderIcon(step.iconName, <Layers className="w-6 h-6 text-slate-400" />)}
                                                         </div>
-                                                        <h4 className="font-black text-slate-800 dark:text-white text-sm">{step.title}</h4>
-                                                        <p className="text-xs font-bold text-slate-500 dark:text-white/50 leading-relaxed">{step.description}</p>
+                                                        <h4 className="font-black text-slate-800 dark:text-white text-lg">{step.title}</h4>
+                                                        <p className="text-base font-bold text-slate-500 dark:text-white/60 leading-relaxed">{step.description}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -304,11 +304,11 @@ export default function PolicyIndex() {
 
                                         {/* Generic Stats Grid */}
                                         {sub.statsGrid && sub.statsGrid.length > 0 && (
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                                                 {sub.statsGrid.map((stat, sIdx) => (
-                                                    <div key={sIdx} className="p-4 rounded-[18px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-1">
-                                                        <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{stat.label}</span>
-                                                        <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                                    <div key={sIdx} className="p-6 rounded-[22px] bg-black/3 dark:bg-white/4 border border-black/5 dark:border-white/8 space-y-2">
+                                                        <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest block">{stat.label}</span>
+                                                        <p className="text-base font-bold text-slate-700 dark:text-white/90 leading-relaxed">
                                                             {stat.description}
                                                         </p>
                                                     </div>
@@ -318,43 +318,43 @@ export default function PolicyIndex() {
 
                                         {/* Generic Feature Boxes */}
                                         {sub.featureBoxes && sub.featureBoxes.length > 0 && (
-                                            <div className="space-y-4">
+                                            <div className="space-y-6">
                                                 {sub.featureBoxes.map((fbox, fIdx) => (
-                                                    <div key={fIdx} className={`p-5 rounded-[20px] border space-y-4 ${getBadgeStyle(fbox.variant)}`}>
+                                                    <div key={fIdx} className={`p-7 rounded-[26px] border space-y-5 ${getBadgeStyle(fbox.variant)}`}>
                                                         <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2 font-black text-sm text-slate-900 dark:text-white">
+                                                            <div className="flex items-center gap-3 font-black text-lg text-slate-900 dark:text-white">
                                                                 {renderIcon(fbox.iconName)}
                                                                 <span>{fbox.title}</span>
                                                             </div>
                                                             {fbox.badgeText && (
-                                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-white/20 text-current border border-current/30">
+                                                                <span className="px-3.5 py-1 rounded-full text-xs font-black bg-white/20 text-current border border-current/30">
                                                                     {fbox.badgeText}
                                                                 </span>
                                                             )}
                                                         </div>
 
                                                         {fbox.description && (
-                                                            <p className="text-xs font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                                                            <p className="text-base font-bold text-slate-700 dark:text-white/80 leading-relaxed">
                                                                 {fbox.description}
                                                             </p>
                                                         )}
 
                                                         {/* Feature Box SubCards */}
                                                         {fbox.subCards && fbox.subCards.length > 0 && (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
                                                                 {fbox.subCards.map((sc, scIdx) => (
-                                                                    <div key={scIdx} className="p-4 rounded-[16px] bg-white/90 dark:bg-slate-900/90 border border-black/8 dark:border-white/10 space-y-2 shadow-sm">
-                                                                        <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-2">
-                                                                            <span className="font-black text-xs text-slate-900 dark:text-white">{sc.title}</span>
+                                                                    <div key={scIdx} className="p-6 rounded-[20px] bg-white/90 dark:bg-slate-900/90 border border-black/8 dark:border-white/10 space-y-3 shadow-sm">
+                                                                        <div className="flex items-center justify-between border-b border-black/5 dark:border-white/10 pb-3">
+                                                                            <span className="font-black text-base text-slate-900 dark:text-white">{sc.title}</span>
                                                                             {sc.badge && (
-                                                                                <span className="text-[10px] font-black px-2 py-0.5 rounded bg-primary/10 text-primary">{sc.badge}</span>
+                                                                                <span className="text-xs font-black px-3 py-1 rounded bg-primary/10 text-primary">{sc.badge}</span>
                                                                             )}
                                                                         </div>
                                                                         {sc.subtitle && (
-                                                                            <span className="text-xs font-black text-primary block">{sc.subtitle}</span>
+                                                                            <span className="text-base font-black text-primary block">{sc.subtitle}</span>
                                                                         )}
                                                                         {sc.description && (
-                                                                            <p className="text-[11px] font-bold text-slate-600 dark:text-white/70 leading-relaxed">{sc.description}</p>
+                                                                            <p className="text-sm font-bold text-slate-700 dark:text-white/80 leading-relaxed">{sc.description}</p>
                                                                         )}
                                                                     </div>
                                                                 ))}
@@ -367,32 +367,32 @@ export default function PolicyIndex() {
 
                                         {/* Generic Cards Grid */}
                                         {sub.cardsGrid && sub.cardsGrid.length > 0 && (
-                                            <div className="grid grid-cols-1 gap-5">
+                                            <div className="grid grid-cols-1 gap-6">
                                                 {sub.cardsGrid.map((card, cIdx) => (
-                                                    <div key={cIdx} className="p-5 rounded-[20px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-3">
+                                                    <div key={cIdx} className="p-7 rounded-[26px] bg-black/3 dark:bg-white/4 border border-black/8 dark:border-white/10 flex flex-col gap-5">
                                                         <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-2 font-black text-sm text-slate-800 dark:text-white">
+                                                            <div className="flex items-center gap-3 font-black text-lg text-slate-800 dark:text-white">
                                                                 {renderIcon(card.iconName)}
                                                                 <span>{card.title}</span>
                                                             </div>
                                                             {card.badge && (
-                                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${getBadgeStyle(card.variant)}`}>
+                                                                <span className={`text-xs font-black px-3.5 py-1.5 rounded-lg border ${getBadgeStyle(card.variant)}`}>
                                                                     {card.badge}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         {card.subtitle && (
-                                                            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-black">
+                                                            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20 text-primary text-base font-black">
                                                                 {card.subtitle}
                                                             </div>
                                                         )}
                                                         {card.description && (
-                                                            <p className="text-xs font-bold text-slate-600 dark:text-white/70 leading-relaxed">
+                                                            <p className="text-base font-bold text-slate-600 dark:text-white/70 leading-relaxed">
                                                                 {card.description}
                                                             </p>
                                                         )}
                                                         {card.list && (
-                                                            <div className="flex flex-col gap-2 pt-1">
+                                                            <div className="flex flex-col gap-3 pt-1">
                                                                 {card.list.map((item, lIdx) => {
                                                                     const parts = item.split(':');
                                                                     const hasColon = parts.length > 1;
@@ -400,11 +400,11 @@ export default function PolicyIndex() {
                                                                     const descPart = hasColon ? parts.slice(1).join(':').trim() : item;
 
                                                                     return (
-                                                                        <div key={lIdx} className="p-2.5 rounded-[12px] bg-white/70 dark:bg-slate-900/60 border border-black/5 dark:border-white/8 flex items-start gap-2.5 transition-all hover:border-primary/30">
-                                                                            <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1.5 shadow-sm shadow-primary/50" />
-                                                                            <div className="text-xs font-bold leading-relaxed text-slate-700 dark:text-white/80">
+                                                                        <div key={lIdx} className="p-4 rounded-[16px] bg-white/80 dark:bg-slate-900/70 border border-black/5 dark:border-white/8 flex items-start gap-3.5 transition-all hover:border-primary/30">
+                                                                            <span className="w-3 h-3 rounded-full bg-primary shrink-0 mt-2 shadow-sm shadow-primary/50" />
+                                                                            <div className="text-base font-bold leading-relaxed text-slate-700 dark:text-white/90">
                                                                                 {titlePart && (
-                                                                                    <span className="font-black text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-white/20 pb-0.5 ml-1.5 inline-block">
+                                                                                    <span className="font-black text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-white/20 pb-0.5 ml-2.5 inline-block text-base">
                                                                                         {titlePart}:
                                                                                     </span>
                                                                                 )}
@@ -422,16 +422,16 @@ export default function PolicyIndex() {
 
                                         {/* Generic Subsection Callout */}
                                         {sub.callout && (
-                                            <div className={`p-4 rounded-[20px] border flex items-start gap-3 ${
+                                            <div className={`p-6 rounded-[24px] border flex items-start gap-4 ${
                                                 sub.callout.type === 'alert'
                                                     ? 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200'
                                                     : sub.callout.type === 'success'
                                                     ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-300'
                                                     : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-800 dark:text-indigo-300'
                                             }`}>
-                                                {sub.callout.type === 'alert' ? <ShieldAlert className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" /> : sub.callout.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500 mt-0.5" /> : <Info className="w-5 h-5 shrink-0 text-indigo-500 mt-0.5" />}
-                                                <div className="text-xs font-bold leading-relaxed">
-                                                    {sub.callout.title && <span className="font-black text-sm block mb-1">{sub.callout.title}</span>}
+                                                {sub.callout.type === 'alert' ? <ShieldAlert className="w-7 h-7 shrink-0 text-rose-500 mt-0.5" /> : sub.callout.type === 'success' ? <CheckCircle2 className="w-7 h-7 shrink-0 text-emerald-500 mt-0.5" /> : <Info className="w-7 h-7 shrink-0 text-indigo-500 mt-0.5" />}
+                                                <div className="text-base font-bold leading-relaxed">
+                                                    {sub.callout.title && <span className="font-black text-lg block mb-1">{sub.callout.title}</span>}
                                                     {sub.callout.text}
                                                 </div>
                                             </div>
