@@ -15,7 +15,7 @@ class SupplierPaymentRepository extends Repository implements SupplierPaymentRep
         return SupplierPayment::class;
     }
 
-    public function paginated(int $perPage = 5)
+    public function paginated(int $perPage = 20)
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
