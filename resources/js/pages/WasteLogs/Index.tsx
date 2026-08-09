@@ -1,12 +1,10 @@
-import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { useState, useMemo } from 'react';
+import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { Link } from '@inertiajs/react';
-import { Plus, Eye, Trash2, AlertTriangle, X, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
+import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
+import { Plus, Eye, Trash2, AlertTriangle, X, SlidersHorizontal, RotateCcw, Search, Calendar, PackageCheck, FileSpreadsheet } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface User { id: number; name: string; }
 interface Product { id: number; name: string; stock: string; category_id: number; }
@@ -58,39 +56,38 @@ function DeleteWasteLogModal({ wasteLog, onClose }: { wasteLog: WasteLog; onClos
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-md rounded-[28px] p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200
-                border border-black/10 dark:border-white/[0.12]
-                bg-gradient-to-br from-white to-slate-100
-                dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
-                backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
+            <div className="relative w-full sm:max-w-md rounded-[28px] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200
+                border-2 border-red-500/30
+                bg-white dark:bg-slate-900
+                shadow-2xl shadow-black/40">
 
                 <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
-                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    <div className="w-14 h-14 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 flex items-center justify-center">
+                        <AlertTriangle className="w-7 h-7 text-red-500" />
                     </div>
                     <button onClick={onClose}
-                        className="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
-                        <X className="w-4 h-4" />
+                        className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-white">حذف سجل التالف</h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
-                        سيتم حذف السجل واستعادة المخزون لجميع المنتجات المسجلة.
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">حذف سجل التالف #{wasteLog.id}</h3>
+                    <p className="text-base font-bold text-slate-500 dark:text-white/60 leading-relaxed">
+                        سيتم حذف السجل واستعادة المخزون لجميع المنتجات المسجلة ({wasteLog.items.length} منتج).
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pt-2">
                     <button onClick={onClose}
-                        className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+                        className="flex-1 h-14 rounded-[18px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-base transition-all hover:bg-black/10 active:scale-95">
                         إلغاء
                     </button>
                     <button onClick={confirm}
-                        className="flex-1 h-11 rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30">
-                        <Trash2 className="w-4 h-4" /> تأكيد الحذف
+                        className="flex-1 h-14 rounded-[18px] bg-red-500 hover:bg-red-600 text-white font-black text-base transition-all flex items-center justify-center gap-2.5 shadow-lg active:scale-95">
+                        <Trash2 className="w-5 h-5" /> تأكيد الحذف
                     </button>
                 </div>
             </div>
@@ -120,16 +117,23 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
         if (fDateFrom) f['filter[date_from]'] = fDateFrom;
         if (fDateTo) f['filter[date_to]'] = fDateTo;
         router.get('/waste-logs', f, { preserveScroll: true });
+        setFilterOpen(false);
     }
 
     function resetFilter() {
         setFUser(''); setFProduct(''); setFReason('');
         setFDateFrom(''); setFDateTo('');
         router.get('/waste-logs', {}, { preserveScroll: true });
+        setFilterOpen(false);
     }
 
+    // KPI stats
+    const totalItemsCount = useMemo(() => {
+        return wasteLogs.data.reduce((acc, log) => acc + log.items.reduce((sum, item) => sum + (parseFloat(item.quantity) || 0), 0), 0);
+    }, [wasteLogs.data]);
+
     const FilterPanel = () => (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
             <ModernSelect
                 label="المسجِّل"
                 placeholder="الكل"
@@ -176,16 +180,18 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
             <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
             <DateFilterInput label="إلى تاريخ" value={fDateTo} onChange={setFDateTo} />
 
-            <button onClick={applyFilter}
-                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" /> تطبيق الفلتر
-            </button>
-            {hasFilter && (
-                <button onClick={resetFilter}
-                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                    إعادة تعيين
+            <div className="flex flex-col gap-3 pt-2">
+                <button onClick={applyFilter}
+                    className="w-full h-14 rounded-[18px] bg-primary text-white font-black text-lg hover:bg-primary/90 transition-all flex items-center justify-center gap-2.5 shadow-md active:scale-95">
+                    <Search className="w-5 h-5" /> تطبيق الفلتر
                 </button>
-            )}
+                {hasFilter && (
+                    <button onClick={resetFilter}
+                        className="w-full h-14 rounded-[18px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-600 dark:text-white/70 font-black text-lg transition-all flex items-center justify-center gap-2.5 active:scale-95">
+                        <RotateCcw className="w-5 h-5" /> إعادة تعيين
+                    </button>
+                )}
+            </div>
         </div>
     );
 
@@ -193,147 +199,203 @@ export default function WasteLogsIndex({ wasteLogs, users, products, flash }: Pr
         <AppShell pageTitle="التالف والخسائر">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">التالف والخسائر</h1>
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">تسجيل وتتبع المنتجات التالفة</p>
+                        <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">التالف والخسائر</h1>
+                        <p className="text-base font-bold text-slate-400 dark:text-white/40 mt-1">تسجيل وتتبع المنتجات التالفة وتحديث المخزون</p>
                     </div>
-                    <Link href="/waste-logs/create"
-                        className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
-                        <Plus className="w-4 h-4" /> تسجيل تالف جديد
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setFilterOpen(true)}
+                            className="spatial-button h-14 px-6 rounded-[20px] font-black text-base flex items-center gap-2.5 bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-700 dark:text-white active:scale-95">
+                            <SlidersHorizontal className="w-5 h-5" />
+                            <span>الفلاتر</span>
+                            {hasFilter && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                        </button>
+                        <Link href="/waste-logs/create"
+                            className="spatial-button h-14 px-8 rounded-[20px] font-black text-base sm:text-lg flex items-center gap-2.5 bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 active:scale-95">
+                            <Plus className="w-6 h-6" /> تسجيل تالف جديد
+                        </Link>
+                    </div>
                 </div>
 
-                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
-                {flash?.error && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
+                {flash?.success && <div className="px-6 py-4 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg">{flash.success}</div>}
+                {flash?.error && <div className="px-6 py-4 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg">{flash.error}</div>}
 
-                <div className="lg:hidden">
-                    <button onClick={() => setFilterOpen(p => !p)}
-                        className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
-                        <div className="flex items-center gap-2">
-                            <SlidersHorizontal className="w-4 h-4" />
-                            فلترة
-                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
+                {/* KPI Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <SpatialCard>
+                        <div className="flex items-center gap-4 p-2">
+                            <div className="w-14 h-14 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 flex items-center justify-center shrink-0">
+                                <AlertTriangle className="w-7 h-7 text-red-500" />
+                            </div>
+                            <div>
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">إجمالي عمليات التلف</span>
+                                <p className="text-3xl font-black text-slate-800 dark:text-white mt-0.5">{wasteLogs.total}</p>
+                            </div>
                         </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {filterOpen && (
-                        <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <FilterPanel />
+                    </SpatialCard>
+
+                    <SpatialCard>
+                        <div className="flex items-center gap-4 p-2">
+                            <div className="w-14 h-14 rounded-[20px] bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center shrink-0">
+                                <PackageCheck className="w-7 h-7 text-amber-500" />
+                            </div>
+                            <div>
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">إجمالي القطع التالفة في الصفحة</span>
+                                <p className="text-3xl font-black text-amber-500 mt-0.5">{fmt(totalItemsCount)}</p>
+                            </div>
                         </div>
-                    )}
+                    </SpatialCard>
+
+                    <SpatialCard>
+                        <div className="flex items-center gap-4 p-2">
+                            <div className="w-14 h-14 rounded-[20px] bg-blue-500/10 border-2 border-blue-500/20 flex items-center justify-center shrink-0">
+                                <FileSpreadsheet className="w-7 h-7 text-blue-500" />
+                            </div>
+                            <div>
+                                <span className="text-xs font-black text-slate-400 uppercase tracking-widest">صفحات السجلات</span>
+                                <p className="text-3xl font-black text-slate-800 dark:text-white mt-0.5">{wasteLogs.current_page} / {wasteLogs.last_page}</p>
+                            </div>
+                        </div>
+                    </SpatialCard>
                 </div>
 
-                <div className="flex gap-6">
-                    <div className="flex-1 min-w-0">
-                        <SpatialCard title={`سجلات التالف (${wasteLogs.total})`} icon={<AlertTriangle className="w-4 h-4" />}>
-                            {wasteLogs.data.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
-                                    <span className="text-4xl">📦</span>
-                                    <span className="font-bold">لا توجد سجلات تالف</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-[16px]">
-                                            <thead>
-                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'المسجِّل', 'عدد المنتجات', 'التاريخ', 'الإجراءات'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {wasteLogs.data.map(log => (
-                                                    <tr key={log.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
-                                                        <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{log.id}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{log.user.name}</td>
-                                                        <td className="px-4 py-4 font-black text-slate-700 dark:text-white/80">{log.items.length}</td>
-                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs">
-                                                            {fmtDate(log.created_at)}
-                                                        </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <Link href={`/waste-logs/${log.id}`}
-                                                                    className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                                    <Eye className="w-3 h-3" /> عرض
-                                                                </Link>
-                                                                <button onClick={() => setDeleteTarget(log)}
-                                                                    className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                    <Trash2 className="w-3 h-3" /> حذف
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div className="flex flex-col gap-4 lg:hidden">
+                {/* Main Table / Cards Container */}
+                <SpatialCard title={`سجلات التالف (${wasteLogs.total})`} icon={<AlertTriangle className="w-5 h-5 text-red-500" />}>
+                    {wasteLogs.data.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
+                            <span className="text-6xl">📦</span>
+                            <span className="font-black text-xl">لا توجد سجلات تالف مطابقة</span>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <table className="w-full text-right">
+                                    <thead>
+                                        <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
+                                            {['# السجل', 'المسجِّل', 'عدد المواد', 'التاريخ', 'الإجراءات'].map(h => (
+                                                <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                         {wasteLogs.data.map(log => (
-                                            <div key={log.id} className="rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden">
-                                                <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                                    <div>
-                                                        <span className="font-black text-slate-800 dark:text-white">{log.user.name}</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{log.id}</span>
-                                                        </div>
+                                            <tr key={log.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors group">
+                                                <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl whitespace-nowrap">#{log.id}</td>
+                                                <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl whitespace-nowrap">{log.user.name}</td>
+                                                <td className="px-5 py-6 font-black text-amber-500 text-2xl whitespace-nowrap">{log.items.length} <span className="text-sm font-bold opacity-75">صنف</span></td>
+                                                <td className="px-5 py-6 whitespace-nowrap">
+                                                    <span className="text-base font-black text-slate-600 dark:text-white/70 px-3 py-1.5 rounded-[12px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5">
+                                                        {fmtDate(log.created_at)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-6 text-center whitespace-nowrap">
+                                                    <div className="flex items-center justify-center gap-3">
+                                                        <Link href={`/waste-logs/${log.id}`}
+                                                            className="flex items-center gap-2.5 px-6 sm:px-8 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                            <Eye className="w-5 h-5 sm:w-6 sm:h-6" /> عرض
+                                                        </Link>
+                                                        <button onClick={() => setDeleteTarget(log)}
+                                                            className="flex items-center gap-2.5 px-6 sm:px-8 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                            <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" /> حذف
+                                                        </button>
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">عدد المنتجات</span>
-                                                        <span className="font-black text-slate-700 dark:text-white/80">{log.items.length}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest">{fmtDate(log.created_at)}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
-                                                    <Link href={`/waste-logs/${log.id}`}
-                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
-                                                        <Eye className="w-4 h-4" /> عرض
-                                                    </Link>
-                                                    <button onClick={() => setDeleteTarget(log)}
-                                                        className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                        <Trash2 className="w-4 h-4" /> حذف
-                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Cards */}
+                            <div className="flex flex-col gap-4 lg:hidden">
+                                {wasteLogs.data.map(log => (
+                                    <div key={log.id} className="p-6 rounded-[28px] bg-black/3 dark:bg-white/3 border-2 border-black/5 dark:border-white/10 flex flex-col gap-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <span className="font-black text-slate-800 dark:text-white text-2xl">{log.user.name}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-sm font-bold text-slate-400 dark:text-white/60">سجل #{log.id}</span>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-
-                                    {wasteLogs.last_page > 1 && (
-                                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
-                                            {wasteLogs.links.map((link, i) => (
-                                                link.url ? (
-                                                    <Link key={i} href={link.url}
-                                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}
-                                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                                    />
-                                                ) : (
-                                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
-                                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                                    />
-                                                )
-                                            ))}
+                                            <span className="text-base font-black text-slate-600 dark:text-white/70 px-3 py-1 rounded-[12px] bg-black/5 dark:bg-white/10">
+                                                {fmtDate(log.created_at)}
+                                            </span>
                                         </div>
-                                    )}
-                                </>
-                            )}
-                        </SpatialCard>
-                    </div>
 
-                    <div className="hidden lg:block w-[360px] shrink-0">
-                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-                            <FilterPanel />
-                        </SpatialCard>
-                    </div>
-                </div>
+                                        <div className="grid grid-cols-2 gap-3 pt-2">
+                                            <div>
+                                                <span className="text-xs font-black text-slate-500">عدد المواد</span>
+                                                <p className="font-black text-2xl text-amber-500">{log.items.length} صنف</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-black text-slate-500">التاريخ</span>
+                                                <p className="font-black text-xl text-slate-700 dark:text-white/80">{fmtDate(log.created_at)}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 pt-3">
+                                            <Link href={`/waste-logs/${log.id}`}
+                                                className="flex-1 flex items-center justify-center gap-2.5 h-14 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-lg active:scale-95 shadow-md">
+                                                <Eye className="w-5 h-5" /> عرض
+                                            </Link>
+                                            <button onClick={() => setDeleteTarget(log)}
+                                                className="flex-1 flex items-center justify-center gap-2.5 h-14 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-lg active:scale-95 shadow-md">
+                                                <Trash2 className="w-5 h-5" /> حذف
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Pagination */}
+                            {wasteLogs.last_page > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
+                                    {wasteLogs.links.map((link, i) => (
+                                        link.url ? (
+                                            <Link key={i} href={link.url}
+                                                className={`px-5 h-12 rounded-[16px] font-black text-base flex items-center transition-all ${link.active ? 'bg-primary text-white shadow-md' : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 hover:bg-black/10'}`}
+                                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                            />
+                                        ) : (
+                                            <span key={i} className="px-5 h-12 rounded-[16px] font-black text-base flex items-center text-slate-300 dark:text-white/20"
+                                                dangerouslySetInnerHTML={{ __html: link.label }}
+                                            />
+                                        )
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </SpatialCard>
             </div>
 
+            {/* Filter Drawer Portal */}
+            {filterOpen && createPortal(
+                <div className="fixed inset-0 z-[1000]">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setFilterOpen(false)} />
+                    <div className="absolute top-0 right-0 w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-2xl p-6 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-black/10 dark:border-white/10 z-10" dir="rtl">
+                        <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-[14px] bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                    <SlidersHorizontal className="w-5 h-5 text-primary" />
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-800 dark:text-white">تصفية نتائج التالف</h2>
+                            </div>
+                            <button onClick={() => setFilterOpen(false)}
+                                className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <FilterPanel />
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Delete Modal Portal */}
             {deleteTarget && (
                 <DeleteWasteLogModal wasteLog={deleteTarget} onClose={() => setDeleteTarget(null)} />
             )}
