@@ -177,7 +177,7 @@ export default function PurchaseReturnsCreate({ suppliers, products, paymentMeth
         <>
         <AppShell pageTitle="مرتجع مشتريات جديد">
             {/* Desktop Layout */}
-            <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-120px)] overflow-hidden">
+            <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
                 {/* ══ LEFT PANEL ══ */}
                 <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">
                     {/* Top bar */}

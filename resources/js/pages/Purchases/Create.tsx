@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, ChevronLeft, Truck } from 'lucide-react';
+import { Plus, Trash2, Check, X, Package, ShoppingCart, CreditCard, ChevronLeft, Truck, Wallet, ChevronUp } from 'lucide-react';
 
 interface Supplier      { id: number; name: string; phone: string; }
 interface Category      { id: number; name: string; unit: string; }
@@ -41,6 +42,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
     const [payments,            setPayments]            = useState<PaymentEntry[]>([]);
     const [processing,          setProcessing]          = useState(false);
     const [showCreditConfirm,   setShowCreditConfirm]   = useState(false);
+    const [showPaymentDrawer,   setShowPaymentDrawer]   = useState(false);
     const [paymentManuallySet,  setPaymentManuallySet]  = useState(false);
 
     // Add product form
@@ -77,6 +79,19 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
         window.addEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
         return () => window.removeEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
     }, [paymentMethods]);
+
+    useEffect(() => {
+        if (showPaymentDrawer) {
+            const rem = total - totalPaid;
+            if (!selMethod && paymentMethods.length > 0) {
+                const defId = defaultPaymentMethodId || String(paymentMethods[0].id);
+                setSelMethod(defId);
+                setSelAmount(rem > 0 ? rem.toFixed(2) : '');
+            } else if (!selAmount && rem > 0) {
+                setSelAmount(rem.toFixed(2));
+            }
+        }
+    }, [showPaymentDrawer]);
 
     // ── Barcode Scanner Listener ─────────────────────────────────────────────
     useEffect(() => {
@@ -229,7 +244,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
         <>
         <AppShell pageTitle="فاتورة شراء جديدة">
             {/* Desktop Layout */}
-            <div className="hidden lg:flex flex-col lg:flex-row gap-0 -m-4 lg:-m-10 h-[calc(100vh-80px)] lg:h-[calc(100dvh-120px)] overflow-hidden">
+            <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
 
                 {/* ══ LEFT PANEL ══ */}
                 <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">
@@ -268,10 +283,10 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                     </div>
 
                     {/* Add product form */}
-                    <div className="px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
+                    <div className="px-5 py-4 flex-1 overflow-y-auto">
                         <div className="flex items-center gap-2 mb-3">
                             <Package className="w-4 h-4 text-primary" />
-                            <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج</span>
+                            <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج للفاتورة</span>
                         </div>
                         <div className="w-full">
                             <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
@@ -286,168 +301,104 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                         </div>
 
                         {selectedProduct && (
-                            <div className="flex flex-wrap items-end gap-3 w-full pt-6">
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">
-                                        الكمية ({selectedProduct.category.unit})
-                                    </label>
-                                    <button onClick={() => openPad(`الكمية (${selectedProduct.category.unit})`, selQty, setSelQty)}
-                                        className="spatial-input h-16 rounded-[20px] px-5 text-[18px] font-black w-36 text-center cursor-pointer hover:border-primary/40 transition-all">
-                                        {selQty || '0'}
-                                    </button>
-                                </div>
-
-                                <div className="flex flex-col gap-1.5">
-                                    <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">السعر الإجمالي</label>
-                                    <button onClick={() => openPad('السعر الإجمالي', selTotalPrice, setSelTotalPrice)}
-                                        className="spatial-input h-16 rounded-[20px] px-5 text-[18px] font-black w-40 text-center cursor-pointer hover:border-primary/40 transition-all">
-                                        {selTotalPrice || '0.00'}
-                                    </button>
-                                </div>
-
-                                {unitCostPreview !== null && (
+                            <div className="flex flex-col gap-4 w-full pt-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">سعر الوحدة</label>
-                                        <div className="flex items-center h-16 px-5 rounded-[20px] bg-primary/5 border border-primary/20">
-                                            <span className="font-black text-primary text-[18px]">{unitCostPreview.toFixed(3)}</span>
+                                        <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                                            الكمية ({selectedProduct.category.unit})
+                                        </label>
+                                        <button onClick={() => openPad(`الكمية (${selectedProduct.category.unit})`, selQty, setSelQty)}
+                                            className="spatial-input h-16 sm:h-20 rounded-[22px] px-5 sm:px-6 text-xl sm:text-[24px] font-black text-center cursor-pointer hover:border-primary/40 transition-all border-2 active:scale-95 shadow-sm">
+                                            {selQty || '0'}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-col gap-1.5">
+                                        <label className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">السعر الإجمالي</label>
+                                        <button onClick={() => openPad('السعر الإجمالي', selTotalPrice, setSelTotalPrice)}
+                                            className="spatial-input h-16 sm:h-20 rounded-[22px] px-5 sm:px-6 text-xl sm:text-[24px] font-black text-center cursor-pointer hover:border-primary/40 transition-all border-2 active:scale-95 shadow-sm">
+                                            {selTotalPrice || '0.00'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                                    {unitCostPreview !== null && (
+                                        <div className="flex-1 flex items-center justify-between px-5 h-16 sm:h-20 rounded-[22px] bg-primary/10 border-2 border-primary/20">
+                                            <span className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-widest">سعر الوحدة</span>
+                                            <span className="font-black text-primary text-xl sm:text-2xl">{unitCostPreview.toFixed(3)} <span className="text-xs font-bold">د.ل</span></span>
                                         </div>
-                                    </div>
-                                )}
-
-                                <button onClick={addToCart} disabled={!canAdd}
-                                    className="spatial-button flex items-center gap-2 px-8 h-16 text-base font-black disabled:opacity-40 shrink-0 active:scale-[0.95] hover:scale-[1.02]">
-                                    <Plus className="w-5 h-5" /> إضافة
-                                </button>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Totals + Payment */}
-                    <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-                        {/* Totals */}
-                        <div className="flex flex-col gap-2 p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                            {[
-                                { label: 'الإجمالي', value: total.toFixed(2),     cls: 'text-slate-800 dark:text-white text-lg font-black' },
-                                { label: 'المدفوع',  value: totalPaid.toFixed(2), cls: 'text-emerald-600 dark:text-emerald-400 font-bold' },
-                                { label: 'المتبقي',  value: remaining.toFixed(2), cls: remaining > 0 ? 'text-red-500 font-bold' : 'text-slate-400 dark:text-white/30 font-bold' },
-                            ].map(({ label, value, cls }) => (
-                                <div key={label} className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-slate-500 dark:text-white/40">{label}</span>
-                                    <span className={cls}>{value}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Payment section */}
-                        {cart.length > 0 && (
-                            <div className="flex gap-3">
-                                {/* يسار — تسجيل دفعة */}
-                                <div className="flex flex-col gap-2 w-1/2">
-                                    <div className="flex flex-wrap gap-2">
-                                        {paymentMethods.map(m => (
-                                            <button key={m.id}
-                                                onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                                                className={`flex-1 min-w-[70px] h-16 rounded-[16px] font-bold text-base transition-all border-2 ${
-                                                    selMethod === String(m.id)
-                                                        ? 'bg-primary border-primary text-white'
-                                                        : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40'
-                                                }`}>
-                                                {m.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), setSelAmount, remaining)}
-                                            className="spatial-input flex-1 h-16 rounded-[20px] px-4 text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all">
-                                            {selAmount || remaining.toFixed(2)}
-                                        </button>
-                                        <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                                            className="spatial-button flex items-center justify-center w-20 h-16 disabled:opacity-40 shrink-0">
-                                            <Plus className="w-7 h-7" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* يمين — كاردات الدفعات */}
-                                <div className="flex flex-col gap-2 w-1/2">
-                                    {payments.length === 0 ? (
-                                        <div className="flex-1 flex items-center justify-center h-full text-slate-300 dark:text-white/20 font-bold text-sm">لا توجد دفعات</div>
-                                    ) : (
-                                        payments.map((p, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 px-4 h-[70px] rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
-                                                <CreditCard className="w-5 h-5 text-emerald-500 shrink-0" />
-                                                <div className="flex flex-col min-w-0 flex-1">
-                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs">{p.method_name}</span>
-                                                    <span className="font-black text-slate-800 dark:text-white text-lg">{p.amount}</span>
-                                                </div>
-                                                <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                    className="w-12 h-12 rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0">
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        ))
                                     )}
+
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => {
+                                            setSelProduct(''); setSelQty(''); setSelTotalPrice(''); setProductKey(k => k + 1);
+                                        }}
+                                        title="إلغاء الاختيار وتفريغ الحقول"
+                                        className="h-16 sm:h-20 px-4 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 font-black text-sm sm:text-base flex items-center justify-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer shadow-sm">
+                                            <X className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+                                            <span>إلغاء</span>
+                                        </button>
+                                        <button onClick={addToCart} disabled={!canAdd}
+                                            className="spatial-button flex-1 sm:flex-initial min-w-[140px] flex items-center justify-center gap-2.5 px-8 h-16 sm:h-20 rounded-[22px] text-xl font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] shadow-lg">
+                                            <Plus className="w-6 h-6" /> إضافة للسلة
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    {/* Submit */}
-                    <div className="px-5 py-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
-                        {supplierId === '1' && remaining > 0.01 && (
-                            <div className="px-4 py-2 rounded-[12px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs">
-                                ⚠️ مورد نقدي — يجب الدفع الكامل قبل التأكيد
-                            </div>
-                        )}
-                        <div className="flex gap-2">
-                            <div className="flex flex-col gap-2 w-1/4">
-                                <Link href="/purchases"
-                                    className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
-                                    <X className="w-4 h-4" /> إلغاء
-                                </Link>
-                                {cart.length > 0 && (
-                                    <button onClick={() => { setCart([]); setPayments([]); setPaymentManuallySet(false); }}
-                                        className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-red-500/15 dark:bg-red-500/25 hover:bg-red-500/30 border border-red-500/30 text-red-500 dark:text-red-400 font-bold text-sm transition-all">
-                                        <Trash2 className="w-4 h-4" /> مسح
-                                    </button>
-                                )}
-                            </div>
-                            <button onClick={submit}
-                                disabled={processing || cart.length === 0 || (supplierId === '1' && remaining > 0.01)}
-                                className="spatial-button flex-1 flex items-center justify-center gap-2 text-lg font-black disabled:opacity-40"
-                                style={{ height: cart.length > 0 ? '144px' : '68px' }}>
-                                <Check className="w-6 h-6" />
-                                {cart.length > 0 ? `تأكيد الشراء — ${total.toFixed(2)}` : 'تأكيد الشراء'}
+                    {/* Fixed Bottom Submit Action Bar */}
+                    <div className="px-3 sm:px-5 pt-2.5 sm:pt-3 pb-2 sm:pb-2.5 border-t border-black/5 dark:border-white/5 shrink-0 flex items-stretch gap-2 sm:gap-3">
+                        <div className="flex flex-col gap-2 shrink-0">
+                            <Link href="/purchases" className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 shrink-0 shadow-sm active:scale-95">
+                                <X className="w-6 h-6" /> إلغاء
+                            </Link>
+                            <button onClick={() => { setCart([]); setPayments([]); setPaymentManuallySet(false); }} disabled={cart.length === 0} className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-black text-base sm:text-lg transition-all shrink-0 shadow-sm active:scale-95 disabled:opacity-40 disabled:pointer-events-none">
+                                <Trash2 className="w-6 h-6" /> مسح
                             </button>
                         </div>
+                        <button onClick={() => setShowPaymentDrawer(true)}
+                            disabled={cart.length === 0}
+                            className="spatial-button flex-1 flex items-center justify-between px-6 sm:px-10 rounded-[28px] text-xl sm:text-[24px] font-black shadow-2xl disabled:opacity-40 hover:scale-[1.01] active:scale-95 transition-all">
+                            <div className="flex items-center gap-3.5">
+                                <Wallet className="w-8 h-8 sm:w-10 sm:h-10" />
+                                <span>تأكيد الشراء والانتقال للدفع</span>
+                            </div>
+                            <div className="flex items-center gap-3.5">
+                                <span className="text-xs sm:text-sm font-black bg-white/20 dark:bg-black/20 px-3.5 py-2 rounded-full">{cart.length} أصناف</span>
+                                <span className="text-2xl sm:text-3xl font-black">{total.toFixed(2)} د.ل</span>
+                                <ChevronUp className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce" />
+                            </div>
+                        </button>
                     </div>
                 </div>
 
                 {/* ══ RIGHT PANEL ══ */}
                 <div className="w-full lg:w-[600px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0 border-r border-black/5 dark:border-white/5">
 
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-black/5 dark:border-white/5 shrink-0">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
                         <div className="flex items-center gap-2">
-                            <ShoppingCart className="w-4 h-4 text-primary" />
-                            <span className="font-black text-slate-800 dark:text-white text-sm">
+                            <ShoppingCart className="w-5 h-5 text-primary" />
+                            <span className="font-black text-slate-800 dark:text-white text-base">
                                 عناصر الفاتورة
-                                {cart.length > 0 && <span className="mr-2 text-xs font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">{cart.length}</span>}
+                                {cart.length > 0 && <span className="mr-2 text-xs font-black text-primary bg-primary/10 px-2.5 py-1 rounded-full">{cart.length}</span>}
                             </span>
                         </div>
-                        <span className="text-xs font-bold text-slate-400 dark:text-white/30">{selectedSupplierName}</span>
+                        <span className="text-xs sm:text-sm font-black text-slate-500 dark:text-white/40">{selectedSupplierName}</span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto px-4 py-3">
+                    <div className="flex-1 overflow-y-auto px-4 py-4">
                         {cart.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-300 dark:text-white/20">
-                                <Package className="w-12 h-12" />
-                                <span className="font-bold text-sm">لا توجد منتجات</span>
-                                <span className="text-xs">أضف منتجاً من اليسار</span>
+                                <Package className="w-16 h-16" />
+                                <span className="font-black text-lg">السلة فارغة</span>
+                                <span className="text-sm font-bold">اختر منتجاً من اليسار لإضافته للفاتورة</span>
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-2">
-                                <div className="grid grid-cols-[2fr_80px_90px_100px_60px] gap-3 px-4 py-2 text-xs font-bold text-slate-500 dark:text-white/40 bg-slate-50 dark:bg-slate-800/50 rounded-[12px] border border-slate-200/50 dark:border-slate-700/50">
+                            <div className="flex flex-col gap-3">
+                                <div className="grid grid-cols-[2fr_90px_100px_110px_72px] gap-2.5 px-4 py-2.5 text-xs font-black text-slate-500 dark:text-white/40 bg-slate-100/70 dark:bg-slate-800/70 rounded-[14px] border border-black/5 dark:border-white/10">
                                     <span>المنتج</span>
                                     <span className="text-center">الكمية</span>
                                     <span className="text-center">سعر الوحدة</span>
@@ -455,24 +406,29 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                     <span className="text-center">حذف</span>
                                 </div>
                                 {cart.map((item, idx) => (
-                                    <div key={idx} className="grid grid-cols-[2fr_80px_90px_100px_60px] gap-3 px-4 py-3 rounded-[16px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-primary/30 transition-all shadow-sm">
+                                    <div key={idx} className="grid grid-cols-[2fr_90px_100px_110px_72px] gap-2.5 px-4 py-3.5 rounded-[20px] bg-white dark:bg-slate-800 border-2 border-black/5 dark:border-white/10 hover:border-primary/40 transition-all shadow-sm items-center">
                                         <div className="min-w-0 flex flex-col justify-center">
-                                            <span className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.product_name}</span>
-                                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{item.category_name}</span>
+                                            <span className="font-black text-slate-900 dark:text-white text-base truncate">{item.product_name}</span>
+                                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">{item.category_name}</span>
                                         </div>
                                         <div className="flex items-center justify-center">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{item.quantity}{item.unit}</span>
+                                            <div className="w-full h-14 rounded-[14px] bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 font-black text-sm text-slate-800 dark:text-white flex items-center justify-center">
+                                                {item.quantity}{item.unit}
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-center">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{item.unit_cost}</span>
+                                            <div className="w-full h-14 rounded-[14px] bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 font-black text-sm text-slate-800 dark:text-white flex items-center justify-center">
+                                                {item.unit_cost}
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-center">
-                                            <span className="font-black text-slate-800 dark:text-white text-base">{item.line_total.toFixed(2)}</span>
+                                            <span className="font-black text-primary text-lg sm:text-xl">{item.line_total.toFixed(2)}</span>
                                         </div>
                                         <div className="flex items-center justify-center">
                                             <button onClick={() => removeFromCart(idx)}
-                                                className="w-10 h-10 rounded-[12px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-[0.95]">
-                                                <Trash2 className="w-4 h-4" />
+                                                title="حذف المنتج من الفاتورة"
+                                                className="w-16 h-16 rounded-[20px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all active:scale-90 shadow-lg shadow-red-500/25 cursor-pointer shrink-0">
+                                                <Trash2 className="w-8 h-8 stroke-[2.5]" />
                                             </button>
                                         </div>
                                     </div>
@@ -481,10 +437,10 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                         )}
                     </div>
 
-                    <div className="px-4 pb-3 border-t border-black/5 dark:border-white/5 shrink-0 pt-3">
+                    <div className="px-4 pb-4 border-t border-black/5 dark:border-white/5 shrink-0 pt-3">
                         <textarea value={notes} onChange={e => setNotes(e.target.value)}
                             rows={2} placeholder="ملاحظات على فاتورة الشراء... (اختياري)"
-                            className="w-full spatial-input rounded-[16px] px-4 py-3 text-sm font-bold resize-none" />
+                            className="w-full spatial-input rounded-[18px] px-4 py-3 text-sm font-bold resize-none" />
                     </div>
                 </div>
             </div>
@@ -866,6 +822,151 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
             onConfirm={executeSubmit}
             onCancel={() => setShowCreditConfirm(false)}
         />
+
+        {/* ══ PAYMENT DRAWER (BOTTOM SHEET) ══ */}
+        {showPaymentDrawer && typeof document !== 'undefined' && createPortal(
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex flex-col justify-end animate-in fade-in duration-200" onClick={() => setShowPaymentDrawer(false)}>
+                <div className="bg-white dark:bg-slate-900 border-t border-black/10 dark:border-white/10 rounded-t-[36px] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+
+                    {/* Drawer Header */}
+                    <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-[18px] bg-primary/10 text-primary flex items-center justify-center font-black">
+                                <Wallet className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h2 className="font-black text-xl sm:text-2xl text-slate-900 dark:text-white">إتمام تسوية فاتورة الشراء والسداد</h2>
+                                <p className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">
+                                    المورد: <span className="text-primary font-black">{selectedSupplierName}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowPaymentDrawer(false)} className="w-12 h-12 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-600 dark:text-white/70 transition-all active:scale-95">
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+
+                    {/* Drawer Content */}
+                    <div className="p-6 sm:p-8 overflow-y-auto flex flex-col gap-6">
+
+                        {/* Top Totals Strip */}
+                        <div className="grid grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-5 rounded-[26px] bg-black/3 dark:bg-white/3 border-2 border-black/5 dark:border-white/5">
+                            <div className="flex flex-col items-center justify-center p-3 rounded-[20px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm">
+                                <span className="text-xs sm:text-sm font-black text-slate-500 dark:text-white/40 mb-1">إجمالي الشراء</span>
+                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{total.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
+                            </div>
+                            <div className="flex flex-col items-center justify-center p-3 rounded-[20px] bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
+                                <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mb-1">المدفوع للمورد</span>
+                                <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
+                            </div>
+                            <div className={`flex flex-col items-center justify-center p-3 rounded-[20px] border shadow-sm ${remaining > 0.01 ? 'bg-red-500/10 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 border-black/5 dark:border-white/5'}`}>
+                                <span className="text-xs sm:text-sm font-black text-slate-500 dark:text-white/40 mb-1">المتبقي (آجل)</span>
+                                <span className={`text-2xl sm:text-3xl font-black ${remaining > 0.01 ? 'text-red-500' : 'text-slate-400 dark:text-white/30'}`}>{remaining.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
+                            </div>
+                        </div>
+
+                        {/* Middle Content — Payment Methods & Payments List */}
+                        <div className="flex flex-col lg:flex-row gap-6">
+
+                            {/* Left Col — Select Payment Method */}
+                            <div className="flex flex-col gap-4 w-full lg:w-1/2">
+                                <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">اختر طريقة التسوية والمبلغ</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {paymentMethods.map(m => {
+                                        const methodId = String(m.id);
+                                        const isSelected = selMethod === methodId;
+                                        return (
+                                            <button key={m.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setSelMethod('');
+                                                        setSelAmount('');
+                                                    } else {
+                                                        setSelMethod(methodId);
+                                                        setSelAmount(remaining > 0 ? remaining.toFixed(2) : '');
+                                                    }
+                                                }}
+                                                className={`h-16 sm:h-20 rounded-[20px] font-black text-base sm:text-lg transition-all border-2 flex items-center justify-center ${isSelected
+                                                    ? 'bg-primary border-primary text-white shadow-md shadow-primary/25 scale-[1.02]'
+                                                    : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-white/80 hover:border-primary/40 active:scale-95'
+                                                    }`}>
+                                                {m.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="flex gap-3 mt-1">
+                                    <button
+                                        onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
+                                        className="spatial-input flex-1 h-16 sm:h-20 rounded-[22px] px-5 text-xl sm:text-[24px] font-black text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm">
+                                        {selAmount || remaining.toFixed(2)}
+                                    </button>
+                                    <button
+                                        onClick={addPayment}
+                                        disabled={!selMethod || !selAmount || +selAmount <= 0 || +selAmount > remaining + 0.001}
+                                        className="spatial-button flex items-center justify-center gap-2 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] text-lg sm:text-xl font-black disabled:opacity-40 shrink-0 active:scale-95 shadow-md">
+                                        <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> إضافة تسوية
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right Col — Payments Cards List */}
+                            <div className="flex flex-col gap-3 w-full lg:w-1/2">
+                                <label className="text-sm sm:text-base font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center justify-between">
+                                    <span>الدفعات المسجلة</span>
+                                    {payments.length > 0 && (
+                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                            {payments.length} دفعة
+                                        </span>
+                                    )}
+                                </label>
+                                {payments.length === 0 ? (
+                                    <div className="flex-1 flex items-center justify-center min-h-[160px] text-slate-400 dark:text-white/30 font-black text-lg border-2 border-dashed border-black/10 dark:border-white/10 rounded-[24px]">
+                                        لم يتم إضافة أي دفعات بعد
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1">
+                                        {payments.map((p, idx) => (
+                                            <div key={idx} className="flex items-center justify-between px-6 py-5 rounded-[24px] bg-emerald-500/10 border-2 border-emerald-500/30 shadow-md transition-all hover:border-emerald-500/50 min-h-[84px]">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-[16px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                        <CreditCard className="w-7 h-7" />
+                                                    </div>
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <span className="font-black text-emerald-700 dark:text-emerald-300 text-sm sm:text-base">{p.method_name}</span>
+                                                        <span className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl tracking-tight">{p.amount} <span className="text-sm">د.ل</span></span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
+                                                    title="حذف الدفعة"
+                                                    className="w-14 h-14 rounded-[18px] bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-lg shadow-red-500/25 cursor-pointer">
+                                                    <Trash2 className="w-6 h-6 stroke-[2.5]" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer Submit Button */}
+                    <div className="pt-5 sm:pt-6 pb-16 sm:pb-24 px-6 sm:px-8 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-4">
+                        <button onClick={() => setShowPaymentDrawer(false)} className="h-16 sm:h-20 px-6 sm:px-8 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 active:scale-95">
+                            رجوع للتعديل
+                        </button>
+                        <button onClick={() => { setShowPaymentDrawer(false); submit(); }}
+                            disabled={processing || cart.length === 0 || (supplierId === '1' && remaining > 0.01)}
+                            className="spatial-button flex-1 flex items-center justify-center gap-3 h-16 sm:h-20 rounded-[22px] text-xl sm:text-2xl font-black disabled:opacity-40 active:scale-95 shadow-xl">
+                            <Check className="w-7 h-7 sm:w-8 sm:h-8" />
+                            <span>تأكيد وحفظ فاتورة الشراء ({total.toFixed(2)} د.ل)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
         </>
     );
 }
