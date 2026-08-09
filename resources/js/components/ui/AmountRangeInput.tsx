@@ -19,28 +19,28 @@ export function AmountRangeInput({ label = 'المبلغ (من — إلى)', val
 
     return (
         <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">
+            <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-white/75 uppercase tracking-widest">
                 {label}
             </label>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
                 {/* حقل من */}
                 <button
                     type="button"
                     onClick={() => setActivePad('from')}
-                    className={`spatial-input flex-1 min-w-0 h-11 rounded-[14px] px-3 text-[14px] font-bold text-center cursor-pointer hover:border-primary/40 transition-all ${
+                    className={`spatial-input flex-1 min-w-0 h-14 sm:h-16 rounded-[18px] px-4 text-base sm:text-xl font-black text-center cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 ${
                         valueFrom ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
                     }`}
                 >
                     {valueFrom ? fmt(valueFrom) : 'من'}
                 </button>
 
-                <span className="flex items-center text-slate-400 dark:text-white/30 font-bold text-sm shrink-0">—</span>
+                <span className="flex items-center text-slate-400 dark:text-white/40 font-black text-base sm:text-lg shrink-0">—</span>
 
                 {/* حقل إلى */}
                 <button
                     type="button"
                     onClick={() => setActivePad('to')}
-                    className={`spatial-input flex-1 min-w-0 h-11 rounded-[14px] px-3 text-[14px] font-bold text-center cursor-pointer hover:border-primary/40 transition-all ${
+                    className={`spatial-input flex-1 min-w-0 h-14 sm:h-16 rounded-[18px] px-4 text-base sm:text-xl font-black text-center cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 ${
                         valueTo ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
                     }`}
                 >

@@ -15,12 +15,13 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
         return Invoice::class;
     }
 
-    public function paginated(int $perPage = 5)
+    public function paginated(int $perPage = 20)
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
         return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['customer', 'user'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
+                AllowedFilter::exact('id'),
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('payment_status'),
