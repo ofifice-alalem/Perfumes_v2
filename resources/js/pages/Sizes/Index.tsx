@@ -3,7 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Pencil, Trash2, X, Check, Ruler, AlertTriangle, Hash } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Ruler, AlertTriangle } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 interface Size {
@@ -224,31 +224,19 @@ export default function SizesIndex({ sizes, flash }: Props) {
                 {form.errors.label && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.label}</p>}
               </div>
 
-              {/* Value Input with Touch NumberPad Trigger */}
+              {/* Value — tap to open NumberPad */}
               <div>
                 <label className="block text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2.5">القيمة (ml) *</label>
-                <div className="flex items-center gap-3">
-                  <div className="relative flex-1">
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={form.data.value}
-                      onChange={e => form.setData('value', e.target.value)}
-                      placeholder="0"
-                      min="0.01"
-                      step="0.01"
-                      className="spatial-input w-full h-20 rounded-[22px] px-6 text-3xl font-black text-slate-800 dark:text-white border-2 text-center"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPad(true)}
-                    className="h-20 px-8 rounded-[22px] bg-primary text-white font-black text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 active:scale-95 transition-all shrink-0"
-                    title="فتح لوحة الأرقام اللمسية"
-                  >
-                    <Hash className="w-8 h-8" /> لوحة الأرقام
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPad(true)}
+                  className="spatial-input w-full h-18 sm:h-20 rounded-[22px] px-6 text-2xl font-black border-2 flex items-center justify-between gap-3 transition-all hover:border-primary/40 active:scale-[0.98]"
+                >
+                  <span className={form.data.value ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'}>
+                    {form.data.value || '0'}
+                  </span>
+                  <span className="text-sm font-black text-slate-400 dark:text-white/40 shrink-0">ml</span>
+                </button>
                 {form.errors.value && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.value}</p>}
               </div>
 
