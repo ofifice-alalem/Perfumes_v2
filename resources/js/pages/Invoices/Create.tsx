@@ -915,14 +915,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         />
                                     </div>
                                 </div>
-                                <div className="flex gap-2 shrink-0">
-                                    {(['regular', 'vip'] as const).map(type => (
-                                        <button key={type} onClick={() => setCustomerType(type)}
-                                            className={`flex-1 sm:flex-none px-4 sm:px-5 h-11 sm:h-12 rounded-[12px] sm:rounded-[14px] border-2 transition-all font-bold text-sm ${customerType === type ? 'border-primary bg-primary text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50 hover:border-primary/40'}`}>
-                                            {type === 'regular' ? 'عادي' : '⭐ VIP'}
-                                        </button>
-                                    ))}
-                                </div>
+
                             </div>
 
                             {/* Debt warning */}
@@ -1194,14 +1187,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     }}
                                 />
                             </div>
-                            <div className="flex gap-1.5 shrink-0">
-                                {(['regular', 'vip'] as const).map(type => (
-                                    <button key={type} onClick={() => setCustomerType(type)}
-                                        className={`px-3 h-9 rounded-[10px] border-2 transition-all font-bold text-xs ${customerType === type ? 'border-primary bg-primary text-white' : 'border-black/10 dark:border-white/10 text-slate-500 dark:text-white/50'}`}>
-                                        {type === 'regular' ? 'عادي' : 'VIP'}
-                                    </button>
-                                ))}
-                            </div>
+
                         </div>
 
                         {customerId && originalDebt > 0 && (
