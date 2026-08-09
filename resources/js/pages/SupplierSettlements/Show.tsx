@@ -1,11 +1,11 @@
 import { Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { ArrowRight, RefreshCw } from 'lucide-react';
+import { ArrowRight, RefreshCw, User, FileText, Calendar, Wallet, StickyNote } from 'lucide-react';
 
 interface Supplier      { id: number; name: string; phone: string | null; total_debt: string; }
 interface Purchase      { id: number; total: string; payment_status: string; }
-interface PurchaseReturn { id: number; total: string; recovery_status: string; }
+interface PurchaseReturn { id: number; total: string; recovery_status?: string; }
 interface PaymentMethod { id: number; name: string; }
 
 interface SupplierSettlement {
@@ -40,110 +40,154 @@ export default function SupplierSettlementsShow({ settlement, flash }: Props) {
     const isSoftDeleted = !!settlement.deleted_at;
 
     return (
-        <AppShell pageTitle={`تسوية #${settlement.id}`}>
-            <div className="flex flex-col gap-6 pb-32 lg:pb-0">
+        <AppShell pageTitle={`تسوية مورد #${settlement.id}`}>
+            <div className="flex flex-col gap-8 pb-32 lg:pb-0">
 
-                {/* Header */}
-                <div className="flex items-center gap-3">
-                    <Link href="/supplier-settlements"
-                        className="w-10 h-10 rounded-[14px] bg-black/5 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-white/50 hover:bg-black/10 transition-all">
-                        <ArrowRight className="w-5 h-5" />
-                    </Link>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <h1 className="text-2xl font-black text-slate-800 dark:text-white">تسوية #{settlement.id}</h1>
-                            {isSoftDeleted && (
-                                <span className="text-sm font-bold px-3 py-1 rounded-[10px] bg-red-500/10 text-red-500">محذوفة</span>
-                            )}
-                        </div>
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-0.5">{settlement.supplier.name}</p>
-                    </div>
-                </div>
-
-                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
-                {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
-
-                {/* Summary cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {[
-                        { label: 'المبلغ',       value: fmt(settlement.amount),                    color: 'text-purple-500' },
-                        { label: 'وسيلة الرد',   value: settlement.payment_method.name,            color: 'text-slate-800 dark:text-white' },
-                        { label: 'التاريخ',       value: fmtDate(settlement.created_at), color: 'text-slate-800 dark:text-white' },
-                    ].map(s => (
-                        <div key={s.label} className="spatial-card p-4 flex flex-col gap-1">
-                            <span className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">{s.label}</span>
-                            <span className={`text-xl font-black ${s.color}`}>{s.value}</span>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Supplier info */}
-                <SpatialCard title="بيانات المورد" icon={<RefreshCw className="w-4 h-4" />}>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <Link href="/supplier-settlements"
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] bg-black/5 dark:bg-white/8 hover:bg-primary/10 hover:text-primary border-2 border-black/5 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-white/70 transition-all shrink-0 active:scale-95 shadow-sm">
+                            <ArrowRight className="w-7 h-7 sm:w-8 sm:h-8" />
+                        </Link>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">الاسم</p>
-                            <Link href="/suppliers" className="font-black text-slate-800 dark:text-white hover:text-primary transition-colors">
-                                {settlement.supplier.name}
-                            </Link>
-                        </div>
-                        {settlement.supplier.phone && (
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">الهاتف</p>
-                                <p className="font-bold text-slate-700 dark:text-white/80">{settlement.supplier.phone}</p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">تفاصيل تسوية المورد #{settlement.id}</h1>
+                                {isSoftDeleted && (
+                                    <span className="text-base font-black px-4 py-1.5 rounded-[14px] bg-red-500/10 text-red-500 border border-red-500/20">
+                                        ملغية / محذوفة
+                                    </span>
+                                )}
                             </div>
-                        )}
-                        <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">إجمالي الدين</p>
-                            <p className={`font-black text-lg ${parseFloat(settlement.supplier.total_debt) > 0 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                {fmt(settlement.supplier.total_debt)}
+                            <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">
+                                {settlement.supplier?.name ?? 'مورد غير معروف'}
                             </p>
                         </div>
                     </div>
-                </SpatialCard>
+                </div>
 
-                {/* Reference: purchase return or purchase */}
-                {settlement.purchase_return ? (
-                    <SpatialCard title="المرتجع المرتبط" icon={<RefreshCw className="w-4 h-4" />}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">رقم المرتجع</p>
-                                <Link href={`/purchase-returns/${settlement.purchase_return.id}`} className="font-black text-orange-500 hover:underline text-lg">
-                                    #{settlement.purchase_return.id}
-                                </Link>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">إجمالي المرتجع</p>
-                                <p className="font-black text-slate-800 dark:text-white text-lg">{fmt(settlement.purchase_return.total)}</p>
-                            </div>
-                        </div>
-                    </SpatialCard>
-                ) : settlement.purchase ? (
-                    <SpatialCard title="الفاتورة المرتبطة" icon={<RefreshCw className="w-4 h-4" />}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">رقم الفاتورة</p>
-                                <Link href={`/purchases/${settlement.purchase.id}`} className="font-black text-primary hover:underline text-lg">
-                                    #{settlement.purchase.id}
-                                </Link>
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">إجمالي الفاتورة</p>
-                                <p className="font-black text-slate-800 dark:text-white text-lg">{fmt(settlement.purchase.total)}</p>
-                            </div>
-                        </div>
-                    </SpatialCard>
-                ) : (
-                    <div className="px-5 py-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40">تسوية مستقلة — غير مرتبطة بفاتورة أو مرتجع محدد</p>
+                {/* Flash Messages */}
+                {flash?.success && (
+                    <div className="px-6 py-4 rounded-[22px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg sm:text-xl shadow-sm">
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="px-6 py-4 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg sm:text-xl shadow-sm">
+                        {flash.error}
                     </div>
                 )}
 
-                {/* Notes */}
-                {settlement.notes && (
-                    <div className="px-5 py-4 rounded-[16px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                        <p className="text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest mb-1">ملاحظات</p>
-                        <p className="font-bold text-slate-700 dark:text-white/80">{settlement.notes}</p>
+                {/* Summary Cards Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div className="p-6 sm:p-8 rounded-[28px] bg-purple-500/10 border-2 border-purple-500/20 flex flex-col gap-2 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">مبلغ التسوية المسترد</span>
+                            <Wallet className="w-7 h-7 text-purple-500" />
+                        </div>
+                        <span className="text-3xl sm:text-4xl font-black text-purple-600 dark:text-purple-400">
+                            {fmt(settlement.amount)} <span className="text-xl font-bold">د.ل</span>
+                        </span>
                     </div>
+
+                    <div className="p-6 sm:p-8 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/5 dark:border-white/10 flex flex-col gap-2 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">وسيلة الرد</span>
+                            <RefreshCw className="w-7 h-7 text-primary" />
+                        </div>
+                        <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">
+                            {settlement.payment_method?.name ?? '—'}
+                        </span>
+                    </div>
+
+                    <div className="p-6 sm:p-8 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/5 dark:border-white/10 flex flex-col gap-2 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">تاريخ التسوية</span>
+                            <Calendar className="w-7 h-7 text-purple-500" />
+                        </div>
+                        <span className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-wide">
+                            {fmtDate(settlement.created_at)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Details Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Supplier Info */}
+                    <SpatialCard title="بيانات المورد" icon={<User className="w-6 h-6 text-primary" />}>
+                        <div className="flex flex-col gap-6 p-2">
+                            <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                <span className="text-base font-bold text-slate-400 dark:text-white/50">اسم المورد</span>
+                                <Link href="/suppliers" className="text-xl font-black text-slate-800 dark:text-white hover:text-primary transition-colors">
+                                    {settlement.supplier?.name ?? 'مورد غير معروف'}
+                                </Link>
+                            </div>
+
+                            {settlement.supplier?.phone && (
+                                <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                    <span className="text-base font-bold text-slate-400 dark:text-white/50">رقم الهاتف</span>
+                                    <span className="text-xl font-black text-slate-800 dark:text-white">{settlement.supplier.phone}</span>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                <span className="text-base font-bold text-slate-400 dark:text-white/50">إجمالي ديون المورد الحالية</span>
+                                <span className={`text-2xl font-black ${parseFloat(settlement.supplier?.total_debt ?? '0') > 0 ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    {fmt(settlement.supplier?.total_debt ?? '0')} د.ل
+                                </span>
+                            </div>
+                        </div>
+                    </SpatialCard>
+
+                    {/* Linked Purchase Return or Purchase */}
+                    <SpatialCard title="ربط المستند" icon={<FileText className="w-6 h-6 text-primary" />}>
+                        <div className="flex flex-col gap-6 p-2">
+                            {settlement.purchase_return ? (
+                                <>
+                                    <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                        <span className="text-base font-bold text-slate-400 dark:text-white/50">رقم مرتجع الشراء</span>
+                                        <Link href={`/purchase-returns/${settlement.purchase_return.id}`} className="text-2xl font-black text-amber-500 hover:underline">
+                                            #{settlement.purchase_return.id}
+                                        </Link>
+                                    </div>
+                                    <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                        <span className="text-base font-bold text-slate-400 dark:text-white/50">إجمالي قيمة المرتجع</span>
+                                        <span className="text-2xl font-black text-slate-800 dark:text-white">{fmt(settlement.purchase_return.total)} د.ل</span>
+                                    </div>
+                                </>
+                            ) : settlement.purchase ? (
+                                <>
+                                    <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                        <span className="text-base font-bold text-slate-400 dark:text-white/50">رقم فاتورة الشراء</span>
+                                        <Link href={`/purchases/${settlement.purchase.id}`} className="text-2xl font-black text-primary hover:underline">
+                                            #{settlement.purchase.id}
+                                        </Link>
+                                    </div>
+                                    <div className="flex items-center justify-between p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8">
+                                        <span className="text-base font-bold text-slate-400 dark:text-white/50">إجمالي قيمة الفاتورة</span>
+                                        <span className="text-2xl font-black text-slate-800 dark:text-white">{fmt(settlement.purchase.total)} د.ل</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="p-8 rounded-[24px] bg-purple-500/5 border-2 border-purple-500/20 flex flex-col items-center justify-center text-center gap-3">
+                                    <span className="text-4xl">🔄</span>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white">تسوية مستقلة</h3>
+                                    <p className="text-base font-bold text-slate-500 dark:text-white/60">
+                                        هذه التسوية مسجلة كتسوية نقدية مستردة مباشرة من المورد وغير مرتبطة بفاتورة أو مرتجع محدد.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </SpatialCard>
+                </div>
+
+                {/* Notes Card */}
+                {settlement.notes && (
+                    <SpatialCard title="ملاحظات التسوية" icon={<StickyNote className="w-6 h-6 text-amber-500" />}>
+                        <div className="p-6 rounded-[22px] bg-black/3 dark:bg-white/5 border border-black/5 dark:border-white/8 text-lg font-bold text-slate-700 dark:text-white/80 leading-relaxed">
+                            {settlement.notes}
+                        </div>
+                    </SpatialCard>
                 )}
             </div>
         </AppShell>
