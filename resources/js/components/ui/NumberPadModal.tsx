@@ -78,7 +78,7 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   // ── Desktop ───────────────────────────────────────────────────────────────
   if (!isMobile) return createPortal(
-    <div onClick={onClose} className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md cursor-pointer p-4">
+    <div onClick={onClose} className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-md cursor-pointer p-4">
       <div onClick={e => e.stopPropagation()} className="bg-white dark:bg-slate-800 rounded-[32px] border-2 border-black/10 dark:border-white/12 shadow-2xl w-[460px] max-w-[95vw] max-h-[92vh] overflow-y-auto cursor-default flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-black/5 dark:border-white/5 shrink-0">
@@ -142,7 +142,7 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
 
   // ── Mobile (bottom sheet) ─────────────────────────────────────────────────
   return createPortal(
-    <div onClick={onClose} className="fixed inset-0 z-[9999] flex flex-col justify-end bg-black/60 backdrop-blur-md cursor-pointer">
+    <div onClick={onClose} className="fixed inset-0 z-[100000] flex flex-col justify-end bg-black/60 backdrop-blur-md cursor-pointer">
       <div onClick={e => e.stopPropagation()} className="w-full bg-white dark:bg-[#1a1f35] rounded-t-[32px] border-t-2 border-black/10 dark:border-white/12 shadow-2xl overflow-hidden cursor-default">
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-black/5 dark:border-white/5">
           <h3 className="font-black text-slate-800 dark:text-white text-xl">{title}</h3>

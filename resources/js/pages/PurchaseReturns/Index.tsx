@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
 import { Plus, RotateCcw, Eye, Trash2, AlertTriangle, X, SlidersHorizontal, ChevronDown, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
-import { ModernSelect } from '@/components/ui/SpatialComponents';
 
 interface Supplier { id: number; name: string; }
 interface Product       { id: number; name: string; }
@@ -87,7 +86,7 @@ function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
 function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () => void }) {
     const [deleteSettlements, setDeleteSettlements] = useState(false);
 
-    const isCash           = ret.supplier.id === 1;
+    const isCash           = (ret.supplier?.id ?? (ret as any).supplier_id) === 1;
     const settlementsTotal = parseFloat(ret.settlements_total ?? '0');
     const hasSettlements   = !isCash && settlementsTotal > 0;
 
@@ -155,13 +154,13 @@ function CancelReturnModal({ ret, onClose }: { ret: PurchaseReturn; onClose: () 
     );
 }
 
-export default function PurchaseReturnsIndex({ returns: data, suppliers, products, paymentMethods, flash }: Props) {
+export default function PurchaseReturnsIndex({ returns: data, suppliers = [], products = [], paymentMethods = [], flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<PurchaseReturn | null>(null);
     const [filterOpen,   setFilterOpen]   = useState(false);
     const [activeTab,    setActiveTab]    = useState<'active' | 'deleted'>('active');
 
-    const activeReturns  = data.data.filter(r => !r.deleted_at);
-    const deletedReturns = data.data.filter(r => r.deleted_at);
+    const activeReturns  = (data?.data || []).filter(r => !r.deleted_at);
+    const deletedReturns = (data?.data || []).filter(r => r.deleted_at);
     const displayReturns = activeTab === 'active' ? activeReturns : deletedReturns;
 
     // قراءة الفلاتر الحالية من URL
@@ -354,7 +353,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                                 {displayReturns.map(r => (
                                                     <tr key={r.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors ${r.deleted_at ? 'opacity-50' : ''}`}>
                                                         <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{r.id}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{r.supplier.name}</td>
+                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{r.supplier?.name ?? 'مورد غير معروف'}</td>
                                                         <td className="px-4 py-4">
                                                             {r.purchase
                                                                 ? <Link href={`/purchases/${r.purchase.id}`} className="text-primary font-bold hover:underline">#{r.purchase.id}</Link>
@@ -406,7 +405,7 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                             <div key={r.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${r.deleted_at ? 'opacity-60' : ''}`}>
                                                 <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
                                                     <div>
-                                                        <span className="font-black text-slate-800 dark:text-white">{r.supplier.name}</span>
+                                                        <span className="font-black text-slate-800 dark:text-white">{r.supplier?.name ?? 'مورد غير معروف'}</span>
                                                         <div className="flex items-center gap-2 mt-0.5">
                                                             <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{r.id}</span>
                                                             {r.deleted_at
@@ -463,22 +462,8 @@ export default function PurchaseReturnsIndex({ returns: data, suppliers, product
                                         ))}
                                     </div>
 
-                                    {data.last_page > 1 && (
-                                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
-                                            {data.links.map((link, i) => (
-                                                link.url ? (
-                                                    <Link key={i} href={link.url}
-                                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10'}`}
-                                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                                    />
-                                                ) : (
-                                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
-                                                        dangerouslySetInnerHTML={{ __html: link.label }}
-                                                    />
-                                                )
-                                            ))}
-                                        </div>
-                                    )}
+                                    {/* Pagination */}
+                                    <Pagination links={data?.links || []} currentPage={data?.current_page} lastPage={data?.last_page} />
                                 </>
                             )}
                         </SpatialCard>

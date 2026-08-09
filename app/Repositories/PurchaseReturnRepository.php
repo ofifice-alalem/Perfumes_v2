@@ -15,7 +15,7 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
         return PurchaseReturn::class;
     }
 
-    public function paginated(int $perPage = 5)
+    public function paginated(int $perPage = 20)
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
 
