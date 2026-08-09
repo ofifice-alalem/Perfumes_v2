@@ -78,7 +78,6 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
 
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
-      <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">الحجم</label>
 
       {/* Mobile: grid 2 cols — Desktop: flex wrap */}
       <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3.5">

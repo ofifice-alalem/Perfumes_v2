@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
@@ -9,6 +10,7 @@ import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
     CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause, Edit,
+    ChevronUp, Wallet, CheckCircle2,
 } from 'lucide-react';
 
 interface Customer { id: number; name: string; total_debt?: string; }
@@ -173,6 +175,20 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [processing, setProcessing] = useState(false);
     const [showCreditConfirm, setShowCreditConfirm] = useState(false);
     const [paymentManuallySet, setPaymentManuallySet] = useState(isEditMode);
+    const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F10') {
+                e.preventDefault();
+                if (!showPaymentDrawer && cart.length > 0) {
+                    setShowPaymentDrawer(true);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [showPaymentDrawer, cart]);
 
     // Hold invoices state
     const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
@@ -523,10 +539,21 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         });
     }
 
+    function handleSelectPaymentMethod(methodId: string) {
+        if (selMethod === methodId) {
+            setSelMethod('');
+            setSelAmount('');
+        } else {
+            setSelMethod(methodId);
+            setSelAmount(remaining > 0 ? remaining.toFixed(2) : '');
+        }
+    }
+
     function addPayment() {
-        if (!selMethod || !selAmount || +selAmount <= 0) return;
+        const amountToAdd = selAmount || (remaining > 0 ? remaining.toFixed(2) : '');
+        if (!selMethod || !amountToAdd || +amountToAdd <= 0) return;
         const currentPaid = payments.reduce((s, p) => s + (+p.amount || 0), 0) + debtAmount;
-        if (currentPaid + +selAmount > total) return;
+        if (currentPaid + +amountToAdd > grandTotal + 0.001) return;
         const method = paymentMethods.find(m => m.id === +selMethod);
         if (!method) return;
 
@@ -534,15 +561,16 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             const existing = prev.findIndex(p => p.payment_method_id === selMethod);
             if (existing !== -1) {
                 return prev.map((p, i) => i === existing
-                    ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
+                    ? { ...p, amount: (+p.amount + +amountToAdd).toFixed(2) }
                     : p
                 );
             }
-            return [...prev, { payment_method_id: selMethod, method_name: method.name, amount: selAmount }];
+            return [...prev, { payment_method_id: selMethod, method_name: method.name, amount: amountToAdd }];
         });
 
         setPaymentManuallySet(true);
-        setSelMethod(''); setSelAmount('');
+        setSelMethod('');
+        setSelAmount('');
     }
 
     function clearForm() {
@@ -611,6 +639,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
     function executeSubmit() {
         setShowCreditConfirm(false);
+        setShowPaymentDrawer(false);
         setProcessing(true);
 
         const payload = {
@@ -700,7 +729,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
 
                         {/* Add product form */}
-                        <div className="px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5 shrink-0">
+                        <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5">
                             <div className="flex flex-col gap-2.5 sm:gap-3">
                                 {/* Row 1: product + sale type + qty + preview */}
                                 <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-end">
@@ -760,42 +789,43 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     </div>
                                 )}
 
-                                {/* Row 3: حقل سعر الوحدة + زر الإضافة — يظهر لجميع أنواع البيع */}
-                                {showPriceField && (
-                                    <div className="flex flex-col gap-2.5 sm:gap-3">
-                                        <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-end">
-                                            <div className="flex flex-col gap-1.5 flex-1">
-                                                <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">
-                                                    سعر الوحدة
-                                                    {selMinPrice > 0 && (
-                                                        <span className="mr-1.5 text-amber-600 dark:text-amber-400 normal-case font-bold">
-                                                            (حد أدنى: {selMinPrice.toFixed(2)})
-                                                        </span>
-                                                    )}
-                                                </label>
-                                                <button
-                                                    onClick={() => openPad(
-                                                        `سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`,
-                                                        selUnitPrice,
-                                                        v => setSelUnitPrice(v),
-                                                    )}
-                                                    className={`h-16 sm:h-20 rounded-[22px] px-5 sm:px-6 text-xl sm:text-[24px] font-black w-full text-center cursor-pointer transition-all border-2 spatial-input active:scale-95 shadow-sm ${selUnitPrice && +selUnitPrice < selMinPrice
-                                                            ? 'border-red-500/60 text-red-500 bg-red-500/5'
-                                                            : 'hover:border-primary/40'
-                                                        }`}>
-                                                    {selUnitPrice || '0.00'}
-                                                </button>
-                                                {selUnitPrice && +selUnitPrice < selMinPrice && (
-                                                    <span className="text-xs font-bold text-red-500">أقل من الحد الأدنى</span>
-                                                )}
-                                            </div>
-                                            <button onClick={addToCart} disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
-                                                className="spatial-button w-full sm:w-auto min-w-[140px] flex items-center justify-center gap-2.5 sm:gap-3 px-8 sm:px-12 h-16 sm:h-20 rounded-[22px] text-xl sm:text-[22px] font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] transition-transform shadow-lg">
-                                                <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> إضافة
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
+                                 {/* Row 3: حقل سعر الوحدة + زر الإضافة — يظهر لجميع أنواع البيع */}
+                                 {showPriceField && (
+                                     <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3.5 sm:p-4 rounded-[22px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md">
+                                         <div className="flex flex-1 items-center justify-between gap-3">
+                                             <div className="flex flex-col gap-1 shrink-0">
+                                                 <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                                                     سعر الوحدة
+                                                 </span>
+                                                 {selMinPrice > 0 && (
+                                                     <div className="inline-flex items-baseline gap-1.5 px-3 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30">
+                                                         <span className="text-xs font-bold text-amber-800/80 dark:text-amber-200/80">حد أدنى:</span>
+                                                         <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-300 tracking-tight">
+                                                             {selMinPrice.toFixed(2)}
+                                                         </span>
+                                                         <span className="text-xs font-bold">د.ل</span>
+                                                     </div>
+                                                 )}
+                                             </div>
+                                             <button
+                                                 onClick={() => openPad(
+                                                     `سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`,
+                                                     selUnitPrice,
+                                                     v => setSelUnitPrice(v),
+                                                 )}
+                                                 className={`h-16 sm:h-20 rounded-[20px] px-5 sm:px-6 text-xl sm:text-[24px] font-black flex-1 text-center cursor-pointer transition-all border-2 spatial-input active:scale-95 shadow-sm ${selUnitPrice && +selUnitPrice < selMinPrice
+                                                         ? 'border-red-500/60 text-red-500 bg-red-500/5'
+                                                         : 'hover:border-primary/40'
+                                                     }`}>
+                                                 {selUnitPrice || '0.00'}
+                                             </button>
+                                         </div>
+                                         <button onClick={addToCart} disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
+                                             className="spatial-button w-full sm:w-auto min-w-[140px] flex items-center justify-center gap-2.5 sm:gap-3 px-8 sm:px-12 h-16 sm:h-20 rounded-[22px] text-xl sm:text-[22px] font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] transition-transform shadow-lg">
+                                             <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> إضافة
+                                         </button>
+                                     </div>
+                                 )}
 
                                 {/* Stock warning */}
                                 {selectedProduct && maxCount !== undefined && maxCount === 0 && (
@@ -809,150 +839,59 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             </div>
                         </div>
 
-                        {/* Totals + Payment */}
-                        <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 flex flex-col gap-3 sm:gap-4">
-                            {/* Totals */}
-                            <div className="flex flex-col lg:flex-row gap-2 lg:gap-0 p-3 sm:p-4 rounded-[16px] sm:rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
-                                {/* الفاتورة */}
-                                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 pb-2 lg:pb-0 border-b lg:border-b-0 lg:border-l border-black/5 dark:border-white/5 lg:pl-4">
+                        {/* Totals Summary Bar */}
+                        <div className="mt-auto px-3 sm:px-5 py-3 border-t border-black/5 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/[0.01]">
+                            <div className="flex items-center justify-between gap-2 p-3 sm:p-4 rounded-[20px] bg-black/3 dark:bg-white/3 border border-black/5 dark:border-white/5">
+                                <div className="flex flex-col">
                                     <span className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-white/30 uppercase tracking-widest">الفاتورة</span>
-                                    <span className="text-sm sm:text-base lg:text-lg font-black text-slate-700 dark:text-white/80">{total.toFixed(2)}</span>
+                                    <span className="text-sm sm:text-base font-black text-slate-700 dark:text-white/80">{total.toFixed(2)}</span>
                                 </div>
-
-                                {/* الدين (إذا كان موجوداً) */}
                                 {debtPayment && (
-                                    <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 pb-2 lg:pb-0 border-b lg:border-b-0 lg:border-l border-black/5 dark:border-white/5 lg:px-4">
+                                    <div className="flex flex-col">
                                         <span className="text-[10px] sm:text-xs font-bold text-red-500 uppercase tracking-widest">الدين السابق</span>
-                                        <span className="text-sm sm:text-base lg:text-lg font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
+                                        <span className="text-sm sm:text-base font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
                                     </div>
                                 )}
-
-                                {/* الإجمالي */}
-                                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:px-4 lg:border-l border-black/5 dark:border-white/5">
-                                    <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">الإجمالي</span>
-                                    <span className="text-slate-800 dark:text-white text-base sm:text-lg lg:text-xl font-black">{grandTotal.toFixed(2)}</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">الإجمالي</span>
+                                    <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{grandTotal.toFixed(2)}</span>
                                 </div>
-
-                                {/* المدفوع */}
-                                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:px-4 lg:border-l border-black/5 dark:border-white/5">
-                                    <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">المدفوع</span>
-                                    <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm sm:text-base lg:text-xl">{totalPaid.toFixed(2)}</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">المدفوع</span>
+                                    <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)}</span>
                                 </div>
-
-                                {/* المتبقي */}
-                                <div className="flex items-center justify-between lg:flex-col lg:items-start lg:justify-center flex-1 lg:pr-4">
-                                    <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">المتبقي</span>
-                                    <span className={remaining > 0.01 ? 'text-red-500 font-bold text-sm sm:text-base lg:text-xl' : 'text-slate-400 dark:text-white/30 font-bold text-sm sm:text-base lg:text-xl'}>{remaining.toFixed(2)}</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">المتبقي</span>
+                                    <span className={`text-base sm:text-lg font-black ${remaining > 0.01 ? 'text-red-500' : 'text-slate-400 dark:text-white/30'}`}>{remaining.toFixed(2)}</span>
                                 </div>
                             </div>
-
-                            {/* Payment section */}
-                            {cart.length > 0 && (
-                                <div className="flex flex-col lg:flex-row gap-3">
-                                    {/* يسار — تسجيل دفعة */}
-                                    <div className="flex flex-col gap-2 w-full lg:w-1/2">
-                                        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                                            {paymentMethods.map(m => (
-                                                <button key={m.id}
-                                                    onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
-                                                    className={`flex-1 min-w-[70px] h-16 sm:h-20 rounded-[14px] sm:rounded-[16px] font-bold text-sm sm:text-base transition-all border-2 ${selMethod === String(m.id)
-                                                            ? 'bg-primary border-primary text-white'
-                                                            : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40 active:scale-95'
-                                                        }`}>
-                                                    {m.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
-                                                className="spatial-input flex-1 h-16 sm:h-20 rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 text-base sm:text-[18px] font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
-                                                {selAmount || remaining.toFixed(2)}
-                                            </button>
-                                            <button onClick={addPayment} disabled={!selMethod || !selAmount}
-                                                className="spatial-button flex items-center justify-center w-16 sm:w-20 h-16 sm:h-20 disabled:opacity-40 shrink-0 active:scale-95">
-                                                <Plus className="w-6 h-6 sm:w-7 sm:h-7" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* يمين — كاردات الدفعات */}
-                                    <div className="flex flex-col gap-2.5 sm:gap-3 w-full lg:w-1/2">
-                                        {/* Debt payment card */}
-                                        {debtPayment && (
-                                            <div className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-red-500/10 border-2 border-red-500/30 shadow-sm">
-                                                <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                                    setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                                }, originalDebt)}
-                                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
-                                                    <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
-                                                </button>
-                                                <div className="flex flex-col min-w-0 flex-1">
-                                                    <span className="font-black text-red-600 dark:text-red-400 text-xs sm:text-sm truncate">سداد الدين — {debtPayment.method_name}</span>
-                                                    <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{debtPayment.amount}</span>
-                                                </div>
-                                                <button onClick={() => setDebtPayment(null)}
-                                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
-                                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
-                                                </button>
-                                            </div>
-                                        )}
-                                        {/* Regular payments */}
-                                        {payments.length === 0 && !debtPayment ? (
-                                            <div className="flex-1 flex items-center justify-center h-full min-h-[80px] text-slate-400 dark:text-white/30 font-black text-sm sm:text-base border-2 border-dashed border-black/10 dark:border-white/10 rounded-[22px]">لا توجد دفعات مضافة</div>
-                                        ) : (
-                                            payments.map((p, idx) => (
-                                                <div key={idx} className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-emerald-500/10 border-2 border-emerald-500/30 shadow-sm">
-                                                    <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
-                                                        setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
-                                                        setPaymentManuallySet(true);
-                                                    })} className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
-                                                        <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
-                                                    </button>
-                                                    <div className="flex flex-col min-w-0 flex-1">
-                                                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm truncate">{p.method_name}</span>
-                                                        <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{p.amount}</span>
-                                                    </div>
-                                                    <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
-                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        {/* Submit */}
-                        <div className="px-3 sm:px-5 py-3 sm:py-4 border-t border-black/5 dark:border-white/5 shrink-0 flex flex-col gap-2">
-                            {isCashCustomer && remaining > 0.01 && (
-                                <div className="px-3 sm:px-4 py-2 rounded-[12px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-[10px] sm:text-xs">
-                                    ⚠️ زبون نقدي — يجب الدفع الكامل قبل التأكيد
-                                </div>
-                            )}
-                            <div className="flex gap-2">
-                                <div className="flex flex-col gap-2 w-1/4">
-                                    <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/10 dark:border-white/20">
-                                        <X className="w-4 h-4" /> إلغاء
-                                    </Link>
-                                    {!isEditMode && cart.length > 0 && (
-                                        <button onClick={clearForm} className="h-[68px] flex items-center justify-center gap-2 rounded-[16px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-sm transition-all">
-                                            <Trash2 className="w-4 h-4" /> مسح
-                                        </button>
-                                    )}
-                                </div>
-                                <button onClick={submit}
-                                    disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                                    className="spatial-button flex-1 flex items-center justify-center gap-2 text-lg font-black disabled:opacity-40"
-                                    style={{ height: cart.length > 0 ? '144px' : '68px' }}>
-                                    <Check className="w-6 h-6" />
-                                    {isEditMode
-                                        ? (cart.length > 0 ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : 'حفظ التعديلات')
-                                        : (cart.length > 0 ? `تأكيد البيع — ${grandTotal.toFixed(2)}` : 'تأكيد البيع')}
-                                </button>
+                        {/* Submit Action Bar */}
+                        <div className="px-3 sm:px-5 py-3 sm:py-4 border-t border-black/5 dark:border-white/5 shrink-0 flex items-stretch gap-2 sm:gap-3">
+                            <div className="flex flex-col gap-2 shrink-0">
+                                <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 shrink-0 shadow-sm active:scale-95">
+                                    <X className="w-6 h-6" /> إلغاء
+                                </Link>
+                                {!isEditMode && (
+                                    <button onClick={clearForm} disabled={cart.length === 0} className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-black text-base sm:text-lg transition-all shrink-0 shadow-sm active:scale-95 disabled:opacity-40 disabled:pointer-events-none">
+                                        <Trash2 className="w-6 h-6" /> مسح
+                                    </button>
+                                )}
                             </div>
+                            <button onClick={() => setShowPaymentDrawer(true)}
+                                disabled={cart.length === 0}
+                                className="spatial-button flex-1 flex items-center justify-between px-6 sm:px-10 rounded-[28px] text-xl sm:text-[24px] font-black shadow-2xl disabled:opacity-40 hover:scale-[1.01] active:scale-95 transition-all">
+                                <div className="flex items-center gap-3.5">
+                                    <Wallet className="w-8 h-8 sm:w-10 sm:h-10" />
+                                    <span>{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
+                                </div>
+                                <div className="flex items-center gap-3.5">
+                                    <span className="text-xs sm:text-sm font-black bg-white/20 dark:bg-black/20 px-3.5 py-2 rounded-full">{cart.length} أصناف</span>
+                                    <span className="text-2xl sm:text-3xl font-black">{grandTotal.toFixed(2)} د.ل</span>
+                                    <ChevronUp className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce" />
+                                </div>
+                            </button>
                         </div>
                     </div>
 
@@ -1364,11 +1303,40 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         {/* Sizes */}
                                         {needsSize && (
                                             <div>
-                                                <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest mb-1.5 block">الحجم</label>
                                                 <SizeSelect sizes={sizes} selectedSizeId={selSize}
                                                     onSizeSelect={id => { setSelSize(id); setSelUnitPrice(''); }}
                                                     onPriceResolved={(def, min) => { setSelUnitPrice(def.toFixed(2)); setSelMinPrice(min); }}
                                                     product={selectedProduct} isVip={isVip} />
+                                            </div>
+                                        )}
+
+                                        {/* Unit Price */}
+                                        {showPriceField && (
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex flex-col gap-0.5 shrink-0">
+                                                        <span className="text-xs font-black text-slate-700 dark:text-white/90">
+                                                            سعر الوحدة
+                                                        </span>
+                                                        {selMinPrice > 0 && (
+                                                            <div className="inline-flex items-baseline gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30">
+                                                                <span className="text-[10px] font-bold text-amber-800/80 dark:text-amber-200/80">حد أدنى:</span>
+                                                                <span className="text-sm font-black text-amber-600 dark:text-amber-300 tracking-tight">
+                                                                    {selMinPrice.toFixed(2)}
+                                                                </span>
+                                                                <span className="text-[10px] font-bold">د.ل</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <button onClick={() => openPad(`سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`, selUnitPrice, v => setSelUnitPrice(v))}
+                                                        className={`h-12 rounded-[14px] px-4 text-base font-black flex-1 text-center cursor-pointer transition-all spatial-input active:scale-95 ${selUnitPrice && +selUnitPrice < selMinPrice ? 'border-red-500/60 text-red-500' : 'hover:border-primary/40'
+                                                            }`}>
+                                                        {selUnitPrice || '0.00'}
+                                                    </button>
+                                                </div>
+                                                {selUnitPrice && +selUnitPrice < selMinPrice && (
+                                                    <span className="text-[10px] font-bold text-red-500 block">أقل من الحد الأدنى</span>
+                                                )}
                                             </div>
                                         )}
 
@@ -1393,23 +1361,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             </div>
                                         )}
 
-                                        {/* Unit Price */}
-                                        {showPriceField && (
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest mb-1.5 block">
-                                                    سعر الوحدة
-                                                    {selMinPrice > 0 && <span className="mr-1 text-slate-400 dark:text-white/30 normal-case"> (حد أدنى: {selMinPrice.toFixed(2)})</span>}
-                                                </label>
-                                                <button onClick={() => openPad(`سعر الوحدة (حد أدنى: ${selMinPrice.toFixed(2)})`, selUnitPrice, v => setSelUnitPrice(v))}
-                                                    className={`h-12 rounded-[14px] px-4 text-base font-black w-full text-center cursor-pointer transition-all spatial-input active:scale-95 ${selUnitPrice && +selUnitPrice < selMinPrice ? 'border-red-500/60 text-red-500' : 'hover:border-primary/40'
-                                                        }`}>
-                                                    {selUnitPrice || '0.00'}
-                                                </button>
-                                                {selUnitPrice && +selUnitPrice < selMinPrice && (
-                                                    <span className="text-[10px] font-bold text-red-500 mt-1 block">أقل من الحد الأدنى</span>
-                                                )}
-                                            </div>
-                                        )}
+
 
                                         {/* Stock Warning */}
                                         {selectedProduct && maxCount !== undefined && maxCount === 0 && (
@@ -1527,7 +1479,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                         {/* Payment Tab */}
                         {activeTab === 'payment' && (
-                            <div className="flex flex-col">
+<div className="flex flex-col">
                                 {/* Totals Summary */}
                                 <div className="px-3 py-3 border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2">
                                     <div className="flex flex-col gap-2 p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
@@ -1566,7 +1518,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {paymentMethods.map(m => (
                                                         <button key={m.id}
-                                                            onClick={() => setSelMethod(selMethod === String(m.id) ? '' : String(m.id))}
+                                                            onClick={() => handleSelectPaymentMethod(String(m.id))}
                                                             className={`h-16 rounded-[14px] font-bold text-sm transition-all border-2 ${selMethod === String(m.id)
                                                                     ? 'bg-primary border-primary text-white'
                                                                     : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40 active:scale-95'
@@ -1576,11 +1528,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
+                                                    <button onClick={() => openPad('المبلغ', selAmount || (remaining > 0 ? remaining.toFixed(2) : ''), v => setSelAmount(v), remaining > 0 ? remaining : undefined)}
                                                         className="spatial-input flex-1 h-16 rounded-[14px] px-3 text-base font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
-                                                        {selAmount || remaining.toFixed(2)}
+                                                        {selAmount || (remaining > 0 ? remaining.toFixed(2) : '0.00')}
                                                     </button>
-                                                    <button onClick={addPayment} disabled={!selMethod || !selAmount}
+                                                    <button onClick={addPayment} disabled={!selMethod || (selAmount ? +selAmount <= 0 : remaining <= 0)}
                                                         className="spatial-button flex items-center justify-center w-16 h-16 disabled:opacity-40 active:scale-95">
                                                         <Plus className="w-6 h-6" />
                                                     </button>
@@ -1892,6 +1844,155 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 onConfirm={executeSubmit}
                 onCancel={() => setShowCreditConfirm(false)}
             />
+
+            {/* ══ PAYMENT DRAWER (BOTTOM SHEET) ══ */}
+            {showPaymentDrawer && createPortal(
+                <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+                    <div onClick={() => setShowPaymentDrawer(false)} className="absolute inset-0 cursor-pointer" />
+
+                    <div className="relative z-10 w-full max-w-5xl mx-auto bg-white dark:bg-slate-900 border-t-2 border-black/10 dark:border-white/10 rounded-t-[36px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-[20px] bg-primary/10 text-primary flex items-center justify-center font-black shrink-0">
+                                    <Wallet className="w-7 h-7" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h3 className="font-black text-slate-800 dark:text-white text-xl sm:text-2xl">إتمام عملية السداد والحساب</h3>
+                                    <p className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">
+                                        العميل: <span className="text-primary font-black">{selectedCustomerName}</span> ({isCashCustomer ? 'زبون نقدي' : (customerType === 'vip' ? 'زبون VIP' : 'زبون آجل')})
+                                    </p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowPaymentDrawer(false)} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 dark:text-white/40 transition-all active:scale-95">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Totals Summary Strip */}
+                        <div className="px-6 sm:px-8 py-4 bg-primary/5 border-b border-primary/10 grid grid-cols-2 sm:flex sm:items-center justify-between gap-3 text-center sm:text-right">
+                            <div className="flex flex-col">
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-white/40 uppercase tracking-widest">إجمالي الفاتورة</span>
+                                <span className="text-base sm:text-lg font-black text-slate-700 dark:text-white/80">{total.toFixed(2)} د.ل</span>
+                            </div>
+                            {debtPayment && (
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] sm:text-xs font-bold text-red-500 uppercase tracking-widest">الدين السابق</span>
+                                    <span className="text-base sm:text-lg font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)} د.ل</span>
+                                </div>
+                            )}
+                            <div className="flex flex-col">
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الإجمالي النهائى</span>
+                                <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">{grandTotal.toFixed(2)} د.ل</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">المدفوع</span>
+                                <span className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)} د.ل</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-white/40 uppercase tracking-widest">المتبقي</span>
+                                <span className={`text-lg sm:text-xl font-black ${remaining > 0.01 ? 'text-red-500' : 'text-slate-400 dark:text-white/30'}`}>{remaining.toFixed(2)} د.ل</span>
+                            </div>
+                        </div>
+
+                        {/* Body Grid */}
+                        <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col lg:flex-row gap-6 sm:gap-8">
+                            {/* Left Col — Select Payment Method */}
+                            <div className="flex flex-col gap-4 w-full lg:w-1/2">
+                                <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">اختر طريقة الدفع والمبلغ</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {paymentMethods.map(m => (
+                                        <button key={m.id}
+                                            onClick={() => handleSelectPaymentMethod(String(m.id))}
+                                            className={`h-16 sm:h-20 rounded-[20px] font-black text-base sm:text-lg transition-all border-2 flex items-center justify-center ${selMethod === String(m.id)
+                                                    ? 'bg-primary border-primary text-white shadow-md shadow-primary/25'
+                                                    : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-white/80 hover:border-primary/40 active:scale-95'
+                                                }`}>
+                                            {m.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3 mt-1">
+                                    <button
+                                        onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
+                                        className="spatial-input flex-1 h-16 sm:h-20 rounded-[22px] px-5 text-xl sm:text-[24px] font-black text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm">
+                                        {selAmount || remaining.toFixed(2)}
+                                    </button>
+                                    <button onClick={addPayment} disabled={!selMethod || !selAmount}
+                                        className="spatial-button flex items-center justify-center gap-2 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] text-lg font-black disabled:opacity-40 shrink-0 active:scale-95 shadow-md">
+                                        <Plus className="w-6 h-6" /> إضافة دفعة
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right Col — Payments Cards List */}
+                            <div className="flex flex-col gap-3 w-full lg:w-1/2">
+                                <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">الدفعات المسجلة في الفاتورة</label>
+                                {debtPayment && (
+                                    <div className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-red-500/10 border-2 border-red-500/30 shadow-sm">
+                                        <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                            setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                        }, originalDebt)}
+                                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
+                                            <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        </button>
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="font-black text-red-600 dark:text-red-400 text-xs sm:text-sm truncate">سداد الدين — {debtPayment.method_name}</span>
+                                            <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{debtPayment.amount}</span>
+                                        </div>
+                                        <button onClick={() => setDebtPayment(null)}
+                                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
+                                            <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        </button>
+                                    </div>
+                                )}
+
+                                {payments.length === 0 && !debtPayment ? (
+                                    <div className="flex-1 flex items-center justify-center min-h-[120px] text-slate-400 dark:text-white/30 font-black text-base border-2 border-dashed border-black/10 dark:border-white/10 rounded-[24px]">
+                                        لم يتم إضافة أي دفعات بعد
+                                    </div>
+                                ) : (
+                                    payments.map((p, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-emerald-500/10 border-2 border-emerald-500/30 shadow-sm">
+                                            <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
+                                                setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
+                                                setPaymentManuallySet(true);
+                                            })} className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
+                                                <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
+                                            </button>
+                                            <div className="flex flex-col min-w-0 flex-1">
+                                                <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm truncate">{p.method_name}</span>
+                                                <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{p.amount}</span>
+                                            </div>
+                                            <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
+                                                className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
+                                                <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Drawer Footer / Submit */}
+                        <div className="px-6 sm:px-8 pt-5 pb-16 sm:pb-24 border-t border-black/5 dark:border-white/5 bg-white dark:bg-slate-900 flex flex-col gap-3 shrink-0">
+                            {isCashCustomer && remaining > 0.01 && (
+                                <div className="px-4 py-3 rounded-[16px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-sm text-center">
+                                    ⚠️ زبون نقدي — يجب الدفع الكامل واستيفاء المبلغ المتبقي ({remaining.toFixed(2)} د.ل) قبل التأكيد
+                                </div>
+                            )}
+
+                            <button onClick={submit}
+                                disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
+                                className="spatial-button h-24 sm:h-28 rounded-[28px] text-2xl sm:text-[26px] font-black w-full flex items-center justify-center gap-4 shadow-2xl active:scale-95 hover:scale-[1.01] transition-all disabled:opacity-40">
+                                <Check className="w-8 h-8 sm:w-10 sm:h-10" />
+                                {isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة'}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </>
     );
 }
