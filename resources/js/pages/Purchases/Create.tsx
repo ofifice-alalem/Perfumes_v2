@@ -829,19 +829,19 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                 <div className="bg-white dark:bg-slate-900 border-t border-black/10 dark:border-white/10 rounded-t-[36px] max-h-[92vh] flex flex-col overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
 
                     {/* Drawer Header */}
-                    <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02]">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-[18px] bg-primary/10 text-primary flex items-center justify-center font-black">
-                                <Wallet className="w-6 h-6" />
+                    <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-[20px] bg-primary/15 text-primary flex items-center justify-center font-black shrink-0 border border-primary/20 shadow-sm">
+                                <Wallet className="w-7 h-7" />
                             </div>
-                            <div>
+                            <div className="flex flex-col">
                                 <h2 className="font-black text-xl sm:text-2xl text-slate-900 dark:text-white">إتمام تسوية فاتورة الشراء والسداد</h2>
-                                <p className="text-xs sm:text-sm font-bold text-slate-500 dark:text-white/40">
-                                    المورد: <span className="text-primary font-black">{selectedSupplierName}</span>
+                                <p className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">
+                                    المورد: <span className="text-primary font-black text-sm sm:text-base">{selectedSupplierName}</span>
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => setShowPaymentDrawer(false)} className="w-12 h-12 rounded-[16px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-600 dark:text-white/70 transition-all active:scale-95">
+                        <button onClick={() => setShowPaymentDrawer(false)} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 dark:text-white/70 transition-all active:scale-95 border border-black/5 dark:border-white/10">
                             <X className="w-6 h-6" />
                         </button>
                     </div>
@@ -850,18 +850,18 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                     <div className="p-6 sm:p-8 overflow-y-auto flex flex-col gap-6">
 
                         {/* Top Totals Strip */}
-                        <div className="grid grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-5 rounded-[26px] bg-black/3 dark:bg-white/3 border-2 border-black/5 dark:border-white/5">
-                            <div className="flex flex-col items-center justify-center p-3 rounded-[20px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5 shadow-sm">
-                                <span className="text-xs sm:text-sm font-black text-slate-500 dark:text-white/40 mb-1">إجمالي الشراء</span>
+                        <div className="grid grid-cols-3 gap-3 sm:gap-4 p-4 sm:p-5 rounded-[26px] bg-slate-100/80 dark:bg-slate-800/90 border-2 border-slate-200 dark:border-slate-700">
+                            <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-[20px] bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
+                                <span className="text-xs sm:text-sm font-black text-slate-600 dark:text-slate-300 mb-1">إجمالي الشراء</span>
                                 <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{total.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
                             </div>
-                            <div className="flex flex-col items-center justify-center p-3 rounded-[20px] bg-emerald-500/10 border border-emerald-500/20 shadow-sm">
-                                <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 mb-1">المدفوع للمورد</span>
+                            <div className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-[20px] bg-emerald-500/15 dark:bg-emerald-500/20 border-2 border-emerald-500/40 shadow-sm">
+                                <span className="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-300 mb-1">المدفوع للمورد</span>
                                 <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
                             </div>
-                            <div className={`flex flex-col items-center justify-center p-3 rounded-[20px] border shadow-sm ${remaining > 0.01 ? 'bg-red-500/10 border-red-500/20' : 'bg-slate-100 dark:bg-slate-800 border-black/5 dark:border-white/5'}`}>
-                                <span className="text-xs sm:text-sm font-black text-slate-500 dark:text-white/40 mb-1">المتبقي (آجل)</span>
-                                <span className={`text-2xl sm:text-3xl font-black ${remaining > 0.01 ? 'text-red-500' : 'text-slate-400 dark:text-white/30'}`}>{remaining.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
+                            <div className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-[20px] border-2 shadow-sm ${remaining > 0.01 ? 'bg-red-500/15 dark:bg-red-500/20 border-red-500/40' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+                                <span className="text-xs sm:text-sm font-black text-slate-600 dark:text-slate-300 mb-1">المتبقي (آجل)</span>
+                                <span className={`text-2xl sm:text-3xl font-black ${remaining > 0.01 ? 'text-red-600 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{remaining.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
                             </div>
                         </div>
 
@@ -887,8 +887,8 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                                     }
                                                 }}
                                                 className={`h-16 sm:h-20 rounded-[20px] font-black text-base sm:text-lg transition-all border-2 flex items-center justify-center ${isSelected
-                                                    ? 'bg-primary border-primary text-white shadow-md shadow-primary/25 scale-[1.02]'
-                                                    : 'bg-black/5 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-white/80 hover:border-primary/40 active:scale-95'
+                                                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30 scale-[1.02]'
+                                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white hover:border-primary/60 active:scale-95 shadow-sm'
                                                     }`}>
                                                 {m.name}
                                             </button>
@@ -898,7 +898,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                 <div className="flex gap-3 mt-1">
                                     <button
                                         onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
-                                        className="spatial-input flex-1 h-16 sm:h-20 rounded-[22px] px-5 text-xl sm:text-[24px] font-black text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm">
+                                        className="spatial-input flex-1 h-16 sm:h-20 rounded-[22px] px-5 text-2xl sm:text-3xl font-black text-center cursor-pointer hover:border-primary/60 border-2 transition-all active:scale-95 shadow-sm">
                                         {selAmount || remaining.toFixed(2)}
                                     </button>
                                     <button
@@ -921,15 +921,15 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                     )}
                                 </label>
                                 {payments.length === 0 ? (
-                                    <div className="flex-1 flex items-center justify-center min-h-[160px] text-slate-400 dark:text-white/30 font-black text-lg border-2 border-dashed border-black/10 dark:border-white/10 rounded-[24px]">
+                                    <div className="flex-1 flex items-center justify-center min-h-[160px] text-slate-500 dark:text-slate-400 font-black text-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-[24px]">
                                         لم يتم إضافة أي دفعات بعد
                                     </div>
                                 ) : (
                                     <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-1">
                                         {payments.map((p, idx) => (
-                                            <div key={idx} className="flex items-center justify-between px-6 py-5 rounded-[24px] bg-emerald-500/10 border-2 border-emerald-500/30 shadow-md transition-all hover:border-emerald-500/50 min-h-[84px]">
+                                            <div key={idx} className="flex items-center justify-between px-6 py-5 rounded-[24px] bg-emerald-500/15 dark:bg-emerald-500/20 border-2 border-emerald-500/40 shadow-md transition-all hover:border-emerald-500/60 min-h-[84px]">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-[16px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                                    <div className="w-12 h-12 rounded-[16px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0">
                                                         <CreditCard className="w-7 h-7" />
                                                     </div>
                                                     <div className="flex flex-col gap-0.5">
@@ -952,8 +952,8 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                     </div>
 
                     {/* Footer Submit Button */}
-                    <div className="pt-5 sm:pt-6 pb-16 sm:pb-24 px-6 sm:px-8 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between gap-4">
-                        <button onClick={() => setShowPaymentDrawer(false)} className="h-16 sm:h-20 px-6 sm:px-8 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 active:scale-95">
+                    <div className="pt-5 sm:pt-6 pb-16 sm:pb-24 px-6 sm:px-8 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-between gap-4">
+                        <button onClick={() => setShowPaymentDrawer(false)} className="h-16 sm:h-20 px-6 sm:px-8 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/80 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 active:scale-95">
                             رجوع للتعديل
                         </button>
                         <button onClick={() => { setShowPaymentDrawer(false); submit(); }}
