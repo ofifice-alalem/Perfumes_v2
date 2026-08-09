@@ -261,7 +261,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
     const [fAmountTo,   setFAmountTo]   = useState(params.get('filter[amount_to]') ?? '');
     const [fPayMethod,  setFPayMethod]  = useState(params.get('filter[payment_method_id]') ?? '');
 
-    const hasFilter = fInvoiceId || fCustomer || fUser || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo || fPayMethod;
+    const hasFilter = Boolean(fInvoiceId || fCustomer || fUser || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo || fPayMethod);
 
     const activeInvoices = invoices.data.filter(inv => !inv.deleted_at);
     const deletedInvoices = invoices.data.filter(inv => inv.deleted_at);
@@ -288,101 +288,6 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
         setFilterDrawerOpen(false);
         router.get('/invoices', {}, { preserveScroll: true });
     }
-
-    const FilterPanel = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            {/* العمود الأول (اليمين): البحث والمعلومات الأساسية + نطاق المبالغ */}
-            <div className="flex flex-col gap-6">
-                {/* قسم البحث والعملاء */}
-                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                        <span className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/25 text-primary flex items-center justify-center text-xl shrink-0 border border-primary/20">🔍</span>
-                        <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
-                    </h4>
-                    
-                    {/* رقم الفاتورة */}
-                    <div className="flex flex-col gap-2.5">
-                        <label className="text-sm sm:text-base font-black text-slate-800 dark:text-white">
-                            رقم الفاتورة
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => setShowIdPad(true)}
-                            className={`spatial-input h-16 rounded-[20px] px-5 text-base sm:text-xl font-black cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 flex items-center justify-between ${
-                                fInvoiceId ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
-                            }`}
-                        >
-                            <div className="flex items-center gap-2.5">
-                                <Hash className="w-5 h-5 text-primary" />
-                                <span>{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة...'}</span>
-                            </div>
-                            {fInvoiceId && (
-                                <span
-                                    onClick={(e) => { e.stopPropagation(); setFInvoiceId(''); }}
-                                    className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors"
-                                >
-                                    ✕
-                                </span>
-                            )}
-                        </button>
-                    </div>
-
-                    <ModernSelect label="العميل" placeholder="الكل"
-                        options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
-                        defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
-                        onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
-                    />
-                    <ModernSelect label="البائع" placeholder="الكل"
-                        options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
-                        defaultValue={fUser ? (users.find(u => String(u.id) === fUser)?.name ?? '') : 'الكل'}
-                        onSelect={val => setFUser(val === 'الكل' ? '' : String(users.find(u => u.name === val)?.id ?? ''))}
-                    />
-                </div>
-
-                {/* قسم المبالغ (تحت البحث) */}
-                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                        <span className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">💵</span>
-                        <span className="text-slate-900 dark:text-white tracking-wide">نطاق المبالغ</span>
-                    </h4>
-                    <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
-                        onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
-                </div>
-            </div>
-
-            {/* العمود الثاني (اليسار): طريقة الدفع والمنتجات + نطاق التواريخ */}
-            <div className="flex flex-col gap-6">
-                {/* قسم الأصناف والدفع */}
-                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                        <span className="w-9 h-9 rounded-xl bg-purple-500/10 dark:bg-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0 border border-purple-500/20">💳</span>
-                        <span className="text-slate-900 dark:text-white tracking-wide">طريقة الدفع والمنتجات</span>
-                    </h4>
-
-                    <ModernSelect label="المنتج" placeholder="الكل"
-                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                        defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
-                        onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
-                    />
-                    <ModernSelect label="طريقة الدفع" placeholder="الكل"
-                        options={[{ label: 'الكل' }, { label: 'هجين', badge: '🔀' }, ...paymentMethods.map(m => ({ label: m.name }))]}
-                        defaultValue={fPayMethod === 'hybrid' ? 'هجين' : fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'}
-                        onSelect={val => setFPayMethod(val === 'الكل' ? '' : val === 'هجين' ? 'hybrid' : String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-                    />
-                </div>
-
-                {/* قسم التواريخ (تحت طريقة الدفع) */}
-                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                        <span className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0 border border-amber-500/20">📅</span>
-                        <span className="text-slate-900 dark:text-white tracking-wide">نطاق التواريخ</span>
-                    </h4>
-                    <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-                    <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
-                </div>
-            </div>
-        </div>
-    );
 
     return (
         <AppShell pageTitle="فواتير البيع">
@@ -591,7 +496,98 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                 resetFilter={resetFilter}
                 hasFilter={Boolean(hasFilter)}
             >
-                <FilterPanel />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {/* العمود الأول (اليمين): البحث والمعلومات الأساسية + نطاق المبالغ */}
+                    <div className="flex flex-col gap-6">
+                        {/* قسم البحث والعملاء */}
+                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                <span className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/25 text-primary flex items-center justify-center text-xl shrink-0 border border-primary/20">🔍</span>
+                                <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                            </h4>
+                            
+                            {/* رقم الفاتورة */}
+                            <div className="flex flex-col gap-2.5">
+                                <label className="text-sm sm:text-base font-black text-slate-800 dark:text-white">
+                                    رقم الفاتورة
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowIdPad(true)}
+                                    className={`spatial-input h-16 rounded-[20px] px-5 text-base sm:text-xl font-black cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 flex items-center justify-between ${
+                                        fInvoiceId ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <Hash className="w-5 h-5 text-primary" />
+                                        <span>{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة...'}</span>
+                                    </div>
+                                    {fInvoiceId && (
+                                        <span
+                                            onClick={(e) => { e.stopPropagation(); setFInvoiceId(''); }}
+                                            className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors"
+                                        >
+                                            ✕
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+
+                            <ModernSelect label="العميل" placeholder="الكل"
+                                options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
+                                defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
+                                onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
+                            />
+                            <ModernSelect label="البائع" placeholder="الكل"
+                                options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
+                                defaultValue={fUser ? (users.find(u => String(u.id) === fUser)?.name ?? '') : 'الكل'}
+                                onSelect={val => setFUser(val === 'الكل' ? '' : String(users.find(u => u.name === val)?.id ?? ''))}
+                            />
+                        </div>
+
+                        {/* قسم المبالغ (تحت البحث) */}
+                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                <span className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">💵</span>
+                                <span className="text-slate-900 dark:text-white tracking-wide">نطاق المبالغ</span>
+                            </h4>
+                            <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
+                                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
+                        </div>
+                    </div>
+
+                    {/* العمود الثاني (اليسار): طريقة الدفع والمنتجات + نطاق التواريخ */}
+                    <div className="flex flex-col gap-6">
+                        {/* قسم الأصناف والدفع */}
+                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                <span className="w-9 h-9 rounded-xl bg-purple-500/10 dark:bg-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0 border border-purple-500/20">💳</span>
+                                <span className="text-slate-900 dark:text-white tracking-wide">طريقة الدفع والمنتجات</span>
+                            </h4>
+
+                            <ModernSelect label="المنتج" placeholder="الكل"
+                                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                                defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
+                                onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+                            />
+                            <ModernSelect label="طريقة الدفع" placeholder="الكل"
+                                options={[{ label: 'الكل' }, { label: 'هجين', badge: '🔀' }, ...paymentMethods.map(m => ({ label: m.name }))]}
+                                defaultValue={fPayMethod === 'hybrid' ? 'هجين' : fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'}
+                                onSelect={val => setFPayMethod(val === 'الكل' ? '' : val === 'هجين' ? 'hybrid' : String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                            />
+                        </div>
+
+                        {/* قسم التواريخ (تحت طريقة الدفع) */}
+                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                <span className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0 border border-amber-500/20">📅</span>
+                                <span className="text-slate-900 dark:text-white tracking-wide">نطاق التواريخ</span>
+                            </h4>
+                            <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
+                            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
+                        </div>
+                    </div>
+                </div>
             </FilterDrawer>
 
             <NumberPadModal
