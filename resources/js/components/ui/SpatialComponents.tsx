@@ -286,7 +286,7 @@ export function ModernSelect({
   enableVirtualKeyboard = true,
 }: {
   label: string;
-  options: string[] | { label: string; meta?: string; badge?: string; searchKey?: string }[];
+  options: string[] | { label: string; meta?: string; badge?: string; price?: string; searchKey?: string }[];
   className?: string;
   placeholder?: string;
   onSelect?: (value: string) => void;
@@ -304,8 +304,8 @@ export function ModernSelect({
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const normalized = (options as (string | { label: string; meta?: string; badge?: string; searchKey?: string })[]).map((o) =>
-    typeof o === 'string' ? { label: o, meta: undefined, badge: undefined, searchKey: undefined } : o
+  const normalized = (options as (string | { label: string; meta?: string; badge?: string; price?: string; searchKey?: string })[]).map((o) =>
+    typeof o === 'string' ? { label: o, meta: undefined, badge: undefined, price: undefined, searchKey: undefined } : o
   );
 
   useEffect(() => {
@@ -354,23 +354,34 @@ export function ModernSelect({
           <div key={opt.label}>
             <li
               onClick={() => { setSelected(opt.label); onSelect?.(opt.label); setIsOpen(false); setSearch(''); setShowKeyboard(false); }}
-              style={{ padding: '22px 24px' }}
-              className={`flex items-center justify-between gap-3.5 rounded-[18px] cursor-pointer font-black transition-all duration-150 text-[17px] sm:text-[19px] min-h-[72px] ${selected === opt.label ? 'bg-primary text-white shadow-lg' : 'text-slate-800 dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'}`}
+              style={{ padding: '20px 24px' }}
+              className={`flex items-center justify-between gap-4 rounded-[20px] cursor-pointer font-black transition-all duration-150 text-xl sm:text-2xl min-h-[76px] ${selected === opt.label ? 'bg-primary text-white shadow-lg' : 'text-slate-800 dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'}`}
             >
-              <div className="flex items-center gap-3">
-                <span className={`shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'} ${selected === opt.label ? 'border-white bg-white/30' : 'border-slate-300 dark:border-white/30'}`}>
+              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                <span className={`shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${size === 'lg' ? 'w-7 h-7' : 'w-6 h-6'} ${selected === opt.label ? 'border-white bg-white/30' : 'border-slate-300 dark:border-white/30'}`}>
                   {selected === opt.label && (
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
                       <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </span>
-                {opt.badge && <span className="text-[13px]">{opt.badge}</span>}
-                <span className="leading-snug">{opt.label}</span>
+                {opt.badge && (
+                  <span className={`text-sm sm:text-base font-bold shrink-0 px-3 py-1 rounded-xl ${selected === opt.label ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary dark:text-primary-light border border-primary/20'}`}>
+                    {opt.badge}
+                  </span>
+                )}
+                <span className="leading-snug truncate font-black text-xl sm:text-2xl">{opt.label}</span>
               </div>
-              {opt.meta && (
-                <span className={`text-[14px] font-black shrink-0 px-3.5 py-1.5 rounded-xl ${selected === opt.label ? 'bg-white/25 text-white' : 'bg-primary text-white'}`}>{opt.meta}</span>
-              )}
+              <div className="flex items-center gap-3 shrink-0">
+                {opt.price && (
+                  <span className={`text-xl sm:text-3xl font-black px-4 py-2 rounded-2xl ${selected === opt.label ? 'bg-white/30 text-white' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-sm'}`}>
+                    {opt.price}
+                  </span>
+                )}
+                {opt.meta && (
+                  <span className={`text-lg sm:text-2xl font-black shrink-0 px-4 py-2 rounded-2xl ${selected === opt.label ? 'bg-white/25 text-white' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shadow-sm'}`}>{opt.meta}</span>
+                )}
+              </div>
             </li>
             {idx < filtered.length - 1 && <div className="h-[1.5px] bg-slate-200 dark:bg-white/15 my-2 mx-1" />}
           </div>

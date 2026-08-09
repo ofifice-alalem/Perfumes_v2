@@ -137,6 +137,25 @@ function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function getProductDisplayPrice(p: Product, isVip: boolean): string {
+    const pp = p.product_price;
+    if (!pp) return '';
+    const unitPrice = parseFloat(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular);
+    const fullPrice = pp.full_bottle_regular ? parseFloat(isVip ? (pp.full_bottle_vip ?? '0') : pp.full_bottle_regular) : 0;
+    
+    if (unitPrice > 0) return `${fmt(unitPrice)} د.ل`;
+    if (fullPrice > 0) return `${fmt(fullPrice)} د.ل`;
+    if (p.price_tier?.tier_prices?.length) {
+        const prices = p.price_tier.tier_prices.map(t => parseFloat(isVip ? t.price_vip : t.price_regular)).filter(n => !isNaN(n) && n > 0);
+        if (prices.length > 0) {
+            const min = Math.min(...prices);
+            const max = Math.max(...prices);
+            return min === max ? `${fmt(min)} د.ل` : `${fmt(min)} - ${fmt(max)} د.ل`;
+        }
+    }
+    return '';
+}
+
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, editInvoice }: Props) {
     const isEditMode = !!editInvoice;
 
@@ -736,7 +755,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <div className="flex items-center gap-2 flex-1 min-w-full sm:min-w-[180px]">
                                         <div className="flex-1 min-w-0">
                                             <ModernSelect key={`p-${resetKey}`} label="" placeholder="اختر المنتج..."
-                                                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}`, searchKey: p.qrcode ?? undefined }))}
+                                                options={products.map(p => ({ label: p.name, badge: p.category.name, price: getProductDisplayPrice(p, isVip), meta: `المخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
                                                 defaultValue={selectedProduct?.name ?? ""}
                                                 onSelect={val => {
                                                     const p = products.find(p => p.name === val);
@@ -1272,7 +1291,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                 )}
                                             </div>
                                             <ModernSelect key={`p-mobile-${resetKey}`} label="" placeholder="اختر المنتج..."
-                                                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `${p.stock}` }))}
+                                                options={products.map(p => ({ label: p.name, badge: p.category.name, price: getProductDisplayPrice(p, isVip), meta: `المخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
                                                 defaultValue={selectedProduct?.name ?? ""}
                                                 onSelect={val => {
                                                     const p = products.find(p => p.name === val);

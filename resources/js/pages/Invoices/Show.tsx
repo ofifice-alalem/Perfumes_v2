@@ -174,8 +174,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <Link href="/invoices" className="w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] bg-black/6 dark:bg-white/8 flex items-center justify-center text-slate-600 dark:text-white/70 hover:bg-black/12 dark:hover:bg-white/15 transition-all shrink-0 border-2 border-black/5 dark:border-white/10 active:scale-95">
-                        <ArrowRight className="w-7 h-7 sm:w-8 sm:h-8" />
+                    <Link href="/invoices" className="flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] bg-black/6 dark:bg-white/8 text-slate-700 dark:text-white/80 hover:bg-black/12 dark:hover:bg-white/15 transition-all shrink-0 border-2 border-black/5 dark:border-white/10 font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                        <ArrowRight className="w-6 h-6 sm:w-8 sm:h-8" />
+                        <span>رجوع للفواتير</span>
                     </Link>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -363,8 +364,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         </div>
                                         <button onClick={() => payRows.length > 1 ? setPayRows(p => p.filter((_, i) => i !== idx)) : null}
                                             disabled={payRows.length === 1}
-                                            className="w-18 h-18 rounded-[24px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed border-2 border-red-500/20 active:scale-95">
-                                            <Trash2 className="w-8 h-8 sm:w-9 sm:h-9" />
+                                            className="h-16 rounded-[22px] px-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2 font-black text-base disabled:opacity-30 disabled:cursor-not-allowed border-2 border-red-500/20 active:scale-95 shrink-0 whitespace-nowrap">
+                                            <Trash2 className="w-6 h-6" />
+                                            <span>حذف السطر</span>
                                         </button>
                                     </div>
                                 ))}
@@ -394,8 +396,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     <table className="w-full text-lg sm:text-xl">
                                         <thead>
                                             <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                {['وسيلة الدفع', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', ''].map(h => (
-                                                    <th key={h} className="text-right px-5 py-5 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider">{h}</th>
+                                                {['وسيلة الدفع', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', 'الإجراءات'].map(h => (
+                                                    <th key={h} className={`px-5 py-5 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider ${h === 'الإجراءات' ? 'text-center' : 'text-right'}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -409,10 +411,16 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     <td className="px-5 py-5 font-bold whitespace-nowrap">
                                                         <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span>
                                                     </td>
-                                                    <td className="px-5 py-5">
+                                                    <td className="px-5 py-5 text-center">
                                                         {!isCancelled && (
                                                             <DeleteModal onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
-                                                                trigger={<button className="flex items-center justify-center w-16 h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black shadow-md active:scale-95"><Trash2 className="w-8 h-8 sm:w-9 sm:h-9" /></button>} />
+                                                                trigger={
+                                                                    <button className="inline-flex items-center justify-center gap-2 px-5 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl shadow-md active:scale-95 whitespace-nowrap">
+                                                                        <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                                        <span>حذف الدفعة</span>
+                                                                    </button>
+                                                                }
+                                                            />
                                                         )}
                                                     </td>
                                                 </tr>
@@ -510,8 +518,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                         </div>
                                         <button onClick={() => setRows.length > 1 ? setSetRows(p => p.filter((_, i) => i !== idx)) : null}
                                             disabled={setRows.length === 1}
-                                            className="w-18 h-18 rounded-[24px] bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed border-2 border-red-500/20 active:scale-95">
-                                            <Trash2 className="w-8 h-8 sm:w-9 sm:h-9" />
+                                            className="h-16 rounded-[22px] px-4 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2 font-black text-base disabled:opacity-30 disabled:cursor-not-allowed border-2 border-red-500/20 active:scale-95 shrink-0 whitespace-nowrap">
+                                            <Trash2 className="w-6 h-6" />
+                                            <span>حذف السطر</span>
                                         </button>
                                     </div>
                                 ))}
@@ -533,8 +542,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     <table className="w-full text-lg sm:text-xl">
                                         <thead>
                                             <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', ''].map(h => (
-                                                    <th key={h} className="text-right px-5 py-5 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider">{h}</th>
+                                                {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'الموظف', 'التاريخ', 'الإجراءات'].map(h => (
+                                                    <th key={h} className={`px-5 py-5 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider ${h === 'الإجراءات' ? 'text-center' : 'text-right'}`}>{h}</th>
                                                 ))}
                                             </tr>
                                         </thead>
@@ -548,10 +557,16 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                     <td className="px-5 py-5 font-bold whitespace-nowrap">
                                                         <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}</span>
                                                     </td>
-                                                    <td className="px-5 py-5">
+                                                    <td className="px-5 py-5 text-center">
                                                         {!isCancelled && (
                                                             <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                                trigger={<button className="flex items-center justify-center w-16 h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black shadow-md active:scale-95"><Trash2 className="w-8 h-8 sm:w-9 sm:h-9" /></button>} />
+                                                                trigger={
+                                                                    <button className="inline-flex items-center justify-center gap-2 px-5 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl shadow-md active:scale-95 whitespace-nowrap">
+                                                                        <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                                        <span>حذف التسوية</span>
+                                                                    </button>
+                                                                }
+                                                            />
                                                         )}
                                                     </td>
                                                 </tr>
