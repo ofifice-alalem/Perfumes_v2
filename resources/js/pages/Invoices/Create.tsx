@@ -877,45 +877,45 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     </div>
 
                                     {/* يمين — كاردات الدفعات */}
-                                    <div className="flex flex-col gap-2 w-full lg:w-1/2">
+                                    <div className="flex flex-col gap-2.5 sm:gap-3 w-full lg:w-1/2">
                                         {/* Debt payment card */}
                                         {debtPayment && (
-                                            <div className="flex items-center gap-2 px-3 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-red-500/10 border-2 border-red-500/20">
+                                            <div className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-red-500/10 border-2 border-red-500/30 shadow-sm">
                                                 <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
                                                     setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
                                                 }, originalDebt)}
-                                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
-                                                    <Edit className="w-4 h-4" />
+                                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
+                                                    <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
                                                 </button>
                                                 <div className="flex flex-col min-w-0 flex-1">
-                                                    <span className="font-bold text-red-600 dark:text-red-400 text-[10px] sm:text-xs truncate">سداد الدين — {debtPayment.method_name}</span>
-                                                    <span className="font-black text-slate-800 dark:text-white text-base sm:text-lg truncate">{debtPayment.amount}</span>
+                                                    <span className="font-black text-red-600 dark:text-red-400 text-xs sm:text-sm truncate">سداد الدين — {debtPayment.method_name}</span>
+                                                    <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{debtPayment.amount}</span>
                                                 </div>
                                                 <button onClick={() => setDebtPayment(null)}
-                                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
-                                                    <Trash2 className="w-4 h-4" />
+                                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
+                                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
                                                 </button>
                                             </div>
                                         )}
                                         {/* Regular payments */}
                                         {payments.length === 0 && !debtPayment ? (
-                                            <div className="flex-1 flex items-center justify-center h-full min-h-[64px] text-slate-300 dark:text-white/20 font-bold text-xs sm:text-sm">لا توجد دفعات</div>
+                                            <div className="flex-1 flex items-center justify-center h-full min-h-[80px] text-slate-400 dark:text-white/30 font-black text-sm sm:text-base border-2 border-dashed border-black/10 dark:border-white/10 rounded-[22px]">لا توجد دفعات مضافة</div>
                                         ) : (
                                             payments.map((p, idx) => (
-                                                <div key={idx} className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 h-[72px] sm:h-20 rounded-[16px] sm:rounded-[18px] bg-emerald-500/10 border-2 border-emerald-500/20">
+                                                <div key={idx} className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-emerald-500/10 border-2 border-emerald-500/30 shadow-sm">
                                                     <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
                                                         setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
                                                         setPaymentManuallySet(true);
-                                                    })} className="w-10 h-10 sm:w-11 sm:h-11 rounded-[12px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
-                                                        <Edit className="w-4 h-4" />
+                                                    })} className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="تعديل القيمة">
+                                                        <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
                                                     </button>
                                                     <div className="flex flex-col min-w-0 flex-1">
-                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] sm:text-xs truncate">{p.method_name}</span>
-                                                        <span className="font-black text-slate-800 dark:text-white text-base sm:text-lg truncate">{p.amount}</span>
+                                                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm truncate">{p.method_name}</span>
+                                                        <span className="font-black text-slate-800 dark:text-white text-xl sm:text-[24px] truncate">{p.amount}</span>
                                                     </div>
                                                     <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                        className="w-10 h-10 sm:w-12 sm:h-12 rounded-[12px] sm:rounded-[14px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
-                                                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm" title="حذف">
+                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
                                                     </button>
                                                 </div>
                                             ))
