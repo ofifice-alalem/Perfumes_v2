@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Ruler, AlertTriangle } from 'lucide-react';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { Plus, Pencil, Trash2, X, Check, Ruler, AlertTriangle, Hash } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 interface Size {
@@ -65,6 +66,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<Size | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Size | null>(null);
+  const [showPad, setShowPad] = useState(false);
 
   const form = useForm({ label: '', value: '' });
 
@@ -184,7 +186,7 @@ export default function SizesIndex({ sizes, flash }: Props) {
 
       {/* Create / Edit Drawer Portal */}
       {drawerOpen && createPortal(
-        <div className="fixed inset-0 z-[1000] select-none">
+        <div className="fixed inset-0 z-[1000] select-none">  
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={closeDrawer} />
 
           <div className="absolute top-0 right-0 w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-black/10 dark:border-white/10 z-10" dir="rtl">
@@ -222,18 +224,31 @@ export default function SizesIndex({ sizes, flash }: Props) {
                 {form.errors.label && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.label}</p>}
               </div>
 
-              {/* Value */}
+              {/* Value Input with Touch NumberPad Trigger */}
               <div>
                 <label className="block text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2.5">القيمة (ml) *</label>
-                <input
-                  type="number"
-                  value={form.data.value}
-                  onChange={e => form.setData('value', e.target.value)}
-                  placeholder="5"
-                  min="0.01"
-                  step="0.01"
-                  className="spatial-input w-full h-18 sm:h-20 rounded-[22px] px-6 text-2xl font-black text-slate-800 dark:text-white border-2"
-                />
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={form.data.value}
+                      onChange={e => form.setData('value', e.target.value)}
+                      placeholder="0"
+                      min="0.01"
+                      step="0.01"
+                      className="spatial-input w-full h-20 rounded-[22px] px-6 text-3xl font-black text-slate-800 dark:text-white border-2 text-center"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPad(true)}
+                    className="h-20 px-8 rounded-[22px] bg-primary text-white font-black text-xl sm:text-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/20 active:scale-95 transition-all shrink-0"
+                    title="فتح لوحة الأرقام اللمسية"
+                  >
+                    <Hash className="w-8 h-8" /> لوحة الأرقام
+                  </button>
+                </div>
                 {form.errors.value && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.value}</p>}
               </div>
 
@@ -265,6 +280,20 @@ export default function SizesIndex({ sizes, flash }: Props) {
       {/* Delete Modal */}
       {deleteTarget && (
         <DeleteSizeModal size={deleteTarget} onClose={() => setDeleteTarget(null)} />
+      )}
+
+      {/* NumberPad Modal */}
+      {showPad && (
+        <NumberPadModal
+          isOpen={showPad}
+          title="قيمة الحجم (مليلتر)"
+          initialValue={form.data.value}
+          onConfirm={val => {
+            form.setData('value', val);
+            setShowPad(false);
+          }}
+          onClose={() => setShowPad(false)}
+        />
       )}
 
     </AppShell>
