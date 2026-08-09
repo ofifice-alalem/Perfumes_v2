@@ -454,7 +454,12 @@ export function ModernSelect({
           onClick={() => {
             if (!isOpen && !isMobile && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              setDropdownPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: Math.max(rect.width, 380) });
+              const width = Math.max(rect.width, 380);
+              let left = rect.left;
+              if (left + width > window.innerWidth - 10) {
+                left = Math.max(10, window.innerWidth - width - 10);
+              }
+              setDropdownPos({ top: rect.bottom + 8, left: left, width: width });
             }
             setIsOpen(!isOpen);
           }}
@@ -467,7 +472,7 @@ export function ModernSelect({
         </div>
 
         {isOpen && !isMobile && dropdownPos && createPortal(
-          <div data-dropdown-portal style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+          <div data-dropdown-portal style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 1000000 }}
             className="spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="border-b border-black/5 dark:border-white/5">{searchInputHeader}</div>
@@ -477,7 +482,7 @@ export function ModernSelect({
         )}
 
         {isOpen && isMobile && createPortal(
-          <div className="fixed inset-0 z-[500] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[1000000] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
               <span className="text-base font-black text-slate-800 dark:text-white">{label || placeholder}</span>
               <button onClick={() => { setIsOpen(false); setSearch(''); setShowKeyboard(false); }} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60">
@@ -625,7 +630,12 @@ export function ModernMultiSelect({
           onClick={() => {
             if (!isOpen && !isMobile && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              setDropdownPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+              const width = Math.max(rect.width, 320);
+              let left = rect.left;
+              if (left + width > window.innerWidth - 10) {
+                left = Math.max(10, window.innerWidth - width - 10);
+              }
+              setDropdownPos({ top: rect.bottom + 8, left: left, width: width });
             }
             setIsOpen(!isOpen);
           }}
@@ -654,7 +664,7 @@ export function ModernMultiSelect({
         </div>
 
         {isOpen && !isMobile && dropdownPos && createPortal(
-          <div data-dropdown-portal style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+          <div data-dropdown-portal style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 1000000 }}
             className="spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="p-3 border-b border-black/5 dark:border-white/5">{searchInput}</div>
@@ -664,7 +674,7 @@ export function ModernMultiSelect({
         )}
 
         {isOpen && isMobile && createPortal(
-          <div className="fixed inset-0 z-[500] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[1000000] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
               <span className="text-base font-black text-slate-800 dark:text-white">{label}</span>
               <button onClick={() => { setIsOpen(false); setSearch(''); }} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60">
