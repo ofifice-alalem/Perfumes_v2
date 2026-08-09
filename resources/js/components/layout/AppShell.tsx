@@ -29,9 +29,9 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
   // Keep-alive heartbeat to prevent php artisan serve and DB from sleeping
   useEffect(() => {
     const interval = setInterval(() => {
-      fetch('/up').catch(() => {});
+      fetch('/up').catch(() => { });
     }, 4 * 60 * 1000); // Every 4 minutes
-    
+
     return () => clearInterval(interval);
   }, []);
 
@@ -73,9 +73,9 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
             <button onClick={() => setIsSidebarOpen(true)} className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
             </button>
-            <img 
-              src="/images/uzba80.png" 
-              alt="طيب التاجوري" 
+            <img
+              src="/images/uzba80.png"
+              alt="طيب التاجوري"
               className="mr-4 h-8 w-auto object-contain drop-shadow-sm"
             />
           </div>

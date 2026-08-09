@@ -74,6 +74,205 @@ export function ModernInput({
   );
 }
 
+function DraggableOnScreenKeyboard({
+  onKeyPress,
+  onBackspace,
+  onClear,
+  onSpace,
+  onClose,
+}: {
+  onKeyPress: (char: string) => void;
+  onBackspace: () => void;
+  onClear: () => void;
+  onSpace: () => void;
+  onClose: () => void;
+}) {
+  const [layout, setLayout] = useState<'ar' | 'en'>('ar');
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleStart = (clientX: number, clientY: number) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const currentX = pos ? pos.x : rect.left;
+    const currentY = pos ? pos.y : rect.top;
+    dragStartRef.current = { x: clientX - currentX, y: clientY - currentY };
+    isDraggingRef.current = true;
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDraggingRef.current) return;
+      const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+      const newX = Math.max(10, Math.min(window.innerWidth - 300, clientX - dragStartRef.current.x));
+      const newY = Math.max(10, Math.min(window.innerHeight - 200, clientY - dragStartRef.current.y));
+      setPos({ x: newX, y: newY });
+    };
+
+    const handleEnd = () => {
+      isDraggingRef.current = false;
+    };
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove);
+    window.addEventListener('touchend', handleEnd);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleEnd);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+    };
+  }, [pos]);
+
+  const arRow1 = ['ض', 'ص', 'ث', 'ق', 'ف', 'غ', 'ع', 'ه', 'خ', 'ح', 'ج', 'د'];
+  const arRow2 = ['ش', 'س', 'ي', 'ب', 'ل', 'ا', 'ت', 'ن', 'م', 'ك', 'ط'];
+  const arRow3 = ['ئ', 'ء', 'ؤ', 'ر', 'لا', 'ى', 'ة', 'و', 'ز', 'ظ'];
+
+  const enRow1 = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
+  const enRow2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
+  const enRow3 = ['Z', 'X', 'C', 'V', 'B', 'N', 'M'];
+
+  const numRow1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+
+  const renderKey = (key: string) => (
+    <button
+      type="button"
+      key={key}
+      onClick={(e) => {
+        e.stopPropagation();
+        onKeyPress(key);
+      }}
+      className="shrink-0 w-[60px] sm:w-[90px] h-[60px] sm:h-[80px] rounded-[16px] sm:rounded-[20px] bg-white dark:bg-slate-800 hover:bg-amber-500 hover:text-white border-2 border-black/10 dark:border-white/10 text-slate-900 dark:text-white font-black text-xl sm:text-3xl shadow-md hover:shadow-xl active:scale-90 transition-all flex items-center justify-center select-none cursor-pointer"
+    >
+      {key}
+    </button>
+  );
+
+  const style: React.CSSProperties = pos
+    ? { position: 'fixed', left: `${pos.x}px`, top: `${pos.y}px`, zIndex: 99999 }
+    : { position: 'fixed', bottom: '16px', left: '16px', zIndex: 99999 };
+
+  return createPortal(
+    <div
+      ref={cardRef}
+      style={style}
+      data-dropdown-portal
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      className="w-max max-w-[96vw] bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-2xl border-2 border-amber-500/50 rounded-[30px] shadow-[0_25px_60px_rgba(0,0,0,0.5)] p-3.5 sm:p-6 flex flex-col gap-3 select-none animate-in slide-in-from-bottom-5 duration-200"
+    >
+      {/* Draggable Header */}
+      <div
+        onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+        onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+        className="flex items-center justify-between px-3.5 py-2.5 bg-amber-500/15 rounded-[18px] border border-amber-500/30 cursor-grab active:cursor-grabbing select-none"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-black text-xs sm:text-sm">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="9" cy="9" r="1.5"/><circle cx="15" cy="9" r="1.5"/><circle cx="9" cy="15" r="1.5"/><circle cx="15" cy="15" r="1.5"/>
+            </svg>
+            <span>اسحب لتحريك الكيبورد</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLayout(layout === 'ar' ? 'en' : 'ar'); }}
+            className="px-3.5 sm:px-5 h-10 sm:h-12 rounded-[14px] bg-primary text-white font-black text-xs sm:text-sm hover:bg-primary/90 transition-all shrink-0 cursor-pointer shadow-md"
+          >
+            {layout === 'ar' ? 'English (EN)' : 'عربي (AR)'}
+          </button>
+
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-[14px] bg-black/10 dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-600 dark:text-white/70 font-black flex items-center justify-center text-base sm:text-lg transition-all cursor-pointer active:scale-95"
+            title="إغلاق"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Numbers & Backspace Bar */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex-1 flex gap-1.5 overflow-x-auto">
+          {numRow1.map((num) => (
+            <button
+              type="button"
+              key={num}
+              onClick={(e) => { e.stopPropagation(); onKeyPress(num); }}
+              className="flex-1 min-w-[34px] sm:min-w-[48px] h-11 sm:h-14 rounded-[14px] bg-white dark:bg-slate-800 hover:bg-amber-500 hover:text-white border-2 border-black/10 dark:border-white/10 text-slate-800 dark:text-white font-black text-base sm:text-xl shadow-sm active:scale-90 transition-all flex items-center justify-center cursor-pointer"
+            >
+              {num}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onBackspace(); }}
+          className="px-5 sm:px-7 h-12 sm:h-16 rounded-[16px] bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500 hover:text-white font-black text-base sm:text-xl border-2 border-amber-500/30 transition-all shrink-0 flex items-center justify-center gap-2 active:scale-95 cursor-pointer shadow-sm"
+          title="تراجع"
+        >
+          <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-9.172a2 2 0 00-1.414.586L3 12z" />
+          </svg>
+          <span className="hidden sm:inline">تراجع</span>
+        </button>
+      </div>
+
+      {/* Main Keys Rows */}
+      {layout === 'ar' ? (
+        <div className="flex flex-col gap-2 overflow-x-auto max-w-full pb-1">
+          <div className="flex gap-2 justify-center min-w-max">{arRow1.map(renderKey)}</div>
+          <div className="flex gap-2 justify-center min-w-max">{arRow2.map(renderKey)}</div>
+          <div className="flex gap-2 justify-center min-w-max">{arRow3.map(renderKey)}</div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 overflow-x-auto max-w-full pb-1">
+          <div className="flex gap-2 justify-center min-w-max">{enRow1.map(renderKey)}</div>
+          <div className="flex gap-2 justify-center min-w-max">{enRow2.map(renderKey)}</div>
+          <div className="flex gap-2 justify-center min-w-max">{enRow3.map(renderKey)}</div>
+        </div>
+      )}
+
+      {/* Control Actions Row */}
+      <div className="flex items-center gap-2.5 mt-1">
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onClear(); }}
+          className="px-6 sm:px-8 h-14 sm:h-20 rounded-[18px] sm:rounded-[22px] bg-red-500/15 text-red-500 hover:bg-red-500 hover:text-white border-2 border-red-500/30 font-black text-base sm:text-xl transition-all shrink-0 active:scale-95 cursor-pointer shadow-md"
+        >
+          مسح (Clear)
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onSpace(); }}
+          className="flex-1 h-14 sm:h-20 rounded-[18px] sm:rounded-[22px] bg-white dark:bg-slate-800 hover:bg-primary hover:text-white text-slate-900 dark:text-white font-black text-lg sm:text-2xl border-2 border-black/10 dark:border-white/10 transition-all shadow-lg active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span>مسافة (Space)</span>
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className="px-8 sm:px-12 h-14 sm:h-20 rounded-[18px] sm:rounded-[22px] bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg sm:text-2xl transition-all shrink-0 active:scale-95 cursor-pointer shadow-lg"
+        >
+          تم
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function ModernSelect({
   label,
   options,
@@ -82,6 +281,7 @@ export function ModernSelect({
   onSelect,
   defaultValue = '',
   allowFreeText = false,
+  enableVirtualKeyboard = true,
 }: {
   label: string;
   options: string[] | { label: string; meta?: string; badge?: string; searchKey?: string }[];
@@ -90,10 +290,12 @@ export function ModernSelect({
   onSelect?: (value: string) => void;
   defaultValue?: string;
   allowFreeText?: boolean;
+  enableVirtualKeyboard?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState(defaultValue);
   const [search, setSearch] = useState('');
+  const [showKeyboard, setShowKeyboard] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -115,7 +317,7 @@ export function ModernSelect({
     function handleClick(e: MouseEvent) {
       if (isMobile) return;
       if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as Element).closest('[data-dropdown-portal]')) {
-        setIsOpen(false); setSearch('');
+        setIsOpen(false); setSearch(''); setShowKeyboard(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -124,73 +326,110 @@ export function ModernSelect({
 
   useEffect(() => {
     if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
-    else setSearch('');
+    else { setSearch(''); setShowKeyboard(false); }
   }, [isOpen]);
 
   const filtered = normalized.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || (o.searchKey && o.searchKey.toLowerCase().includes(search.toLowerCase())));
 
   const optionsList = (size: 'sm' | 'lg') => (
-    <ul className={`overflow-y-auto p-2 ${size === 'sm' ? 'max-h-52' : 'flex-1'}`}>
+    <ul className={`overflow-y-auto p-2.5 ${size === 'sm' ? 'max-h-[520px] sm:max-h-[600px]' : 'flex-1'}`}>
       {allowFreeText && search && (
         <div key="freetext">
           <li
-            onClick={() => { setSelected(search); onSelect?.(search); setIsOpen(false); setSearch(''); }}
-            className={`flex items-center gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} text-primary dark:text-primary-light hover:bg-primary/10 dark:hover:bg-primary/20`}
+            onClick={() => { setSelected(search); onSelect?.(search); setIsOpen(false); setSearch(''); setShowKeyboard(false); }}
+            className={`flex items-center gap-3 px-4 rounded-[16px] cursor-pointer font-black transition-all duration-150 ${size === 'lg' ? 'py-4.5 text-[17px]' : 'py-4 text-[16px]'} text-primary dark:text-primary-light hover:bg-primary/10 dark:hover:bg-primary/20`}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             البحث عن "{search}"
           </li>
-          {filtered.length > 0 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+          {filtered.length > 0 && <div className="h-px bg-slate-200 dark:bg-white/10 my-2 mx-3" />}
         </div>
       )}
       {filtered.length === 0 ? (
-        (!allowFreeText || !search) ? <li className="px-4 py-4 text-center text-sm font-bold text-slate-400 dark:text-white/30">لا توجد نتائج</li> : null
+        (!allowFreeText || !search) ? <li className="px-4 py-6 text-center text-base font-bold text-slate-400 dark:text-white/40">لا توجد نتائج</li> : null
       ) : (
         filtered.map((opt, idx) => (
           <div key={opt.label}>
             <li
-              onClick={() => { setSelected(opt.label); onSelect?.(opt.label); setIsOpen(false); setSearch(''); }}
-              className={`flex items-center justify-between gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} ${selected === opt.label ? 'bg-primary text-white' : 'text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white'}`}
+              onClick={() => { setSelected(opt.label); onSelect?.(opt.label); setIsOpen(false); setSearch(''); setShowKeyboard(false); }}
+              style={{ padding: '22px 24px' }}
+              className={`flex items-center justify-between gap-3.5 rounded-[18px] cursor-pointer font-black transition-all duration-150 text-[17px] sm:text-[19px] min-h-[72px] ${selected === opt.label ? 'bg-primary text-white shadow-lg' : 'text-slate-800 dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'}`}
             >
               <div className="flex items-center gap-3">
-                <span className={`shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${size === 'lg' ? 'w-5 h-5' : 'w-4 h-4'} ${selected === opt.label ? 'border-white bg-white/30' : 'border-slate-300 dark:border-white/20'}`}>
+                <span className={`shrink-0 rounded-full border-2 flex items-center justify-center transition-all ${size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'} ${selected === opt.label ? 'border-white bg-white/30' : 'border-slate-300 dark:border-white/30'}`}>
                   {selected === opt.label && (
-                    <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   )}
                 </span>
                 {opt.badge && <span className="text-[13px]">{opt.badge}</span>}
-                {opt.label}
+                <span className="leading-snug">{opt.label}</span>
               </div>
               {opt.meta && (
-                <span className={`text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl ${selected === opt.label ? 'bg-white/25 text-white' : 'bg-primary text-white'}`}>{opt.meta}</span>
+                <span className={`text-[14px] font-black shrink-0 px-3.5 py-1.5 rounded-xl ${selected === opt.label ? 'bg-white/25 text-white' : 'bg-primary text-white'}`}>{opt.meta}</span>
               )}
             </li>
-            {idx < filtered.length - 1 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+            {idx < filtered.length - 1 && <div className="h-[1.5px] bg-slate-200 dark:bg-white/15 my-2 mx-1" />}
           </div>
         ))
       )}
     </ul>
   );
 
-  const searchInput = (
-    <div className="relative">
-      <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-      </svg>
-      <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث سريع..."
-        className="w-full rounded-[14px] pr-11 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-11 text-[14px]"
-        onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-            if (e.key === 'Enter' && allowFreeText && search) {
-                setSelected(search);
-                onSelect?.(search);
-                setIsOpen(false);
-                setSearch('');
-            }
-        }}
-      />
+  const searchInputHeader = (
+    <div className="flex flex-col">
+      <div className="flex items-center gap-3 p-3.5">
+        <div className="relative flex-1">
+          <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث سريع..."
+            className="w-full rounded-[18px] pr-12 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-16 sm:h-20 text-base sm:text-lg"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && allowFreeText && search) {
+                    setSelected(search);
+                    onSelect?.(search);
+                    setIsOpen(false);
+                    setSearch('');
+                    setShowKeyboard(false);
+                }
+            }}
+          />
+        </div>
+        {enableVirtualKeyboard && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowKeyboard(!showKeyboard);
+            }}
+            className={`h-16 sm:h-20 px-5 sm:px-7 rounded-[18px] border-2 flex items-center gap-2.5 font-black text-base sm:text-lg transition-all shrink-0 cursor-pointer shadow-lg active:scale-95 ${
+              showKeyboard
+                ? 'bg-amber-500 text-white border-amber-500 shadow-amber-500/30'
+                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/40'
+            }`}
+            title="لوحة مفاتيح الشاشة"
+          >
+            <svg className="w-7 h-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="20" height="16" x="2" y="4" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10" />
+            </svg>
+            <span className="inline">لوحة المفاتيح</span>
+          </button>
+        )}
+      </div>
+
+      {/* Virtual Touch Keyboard Component */}
+      {showKeyboard && (
+        <DraggableOnScreenKeyboard
+          onKeyPress={(char) => setSearch((prev) => prev + char)}
+          onBackspace={() => setSearch((prev) => prev.slice(0, -1))}
+          onClear={() => setSearch('')}
+          onSpace={() => setSearch((prev) => prev + ' ')}
+          onClose={() => setShowKeyboard(false)}
+        />
+      )}
     </div>
   );
 
@@ -202,23 +441,23 @@ export function ModernSelect({
           onClick={() => {
             if (!isOpen && !isMobile && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              setDropdownPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: rect.width });
+              setDropdownPos({ top: rect.bottom + window.scrollY + 8, left: rect.left + window.scrollX, width: Math.max(rect.width, 380) });
             }
             setIsOpen(!isOpen);
           }}
-          className={`spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold w-full flex items-center justify-between cursor-pointer select-none ${isOpen ? 'ring-2 ring-primary/40 border-primary/50 dark:border-primary/40 bg-white dark:bg-black/40' : ''}`}
+          className={`spatial-input h-16 sm:h-20 rounded-[22px] px-5 sm:px-6 text-base sm:text-lg font-black w-full flex items-center justify-between cursor-pointer select-none border-2 transition-all ${isOpen ? 'ring-2 ring-primary/40 border-primary/50 dark:border-primary/40 bg-white dark:bg-black/40 shadow-lg' : 'hover:border-primary/30'}`}
         >
-          <span className={selected ? 'text-slate-800 dark:text-white' : 'text-slate-600 dark:text-white/60'}>{selected || placeholder}</span>
-          <div className="text-slate-400 dark:text-white/50 transition-transform duration-300" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+          <span className={selected ? 'text-slate-800 dark:text-white' : 'text-slate-500 dark:text-white/50'}>{selected || placeholder}</span>
+          <div className="text-slate-400 dark:text-white/50 transition-transform duration-300 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
           </div>
         </div>
 
         {isOpen && !isMobile && dropdownPos && createPortal(
           <div data-dropdown-portal style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
-            className="spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-200"
+            className="spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.12)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200"
           >
-            <div className="p-3 border-b border-black/5 dark:border-white/5">{searchInput}</div>
+            <div className="border-b border-black/5 dark:border-white/5">{searchInputHeader}</div>
             {optionsList('sm')}
           </div>,
           document.body
@@ -227,12 +466,12 @@ export function ModernSelect({
         {isOpen && isMobile && createPortal(
           <div className="fixed inset-0 z-[500] flex flex-col bg-white dark:bg-[#0f1428] animate-in fade-in duration-200">
             <div className="flex items-center justify-between px-5 py-4 border-b border-black/5 dark:border-white/5 shrink-0">
-              <span className="text-base font-black text-slate-800 dark:text-white">{label}</span>
-              <button onClick={() => { setIsOpen(false); setSearch(''); }} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60">
+              <span className="text-base font-black text-slate-800 dark:text-white">{label || placeholder}</span>
+              <button onClick={() => { setIsOpen(false); setSearch(''); setShowKeyboard(false); }} className="w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-4 border-b border-black/5 dark:border-white/5 shrink-0">{searchInput}</div>
+            <div className="border-b border-black/5 dark:border-white/5 shrink-0">{searchInputHeader}</div>
             <div className="overflow-y-auto flex-1">{optionsList('lg')}</div>
           </div>,
           document.body

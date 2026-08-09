@@ -77,11 +77,11 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
   }
 
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
-      <label className="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">الحجم</label>
+    <div className={`flex flex-col gap-2.5 ${className}`}>
+      <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">الحجم</label>
 
       {/* Mobile: grid 2 cols — Desktop: flex wrap */}
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3.5">
         {availableSizes.map(size => {
           const price = getPrice(size);
           const isTier = product?.selling_type === 'tier_based';
@@ -90,14 +90,14 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
           const isSelected = selectedSizeId === String(size.id);
           return (
             <button key={size.id} onClick={() => handleSelect(String(size.id), size)}
-              className={`flex items-center justify-between px-4 h-12 rounded-[14px] border-2 transition-all active:scale-[0.97] sm:flex-col sm:justify-center sm:px-4 sm:h-[72px] sm:min-w-[80px] sm:rounded-[18px] ${
+              className={`flex items-center justify-between px-5 h-16 rounded-[20px] border-2 transition-all active:scale-95 sm:flex-col sm:justify-center sm:px-6 sm:h-[84px] sm:min-w-[105px] ${
                 isSelected
-                  ? 'border-primary bg-primary text-white shadow-md shadow-primary/25'
-                  : 'border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-slate-700 dark:text-white/70 hover:border-primary/40 hover:bg-primary/5'
+                  ? 'border-primary bg-primary text-white shadow-lg shadow-primary/25'
+                  : 'border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-slate-700 dark:text-white/80 hover:border-primary/40 hover:bg-primary/5'
               }`}>
-              <span className="font-black text-[14px] sm:text-[15px] leading-tight">{size.label}</span>
-              <span className={`text-[12px] font-bold sm:mt-0.5 ${
-                isSelected ? 'text-white/80' : 'text-primary/70 dark:text-primary/60'
+              <span className="font-black text-base sm:text-lg leading-tight">{size.label}</span>
+              <span className={`text-xs sm:text-sm font-black sm:mt-1 ${
+                isSelected ? 'text-white/90' : 'text-primary dark:text-primary-light'
               }`}>
                 {displayPrice > 0 ? `${displayPrice.toFixed(2)} د` : '—'}
               </span>
@@ -108,18 +108,18 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
         {/* Custom size */}
         {isCustom && customSizes[selectedSizeId] && (
           <button onClick={() => onSizeSelect('')}
-            className="flex items-center justify-between px-4 h-12 rounded-[14px] border-2 border-primary bg-primary text-white shadow-md shadow-primary/25 relative active:scale-[0.97] sm:flex-col sm:justify-center sm:px-4 sm:h-[72px] sm:min-w-[80px] sm:rounded-[18px]">
-            <span className="font-black text-[14px] sm:text-[15px] leading-tight">مخصص</span>
-            <span className="text-[12px] font-bold sm:mt-0.5 text-white/80">{customSizes[selectedSizeId]} مل</span>
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-black">×</span>
+            className="flex items-center justify-between px-5 h-16 rounded-[20px] border-2 border-primary bg-primary text-white shadow-lg shadow-primary/25 relative active:scale-95 sm:flex-col sm:justify-center sm:px-6 sm:h-[84px] sm:min-w-[105px]">
+            <span className="font-black text-base sm:text-lg leading-tight">مخصص</span>
+            <span className="text-xs sm:text-sm font-black sm:mt-1 text-white/90">{customSizes[selectedSizeId]} مل</span>
+            <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-black shadow-md">×</span>
           </button>
         )}
 
         {/* Add custom */}
         <button onClick={() => setShowNumberPad(true)}
-          className="flex items-center justify-center gap-2 h-12 rounded-[14px] border-2 border-dashed border-black/15 dark:border-white/15 text-slate-400 dark:text-white/30 hover:border-primary/40 hover:text-primary transition-all active:scale-[0.97] sm:flex-col sm:px-4 sm:h-[72px] sm:min-w-[80px] sm:rounded-[18px] sm:gap-0">
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="text-[12px] font-bold sm:mt-0.5">حجم مخصص</span>
+          className="flex items-center justify-center gap-2 h-16 rounded-[20px] border-2 border-dashed border-black/20 dark:border-white/20 text-slate-500 dark:text-white/40 hover:border-primary/40 hover:text-primary transition-all active:scale-95 sm:flex-col sm:px-6 sm:h-[84px] sm:min-w-[105px] sm:gap-1">
+          <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
+          <span className="text-xs sm:text-sm font-black">حجم مخصص</span>
         </button>
       </div>
 
