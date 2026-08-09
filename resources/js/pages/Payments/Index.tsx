@@ -192,15 +192,35 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, pro
                 )}
 
                 {/* Tabs & Table */}
-                <div className="flex flex-col gap-4">
-                    {/* Tabs */}
-                    <div className="flex gap-3">
-                        <button onClick={() => setActiveTab('active')} className={`px-6 h-14 sm:h-16 rounded-[20px] font-black text-base sm:text-xl transition-all border-2 ${activeTab === 'active' ? 'bg-primary text-white border-primary shadow-md' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12 border-transparent'}`}>
-                            الدفعات النشطة ({activePayments.length})
-                        </button>
-                        <button onClick={() => setActiveTab('deleted')} className={`px-6 h-14 sm:h-16 rounded-[20px] font-black text-base sm:text-xl transition-all border-2 ${activeTab === 'deleted' ? 'bg-primary text-white border-primary shadow-md' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12 border-transparent'}`}>
-                            الدفعات المحذوفة ({deletedPayments.length})
-                        </button>
+                <div className="flex flex-col gap-6">
+                    {/* Tabs & Filter Row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex gap-3">
+                            <button onClick={() => setActiveTab('active')} className={`px-6 h-14 sm:h-16 rounded-[20px] font-black text-base sm:text-xl transition-all border-2 ${activeTab === 'active' ? 'bg-primary text-white border-primary shadow-md' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12 border-transparent'}`}>
+                                الدفعات النشطة ({activePayments.length})
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`px-6 h-14 sm:h-16 rounded-[20px] font-black text-base sm:text-xl transition-all border-2 ${activeTab === 'deleted' ? 'bg-primary text-white border-primary shadow-md' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12 border-transparent'}`}>
+                                الدفعات المحذوفة ({deletedPayments.length})
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {hasFilter && (
+                                <button onClick={resetFilter}
+                                    className="flex items-center gap-2 px-5 h-14 sm:h-16 rounded-[20px] bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black text-base sm:text-lg transition-all border-2 border-red-500/20 active:scale-95 shadow-sm whitespace-nowrap">
+                                    <RotateCcw className="w-5 h-5" />
+                                    <span>إعادة تعيين</span>
+                                </button>
+                            )}
+                            <button onClick={() => setFilterOpen(true)}
+                                className={`flex items-center gap-3 px-6 h-14 sm:h-16 rounded-[20px] font-black text-base sm:text-xl transition-all border-2 active:scale-95 shadow-sm ${hasFilter ? 'bg-primary/15 border-primary text-primary shadow-primary/10' : 'spatial-input text-slate-800 dark:text-white hover:border-primary/40'}`}>
+                                <SlidersHorizontal className="w-6 h-6 text-primary" />
+                                <span>الفلترة</span>
+                                {hasFilter && (
+                                    <span className="w-3 h-3 rounded-full bg-primary animate-pulse" />
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     <SpatialCard title={`الدفعات (${displayPayments.length})`} icon={<CreditCard className="w-6 h-6" />}>
