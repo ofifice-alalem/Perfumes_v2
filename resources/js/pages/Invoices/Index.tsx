@@ -178,9 +178,75 @@ function CancelInvoiceModal({ invoice, onClose }: { invoice: Invoice; onClose: (
     );
 }
 
+function FilterDrawer({ isOpen, onClose, children, applyFilter, resetFilter, hasFilter }: {
+    isOpen: boolean;
+    onClose: () => void;
+    children: React.ReactNode;
+    applyFilter: () => void;
+    resetFilter: () => void;
+    hasFilter: boolean;
+}) {
+    if (!isOpen) return null;
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-start dir-rtl">
+            {/* Backdrop Overlay */}
+            <div
+                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+                onClick={onClose}
+            />
+
+            {/* Slide-over Drawer from Right */}
+            <div className="relative w-full sm:w-[720px] md:w-[840px] lg:w-[900px] max-w-[95vw] h-full
+                bg-gradient-to-b from-white via-slate-50 to-slate-100
+                dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)]
+                shadow-[-24px_0_60px_rgba(0,0,0,0.4)]
+                border-l-2 border-black/10 dark:border-white/15 flex flex-col animate-in slide-in-from-right duration-300 z-10 cursor-default">
+
+                {/* Header */}
+                <div className="flex items-center justify-between px-8 py-6 border-b-2 border-black/5 dark:border-white/8 shrink-0 bg-black/3 dark:bg-white/4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-[22px] bg-primary/10 border-2 border-primary/25 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                            <SlidersHorizontal className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-slate-800 dark:text-white text-2xl sm:text-3xl">تصفية الفواتير المتقدمة</h3>
+                            <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">تخصيص نتائج البحث والفلترة بكفاءة عالية</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-14 h-14 rounded-full bg-black/6 dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-500 dark:text-white/60 flex items-center justify-center transition-all border border-black/5 dark:border-white/10 active:scale-95"
+                    >
+                        <X className="w-7 h-7" />
+                    </button>
+                </div>
+
+                {/* Scrollable Content Area */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                    {children}
+                </div>
+
+                {/* Sticky Action Footer */}
+                <div className="px-8 py-5 border-t-2 border-black/8 dark:border-white/10 bg-white/90 dark:bg-[#13192e]/90 backdrop-blur-2xl flex items-center gap-4 shrink-0 shadow-2xl">
+                    <button onClick={applyFilter} className="flex-1 h-16 sm:h-20 rounded-[22px] bg-primary hover:bg-primary/90 text-white font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-95">
+                        <Search className="w-6 h-6 sm:w-7 sm:h-7" /> تطبيق الفلتر
+                    </button>
+                    {hasFilter && (
+                        <button onClick={resetFilter} className="h-16 sm:h-20 px-8 sm:px-10 rounded-[22px] bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 font-black text-lg sm:text-xl transition-all border-2 border-red-500/30 flex items-center justify-center gap-2.5 active:scale-95 shrink-0">
+                            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" /> إعادة تعيين
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
 export default function InvoicesIndex({ invoices, customers, users, products, paymentMethods, flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Invoice | null>(null);
-    const [filterOpen,   setFilterOpen]   = useState(false);
+    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [activeTab,    setActiveTab]    = useState<'active' | 'deleted'>('active');
 
     const params = new URLSearchParams(window.location.search);
@@ -212,76 +278,109 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
         if (fAmountFrom) f['filter[amount_from]']        = fAmountFrom;
         if (fAmountTo)   f['filter[amount_to]']          = fAmountTo;
         if (fPayMethod)  f['filter[payment_method_id]']  = fPayMethod;
+        setFilterDrawerOpen(false);
         router.get('/invoices', f, { preserveScroll: true });
     }
 
     function resetFilter() {
         setFInvoiceId(''); setFCustomer(''); setFUser(''); setFProduct('');
         setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo(''); setFPayMethod('');
+        setFilterDrawerOpen(false);
         router.get('/invoices', {}, { preserveScroll: true });
     }
 
     const FilterPanel = () => (
-        <div className="flex flex-col gap-4">
-            {/* رقم الفاتورة */}
-            <div className="flex flex-col gap-2">
-                <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-white/75 uppercase tracking-widest">
-                    رقم الفاتورة
-                </label>
-                <button
-                    type="button"
-                    onClick={() => setShowIdPad(true)}
-                    className={`spatial-input h-14 sm:h-16 rounded-[18px] px-4 text-base sm:text-xl font-black cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 flex items-center justify-between ${
-                        fInvoiceId ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
-                    }`}
-                >
-                    <div className="flex items-center gap-2">
-                        <Hash className="w-5 h-5 text-primary" />
-                        <span>{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة...'}</span>
-                    </div>
-                    {fInvoiceId && (
-                        <span
-                            onClick={(e) => { e.stopPropagation(); setFInvoiceId(''); }}
-                            className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors"
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            {/* العمود الأول (اليمين): البحث والمعلومات الأساسية + نطاق المبالغ */}
+            <div className="flex flex-col gap-6">
+                {/* قسم البحث والعملاء */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                        <span className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/25 text-primary flex items-center justify-center text-xl shrink-0 border border-primary/20">🔍</span>
+                        <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                    </h4>
+                    
+                    {/* رقم الفاتورة */}
+                    <div className="flex flex-col gap-2.5">
+                        <label className="text-sm sm:text-base font-black text-slate-800 dark:text-white">
+                            رقم الفاتورة
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setShowIdPad(true)}
+                            className={`spatial-input h-16 rounded-[20px] px-5 text-base sm:text-xl font-black cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 flex items-center justify-between ${
+                                fInvoiceId ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
+                            }`}
                         >
-                            ✕
-                        </span>
-                    )}
-                </button>
+                            <div className="flex items-center gap-2.5">
+                                <Hash className="w-5 h-5 text-primary" />
+                                <span>{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة...'}</span>
+                            </div>
+                            {fInvoiceId && (
+                                <span
+                                    onClick={(e) => { e.stopPropagation(); setFInvoiceId(''); }}
+                                    className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors"
+                                >
+                                    ✕
+                                </span>
+                            )}
+                        </button>
+                    </div>
+
+                    <ModernSelect label="العميل" placeholder="الكل"
+                        options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
+                        defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
+                        onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
+                    />
+                    <ModernSelect label="البائع" placeholder="الكل"
+                        options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
+                        defaultValue={fUser ? (users.find(u => String(u.id) === fUser)?.name ?? '') : 'الكل'}
+                        onSelect={val => setFUser(val === 'الكل' ? '' : String(users.find(u => u.name === val)?.id ?? ''))}
+                    />
+                </div>
+
+                {/* قسم المبالغ (تحت البحث) */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                        <span className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">💵</span>
+                        <span className="text-slate-900 dark:text-white tracking-wide">نطاق المبالغ</span>
+                    </h4>
+                    <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
+                        onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
+                </div>
             </div>
 
-            <ModernSelect label="العميل" placeholder="الكل"
-                options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
-                defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
-                onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
-            />
-            <ModernSelect label="البائع" placeholder="الكل"
-                options={[{ label: 'الكل' }, ...users.map(u => ({ label: u.name }))]}
-                defaultValue={fUser ? (users.find(u => String(u.id) === fUser)?.name ?? '') : 'الكل'}
-                onSelect={val => setFUser(val === 'الكل' ? '' : String(users.find(u => u.name === val)?.id ?? ''))}
-            />
-            <ModernSelect label="المنتج" placeholder="الكل"
-                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
-                onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
-            />
-            <ModernSelect label="طريقة الدفع" placeholder="الكل"
-                options={[{ label: 'الكل' }, { label: 'هجين', badge: '🔀' }, ...paymentMethods.map(m => ({ label: m.name }))]}
-                defaultValue={fPayMethod === 'hybrid' ? 'هجين' : fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'}
-                onSelect={val => setFPayMethod(val === 'الكل' ? '' : val === 'هجين' ? 'hybrid' : String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
-            />
-            <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
-                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
-            <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
-            <button onClick={applyFilter} className="w-full h-16 sm:h-20 rounded-[22px] bg-primary text-white font-black text-lg sm:text-2xl hover:bg-primary/90 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95 mt-3">
-                <Search className="w-6 h-6 sm:w-7 sm:h-7" /> تطبيق الفلتر
-            </button>
-            {hasFilter && (
-                <button onClick={resetFilter} className="w-full h-16 sm:h-20 rounded-[22px] bg-black/6 dark:bg-white/8 hover:bg-black/12 dark:hover:bg-white/15 text-slate-700 dark:text-white/80 font-black text-lg sm:text-2xl transition-all border-2 border-black/8 dark:border-white/10 shadow-sm mt-2 active:scale-95">
-                    إعادة تعيين الفلتر
-                </button>
-            )}
+            {/* العمود الثاني (اليسار): طريقة الدفع والمنتجات + نطاق التواريخ */}
+            <div className="flex flex-col gap-6">
+                {/* قسم الأصناف والدفع */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                        <span className="w-9 h-9 rounded-xl bg-purple-500/10 dark:bg-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0 border border-purple-500/20">💳</span>
+                        <span className="text-slate-900 dark:text-white tracking-wide">طريقة الدفع والمنتجات</span>
+                    </h4>
+
+                    <ModernSelect label="المنتج" placeholder="الكل"
+                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                        defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
+                        onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+                    />
+                    <ModernSelect label="طريقة الدفع" placeholder="الكل"
+                        options={[{ label: 'الكل' }, { label: 'هجين', badge: '🔀' }, ...paymentMethods.map(m => ({ label: m.name }))]}
+                        defaultValue={fPayMethod === 'hybrid' ? 'هجين' : fPayMethod ? (paymentMethods.find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'}
+                        onSelect={val => setFPayMethod(val === 'الكل' ? '' : val === 'هجين' ? 'hybrid' : String(paymentMethods.find(m => m.name === val)?.id ?? ''))}
+                    />
+                </div>
+
+                {/* قسم التواريخ (تحت طريقة الدفع) */}
+                <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                        <span className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0 border border-amber-500/20">📅</span>
+                        <span className="text-slate-900 dark:text-white tracking-wide">نطاق التواريخ</span>
+                    </h4>
+                    <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
+                    <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
+                </div>
+            </div>
         </div>
     );
 
@@ -301,182 +400,199 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                 {flash?.success && <div className="px-5 py-3.5 rounded-[18px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-base">{flash.success}</div>}
                 {flash?.error   && <div className="px-5 py-3.5 rounded-[18px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-base">{flash.error}</div>}
 
-                {/* Mobile Filter */}
-                <div className="lg:hidden">
-                    <button onClick={() => setFilterOpen(p => !p)} className="w-full flex items-center justify-between px-7 h-16 sm:h-20 rounded-[22px] spatial-input font-black text-lg sm:text-2xl text-slate-800 dark:text-white border-2">
-                        <div className="flex items-center gap-3">
-                            <SlidersHorizontal className="w-6 h-6 text-primary" /> خيارات الفلترة
-                            {hasFilter && <span className="w-3 h-3 rounded-full bg-primary animate-pulse" />}
-                        </div>
-                        <ChevronDown className={`w-6 h-6 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {filterOpen && (
-                        <div className="mt-3 spatial-card p-6 sm:p-8 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <FilterPanel />
-                        </div>
-                    )}
+                {/* Header Action Bar: Tabs & Filter Button */}
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    {/* Tabs */}
+                    <div className="flex gap-3.5">
+                        <button
+                            onClick={() => setActiveTab('active')}
+                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
+                                activeTab === 'active'
+                                    ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
+                                    : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
+                            }`}
+                        >
+                            الفواتير النشطة ({activeInvoices.length})
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('deleted')}
+                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
+                                activeTab === 'deleted'
+                                    ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
+                                    : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
+                            }`}
+                        >
+                            الفواتير الملغية ({deletedInvoices.length})
+                        </button>
+                    </div>
+
+                    {/* Filter Action Buttons */}
+                    <div className="flex items-center gap-3">
+                        {hasFilter && (
+                            <button
+                                onClick={resetFilter}
+                                className="flex items-center gap-2.5 px-6 h-16 sm:h-20 rounded-[22px] font-black text-base sm:text-xl transition-all border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white active:scale-95 shadow-md"
+                            >
+                                <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
+                                <span>إعادة تعيين</span>
+                            </button>
+                        )}
+
+                        {/* Filter Drawer Trigger Button */}
+                        <button
+                            onClick={() => setFilterDrawerOpen(true)}
+                            className={`flex items-center gap-3.5 px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 active:scale-95 shadow-md ${
+                                hasFilter
+                                    ? 'bg-primary/15 border-primary text-primary shadow-primary/10'
+                                    : 'bg-black/5 dark:bg-white/8 text-slate-700 dark:text-white/80 border-black/8 dark:border-white/10 hover:bg-black/10 dark:hover:bg-white/12'
+                            }`}
+                        >
+                            <SlidersHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+                            <span>تصفية الفواتير</span>
+                            {hasFilter && (
+                                <span className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex gap-6">
-                    <div className="flex-1 min-w-0">
-                        {/* Tabs */}
-                        <div className="flex gap-3.5 mb-6">
-                            <button
-                                onClick={() => setActiveTab('active')}
-                                className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
-                                    activeTab === 'active'
-                                        ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
-                                        : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
-                                }`}
-                            >
-                                الفواتير النشطة ({activeInvoices.length})
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('deleted')}
-                                className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
-                                    activeTab === 'deleted'
-                                        ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
-                                        : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
-                                }`}
-                            >
-                                الفواتير الملغية ({deletedInvoices.length})
-                            </button>
-                        </div>
-
-                        <SpatialCard title={`الفواتير (${displayInvoices.length})`} icon={<FileText className="w-5 h-5" />}>
-                            {displayInvoices.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
-                                    <span className="text-5xl">🧾</span>
-                                    <span className="font-bold text-lg">{activeTab === 'active' ? 'لا توجد فواتير بيع' : 'لا توجد فواتير ملغية'}</span>
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Desktop Table */}
-                                    <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-lg sm:text-xl">
-                                            <thead>
-                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'العميل', 'البائع', 'الإجمالي', 'المدفوع', 'المتبقي', 'التاريخ', 'الإجراءات'].map(h => (
-                                                        <th key={h} className="text-right px-5 py-6 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider whitespace-nowrap">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {displayInvoices.map(inv => (
-                                                    <tr key={inv.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors cursor-pointer group ${inv.deleted_at ? 'opacity-50' : ''}`}>
-                                                        <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{inv.id}</td>
-                                                        <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{inv.customer?.name ?? 'زبون نقدي'}</td>
-                                                        <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/70 text-lg sm:text-xl">{inv.user?.name ?? '—'}</td>
-                                                        <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.total)} <span className="text-sm font-bold">د.ل</span></td>
-                                                        <td className="px-5 py-6 font-black text-emerald-600 dark:text-emerald-400 text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.paid_amount)} <span className="text-sm font-bold">د.ل</span></td>
-                                                        <td className="px-5 py-6 font-black text-amber-500 text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.due_amount)} <span className="text-sm font-bold">د.ل</span></td>
-                                                        <td className="px-5 py-6 text-slate-700 dark:text-white/80 whitespace-nowrap font-black text-xl">
-                                                            <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{fmtDate(inv.created_at)}</span>
-                                                        </td>
-                                                        <td className="px-5 py-6">
-                                                            <div className="flex items-center gap-3">
-                                                                <Link href={`/invoices/${inv.id}`} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                    <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
-                                                                </Link>
-                                                                {inv.deleted_at ? (
-                                                                    <RestoreModal
-                                                                        title="استعادة الفاتورة"
-                                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
-                                                                        onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
-                                                                        trigger={
-                                                                            <button className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
-                                                                            </button>
-                                                                        }
-                                                                    />
-                                                                ) : (
-                                                                    <button onClick={() => setCancelTarget(inv)} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
+                <div className="w-full">
+                    <SpatialCard title={`الفواتير (${displayInvoices.length})`} icon={<FileText className="w-5 h-5" />}>
+                        {displayInvoices.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
+                                <span className="text-5xl">🧾</span>
+                                <span className="font-bold text-lg">{activeTab === 'active' ? 'لا توجد فواتير بيع' : 'لا توجد فواتير ملغية'}</span>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Table */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full text-lg sm:text-xl">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
+                                                {['#', 'العميل', 'البائع', 'الإجمالي', 'المدفوع', 'المتبقي', 'التاريخ', 'الإجراءات'].map(h => (
+                                                    <th key={h} className={`px-5 py-6 text-base sm:text-xl font-black text-slate-600 dark:text-white/60 uppercase tracking-wider whitespace-nowrap ${h === 'الإجراءات' ? 'text-center' : 'text-right'}`}>{h}</th>
                                                 ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Mobile Cards */}
-                                    <div className="flex flex-col gap-4 lg:hidden">
-                                        {displayInvoices.map(inv => (
-                                            <div key={inv.id} className={`rounded-[28px] border border-black/8 dark:border-white/12 overflow-hidden ${inv.deleted_at ? 'opacity-60' : ''}`}>
-                                                <div className="px-6 py-5 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                                    <div>
-                                                        <span className="font-black text-lg text-slate-800 dark:text-white">{inv.customer?.name ?? 'زبون نقدي'}</span>
-                                                        <div className="flex items-center gap-2 mt-1">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{inv.id}</span>
-                                                            {inv.deleted_at && (
-                                                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {displayInvoices.map(inv => (
+                                                <tr key={inv.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors cursor-pointer group ${inv.deleted_at ? 'opacity-50' : ''}`}>
+                                                    <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{inv.id}</td>
+                                                    <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{inv.customer?.name ?? 'زبون نقدي'}</td>
+                                                    <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/70 text-lg sm:text-xl">{inv.user?.name ?? '—'}</td>
+                                                    <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.total)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 font-black text-emerald-600 dark:text-emerald-400 text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.paid_amount)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 font-black text-amber-500 text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.due_amount)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 text-slate-700 dark:text-white/80 whitespace-nowrap font-black text-xl">
+                                                        <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{fmtDate(inv.created_at)}</span>
+                                                    </td>
+                                                    <td className="px-5 py-6 text-center">
+                                                        <div className="flex items-center justify-center gap-3">
+                                                            <Link href={`/invoices/${inv.id}`} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
+                                                            </Link>
+                                                            {inv.deleted_at ? (
+                                                                <RestoreModal
+                                                                    title="استعادة الفاتورة"
+                                                                    description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                                    onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                                    trigger={
+                                                                        <button className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                            <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                                        </button>
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <button onClick={() => setCancelTarget(inv)} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                                </button>
                                                             )}
                                                         </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards */}
+                                <div className="flex flex-col gap-4 lg:hidden">
+                                    {displayInvoices.map(inv => (
+                                        <div key={inv.id} className={`rounded-[28px] border border-black/8 dark:border-white/12 overflow-hidden ${inv.deleted_at ? 'opacity-60' : ''}`}>
+                                            <div className="px-6 py-5 bg-black/3 dark:bg-white/6 flex items-center justify-between">
+                                                <div>
+                                                    <span className="font-black text-lg text-slate-800 dark:text-white">{inv.customer?.name ?? 'زبون نقدي'}</span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{inv.id}</span>
+                                                        {inv.deleted_at && (
+                                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                                        )}
                                                     </div>
-                                                </div>
-                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-6">
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
-                                                        <span className="font-black text-xl text-slate-800 dark:text-white">{fmt(inv.total)} <span className="text-xs font-normal">د.ل</span></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-bold text-slate-400 dark:text-white/40">المدفوع</span>
-                                                        <span className="font-black text-xl text-emerald-600 dark:text-emerald-400">{fmt(inv.paid_amount)} <span className="text-xs font-normal">د.ل</span></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-bold text-slate-400 dark:text-white/40">المتبقي</span>
-                                                        <span className="font-black text-xl text-amber-500">{fmt(inv.due_amount)} <span className="text-xs font-normal">د.ل</span></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="text-base font-black text-slate-800 dark:text-white/90">{fmtDate(inv.created_at)}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3.5 px-6 py-5 border-t border-black/5 dark:border-white/8">
-                                                    <Link href={`/invoices/${inv.id}`} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                                                        <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
-                                                    </Link>
-                                                    {inv.deleted_at ? (
-                                                        <RestoreModal
-                                                            title="استعادة الفاتورة"
-                                                            description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
-                                                            onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
-                                                            trigger={
-                                                                <button className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                                                                    <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
-                                                                </button>
-                                                            }
-                                                        />
-                                                    ) : (
-                                                        <button onClick={() => setCancelTarget(inv)} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                                                            <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
-                                                        </button>
-                                                    )}
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-6">
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
+                                                    <span className="font-black text-xl text-slate-800 dark:text-white">{fmt(inv.total)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">المدفوع</span>
+                                                    <span className="font-black text-xl text-emerald-600 dark:text-emerald-400">{fmt(inv.paid_amount)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">المتبقي</span>
+                                                    <span className="font-black text-xl text-amber-500">{fmt(inv.due_amount)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                    <span className="text-base font-black text-slate-800 dark:text-white/90">{fmtDate(inv.created_at)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3.5 px-6 py-5 border-t border-black/5 dark:border-white/8">
+                                                <Link href={`/invoices/${inv.id}`} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                    <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
+                                                </Link>
+                                                {inv.deleted_at ? (
+                                                    <RestoreModal
+                                                        title="استعادة الفاتورة"
+                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                        onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                        trigger={
+                                                            <button className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                            </button>
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <button onClick={() => setCancelTarget(inv)} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
 
-                                    {/* Pagination */}
-                                    <Pagination links={invoices.links} currentPage={invoices.current_page} lastPage={invoices.last_page} />
-                                </>
-                            )}
-                        </SpatialCard>
-                    </div>
-
-                    {/* Desktop Filter */}
-                    <div className="hidden lg:block w-[360px] shrink-0">
-                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-                            <FilterPanel />
-                        </SpatialCard>
-                    </div>
+                                {/* Pagination */}
+                                <Pagination links={invoices.links} currentPage={invoices.current_page} lastPage={invoices.last_page} />
+                            </>
+                        )}
+                    </SpatialCard>
                 </div>
             </div>
 
             {cancelTarget && <CancelInvoiceModal invoice={cancelTarget} onClose={() => setCancelTarget(null)} />}
+
+            <FilterDrawer
+                isOpen={filterDrawerOpen}
+                onClose={() => setFilterDrawerOpen(false)}
+                applyFilter={applyFilter}
+                resetFilter={resetFilter}
+                hasFilter={Boolean(hasFilter)}
+            >
+                <FilterPanel />
+            </FilterDrawer>
 
             <NumberPadModal
                 isOpen={showIdPad}
