@@ -1,11 +1,11 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
-import { Plus, Eye, Trash2, RotateCcw, SlidersHorizontal, ChevronDown, Search, AlertTriangle, X } from 'lucide-react';
-import { createPortal } from 'react-dom';
+import { Plus, Eye, Trash2, RotateCcw, SlidersHorizontal, Search, AlertTriangle, X } from 'lucide-react';
 
 interface Customer { id: number; name: string; }
 interface Product  { id: number; name: string; }
@@ -56,22 +56,22 @@ function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
     yesLabel: string; yesDesc: string; noLabel: string; noDesc: string;
 }) {
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
             <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(true)}>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
-                    {value && <div className="w-2 h-2 rounded-full bg-white" />}
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
+                    {value && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{yesLabel}</span>
+                    <span className="font-black text-slate-800 dark:text-white text-base">{yesLabel}</span>
                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">{yesDesc}</span>
                 </div>
             </label>
             <label className="flex items-center gap-3 cursor-pointer group" onClick={() => onChange(false)}>
-                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
-                    {!value && <div className="w-2 h-2 rounded-full bg-white" />}
+                <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
+                    {!value && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
                 </div>
                 <div className="flex flex-col">
-                    <span className="font-bold text-slate-700 dark:text-white/80 text-sm">{noLabel}</span>
+                    <span className="font-black text-slate-800 dark:text-white text-base">{noLabel}</span>
                     <span className="text-xs font-bold text-slate-400 dark:text-white/40">{noDesc}</span>
                 </div>
             </label>
@@ -94,36 +94,36 @@ function CancelReturnModal({ ret, onClose }: { ret: InvoiceReturn; onClose: () =
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-md rounded-[28px] p-6 flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200
-                border border-black/10 dark:border-white/[0.12]
-                bg-gradient-to-br from-white to-slate-100
-                dark:[background:linear-gradient(145deg,rgba(40,60,120,0.45)_0%,rgba(20,25,55,0.35)_100%)]
-                backdrop-blur-3xl shadow-2xl shadow-black/10 dark:shadow-black/50">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-in fade-in" onClick={onClose} />
+            <div className="relative w-full sm:max-w-lg rounded-[32px] p-8 flex flex-col gap-6 animate-in zoom-in-95 duration-200
+                border-2 border-black/10 dark:border-white/15
+                bg-gradient-to-b from-white via-slate-50 to-slate-100
+                dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)]
+                shadow-2xl z-10">
 
                 <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center">
-                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    <div className="w-16 h-16 rounded-[22px] bg-red-500/15 border-2 border-red-500/25 flex items-center justify-center text-red-500">
+                        <AlertTriangle className="w-8 h-8" />
                     </div>
                     <button onClick={onClose}
-                        className="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
-                        <X className="w-4 h-4" />
+                        className="w-12 h-12 rounded-full bg-black/6 dark:bg-white/10 hover:bg-black/12 dark:hover:bg-white/20 text-slate-500 dark:text-white/60 flex items-center justify-center transition-all">
+                        <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                    <h3 className="text-lg font-black text-slate-800 dark:text-white">إلغاء المرتجع</h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">
-                        سيتم إلغاء المرتجع واستعادة المخزون.
+                <div className="flex flex-col gap-2">
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">إلغاء المرتجع #{ret.id}</h3>
+                    <p className="text-base font-bold text-slate-500 dark:text-white/50 leading-relaxed">
+                        سيتم إلغاء المرتجع واستعادة المخزون لحالته السابقة.
                     </p>
                 </div>
 
                 {hasSettlements && (
-                    <div className="flex flex-col gap-3 p-4 rounded-[18px] bg-black/4 dark:bg-white/5 border border-black/8 dark:border-white/10">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-bold text-slate-600 dark:text-white/70">التسويات المرتبطة بهذا المرتجع</span>
-                            <span className="font-black text-purple-500 text-sm">{fmt(String(settlementsTotal))}</span>
+                    <div className="flex flex-col gap-4 p-5 rounded-[22px] bg-black/4 dark:bg-white/5 border-2 border-black/8 dark:border-white/10">
+                        <div className="flex items-center justify-between">
+                            <span className="text-base font-bold text-slate-600 dark:text-white/70">التسويات المرتبطة بهذا المرتجع</span>
+                            <span className="font-black text-purple-500 text-xl">{fmt(String(settlementsTotal))} د.ل</span>
                         </div>
                         <div className="h-px bg-black/8 dark:bg-white/8" />
                         <RadioGroup
@@ -134,14 +134,14 @@ function CancelReturnModal({ ret, onClose }: { ret: InvoiceReturn; onClose: () =
                     </div>
                 )}
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4 pt-2">
                     <button onClick={onClose}
-                        className="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+                        className="flex-1 h-16 rounded-[22px] bg-black/6 dark:bg-white/8 hover:bg-black/10 text-slate-600 dark:text-white/70 font-black text-lg transition-all border border-black/8 dark:border-white/10">
                         إلغاء
                     </button>
                     <button onClick={confirm}
-                        className="flex-1 h-11 rounded-[14px] bg-red-500 hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30">
-                        <Trash2 className="w-4 h-4" /> تأكيد الإلغاء
+                        className="flex-1 h-16 rounded-[22px] bg-red-500 hover:bg-red-600 text-white font-black text-lg transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/30 active:scale-95">
+                        <Trash2 className="w-6 h-6" /> تأكيد الإلغاء
                     </button>
                 </div>
             </div>
@@ -158,6 +158,7 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
     const activeReturns  = data.data.filter(r => !r.deleted_at);
     const deletedReturns = data.data.filter(r => r.deleted_at);
     const displayReturns = activeTab === 'active' ? activeReturns : deletedReturns;
+
     const params = new URLSearchParams(window.location.search);
     const [fCustomer,   setFCustomer]   = useState(params.get('filter[customer_id]') ?? '');
     const [fStatus,     setFStatus]     = useState(params.get('filter[recovery_status]') ?? '');
@@ -167,7 +168,7 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
     const [fAmountFrom, setFAmountFrom] = useState(params.get('filter[amount_from]') ?? '');
     const [fAmountTo,   setFAmountTo]   = useState(params.get('filter[amount_to]') ?? '');
 
-    const hasFilter = fCustomer || fStatus || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo;
+    const hasFilter = Boolean(fCustomer || fStatus || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo);
 
     function applyFilter() {
         const f: Record<string, string> = {};
@@ -178,231 +179,340 @@ export default function InvoiceReturnsIndex({ returns: data, customers, products
         if (fDateTo)     f['filter[date_to]']           = fDateTo;
         if (fAmountFrom) f['filter[amount_from]']       = fAmountFrom;
         if (fAmountTo)   f['filter[amount_to]']         = fAmountTo;
+        setFilterOpen(false);
         router.get('/invoice-returns', f, { preserveScroll: true });
     }
 
     function resetFilter() {
         setFCustomer(''); setFStatus(''); setFProduct('');
         setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo('');
+        setFilterOpen(false);
         router.get('/invoice-returns', {}, { preserveScroll: true });
     }
 
-    const FilterPanel = () => (
-        <div className="flex flex-col gap-4">
-            <ModernSelect label="العميل" placeholder="الكل"
-                options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
-                defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
-                onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
-            />
-            <ModernSelect label="المنتج" placeholder="الكل"
-                options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
-                defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
-                onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
-            />
-            <ModernSelect label="حالة الاسترداد" placeholder="الكل"
-                options={[{ label: 'الكل' }, { label: 'لم يُسترد' }, { label: 'مسترد جزئياً' }, { label: 'مسترد بالكامل' }]}
-                defaultValue={fStatus === 'unpaid' ? 'لم يُسترد' : fStatus === 'partial' ? 'مسترد جزئياً' : fStatus === 'paid' ? 'مسترد بالكامل' : 'الكل'}
-                onSelect={val => setFStatus(val === 'لم يُسترد' ? 'unpaid' : val === 'مسترد جزئياً' ? 'partial' : val === 'مسترد بالكامل' ? 'paid' : '')}
-            />
-            <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
-                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
-            <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
-            <button onClick={applyFilter} className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" /> تطبيق الفلتر
-            </button>
-            {hasFilter && (
-                <button onClick={resetFilter} className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                    إعادة تعيين
-                </button>
-            )}
-        </div>
-    );
-
     return (
+        <>
         <AppShell pageTitle="مرتجعات العملاء">
-            <div className="flex flex-col gap-6 pb-32 lg:pb-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col gap-8 pb-32 lg:pb-0">
+                {/* Header Section */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-slate-800 dark:text-white">مرتجعات العملاء</h1>
-                        <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">إدارة مرتجعات البيع</p>
+                        <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">مرتجعات العملاء</h1>
+                        <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">سجل وإدارة مرتجعات فواتير المبيعات</p>
                     </div>
-                    <Link href="/invoice-returns/create" className="spatial-button w-full sm:w-auto flex items-center justify-center gap-2 px-5 h-11 text-sm">
-                        <Plus className="w-4 h-4" /> مرتجع جديد
-                    </Link>
+                    <div className="flex items-center gap-3">
+                        <Link href="/invoice-returns/create"
+                            className="spatial-button flex items-center justify-center gap-3 px-7 sm:px-9 h-16 sm:h-20 rounded-[22px] text-lg sm:text-2xl font-black shadow-xl">
+                            <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> مرتجع جديد
+                        </Link>
+                    </div>
                 </div>
 
-                {flash?.success && <div className="px-5 py-3 rounded-[16px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-sm">{flash.success}</div>}
-                {flash?.error   && <div className="px-5 py-3 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 font-bold text-sm">{flash.error}</div>}
+                {flash?.success && (
+                    <div className="px-6 py-4 rounded-[22px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg sm:text-xl shadow-sm">
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="px-6 py-4 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg sm:text-xl shadow-sm">
+                        {flash.error}
+                    </div>
+                )}
 
-                <div className="lg:hidden">
-                    <button onClick={() => setFilterOpen(p => !p)} className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
-                        <div className="flex items-center gap-2"><SlidersHorizontal className="w-4 h-4" /> فلترة {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}</div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {filterOpen && <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200"><FilterPanel /></div>}
-                </div>
-
-                <div className="flex gap-6">
-                    <div className="flex-1 min-w-0">
-                        {/* Tabs */}
-                        <div className="flex gap-2 mb-4">
-                            <button onClick={() => setActiveTab('active')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'active' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                                المرتجعات النشطة ({activeReturns.length})
+                {/* Tabs & Filter Bar Section */}
+                <div className="flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setActiveTab('active')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                <span>المرتجعات النشطة</span>
+                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
+                                    {activeReturns.length}
+                                </span>
                             </button>
-                            <button onClick={() => setActiveTab('deleted')} className={`px-5 h-11 rounded-[14px] font-bold text-sm transition-all ${activeTab === 'deleted' ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                                المرتجعات الملغية ({deletedReturns.length})
+                            <button onClick={() => setActiveTab('deleted')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'deleted' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                <span>المرتجعات الملغية</span>
+                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'deleted' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
+                                    {deletedReturns.length}
+                                </span>
                             </button>
                         </div>
 
-                        <SpatialCard title={`المرتجعات (${displayReturns.length})`} icon={<RotateCcw className="w-4 h-4" />}>
-                            {displayReturns.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-3">
-                                    <span className="text-4xl">↩️</span>
-                                    <span className="font-bold">{activeTab === 'active' ? 'لا توجد مرتجعات' : 'لا توجد مرتجعات ملغية'}</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-[16px]">
-                                            <thead>
-                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['#', 'العميل', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {displayReturns.map(ret => (
-                                                    <tr key={ret.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors ${ret.deleted_at ? 'opacity-50' : ''}`}>
-                                                        <td className="px-4 py-4 font-bold text-slate-400 dark:text-white/40">#{ret.id}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-800 dark:text-white">{ret.customer?.name ?? 'زبون نقدي'}</td>
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60">
-                                                            {ret.invoice ? <Link href={`/invoices/${ret.invoice.id}`} className="hover:text-primary transition-colors">#{ret.invoice.id}</Link> : '—'}
-                                                        </td>
-                                                        <td className="px-4 py-4 font-black text-orange-500 whitespace-nowrap">{fmt(ret.total)}</td>
-                                                        <td className="px-4 py-4 font-black text-purple-500 whitespace-nowrap">{fmt(ret.recovered_amount)}</td>
-                                                        <td className="px-4 py-4 font-black text-amber-500 whitespace-nowrap">{fmt(ret.due_recovery)}</td>
-                                                        <td className="px-4 py-4">
-                                                            {ret.deleted_at ? (
-                                                                <span className="text-xs font-bold px-2.5 py-1 rounded-[8px] bg-red-500/10 text-red-500">ملغي</span>
-                                                            ) : (
-                                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-[8px] ${recoveryClass[ret.recovery_status]}`}>{recoveryLabel[ret.recovery_status]}</span>
-                                                            )}
-                                                        </td>
-                                                        <td className="px-4 py-4 text-slate-500 dark:text-white/50 whitespace-nowrap font-bold text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(ret.created_at)}</span></td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="flex items-center gap-2">
-                                                                <Link href={`/invoice-returns/${ret.id}`} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-xs">
-                                                                    <Eye className="w-3 h-3" /> عرض
-                                                                </Link>
-                                                                {ret.deleted_at ? (
-                                                                    <button onClick={() => router.post(`/invoice-returns/${ret.id}/restore`)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-xs">
-                                                                        <RotateCcw className="w-3 h-3" /> استعادة
-                                                                    </button>
-                                                                ) : (
-                                                                    <button onClick={() => setCancelTarget(ret)} className="flex items-center gap-1.5 px-3 h-8 rounded-[10px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs">
-                                                                        <Trash2 className="w-3 h-3" /> إلغاء
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                        <div className="flex items-center gap-3">
+                            {hasFilter && (
+                                <button onClick={resetFilter} className="flex items-center gap-2.5 px-6 h-16 sm:h-20 rounded-[22px] font-black text-base sm:text-xl transition-all border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white active:scale-95 shadow-md">
+                                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    <span>إعادة تعيين</span>
+                                </button>
+                            )}
+                            <button onClick={() => setFilterOpen(true)}
+                                className={`flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl transition-all border-2 active:scale-95 shadow-md ${hasFilter ? 'bg-primary/15 border-primary text-primary shadow-primary/10' : 'spatial-input text-slate-800 dark:text-white hover:border-primary/40'}`}>
+                                <SlidersHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+                                <span>الفلترة</span>
+                                {hasFilter && (
+                                    <span className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
+                                )}
+                            </button>
+                        </div>
+                    </div>
 
-                                    {/* Mobile Cards */}
-                                    <div className="flex flex-col gap-4 lg:hidden">
-                                        {displayReturns.map(ret => (
-                                            <div key={ret.id} className={`rounded-[24px] border border-black/8 dark:border-white/12 overflow-hidden ${ret.deleted_at ? 'opacity-60' : ''}`}>
-                                                <div className="px-5 py-4 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                                    <div>
-                                                        <span className="font-black text-slate-800 dark:text-white">{ret.customer?.name ?? 'زبون نقدي'}</span>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{ret.id}</span>
+                    <SpatialCard title={`المرتجعات (${displayReturns.length})`} icon={<RotateCcw className="w-6 h-6 text-primary" />}>
+                        {displayReturns.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
+                                <span className="text-6xl">↩️</span>
+                                <span className="font-black text-2xl">{activeTab === 'active' ? 'لا توجد مرتجعات نشطة' : 'لا توجد مرتجعات ملغية'}</span>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Desktop Table */}
+                                <div className="hidden lg:block overflow-x-auto">
+                                    <table className="w-full text-right">
+                                        <thead>
+                                            <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
+                                                {['#', 'العميل', 'الفاتورة', 'المرتجع', 'التسوية', 'المتبقي', 'الحالة', 'التاريخ', ''].map(h => (
+                                                    <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
+                                            {displayReturns.map(ret => (
+                                                <tr key={ret.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors cursor-pointer group ${ret.deleted_at ? 'opacity-50' : ''}`}>
+                                                    <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{ret.id}</td>
+                                                    <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{ret.customer?.name ?? 'زبون نقدي'}</td>
+                                                    <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/70 text-xl">
+                                                        {ret.invoice ? (
+                                                            <Link href={`/invoices/${ret.invoice.id}`} className="text-primary hover:underline font-black">
+                                                                #{ret.invoice.id}
+                                                            </Link>
+                                                        ) : '—'}
+                                                    </td>
+                                                    <td className="px-5 py-6 font-black text-orange-500 text-2xl sm:text-3xl whitespace-nowrap">{fmt(ret.total)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 font-black text-purple-500 text-2xl sm:text-3xl whitespace-nowrap">{fmt(ret.recovered_amount)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 font-black text-amber-500 text-2xl sm:text-3xl whitespace-nowrap">{fmt(ret.due_recovery)} <span className="text-sm font-bold">د.ل</span></td>
+                                                    <td className="px-5 py-6 whitespace-nowrap">
+                                                        {ret.deleted_at ? (
+                                                            <span className="text-lg font-black px-4 py-2 rounded-[14px] bg-red-500/10 text-red-500">ملغي</span>
+                                                        ) : (
+                                                            <span className={`text-lg font-black px-4 py-2 rounded-[14px] ${recoveryClass[ret.recovery_status]}`}>{recoveryLabel[ret.recovery_status]}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-6 text-slate-700 dark:text-white/80 whitespace-nowrap font-black text-xl">
+                                                        <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{fmtDate(ret.created_at)}</span>
+                                                    </td>
+                                                    <td className="px-5 py-6 text-center">
+                                                        <div className="flex items-center justify-center gap-3">
+                                                            <Link href={`/invoice-returns/${ret.id}`} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
+                                                            </Link>
                                                             {ret.deleted_at ? (
-                                                                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
+                                                                <button onClick={() => router.post(`/invoice-returns/${ret.id}/restore`, {}, { preserveScroll: true })}
+                                                                    className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                    <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                                </button>
                                                             ) : (
-                                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${recoveryClass[ret.recovery_status]}`}>{recoveryLabel[ret.recovery_status]}</span>
+                                                                <button onClick={() => setCancelTarget(ret)}
+                                                                    className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                                </button>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-5">
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
-                                                        {ret.invoice ? (
-                                                            <Link href={`/invoices/${ret.invoice.id}`} className="font-bold text-primary hover:underline">#{ret.invoice.id}</Link>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards */}
+                                <div className="flex flex-col gap-4 lg:hidden">
+                                    {displayReturns.map(ret => (
+                                        <div key={ret.id} className={`rounded-[28px] border border-black/8 dark:border-white/12 overflow-hidden ${ret.deleted_at ? 'opacity-60' : ''}`}>
+                                            <div className="px-6 py-5 bg-black/3 dark:bg-white/6 flex items-center justify-between">
+                                                <div>
+                                                    <span className="font-black text-xl text-slate-800 dark:text-white">{ret.customer?.name ?? 'زبون نقدي'}</span>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">#{ret.id}</span>
+                                                        {ret.deleted_at ? (
+                                                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-500/10 text-red-500">ملغي</span>
                                                         ) : (
-                                                            <span className="font-bold text-slate-400 dark:text-white/40">—</span>
+                                                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${recoveryClass[ret.recovery_status]}`}>{recoveryLabel[ret.recovery_status]}</span>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المرتجع</span>
-                                                        <span className="font-black text-orange-500">{fmt(ret.total)}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التسوية</span>
-                                                        <span className="font-black text-purple-500">{fmt(ret.recovered_amount)}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">المتبقي</span>
-                                                        <span className="font-black text-amber-500">{fmt(ret.due_recovery)}</span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between py-3">
-                                                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">التاريخ</span>
-                                                        <span className="text-[16px] font-black text-slate-800 dark:text-white/90 tracking-widest">{fmtDate(ret.created_at)}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-3 px-5 py-4 border-t border-black/5 dark:border-white/8">
-                                                    <Link href={`/invoice-returns/${ret.id}`} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-bold text-sm">
-                                                        <Eye className="w-4 h-4" /> عرض
-                                                    </Link>
-                                                    {ret.deleted_at ? (
-                                                        <button onClick={() => router.post(`/invoice-returns/${ret.id}/restore`)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                                            <RotateCcw className="w-4 h-4" /> استعادة
-                                                        </button>
-                                                    ) : (
-                                                        <button onClick={() => setCancelTarget(ret)} className="flex-1 flex items-center justify-center gap-2 h-11 rounded-[14px] border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                                            <Trash2 className="w-4 h-4" /> إلغاء
-                                                        </button>
-                                                    )}
                                                 </div>
                                             </div>
+                                            <div className="flex flex-col divide-y divide-black/5 dark:divide-white/8 px-6">
+                                                {ret.invoice && (
+                                                    <div className="flex items-center justify-between py-4">
+                                                        <span className="text-base font-bold text-slate-400 dark:text-white/40">الفاتورة</span>
+                                                        <Link href={`/invoices/${ret.invoice.id}`} className="font-black text-xl text-primary hover:underline">#{ret.invoice.id}</Link>
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">المرتجع</span>
+                                                    <span className="font-black text-2xl text-orange-500">{fmt(ret.total)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">التسوية</span>
+                                                    <span className="font-black text-2xl text-purple-500">{fmt(ret.recovered_amount)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">المتبقي</span>
+                                                    <span className="font-black text-2xl text-amber-500">{fmt(ret.due_recovery)} <span className="text-xs font-normal">د.ل</span></span>
+                                                </div>
+                                                <div className="flex items-center justify-between py-4">
+                                                    <span className="text-base font-bold text-slate-400 dark:text-white/40">التاريخ</span>
+                                                    <span className="text-lg font-black text-slate-800 dark:text-white/90">{fmtDate(ret.created_at)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3.5 px-6 py-5 border-t border-black/5 dark:border-white/8">
+                                                <Link href={`/invoice-returns/${ret.id}`} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                    <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
+                                                </Link>
+                                                {ret.deleted_at ? (
+                                                    <button onClick={() => router.post(`/invoice-returns/${ret.id}/restore`, {}, { preserveScroll: true })}
+                                                        className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                        <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                    </button>
+                                                ) : (
+                                                    <button onClick={() => setCancelTarget(ret)}
+                                                        className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {data.last_page > 1 && (
+                                    <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
+                                        {data.links.map((link, i) => (
+                                            link.url ? (
+                                                <Link key={i} href={link.url}
+                                                    className={`px-5 h-12 rounded-[14px] font-black text-base flex items-center transition-all ${link.active ? 'bg-primary text-white shadow-md' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}
+                                                    dangerouslySetInnerHTML={{ __html: link.label }} />
+                                            ) : (
+                                                <span key={i} className="px-5 h-12 rounded-[14px] font-black text-base flex items-center text-slate-300 dark:text-white/20"
+                                                    dangerouslySetInnerHTML={{ __html: link.label }} />
+                                            )
                                         ))}
                                     </div>
-
-                                    {data.last_page > 1 && (
-                                        <div className="flex items-center justify-center gap-2 pt-4 flex-wrap">
-                                            {data.links.map((link, i) => (
-                                                link.url ? (
-                                                    <Link key={i} href={link.url}
-                                                        className={`px-4 h-9 rounded-[12px] font-bold text-sm flex items-center transition-all ${link.active ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}
-                                                        dangerouslySetInnerHTML={{ __html: link.label }} />
-                                                ) : (
-                                                    <span key={i} className="px-4 h-9 rounded-[12px] font-bold text-sm flex items-center text-slate-300 dark:text-white/20"
-                                                        dangerouslySetInnerHTML={{ __html: link.label }} />
-                                                )
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </SpatialCard>
-                    </div>
-                    <div className="hidden lg:block w-[360px] shrink-0">
-                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-                            <FilterPanel />
-                        </SpatialCard>
-                    </div>
+                                )}
+                            </>
+                        )}
+                    </SpatialCard>
                 </div>
             </div>
-
-            {cancelTarget && (
-                <CancelReturnModal ret={cancelTarget} onClose={() => setCancelTarget(null)} />
-            )}
         </AppShell>
+
+        {/* Sliding Filter Drawer Portal */}
+        {filterOpen && createPortal(
+            <div className="fixed inset-0 z-[9999] flex justify-start dir-rtl">
+                {/* Backdrop Overlay */}
+                <div
+                    className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+                    onClick={() => setFilterOpen(false)}
+                />
+
+                {/* Slide-over Drawer from Right */}
+                <div className="relative w-full sm:w-[720px] md:w-[840px] lg:w-[900px] max-w-[95vw] h-full
+                    bg-gradient-to-b from-white via-slate-50 to-slate-100
+                    dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)]
+                    shadow-[-24px_0_60px_rgba(0,0,0,0.4)]
+                    border-l-2 border-black/10 dark:border-white/15 flex flex-col animate-in slide-in-from-right duration-300 z-10 cursor-default">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-8 py-6 border-b-2 border-black/5 dark:border-white/8 shrink-0 bg-black/3 dark:bg-white/4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-16 h-16 rounded-[22px] bg-primary/10 border-2 border-primary/25 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
+                                <SlidersHorizontal className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h3 className="font-black text-slate-800 dark:text-white text-2xl sm:text-3xl">تصفية المرتجعات المتقدمة</h3>
+                                <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">تخصيص نتائج البحث والفلترة بكفاءة عالية</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setFilterOpen(false)}
+                            className="w-14 h-14 rounded-full bg-black/6 dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-500 dark:text-white/60 flex items-center justify-center transition-all border border-black/5 dark:border-white/10 active:scale-95">
+                            <X className="w-7 h-7" />
+                        </button>
+                    </div>
+
+                    {/* Content Area - 2 Columns */}
+                    <div className="flex-1 overflow-y-auto p-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Column 1 */}
+                            <div className="flex flex-col gap-6">
+                                <div className="p-6 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                        <span className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl shrink-0 border border-blue-500/20">👤</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">العميل والمنتج</span>
+                                    </h4>
+                                    <ModernSelect label="العميل" placeholder="الكل"
+                                        options={[{ label: 'الكل' }, ...customers.map(c => ({ label: c.name }))]}
+                                        defaultValue={fCustomer ? (customers.find(c => String(c.id) === fCustomer)?.name ?? '') : 'الكل'}
+                                        onSelect={val => setFCustomer(val === 'الكل' ? '' : String(customers.find(c => c.name === val)?.id ?? ''))}
+                                    />
+                                    <ModernSelect label="المنتج" placeholder="الكل"
+                                        options={[{ label: 'الكل' }, ...products.map(p => ({ label: p.name }))]}
+                                        defaultValue={fProduct ? (products.find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
+                                        onSelect={val => setFProduct(val === 'الكل' ? '' : String(products.find(p => p.name === val)?.id ?? ''))}
+                                    />
+                                </div>
+
+                                <div className="p-6 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                        <span className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">💵</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">نطاق المبالغ</span>
+                                    </h4>
+                                    <AmountRangeInput label="إجمالي المرتجع (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
+                                        onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
+                                </div>
+                            </div>
+
+                            {/* Column 2 */}
+                            <div className="flex flex-col gap-6">
+                                <div className="p-6 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                        <span className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center text-xl shrink-0 border border-purple-500/20">📊</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">حالة الاسترداد</span>
+                                    </h4>
+                                    <ModernSelect label="حالة الاسترداد" placeholder="الكل"
+                                        options={[{ label: 'الكل' }, { label: 'لم يُسترد' }, { label: 'مسترد جزئياً' }, { label: 'مسترد بالكامل' }]}
+                                        defaultValue={fStatus === 'unpaid' ? 'لم يُسترد' : fStatus === 'partial' ? 'مسترد جزئياً' : fStatus === 'paid' ? 'مسترد بالكامل' : 'الكل'}
+                                        onSelect={val => setFStatus(val === 'لم يُسترد' ? 'unpaid' : val === 'مسترد جزئياً' ? 'partial' : val === 'مسترد بالكامل' ? 'paid' : '')}
+                                    />
+                                </div>
+
+                                <div className="p-6 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
+                                    <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
+                                        <span className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-xl shrink-0 border border-amber-500/20">📅</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">التاريخ</span>
+                                    </h4>
+                                    <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
+                                    <DateFilterInput label="إلى تاريخ" value={fDateTo} onChange={setFDateTo} />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sticky Action Footer */}
+                    <div className="px-8 py-5 border-t-2 border-black/8 dark:border-white/10 bg-white/90 dark:bg-[#13192e]/90 backdrop-blur-2xl flex items-center gap-4 shrink-0 shadow-2xl">
+                        <button onClick={applyFilter} className="flex-1 h-16 sm:h-20 rounded-[22px] bg-primary hover:bg-primary/90 text-white font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-95">
+                            <Search className="w-6 h-6 sm:w-7 sm:h-7" /> تطبيق الفلتر
+                        </button>
+                        {hasFilter && (
+                            <button onClick={resetFilter} className="h-16 sm:h-20 px-8 sm:px-10 rounded-[22px] bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 font-black text-lg sm:text-xl transition-all border-2 border-red-500/30 flex items-center justify-center gap-2.5 active:scale-95 shrink-0">
+                                <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" /> إعادة تعيين
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
+
+        {cancelTarget && (
+            <CancelReturnModal ret={cancelTarget} onClose={() => setCancelTarget(null)} />
+        )}
+        </>
     );
 }

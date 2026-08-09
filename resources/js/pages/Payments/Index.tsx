@@ -117,22 +117,7 @@ export default function PaymentsIndex({ payments, customers, paymentMethods, pro
                         <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">دفعات العملاء</h1>
                         <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">سجل المدفوعات من العملاء</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                        <button onClick={() => setFilterOpen(true)}
-                            className="flex items-center gap-3 px-6 h-16 rounded-[22px] spatial-input font-black text-lg sm:text-xl text-slate-800 dark:text-white hover:border-primary/40 transition-all border-2 active:scale-95 shadow-sm">
-                            <SlidersHorizontal className="w-6 h-6 text-primary" />
-                            <span>الفلترة</span>
-                            {hasFilter && (
-                                <span className="w-3 h-3 rounded-full bg-primary animate-pulse" />
-                            )}
-                        </button>
-                        {hasFilter && (
-                            <button onClick={resetFilter}
-                                className="flex items-center gap-2 px-5 h-16 rounded-[22px] bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white font-black text-base sm:text-lg transition-all border-2 border-red-500/20 active:scale-95 shadow-sm whitespace-nowrap">
-                                <RotateCcw className="w-5 h-5" />
-                                <span>إعادة تعيين</span>
-                            </button>
-                        )}
+                    <div className="flex items-center gap-3">
                         <button onClick={() => setShowCreate(p => !p)}
                             className="spatial-button flex items-center justify-center gap-3 px-8 h-16 rounded-[22px] font-black text-lg sm:text-xl shadow-md">
                             <Plus className="w-6 h-6" /> <span>دفعة جديدة</span>

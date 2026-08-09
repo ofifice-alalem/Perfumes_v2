@@ -124,15 +124,7 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                         <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">تسويات العملاء</h1>
                         <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">سجل وإدارة تسويات رصيد العملاء عند الدائنية</p>
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
-                        <button onClick={() => setFilterOpen(true)}
-                            className="flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] spatial-input font-black text-lg sm:text-xl text-slate-800 dark:text-white hover:border-primary/40 transition-all border-2 active:scale-95 shadow-sm">
-                            <SlidersHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
-                            <span>الفلترة</span>
-                            {hasFilter && (
-                                <span className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
-                            )}
-                        </button>
+                    <div className="flex items-center gap-3">
                         <button onClick={() => setShowCreate(p => !p)}
                             className="spatial-button flex items-center justify-center gap-3 px-7 sm:px-9 h-16 sm:h-20 rounded-[22px] text-lg sm:text-2xl font-black shadow-xl">
                             <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> تسوية جديدة
@@ -224,21 +216,40 @@ export default function SettlementsIndex({ settlements, customers, paymentMethod
                     </SpatialCard>
                 )}
 
-                {/* Tabs Section */}
+                {/* Tabs & Filter Bar Section */}
                 <div className="flex flex-col gap-6">
-                    <div className="flex gap-3">
-                        <button onClick={() => setActiveTab('active')} className={`h-16 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                            <span>التسويات النشطة</span>
-                            <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
-                                {activeSettlements.length}
-                            </span>
-                        </button>
-                        <button onClick={() => setActiveTab('deleted')} className={`h-16 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'deleted' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                            <span>التسويات المحذوفة</span>
-                            <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'deleted' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
-                                {deletedSettlements.length}
-                            </span>
-                        </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setActiveTab('active')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                <span>التسويات النشطة</span>
+                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
+                                    {activeSettlements.length}
+                                </span>
+                            </button>
+                            <button onClick={() => setActiveTab('deleted')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'deleted' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
+                                <span>التسويات المحذوفة</span>
+                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'deleted' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
+                                    {deletedSettlements.length}
+                                </span>
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {hasFilter && (
+                                <button onClick={resetFilter} className="flex items-center gap-2.5 px-6 h-16 sm:h-20 rounded-[22px] font-black text-base sm:text-xl transition-all border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white active:scale-95 shadow-md">
+                                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
+                                    <span>إعادة تعيين</span>
+                                </button>
+                            )}
+                            <button onClick={() => setFilterOpen(true)}
+                                className={`flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl transition-all border-2 active:scale-95 shadow-md ${hasFilter ? 'bg-primary/15 border-primary text-primary shadow-primary/10' : 'spatial-input text-slate-800 dark:text-white hover:border-primary/40'}`}>
+                                <SlidersHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+                                <span>الفلترة</span>
+                                {hasFilter && (
+                                    <span className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                     <SpatialCard title={`سجل التسويات (${displaySettlements.length})`} icon={<RefreshCw className="w-6 h-6 text-primary" />}>
