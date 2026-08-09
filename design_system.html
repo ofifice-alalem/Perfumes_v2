@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دليل وحزمة عناصر التصميم Spatial UI - طيب التاجوري</title>
+  
+  <!-- الخطوط الرسمية للمشروع -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Tajawal', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: 'hsl(217, 100%, 50%)',
+              foreground: '#ffffff',
+              light: 'hsl(217, 100%, 65%)',
+              dark: 'hsl(217, 100%, 40%)',
+            },
+            background: 'hsl(240, 5%, 96%)',
+            foreground: 'hsl(240, 10%, 10%)',
+            card: 'hsl(0, 0%, 100%)',
+            border: 'hsl(240, 6%, 90%)',
+            muted: 'hsl(240, 4%, 90%)',
+            destructive: 'hsl(0, 84%, 60%)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* المتغيرات والأنماط الأساسية المستخرجة من app.css للمشروع */
+    :root {
+      --background: 240 5% 96%;
+      --foreground: 240 10% 10%;
+      --card: 0 0% 100%;
+      --primary: 217 100% 50%;
+      --border: 240 6% 90%;
+      --radius: 1.5rem;
+    }
+
+    .dark {
+      --background: 0 0% 0%;
+      --foreground: 0 0% 98%;
+      --card: 240 5% 18%;
+      --primary: 217 100% 55%;
+      --border: 0 0% 100%;
+    }
+
+    body {
+      direction: rtl;
+      font-family: 'Tajawal', sans-serif;
+      min-height: 100vh;
+      transition: background-color 0.5s ease-in-out;
+    }
+
+    .body-bg-dark {
+      background: radial-gradient(circle at 50% 0%, #32323f 0%, #13131a 100%) !important;
+      background-size: cover !important;
+      background-attachment: fixed !important;
+    }
+
+    .body-bg-light {
+      background: radial-gradient(circle at 50% 0%, #f0f4f8 0%, #d9e2ec 100%) !important;
+      background-size: cover !important;
+      background-attachment: fixed !important;
+    }
+
+    /* Spatial System Containers */
+    .spatial-window {
+      backdrop-filter: blur(80px);
+      -webkit-backdrop-filter: blur(80px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      transition: all 0.5s ease-in-out;
+      background: rgba(255, 255, 255, 0.45);
+    }
+    .dark .spatial-window {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: linear-gradient(145deg, rgba(30, 50, 100, 0.55) 0%, rgba(15, 20, 40, 0.45) 100%);
+    }
+
+    .spatial-card {
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 30px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.85) 0%, rgba(220, 230, 245, 0.60) 100%);
+    }
+    .spatial-card:hover {
+      border-color: rgba(0, 0, 0, 0.15);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.92) 0%, rgba(210, 225, 245, 0.70) 100%);
+    }
+    .dark .spatial-card {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: linear-gradient(145deg, rgba(40, 60, 120, 0.35) 0%, rgba(20, 25, 55, 0.25) 100%);
+    }
+    .dark .spatial-card:hover {
+      border-color: rgba(255, 255, 255, 0.20);
+      background: linear-gradient(145deg, rgba(40, 60, 120, 0.45) 0%, rgba(20, 25, 55, 0.35) 100%);
+    }
+    .spatial-card.transparent {
+      background: transparent !important;
+    }
+
+    /* Spatial Modal Dark Glassmorphism */
+    .spatial-modal-card {
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border-radius: 28px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 244, 250, 0.90) 100%);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+    }
+    .dark .spatial-modal-card {
+      border-color: rgba(255, 255, 255, 0.12);
+      background: linear-gradient(145deg, rgba(40, 60, 120, 0.45) 0%, rgba(20, 25, 55, 0.35) 100%) !important;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .spatial-input {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+      outline: none;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .spatial-input:focus {
+      border-color: rgba(59, 130, 246, 0.5);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .dark .spatial-input {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: linear-gradient(135deg, rgba(40, 60, 120, 0.30) 0%, rgba(20, 25, 55, 0.20) 100%);
+      color: #ffffff;
+    }
+    .dark .spatial-input:hover {
+      background: linear-gradient(135deg, rgba(40, 60, 120, 0.40) 0%, rgba(20, 25, 55, 0.28) 100%);
+    }
+    .dark .spatial-input:focus {
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+      background: linear-gradient(135deg, rgba(40, 60, 120, 0.45) 0%, rgba(20, 25, 55, 0.32) 100%);
+    }
+
+    .spatial-button {
+      background-color: hsl(217, 100%, 50%);
+      color: #ffffff;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+      font-weight: 700;
+    }
+    .spatial-button:hover {
+      background-color: #3b82f6;
+      transform: translateY(-1px);
+    }
+
+    .spatial-icon-btn {
+      width: 3rem;
+      height: 3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.05);
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      color: #475569;
+    }
+    .spatial-icon-btn:hover {
+      background: rgba(0, 0, 0, 0.1);
+      color: #0f172a;
+    }
+    .dark .spatial-icon-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .dark .spatial-icon-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+
+    /* Date indicator styling */
+    input[type="date"] {
+      color-scheme: light;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .dark input[type="date"] {
+      color-scheme: dark;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      opacity: 0.5;
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 2px;
+    }
+    .dark input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.6;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: hsl(217, 100%, 50%); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: hsl(217, 100%, 40%); }
+
+    .custom-scroll::-webkit-scrollbar { width: 5px; }
+    .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: hsl(217, 100%, 50%); border-radius: 9999px; }
+
+    /* Keyframe Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-spatial-in {
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="body-bg-dark text-slate-800 dark:text-white transition-colors duration-500 min-h-screen flex flex-col relative">
+
+  <!-- Top Header / Bar -->
+  <header class="sticky top-0 z-40 backdrop-blur-2xl bg-white/70 dark:bg-[#13131a]/70 border-b border-black/10 dark:border-white/10 px-6 py-4 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-4">
+      <button id="sidebarToggleBtn" onclick="toggleSidebar()" class="spatial-icon-btn" title="تبديل القائمة الجانبية">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+        <h1 class="text-xl font-black text-slate-900 dark:text-white tracking-wide">نظام تصميم Spatial UI <span class="text-xs px-2.5 py-1 rounded-full bg-primary/20 text-primary font-bold mr-2">v2.0</span></h1>
+      </div>
+    </div>
+
+    <!-- Controls & Actions -->
+    <div class="flex items-center gap-3">
+      <!-- Dark/Light Theme Switcher -->
+      <button onclick="toggleTheme()" class="spatial-icon-btn group relative" title="تبديل الوضع الليلي / النهاري">
+        <svg id="sunIcon" class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        <svg id="moonIcon" class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      </button>
+
+      <!-- Quick Action Button -->
+      <button onclick="scrollToSection('modalsSection')" class="px-5 h-11 rounded-[16px] bg-primary text-white font-bold text-sm shadow-md hover:bg-blue-600 transition-all flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+        تجربة النوافذ المنبثقة
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Layout Wrapper (Sidebar + Content) -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Sidebar Component Showcase -->
+    <aside id="mainSidebar" class="w-64 border-l border-black/10 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl flex flex-col py-6 px-4 transition-all duration-300 shrink-0 z-30">
+      <div class="flex items-center gap-3 px-3 mb-6">
+        <div class="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center text-white font-black text-lg shadow-lg">ط</div>
+        <div class="flex flex-col sidebar-text">
+          <span class="font-black text-sm text-slate-800 dark:text-white">طيب التاجوري</span>
+          <span class="text-xs text-slate-500 dark:text-white/50">نظام إدارة المبيعات</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 flex flex-col gap-1.5 custom-scroll overflow-y-auto">
+        <div class="text-[11px] font-black text-slate-400 dark:text-white/40 uppercase tracking-widest px-3 my-2 sidebar-text">أقسام التصميم</div>
+        
+        <a href="#colorsSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] bg-primary text-white font-bold text-sm shadow-md transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          <span class="sidebar-text">نظام الألوان والخطوط</span>
+        </a>
+
+        <a href="#containersSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span class="sidebar-text">الحاويات وتقسيم الواجهات</span>
+        </a>
+
+        <a href="#inputsSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          <span class="sidebar-text">حقول الإدخال والأزرار</span>
+        </a>
+
+        <a href="#dropdownsSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          <span class="sidebar-text">القوائم المنسدلة الاختيارية</span>
+        </a>
+
+        <a href="#modalsSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+          <span class="sidebar-text">النوافذ المنبثقة (Modals)</span>
+        </a>
+
+        <a href="#tablesSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="sidebar-text">الجداول والجداول التفاعلية</span>
+        </a>
+
+        <a href="#tabsSection" class="flex items-center gap-3 px-3.5 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 font-bold text-sm transition-all">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"/></svg>
+          <span class="sidebar-text">علامات التبويب (Tabs)</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Canvas Area -->
+    <main class="flex-1 overflow-y-auto p-6 lg:p-10 space-y-12 custom-scroll">
+
+      <!-- Intro Banner Card -->
+      <section class="spatial-card p-8 relative overflow-hidden">
+        <div class="absolute -left-10 -bottom-10 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+          <div class="space-y-3 max-w-2xl">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary font-bold text-xs">
+              <span class="w-2 h-2 rounded-full bg-primary"></span> Spatial Design Framework
+            </div>
+            <h2 class="text-3xl font-black text-slate-900 dark:text-white leading-tight">مكتبة العناصر والواجهات الشاملة (Design System Showcase)</h2>
+            <p class="text-slate-600 dark:text-white/70 font-medium text-base leading-relaxed">
+              هذه الصفحة تحتوي على كود وتوثيق وتجربة تفاعلية حية لجميع مكونات الواجهة الخاصة بالمشروع (حاويات، زجاجيات، قوائم منسدلة، حقول بحث، نوافذ منبثقة، جداول، وتقسيم شاشات).
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="toggleTheme()" class="px-5 py-3 rounded-[18px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-800 dark:text-white font-bold text-sm transition-all border border-black/10 dark:border-white/15 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+              تغيير الثيم الحي
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 1: Colors & Design Tokens -->
+      <section id="colorsSection" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">1. ثوابت الألوان والخطوط (Tokens & Typography System)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">منظومة الألوان الفضائية المعتمدة مع تجربة حية لقياس ونمط الخطوط العربية</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">Design Tokens v2.0</span>
+        </div>
+
+        <!-- Color Cards Palette Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <!-- Primary Blue Token -->
+          <div class="spatial-card p-5 space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="h-24 rounded-[22px] bg-primary flex flex-col items-center justify-center text-white shadow-lg relative group">
+              <span class="font-black text-base">Primary Accent</span>
+              <span class="text-xs font-mono opacity-80">hsl(217, 100%, 50%)</span>
+              <button onclick="copyToClipboard('#0066FF', 'تم نسخ كود اللون الرئيسي!')" class="absolute inset-0 bg-black/40 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity rounded-[22px] font-bold text-xs flex items-center justify-center gap-1.5 text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                نسخ HEX #0066FF
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-xs font-bold">
+              <span class="text-slate-700 dark:text-white/80">اللون الأزرق الفيصل</span>
+              <span class="font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-primary font-black">#0066FF</span>
+            </div>
+          </div>
+
+          <!-- Dark Spatial Canvas Token -->
+          <div class="spatial-card p-5 space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="h-24 rounded-[22px] bg-gradient-to-r from-[#1e2436] to-[#13131a] border border-white/15 flex flex-col items-center justify-center text-white shadow-lg relative group">
+              <span class="font-black text-base">Dark Canvas</span>
+              <span class="text-xs font-mono opacity-70">Spatial Radial Dark</span>
+              <button onclick="copyToClipboard('#13131a', 'تم نسخ كود خلفية الثيم الداكن!')" class="absolute inset-0 bg-black/40 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity rounded-[22px] font-bold text-xs flex items-center justify-center gap-1.5 text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                نسخ HEX #13131A
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-xs font-bold">
+              <span class="text-slate-700 dark:text-white/80">خلفية النظام الداكن</span>
+              <span class="font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-slate-400">#13131A</span>
+            </div>
+          </div>
+
+          <!-- Success Emerald Token -->
+          <div class="spatial-card p-5 space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="h-24 rounded-[22px] bg-emerald-500/20 border border-emerald-500/30 flex flex-col items-center justify-center text-emerald-500 shadow-lg relative group">
+              <span class="font-black text-base">Emerald Success</span>
+              <span class="text-xs font-mono opacity-80">Success Badges & Paid</span>
+              <button onclick="copyToClipboard('#10B981', 'تم نسخ كود لون النجاح!')" class="absolute inset-0 bg-black/40 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity rounded-[22px] font-bold text-xs flex items-center justify-center gap-1.5 text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                نسخ HEX #10B981
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-xs font-bold">
+              <span class="text-slate-700 dark:text-white/80">ألوان الإتمام والنجاح</span>
+              <span class="font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-emerald-500 font-black">#10B981</span>
+            </div>
+          </div>
+
+          <!-- Amber Warning Token -->
+          <div class="spatial-card p-5 space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="h-24 rounded-[22px] bg-amber-500/20 border border-amber-500/30 flex flex-col items-center justify-center text-amber-500 shadow-lg relative group">
+              <span class="font-black text-base">Amber Alert</span>
+              <span class="text-xs font-mono opacity-80">Warnings & Partials</span>
+              <button onclick="copyToClipboard('#F59E0B', 'تم نسخ كود لون التحذير!')" class="absolute inset-0 bg-black/40 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity rounded-[22px] font-bold text-xs flex items-center justify-center gap-1.5 text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                نسخ HEX #F59E0B
+              </button>
+            </div>
+            <div class="flex justify-between items-center text-xs font-bold">
+              <span class="text-slate-700 dark:text-white/80">ألوان التنبيه والتحذير</span>
+              <span class="font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-amber-500 font-black">#F59E0B</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Interactive Typography Tester Box -->
+        <div class="spatial-window rounded-[32px] p-6 lg:p-8 space-y-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-black/10 dark:border-white/10 pb-4">
+            <div>
+              <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-primary"></span> مختبر تجربة وحجم الخطوط العربية الحي (Interactive Font Tester)
+              </h3>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">حرك المؤشر أو اكتب النص للتحقق من التناسق والتوازن البصري</p>
+            </div>
+
+            <!-- Controls: Slider for Font Size -->
+            <div class="flex items-center gap-4 bg-black/5 dark:bg-white/5 p-2 rounded-2xl border border-black/5 dark:border-white/10">
+              <span class="text-xs font-bold text-slate-500 dark:text-white/60">حجم الخط:</span>
+              <input type="range" id="fontSlider" min="14" max="36" value="22" oninput="updateFontPreview()" class="w-32 accent-primary cursor-pointer">
+              <span id="fontSizeDisplay" class="text-xs font-mono font-black px-2.5 py-1 rounded-lg bg-primary text-white">22px</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Text Preview Area -->
+          <div class="space-y-4">
+            <input type="text" id="fontTextInput" value="نظام إدارة المبيعات الفضائي Spatial UI v2.0 - محلات طيب التاجوري" oninput="updateFontPreview()" class="spatial-input h-12 rounded-[16px] px-4 text-xs font-bold w-full" placeholder="اكتب نصاً لتجربته حياً...">
+            
+            <div class="p-6 rounded-[24px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 transition-all">
+              <p id="fontLivePreview" class="font-black text-slate-900 dark:text-white leading-relaxed transition-all" style="font-size: 22px;">
+                نظام إدارة المبيعات الفضائي Spatial UI v2.0 - محلات طيب التاجوري
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: Layout Containers & Split Grids Showcase -->
+      <section id="containersSection" class="space-y-8">
+        <!-- Section Header with Filter Pills -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">2. الحاويات وتقسيم الواجهات (Layout Containers & Grids)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">نماذج البطاقات الزجاجية، شبكات الإحصائيات (KPI Cards)، وتقسيم الشاشات التفاعلي (60% / 40%)</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5 p-1.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-xs font-bold shrink-0">
+            <button onclick="filterContainerView('all')" id="btn-cnt-all" class="px-4 py-2 rounded-xl bg-primary text-white font-bold transition-all shadow-sm">عرض كافة الحاويات</button>
+            <button onclick="filterContainerView('kpi')" id="btn-cnt-kpi" class="px-4 py-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all">شبكة KPI</button>
+            <button onclick="filterContainerView('split')" id="btn-cnt-split" class="px-4 py-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all">تقسيم الشاشة 60/40</button>
+          </div>
+        </div>
+
+        <!-- PART A: KPI Metric Cards Grid (4 Columns) -->
+        <div id="cntGroupKpi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-spatial-in">
+          
+          <!-- KPI 1: Sales -->
+          <div class="spatial-card p-6 flex flex-col justify-between space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-primary/15 rounded-full blur-2xl group-hover:bg-primary/25 transition-all pointer-events-none"></div>
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-[18px] bg-primary/15 border border-primary/25 flex items-center justify-center text-primary font-bold shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                +24.5% ↗
+              </span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider block mb-1">إجمالي مبيعات الشهر</span>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">148,920.00 <span class="text-xs font-normal text-slate-400">د.ل</span></h3>
+            </div>
+            <!-- Mini Sparkline visual bar graph -->
+            <div class="flex items-end gap-1.5 h-6 pt-2 border-t border-black/5 dark:border-white/5">
+              <div class="w-full h-3 bg-primary/20 rounded-full"></div>
+              <div class="w-full h-5 bg-primary/40 rounded-full"></div>
+              <div class="w-full h-4 bg-primary/30 rounded-full"></div>
+              <div class="w-full h-6 bg-primary rounded-full"></div>
+              <div class="w-full h-4 bg-primary/50 rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- KPI 2: Total Invoices -->
+          <div class="spatial-card p-6 flex flex-col justify-between space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/15 rounded-full blur-2xl group-hover:bg-emerald-500/25 transition-all pointer-events-none"></div>
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-[18px] bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-500 font-bold shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                +12.8% ↗
+              </span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider block mb-1">عدد الفواتير الصادرة</span>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">1,284 <span class="text-xs font-normal text-slate-400">فاتورة</span></h3>
+            </div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-white/50 pt-2 border-t border-black/5 dark:border-white/5">
+              <span>معدل الإقفال اليومي</span>
+              <span class="text-emerald-500 font-mono">42 / يوم</span>
+            </div>
+          </div>
+
+          <!-- KPI 3: Average Basket -->
+          <div class="spatial-card p-6 flex flex-col justify-between space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-amber-500/15 rounded-full blur-2xl group-hover:bg-amber-500/25 transition-all pointer-events-none"></div>
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-[18px] bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-500 font-bold shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+              </div>
+              <span class="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-slate-500/15 text-slate-600 dark:text-white/70 border border-slate-500/20">
+                مستقر 0.0%
+              </span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider block mb-1">متوسط سلة القيمة</span>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">315.50 <span class="text-xs font-normal text-slate-400">د.ل</span></h3>
+            </div>
+            <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-white/50 pt-2 border-t border-black/5 dark:border-white/5">
+              <span>الهدف المستهدف</span>
+              <span class="text-amber-500 font-mono">350.00 د.ل</span>
+            </div>
+          </div>
+
+          <!-- KPI 4: Active Clients Stack -->
+          <div class="spatial-card p-6 flex flex-col justify-between space-y-4 hover:-translate-y-1 transition-all duration-300 relative group overflow-hidden">
+            <div class="absolute -right-6 -top-6 w-24 h-24 bg-purple-500/15 rounded-full blur-2xl group-hover:bg-purple-500/25 transition-all pointer-events-none"></div>
+            <div class="flex items-center justify-between">
+              <div class="w-12 h-12 rounded-[18px] bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 font-bold shadow-sm">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+              </div>
+              <span class="inline-flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-full bg-purple-500/15 text-purple-400 border border-purple-500/20">
+                <span class="w-2 h-2 rounded-full bg-purple-400 animate-ping"></span> نشط الآن
+              </span>
+            </div>
+            <div>
+              <span class="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-wider block mb-1">العملاء الدائمون</span>
+              <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">492 <span class="text-xs font-normal text-slate-400">عميل</span></h3>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+              <div class="flex -space-x-2 space-x-reverse">
+                <div class="w-7 h-7 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-800">ط</div>
+                <div class="w-7 h-7 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-800">م</div>
+                <div class="w-7 h-7 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-800">ع</div>
+                <div class="w-7 h-7 rounded-full bg-purple-500 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-slate-800">+48</div>
+              </div>
+              <span class="text-xs font-bold text-slate-500 dark:text-white/50">تحديث فوري</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PART B: Interactive 60% / 40% Split Screen Layout Container -->
+        <div id="cntGroupSplit" class="spatial-window rounded-[36px] p-6 lg:p-8 space-y-6 shadow-2xl relative overflow-hidden animate-spatial-in">
+          
+          <!-- Top Split Bar Header -->
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-black/10 dark:border-white/10 pb-5">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-[14px] bg-primary/15 border border-primary/20 flex items-center justify-center text-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
+              </div>
+              <div>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  واجهة نقاط البيع التفاعلية <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">شاشة قابلة للتقسيم 60% / 40%</span>
+                </h3>
+                <p class="text-xs font-bold text-slate-500 dark:text-white/50">تفاعل حي مع زيادة وتقليل الكميات واحتساب الخصوم وتحديث زر الدفع تلقائياً</p>
+              </div>
+            </div>
+
+            <!-- Header Quick Search & Badges -->
+            <div class="flex items-center gap-3">
+              <div class="relative hidden sm:block">
+                <input type="text" placeholder="بحث بسلة العناصر..." class="spatial-input h-10 rounded-[14px] pr-9 pl-3 text-xs font-bold w-48">
+                <svg class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              </div>
+              <span class="text-xs font-mono font-bold px-3 py-2 rounded-xl bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white border border-black/5 dark:border-white/10">Terminal #01</span>
+            </div>
+          </div>
+
+          <!-- Main Grid Split 60% / 40% (7 cols / 5 cols) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- LEFT CONTAINER: 60% Width (7 Columns) -> Items List & Cart Table -->
+            <div class="lg:col-span-7 spatial-card p-6 flex flex-col justify-between space-y-6">
+              
+              <div class="space-y-4">
+                <!-- Cart Header -->
+                <div class="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-primary animate-ping"></span>
+                    <h4 class="font-black text-base text-slate-800 dark:text-white">عناصر الفاتورة الحالية</h4>
+                  </div>
+                  <span id="posCartItemCount" class="text-xs font-black px-3 py-1 rounded-full bg-primary/10 text-primary">3 أصناف مختارة</span>
+                </div>
+
+                <!-- Interactive Item Cards Stack -->
+                <div id="posCartItemsList" class="space-y-3 custom-scroll max-h-96 overflow-y-auto pl-1">
+                  
+                  <!-- Item 1 Card -->
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 gap-4 hover:border-primary/30 transition-all">
+                    <div class="flex items-center gap-3">
+                      <div class="w-11 h-11 rounded-[16px] bg-primary/20 text-primary font-black text-sm flex items-center justify-center shrink-0">1</div>
+                      <div>
+                        <div class="font-black text-sm text-slate-800 dark:text-white">عطر كوكو شانيل فاخر 100مل</div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-white/50 flex items-center gap-2 mt-0.5">
+                          <span class="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-500 text-[10px]">نسائي</span>
+                          <span>السعر الفردي: 250.00 د.ل</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Quantity Control Buttons -->
+                    <div class="flex items-center justify-between sm:justify-end gap-4">
+                      <div class="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 p-1 rounded-xl border border-black/5 dark:border-white/10">
+                        <button onclick="changePosItemQty(0, -1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">-</button>
+                        <span id="qty-item-0" class="w-7 text-center font-black text-sm font-mono text-slate-800 dark:text-white">2</span>
+                        <button onclick="changePosItemQty(0, 1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-primary hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">+</button>
+                      </div>
+                      <span id="subtotal-item-0" class="font-black text-sm font-mono text-slate-900 dark:text-white shrink-0 min-w-[80px] text-left">500.00 د.ل</span>
+                      <button onclick="removePosItem(0)" class="text-slate-400 hover:text-red-500 transition-colors p-1" title="حذف الصنف"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>
+                  </div>
+
+                  <!-- Item 2 Card -->
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 gap-4 hover:border-primary/30 transition-all">
+                    <div class="flex items-center gap-3">
+                      <div class="w-11 h-11 rounded-[16px] bg-primary/20 text-primary font-black text-sm flex items-center justify-center shrink-0">2</div>
+                      <div>
+                        <div class="font-black text-sm text-slate-800 dark:text-white">عطر ديور سوافي أوريجينال 50مل</div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-white/50 flex items-center gap-2 mt-0.5">
+                          <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 text-[10px]">رجالي</span>
+                          <span>السعر الفردي: 320.00 د.ل</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center justify-between sm:justify-end gap-4">
+                      <div class="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 p-1 rounded-xl border border-black/5 dark:border-white/10">
+                        <button onclick="changePosItemQty(1, -1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">-</button>
+                        <span id="qty-item-1" class="w-7 text-center font-black text-sm font-mono text-slate-800 dark:text-white">1</span>
+                        <button onclick="changePosItemQty(1, 1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-primary hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">+</button>
+                      </div>
+                      <span id="subtotal-item-1" class="font-black text-sm font-mono text-slate-900 dark:text-white shrink-0 min-w-[80px] text-left">320.00 د.ل</span>
+                      <button onclick="removePosItem(1)" class="text-slate-400 hover:text-red-500 transition-colors p-1" title="حذف الصنف"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>
+                  </div>
+
+                  <!-- Item 3 Card -->
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 gap-4 hover:border-primary/30 transition-all">
+                    <div class="flex items-center gap-3">
+                      <div class="w-11 h-11 rounded-[16px] bg-primary/20 text-primary font-black text-sm flex items-center justify-center shrink-0">3</div>
+                      <div>
+                        <div class="font-black text-sm text-slate-800 dark:text-white">زيت عود صندل كمبودي خام</div>
+                        <div class="text-xs font-bold text-slate-500 dark:text-white/50 flex items-center gap-2 mt-0.5">
+                          <span class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 text-[10px]">زيوت عطرية</span>
+                          <span>السعر الفردي: 180.00 د.ل</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center justify-between sm:justify-end gap-4">
+                      <div class="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 p-1 rounded-xl border border-black/5 dark:border-white/10">
+                        <button onclick="changePosItemQty(2, -1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">-</button>
+                        <span id="qty-item-2" class="w-7 text-center font-black text-sm font-mono text-slate-800 dark:text-white">3</span>
+                        <button onclick="changePosItemQty(2, 1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-primary hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">+</button>
+                      </div>
+                      <span id="subtotal-item-2" class="font-black text-sm font-mono text-slate-900 dark:text-white shrink-0 min-w-[80px] text-left">540.00 د.ل</span>
+                      <button onclick="removePosItem(2)" class="text-slate-400 hover:text-red-500 transition-colors p-1" title="حذف الصنف"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- Cart Bottom Actions -->
+              <div class="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5 gap-3 flex-wrap">
+                <button class="px-4 py-2.5 rounded-[14px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-700 dark:text-white font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                  إضافة عنصر سريع
+                </button>
+                <button onclick="resetPosCart()" class="px-4 py-2.5 rounded-[14px] text-red-500 hover:bg-red-500/10 font-bold text-xs flex items-center gap-1.5 transition-all">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  إعادة ضبط السلة
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT CONTAINER: 40% Width (5 Columns) -> Summary & Checkout -->
+            <div class="lg:col-span-5 spatial-card p-6 flex flex-col justify-between space-y-6">
+              
+              <div class="space-y-5">
+                <!-- Customer info badge -->
+                <div class="p-3.5 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-primary text-white font-black text-xs flex items-center justify-center">ع</div>
+                    <div>
+                      <div class="font-bold text-xs text-slate-800 dark:text-white">العميل: شركة الأفق المحدودة</div>
+                      <div class="text-[10px] text-slate-400">كود العميل: #CUST-8820</div>
+                    </div>
+                  </div>
+                  <button class="text-xs font-bold text-primary hover:underline">تغيير</button>
+                </div>
+
+                <!-- Interactive Discount Selector Pills -->
+                <div class="space-y-2">
+                  <label class="text-[11px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider block">تطبيق نسبة الخصم</label>
+                  <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setPosDiscountPercent(0)" id="disc-btn-0" class="disc-btn py-2 rounded-xl text-xs font-bold bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white border border-transparent transition-all">0%</button>
+                    <button onclick="setPosDiscountPercent(5)" id="disc-btn-5" class="disc-btn py-2 rounded-xl text-xs font-bold bg-primary text-white border border-primary transition-all shadow-sm">5%</button>
+                    <button onclick="setPosDiscountPercent(10)" id="disc-btn-10" class="disc-btn py-2 rounded-xl text-xs font-bold bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white border border-transparent transition-all">10%</button>
+                    <button onclick="setPosDiscountPercent(15)" id="disc-btn-15" class="disc-btn py-2 rounded-xl text-xs font-bold bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white border border-transparent transition-all">15%</button>
+                  </div>
+                </div>
+
+                <!-- Payment Method Toggle Buttons -->
+                <div class="space-y-2">
+                  <label class="text-[11px] font-bold text-slate-500 dark:text-white/60 uppercase tracking-wider block">طريقة الدفع المحددة</label>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button onclick="selectPaymentMethod(this)" class="pay-method-btn p-3 rounded-xl bg-primary/10 border-2 border-primary text-primary font-bold text-xs flex flex-col items-center gap-1 transition-all">
+                      <span>💵 نقداً</span>
+                    </button>
+                    <button onclick="selectPaymentMethod(this)" class="pay-method-btn p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-bold text-xs flex flex-col items-center gap-1 transition-all">
+                      <span>💳 بطاقة</span>
+                    </button>
+                    <button onclick="selectPaymentMethod(this)" class="pay-method-btn p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-bold text-xs flex flex-col items-center gap-1 transition-all">
+                      <span>📱 تحويل</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Financial Breakdown -->
+                <div class="space-y-2.5 pt-3 border-t border-black/10 dark:border-white/10 text-sm font-bold">
+                  <div class="flex justify-between text-slate-600 dark:text-white/70">
+                    <span>المجموع الفرعي:</span>
+                    <span id="posSubtotal" class="font-mono text-slate-800 dark:text-white">1,360.00 د.ل</span>
+                  </div>
+                  <div class="flex justify-between text-emerald-500">
+                    <span>الخصم المطبق (<span id="posDiscDisplay">5</span>%):</span>
+                    <span id="posDiscountVal" class="font-mono">- 68.00 د.ل</span>
+                  </div>
+                  <div class="flex justify-between text-slate-400 text-xs">
+                    <span>الضريبة المضافة (0%):</span>
+                    <span class="font-mono">0.00 د.ل</span>
+                  </div>
+                  <div class="h-px bg-black/10 dark:bg-white/10 my-2"></div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-base font-black text-slate-900 dark:text-white">الصافي النهائي:</span>
+                    <span id="posNetTotal" class="text-2xl font-black text-primary font-mono">1,292.00 د.ل</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Main Checkout Button -->
+              <button onclick="triggerPosModalWithCalculatedAmount()" class="w-full h-15 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-base transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-3 group">
+                <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                <span id="posCheckoutBtnText">دفع الفاتورة والطباعة (1,292.00 د.ل)</span>
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- SECTION 3: Form Inputs & Buttons -->
+      <section id="inputsSection" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">3. حقول الإدخال والأزرار التفاعلية (Inputs & Interactive Buttons)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">حقول إدخال ذكية تدعم إظهار/إخفاء كلمة المرور، العداد الحي، وحالات التحميل التفاعلية للأزرار</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">Interactive Forms</span>
+        </div>
+
+        <div class="spatial-card p-6 lg:p-8 space-y-8">
+
+          <!-- Inputs Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Standard Modern Input with Live Character Counter -->
+            <div class="flex flex-col gap-2">
+              <div class="flex justify-between items-center">
+                <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">اسم المنتج / العطر (مع عداد حي)</label>
+                <span id="inputCharCounter" class="text-[11px] font-mono font-bold text-primary">20 / 40 حرفاً</span>
+              </div>
+              <input type="text" id="interactiveTitleInput" oninput="updateCharCounter(this)" placeholder="أدخل اسم المنتج..." class="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold w-full" value="عطر ديور سوافي أوريجينال" />
+            </div>
+
+            <!-- Password Input with Toggle Eye Icon -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">كلمة مرور الحساب / PIN</label>
+              <div class="relative">
+                <input type="password" id="demoPasswordInput" placeholder="أدخل كلمة المرور..." class="spatial-input h-14 rounded-[20px] pr-5 pl-12 text-[15px] font-bold w-full" value="spatial2026secret" />
+                <button onclick="togglePasswordVisibility()" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-white/40 hover:text-primary transition-colors p-1" title="إظهار / إخفاء كلمة المرور">
+                  <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search Input with Clear Button -->
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest">البحث السريع المضيء</label>
+              <div class="relative">
+                <input type="text" id="demoSearchInput" placeholder="بحث بالرمز أو الأرقام..." class="spatial-input h-14 rounded-[20px] pr-12 pl-10 text-[15px] font-bold w-full" value="INV-9904" />
+                <svg class="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <button onclick="document.getElementById('demoSearchInput').value=''" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors p-1" title="مسح النص"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Validation States (Success, Warning, Error) -->
+          <div class="space-y-3 pt-4 border-t border-black/10 dark:border-white/10">
+            <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest block">حالات التدقيق والاعتماد (Validation States)</label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              <!-- Valid Input -->
+              <div class="relative">
+                <input type="text" value="تم التحقق من الرمز بنجاح" readonly class="w-full h-12 rounded-[16px] px-4 pr-10 bg-emerald-500/10 border border-emerald-500/40 text-emerald-600 dark:text-emerald-400 text-xs font-bold outline-none">
+                <svg class="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+
+              <!-- Warning Input -->
+              <div class="relative">
+                <input type="text" value="مخزون الصنف منخفض جداً" readonly class="w-full h-12 rounded-[16px] px-4 pr-10 bg-amber-500/10 border border-amber-500/40 text-amber-600 dark:text-amber-400 text-xs font-bold outline-none">
+                <svg class="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+
+              <!-- Error Input -->
+              <div class="relative">
+                <input type="text" value="الرصيد غير كافٍ لإتمام العملية" readonly class="w-full h-12 rounded-[16px] px-4 pr-10 bg-red-500/10 border border-red-500/40 text-red-600 dark:text-red-400 text-xs font-bold outline-none">
+                <svg class="w-5 h-5 absolute right-3 top-1/2 -translate-y-1/2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Interactive Button Micro-Animations Showcase -->
+          <div class="space-y-4 pt-4 border-t border-black/10 dark:border-white/10">
+            <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest block">الأزرار التفاعلية ومحاكاة التحميل (Interactive Action Buttons)</label>
+            <div class="flex flex-wrap items-center gap-4">
+              
+              <!-- Primary Interactive Button with Loading Spinner Simulation -->
+              <button onclick="simulateBtnLoading(this)" class="spatial-button h-14 px-8 text-base flex items-center justify-center gap-2 group">
+                <svg class="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                <span class="btn-text">حفظ التغييرات (تجربة التحميل)</span>
+              </button>
+              
+              <button onclick="openModal('confirmModal')" class="h-14 px-8 rounded-[20px] bg-black/6 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-slate-700 dark:text-white font-bold text-base transition-all border border-black/10 dark:border-white/15 flex items-center gap-2">
+                <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                معاينة ثانوية
+              </button>
+
+              <button onclick="openModal('deleteModal')" class="h-14 px-8 rounded-[20px] bg-destructive hover:bg-red-600 text-white font-bold text-base transition-all shadow-md flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                إلغاء وحذف
+              </button>
+
+              <button onclick="toggleSidebar()" class="spatial-icon-btn w-14 h-14" title="تبديل القائمة الجانبية">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: Interactive Dropdowns (Single Select & Multi Select - Matched Pixel Perfect to SpatialComponents.tsx) -->
+      <section id="dropdownsSection" class="space-y-6">
+        <div class="flex items-center gap-3">
+          <span class="w-3 h-8 rounded-full bg-primary"></span>
+          <h2 class="text-2xl font-black text-slate-900 dark:text-white">4. القوائم المنسدلة الذكية (Modern Dropdowns & Multi-Select)</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+          <!-- Single Select Dropdown Component -->
+          <div class="spatial-card p-6 space-y-4">
+            <h3 class="font-bold text-base text-slate-800 dark:text-white">قائمة منسدلة أحادية (Modern Single Select)</h3>
+            <p class="text-xs text-slate-500 dark:text-white/50">تطابق تام لمكون ModernSelect مع عائم z-index عالي وتحسين التفاعل.</p>
+            
+            <div class="flex flex-col gap-2 relative">
+              <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest block">اختر الفئة / التصنيف</label>
+              
+              <div id="singleSelectTrigger" onclick="openDropdown('singleSelectTrigger', 'singleSelectMenu')" class="spatial-input h-14 rounded-[20px] px-5 text-[15px] font-bold w-full flex items-center justify-between cursor-pointer select-none">
+                <span id="singleSelectValue" class="text-slate-800 dark:text-white">عطور نسائية فاخرة</span>
+                <div id="singleSelectArrow" class="text-slate-400 dark:text-white/50 transition-transform duration-300">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
+
+              <!-- Floating Dropdown Menu (Z-Index Fixed Portal floating over all UI) -->
+              <div id="singleSelectMenu" class="dropdown-portal hidden fixed z-[99999] spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] animate-spatial-in">
+                <div class="p-3 border-b border-black/5 dark:border-white/5">
+                  <div class="relative">
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="singleSelectSearch" onkeyup="filterDropdownOptions('singleSelectSearch', 'singleSelectOptions')" placeholder="بحث سريع..." class="w-full rounded-[14px] pr-11 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-11 text-[14px]">
+                  </div>
+                </div>
+                <ul id="singleSelectOptions" class="overflow-y-auto p-2 max-h-52 custom-scroll">
+                  <li>
+                    <div onclick="selectSingleOption(this, 'عطور رجالية')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white">
+                      <div class="flex items-center gap-3">
+                        <span class="opt-radio shrink-0 rounded-full border-2 border-slate-300 dark:border-white/20 w-4 h-4 flex items-center justify-center transition-all"></span>
+                        <span>عطور رجالية</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white">120 منتج</span>
+                    </div>
+                  </li>
+                  <div class="h-px bg-black/5 dark:bg-white/5 my-1 mx-2"></div>
+                  <li>
+                    <div onclick="selectSingleOption(this, 'عطور نسائية فاخرة')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] bg-primary text-white">
+                      <div class="flex items-center gap-3">
+                        <span class="opt-radio shrink-0 rounded-full border-2 border-white bg-white/30 w-4 h-4 flex items-center justify-center transition-all">
+                          <svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <span>عطور نسائية فاخرة</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-white/25 text-white">95 منتج</span>
+                    </div>
+                  </li>
+                  <div class="h-px bg-black/5 dark:bg-white/5 my-1 mx-2"></div>
+                  <li>
+                    <div onclick="selectSingleOption(this, 'معطرات جو وبخاخات')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white">
+                      <div class="flex items-center gap-3">
+                        <span class="opt-radio shrink-0 rounded-full border-2 border-slate-300 dark:border-white/20 w-4 h-4 flex items-center justify-center transition-all"></span>
+                        <span>معطرات جو وبخاخات</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white">40 منتج</span>
+                    </div>
+                  </li>
+                  <div class="h-px bg-black/5 dark:bg-white/5 my-1 mx-2"></div>
+                  <li>
+                    <div onclick="selectSingleOption(this, 'زيوت خام عطرية')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white">
+                      <div class="flex items-center gap-3">
+                        <span class="opt-radio shrink-0 rounded-full border-2 border-slate-300 dark:border-white/20 w-4 h-4 flex items-center justify-center transition-all"></span>
+                        <span>زيوت خام عطرية</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white">30 منتج</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi Select Dropdown Component -->
+          <div class="spatial-card p-6 space-y-4">
+            <h3 class="font-bold text-base text-slate-800 dark:text-white">قائمة منسدلة متعددة الخيارات (Multi-Select Tags)</h3>
+            <p class="text-xs text-slate-500 dark:text-white/50">تطابق تام لمكون ModernMultiSelect مع وسوم تفاعلية وz-index عالي.</p>
+            
+            <div class="flex flex-col gap-2 relative">
+              <label class="text-xs font-bold text-slate-700 dark:text-white/75 uppercase tracking-widest block">تحديد طرق الدفع المتاحة</label>
+              
+              <div id="multiSelectTrigger" onclick="openDropdown('multiSelectTrigger', 'multiSelectMenu')" class="spatial-input min-h-[56px] rounded-[20px] px-4 py-2 flex items-center justify-between cursor-pointer select-none">
+                <div id="multiSelectTags" class="flex flex-wrap gap-2 flex-1">
+                  <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                    نقداً (كاش)
+                    <button onclick="event.stopPropagation(); removeMultiTag('نقداً (كاش)')" class="hover:bg-primary/20 rounded-full p-0.5 transition-colors"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  </span>
+                  <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                    بطاقة تداول / سداد
+                    <button onclick="event.stopPropagation(); removeMultiTag('بطاقة تداول / سداد')" class="hover:bg-primary/20 rounded-full p-0.5 transition-colors"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  </span>
+                </div>
+                <div id="multiSelectArrow" class="text-slate-400 dark:text-white/50 transition-transform duration-300 ml-1">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
+
+              <!-- Floating Multi Dropdown Menu -->
+              <div id="multiSelectMenu" class="dropdown-portal hidden fixed z-[99999] spatial-card rounded-[24px] overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] animate-spatial-in">
+                <div class="p-3 border-b border-black/5 dark:border-white/5">
+                  <div class="relative">
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="multiSelectSearch" onkeyup="filterDropdownOptions('multiSelectSearch', 'multiSelectOptions')" placeholder="بحث سريع..." class="w-full rounded-[14px] pr-11 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-11 text-[14px]">
+                  </div>
+                </div>
+                <ul id="multiSelectOptions" class="overflow-y-auto p-2 max-h-52 custom-scroll">
+                  <li>
+                    <div data-value="نقداً (كاش)" onclick="toggleMultiOption(this, 'نقداً (كاش)')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light">
+                      <div class="flex items-center gap-3">
+                        <div class="opt-check w-5 h-5 rounded-[6px] border-2 bg-primary border-primary flex items-center justify-center transition-all">
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <span>نقداً (كاش)</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white">كاش</span>
+                    </div>
+                  </li>
+                  <div class="h-px bg-black/5 dark:bg-white/5 my-1 mx-2"></div>
+                  <li>
+                    <div data-value="بطاقة تداول / سداد" onclick="toggleMultiOption(this, 'بطاقة تداول / سداد')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light">
+                      <div class="flex items-center gap-3">
+                        <div class="opt-check w-5 h-5 rounded-[6px] border-2 bg-primary border-primary flex items-center justify-center transition-all">
+                          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
+                        <span>بطاقة تداول / سداد</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white">بطاقات</span>
+                    </div>
+                  </li>
+                  <div class="h-px bg-black/5 dark:bg-white/5 my-1 mx-2"></div>
+                  <li>
+                    <div data-value="تحويل مصرفي (موبي كاش)" onclick="toggleMultiOption(this, 'تحويل مصرفي (موبي كاش)')" class="flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white">
+                      <div class="flex items-center gap-3">
+                        <div class="opt-check w-5 h-5 rounded-[6px] border-2 border-slate-300 dark:border-white/20 flex items-center justify-center transition-all"></div>
+                        <span>تحويل مصرفي (موبي كاش)</span>
+                      </div>
+                      <span class="opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/60">تحويل</span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SECTION 5: Modals & Popups -->
+      <section id="modalsSection" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">5. النوافذ المنبثقة الشاملة (Modals & Dialog System)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">نظام النوافذ العائمة بتأثيرات الزجاج المضيء والتحكم الكامل بالخلفيات الداكنة والنهارية</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">Spatial Modals</span>
+        </div>
+
+        <div class="spatial-card p-6 lg:p-8 space-y-6">
+          <p class="text-sm font-bold text-slate-600 dark:text-white/70">انقر على أي من الأزرار التالية لاستعراض واختبار النوافذ المنبثقة التفاعلية المصممة بالنظام الزجاجي الحديث:</p>
+
+          <div class="flex flex-wrap gap-4">
+            <button onclick="openModal('confirmModal')" class="px-6 h-14 rounded-[20px] bg-amber-500 hover:bg-amber-600 text-white font-black text-sm shadow-md shadow-amber-500/20 transition-all flex items-center gap-2 group">
+              <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              نافذة تأكيد عملية (Confirm Modal)
+            </button>
+
+            <button onclick="openModal('deleteModal')" class="px-6 h-14 rounded-[20px] bg-destructive hover:bg-red-600 text-white font-black text-sm shadow-md shadow-red-500/20 transition-all flex items-center gap-2 group">
+              <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              نافذة تأكيد الحذف (Delete Modal)
+            </button>
+
+            <button onclick="openModal('numberPadModal')" class="px-6 h-14 rounded-[20px] bg-primary hover:bg-blue-600 text-white font-black text-sm shadow-md shadow-primary/20 transition-all flex items-center gap-2 group">
+              <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              حاسبة الكاش والآلة الحاسبة (POS Keypad Modal)
+            </button>
+
+            <button onclick="openModal('invoiceDetailModal')" class="px-6 h-14 rounded-[20px] bg-purple-600 hover:bg-purple-700 text-white font-black text-sm shadow-md shadow-purple-600/20 transition-all flex items-center gap-2 group">
+              <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              معاينة تفاصيل الفاتورة (Invoice Preview)
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 6: Data Tables Showcase -->
+      <section id="tablesSection" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">6. الجداول والبيانات المنظمة التفاعلية (Spatial Data Tables)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">جدول مبيعات فضائي يدعم التحديد المجمع، الفلترة حسب الحالة، التفرز والتصفح</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">Data Grid v2</span>
+        </div>
+
+        <div class="spatial-card overflow-hidden">
+          
+          <!-- Table Toolbar & Filters -->
+          <div class="p-6 border-b border-black/10 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-3">
+              <h3 class="font-black text-lg text-slate-900 dark:text-white">جدول الفواتير المبيعات</h3>
+              <span id="tableRecordBadge" class="text-xs font-bold px-3 py-1 rounded-full bg-primary/10 text-primary">3 سجلات متاحة</span>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Search Table Input -->
+              <div class="relative">
+                <input type="text" id="tableSearchInput" onkeyup="filterTableRows()" placeholder="بحث باسم العميل أو الفاتورة..." class="spatial-input h-10 rounded-[14px] pr-9 pl-3 text-xs font-bold w-56">
+                <svg class="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              </div>
+
+              <!-- Filter Pills -->
+              <div class="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-black/5 dark:border-white/10 text-xs font-bold">
+                <button onclick="filterTableByStatus('all')" id="tbl-btn-all" class="px-3 py-1.5 rounded-lg bg-primary text-white font-bold transition-all">الكل</button>
+                <button onclick="filterTableByStatus('مكتمل')" id="tbl-btn-paid" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all">مدفوع</button>
+                <button onclick="filterTableByStatus('آجل')" id="tbl-btn-due" class="px-3 py-1.5 rounded-lg text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all">آجل</button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bulk Selection Action Bar (Appears when checkboxes checked) -->
+          <div id="bulkActionBar" class="hidden bg-primary/10 border-b border-primary/20 px-6 py-3 flex items-center justify-between animate-spatial-in">
+            <span id="bulkSelectedText" class="text-xs font-black text-primary">تم تحديد 2 عناصر من الجدول</span>
+            <div class="flex items-center gap-2">
+              <button onclick="alert('جاري طباعة الفواتير المحددة...')" class="px-3 py-1.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-blue-600 transition-all flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                طباعة مجمعة
+              </button>
+              <button onclick="unselectAllTableRows()" class="px-3 py-1.5 rounded-xl bg-black/10 dark:bg-white/10 text-slate-700 dark:text-white text-xs font-bold hover:bg-black/20 transition-all">إلغاء التحديد</button>
+            </div>
+          </div>
+
+          <!-- Table Content -->
+          <div class="overflow-x-auto custom-scroll">
+            <table class="w-full text-right text-sm">
+              <thead class="bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/60 font-bold uppercase text-xs">
+                <tr>
+                  <th class="p-4 w-10 text-center">
+                    <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAllRows(this)" class="w-4 h-4 rounded border-slate-300 accent-primary cursor-pointer">
+                  </th>
+                  <th class="p-4 cursor-pointer hover:text-primary transition-colors">رقم الفاتورة <span class="text-[10px]">▲</span></th>
+                  <th class="p-4">اسم العميل</th>
+                  <th class="p-4">تاريخ المعاملة</th>
+                  <th class="p-4">المبلغ الإجمالي</th>
+                  <th class="p-4">الحالة</th>
+                  <th class="p-4 text-center">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="spatialTableBody" class="divide-y divide-black/5 dark:divide-white/5 font-bold text-slate-800 dark:text-white">
+                
+                <!-- Row 1 -->
+                <tr data-status="مكتمل" class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                  <td class="p-4 text-center">
+                    <input type="checkbox" onchange="updateBulkBar()" class="row-checkbox w-4 h-4 rounded border-slate-300 accent-primary cursor-pointer">
+                  </td>
+                  <td class="p-4 text-primary font-mono font-black">#INV-2026-001</td>
+                  <td class="p-4 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 text-primary text-xs font-black flex items-center justify-center">ع</div>
+                    <span>عبدالسلام الورفلي</span>
+                  </td>
+                  <td class="p-4 text-xs font-mono text-slate-500 dark:text-white/60">01-08-2026</td>
+                  <td class="p-4 text-base font-black font-mono">1,450.00 د.ل</td>
+                  <td class="p-4"><span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">مكتمل ومدفوع</span></td>
+                  <td class="p-4 text-center">
+                    <button onclick="openModal('invoiceDetailModal')" class="spatial-icon-btn w-9 h-9 inline-flex" title="معاينة الفاتورة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                  </td>
+                </tr>
+
+                <!-- Row 2 -->
+                <tr data-status="آجل" class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                  <td class="p-4 text-center">
+                    <input type="checkbox" onchange="updateBulkBar()" class="row-checkbox w-4 h-4 rounded border-slate-300 accent-primary cursor-pointer">
+                  </td>
+                  <td class="p-4 text-primary font-mono font-black">#INV-2026-002</td>
+                  <td class="p-4 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 text-xs font-black flex items-center justify-center">م</div>
+                    <span>محمود الفيتوري</span>
+                  </td>
+                  <td class="p-4 text-xs font-mono text-slate-500 dark:text-white/60">01-08-2026</td>
+                  <td class="p-4 text-base font-black font-mono">850.00 د.ل</td>
+                  <td class="p-4"><span class="px-3 py-1 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">آجل / جزئي</span></td>
+                  <td class="p-4 text-center">
+                    <button onclick="openModal('invoiceDetailModal')" class="spatial-icon-btn w-9 h-9 inline-flex" title="معاينة الفاتورة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                  </td>
+                </tr>
+
+                <!-- Row 3 -->
+                <tr data-status="ملغى" class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                  <td class="p-4 text-center">
+                    <input type="checkbox" onchange="updateBulkBar()" class="row-checkbox w-4 h-4 rounded border-slate-300 accent-primary cursor-pointer">
+                  </td>
+                  <td class="p-4 text-primary font-mono font-black">#INV-2026-003</td>
+                  <td class="p-4 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-500 text-xs font-black flex items-center justify-center">أ</div>
+                    <span>شركة الأفق للمستلزمات</span>
+                  </td>
+                  <td class="p-4 text-xs font-mono text-slate-500 dark:text-white/60">31-07-2026</td>
+                  <td class="p-4 text-base font-black font-mono">3,100.00 د.ل</td>
+                  <td class="p-4"><span class="px-3 py-1 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold">ملغى</span></td>
+                  <td class="p-4 text-center">
+                    <button onclick="openModal('invoiceDetailModal')" class="spatial-icon-btn w-9 h-9 inline-flex" title="معاينة الفاتورة"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Interactive Pagination Footer -->
+          <div class="p-4 border-t border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-bold text-slate-500 dark:text-white/60">
+            <span>عرض الصفحات: 1 من أصل 1 (3 سجلات)</span>
+            <div class="flex items-center gap-1.5">
+              <button class="px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 opacity-50 cursor-not-allowed">السابق</button>
+              <button class="px-3.5 py-1.5 rounded-xl bg-primary text-white font-black shadow-sm">1</button>
+              <button class="px-3.5 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors">2</button>
+              <button class="px-3.5 py-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors">3</button>
+              <button class="px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-800 dark:text-white transition-colors">التالي</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- SECTION 7: Tabs Navigation -->
+      <section id="tabsSection" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <span class="w-3.5 h-9 rounded-full bg-primary shadow-lg shadow-primary/40"></span>
+            <div>
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">7. علامات التبويب التفاعلية (Interactive Tabs & Content Panels)</h2>
+              <p class="text-xs font-bold text-slate-500 dark:text-white/50 mt-0.5">تبويب فضائي حديث يبدل المحتوى بسلاسة مع شارات أرقام ونسب إنجاز تفاعلية</p>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1.5 rounded-xl bg-primary/10 text-primary border border-primary/20">Spatial Tabs</span>
+        </div>
+
+        <div class="spatial-card p-6 lg:p-8 space-y-6">
+          <div class="flex flex-wrap gap-2 p-1.5 rounded-[22px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 w-fit">
+            <button onclick="switchTab('tab1')" id="btn-tab1" class="px-6 py-3 rounded-[16px] bg-primary text-white font-bold text-sm shadow-md transition-all flex items-center gap-2">
+              <span>التقرير المالي الشامل</span>
+              <span class="px-2 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-black">4</span>
+            </button>
+            <button onclick="switchTab('tab2')" id="btn-tab2" class="px-6 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white font-bold text-sm transition-all flex items-center gap-2">
+              <span>حركة المنتجات والمخزون</span>
+              <span class="px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-slate-600 dark:text-white/60 text-[10px] font-black">12</span>
+            </button>
+            <button onclick="switchTab('tab3')" id="btn-tab3" class="px-6 py-3 rounded-[16px] text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white font-bold text-sm transition-all flex items-center gap-2">
+              <span>سجل الأرباح والإقفالات</span>
+              <span class="px-2 py-0.5 rounded-full bg-black/10 dark:bg-white/10 text-slate-600 dark:text-white/60 text-[10px] font-black">2026</span>
+            </button>
+          </div>
+
+          <!-- Panel 1: Financial Overview -->
+          <div id="panel-tab1" class="p-6 rounded-[26px] bg-black/5 dark:bg-white/5 space-y-4 animate-spatial-in">
+            <div class="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+              <h4 class="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ملخص الأرباح والسيولة النقدية
+              </h4>
+              <span class="text-xs font-mono text-emerald-500 font-bold">معدل الإنجاز 94% ↗</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-white/60 leading-relaxed font-bold">
+              يعرض هذا الجزء الرسوم البيانية وملخص الأرباح والخسائر اليومية والشهرية المصنفة حسب الفئات ومنافذ البيع.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div class="p-4 rounded-xl bg-white/60 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                <span class="text-xs text-slate-400 font-bold block">معدل تحصيل الأرباح النقدية</span>
+                <div class="w-full bg-black/10 dark:bg-white/10 h-2.5 rounded-full mt-2 overflow-hidden">
+                  <div class="bg-primary h-full rounded-full" style="width: 88%"></div>
+                </div>
+              </div>
+              <div class="p-4 rounded-xl bg-white/60 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                <span class="text-xs text-slate-400 font-bold block">مؤشر السيولة الكاش متوفر</span>
+                <div class="w-full bg-black/10 dark:bg-white/10 h-2.5 rounded-full mt-2 overflow-hidden">
+                  <div class="bg-emerald-500 h-full rounded-full" style="width: 95%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Panel 2: Inventory Stock Movement -->
+          <div id="panel-tab2" class="hidden p-6 rounded-[26px] bg-black/5 dark:bg-white/5 space-y-4 animate-spatial-in">
+            <div class="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+              <h4 class="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> حركة البضاعة والمخزون الحالية
+              </h4>
+              <span class="text-xs font-mono text-amber-500 font-bold">تحذير 2 أصناف في حد الطلب</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-white/60 leading-relaxed font-bold">
+              تفاصيل البضاعة الواردة والصادرة والتالفة مع حساب متوسط التكلفة التجميعي وكميات المستودعات.
+            </p>
+            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center justify-between">
+              <span>عطر ديور سوافي أوريجينال 50مل - المتبقي: 4 قطع فقط</span>
+              <button onclick="alert('جاري إرسال طلب إعادة التزويد...')" class="px-3 py-1 rounded-lg bg-amber-500 text-white font-bold text-[11px] hover:bg-amber-600 transition-colors">إعادة طلب تزويد</button>
+            </div>
+          </div>
+
+          <!-- Panel 3: Rollover History Audit -->
+          <div id="panel-tab3" class="hidden p-6 rounded-[26px] bg-black/5 dark:bg-white/5 space-y-4 animate-spatial-in">
+            <div class="flex items-center justify-between border-b border-black/5 dark:border-white/5 pb-3">
+              <h4 class="font-black text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span> سجل الأرباح والإقفال الدوري
+              </h4>
+              <span class="text-xs font-mono text-purple-400 font-bold">السنة المالية 2026</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-white/60 leading-relaxed font-bold">
+              تحليل الربحية بعد الإقفال الدوري واحتساب التسويات السنوية وتحديث الأرباح المرحّلة تلقائياً.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL 1: Confirm Modal (Matching ConfirmModal.tsx design & dark gradient) -->
+  <div id="confirmModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <!-- Backdrop Overlay -->
+    <div onclick="closeModal('confirmModal')" class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"></div>
+    
+    <!-- Spatial Modal Box -->
+    <div class="relative w-full max-w-sm spatial-modal-card p-6 flex flex-col gap-5 animate-spatial-in">
+      <div class="flex items-center justify-between">
+        <div class="w-12 h-12 rounded-[16px] bg-amber-500/12 border border-amber-500/15 flex items-center justify-center text-amber-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <button onclick="closeModal('confirmModal')" class="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/70 flex items-center justify-center transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <h3 class="text-lg font-black text-slate-800 dark:text-white">تأكيد العملية</h3>
+        <p class="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">هل أنت متأكد من تنفيذ هذه العملية وحفظ التغييرات؟</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="closeModal('confirmModal')" class="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+          إلغاء
+        </button>
+        <button onclick="closeModal('confirmModal')" class="flex-1 h-11 rounded-[14px] bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-amber-500/30">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+          تأكيد
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Delete Modal (Matching DeleteModal.tsx design & dark gradient) -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <!-- Backdrop Overlay -->
+    <div onclick="closeModal('deleteModal')" class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"></div>
+    
+    <!-- Spatial Modal Box -->
+    <div class="relative w-full max-w-sm spatial-modal-card p-6 flex flex-col gap-5 animate-spatial-in">
+      <div class="flex items-center justify-between">
+        <div class="w-12 h-12 rounded-[16px] bg-red-500/12 border border-red-500/15 flex items-center justify-center text-red-500">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <button onclick="closeModal('deleteModal')" class="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 hover:text-slate-700 dark:hover:text-white/70 flex items-center justify-center transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <h3 class="text-lg font-black text-slate-800 dark:text-white">تأكيد الحذف النهائي</h3>
+        <p class="text-sm font-bold text-slate-500 dark:text-white/50 leading-relaxed">تحذير: لا يمكن التراجع عن هذه العملية وسيتم حذف السجل بصفة دائمة.</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="closeModal('deleteModal')" class="flex-1 h-11 rounded-[14px] bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-600 dark:text-white/70 font-bold text-sm transition-all border border-black/8 dark:border-white/10">
+          إلغاء
+        </button>
+        <button onclick="closeModal('deleteModal')" class="flex-1 h-11 rounded-[14px] bg-destructive hover:bg-red-600 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm shadow-red-500/30">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          حذف نهائي
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: POS Number Pad Calculator Modal (Matching NumberPadModal.tsx design) -->
+  <div id="numberPadModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <!-- Backdrop Overlay -->
+    <div onclick="closeModal('numberPadModal')" class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"></div>
+    
+    <!-- Spatial Modal Box -->
+    <div class="relative w-full max-w-sm spatial-modal-card p-6 flex flex-col gap-4 animate-spatial-in">
+      <div class="flex items-center justify-between border-b border-black/8 dark:border-white/10 pb-3">
+        <h3 class="font-black text-base text-slate-800 dark:text-white">إدخال المبلغ المستلم (POS)</h3>
+        <button onclick="closeModal('numberPadModal')" class="w-8 h-8 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Display Screen -->
+      <div class="spatial-input h-16 rounded-[20px] px-5 flex items-center justify-between text-2xl font-black text-primary font-mono shadow-inner">
+        <span id="posDisplay">800.00</span>
+        <span class="text-xs text-slate-400 dark:text-white/50 font-sans">د.ل</span>
+      </div>
+
+      <!-- Keypad Grid -->
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="appendPosDigit('7')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">7</button>
+        <button onclick="appendPosDigit('8')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">8</button>
+        <button onclick="appendPosDigit('9')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">9</button>
+        <button onclick="appendPosDigit('4')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">4</button>
+        <button onclick="appendPosDigit('5')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">5</button>
+        <button onclick="appendPosDigit('6')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">6</button>
+        <button onclick="appendPosDigit('1')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">1</button>
+        <button onclick="appendPosDigit('2')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">2</button>
+        <button onclick="appendPosDigit('3')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">3</button>
+        <button onclick="clearPosDisplay()" class="h-12 rounded-[16px] bg-amber-500/20 text-amber-500 font-black text-sm hover:bg-amber-500 hover:text-white transition-all">مسح C</button>
+        <button onclick="appendPosDigit('0')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">0</button>
+        <button onclick="appendPosDigit('.')" class="h-12 rounded-[16px] bg-black/5 dark:bg-white/8 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-black text-lg hover:bg-primary hover:text-white dark:hover:bg-primary dark:hover:text-white transition-all">.</button>
+      </div>
+
+      <button onclick="closeModal('numberPadModal')" class="w-full h-14 rounded-[20px] bg-primary hover:bg-blue-600 text-white font-black text-base shadow-lg shadow-primary/20 transition-all pt-1">إتمام العملية وطباعة</button>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Extended Invoice Preview Modal -->
+  <div id="invoiceDetailModal" class="hidden fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <!-- Backdrop Overlay -->
+    <div onclick="closeModal('invoiceDetailModal')" class="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm"></div>
+    
+    <!-- Spatial Modal Box -->
+    <div class="relative w-full max-w-lg spatial-modal-card p-6 lg:p-8 flex flex-col gap-6 animate-spatial-in">
+      <div class="flex items-center justify-between border-b border-black/8 dark:border-white/10 pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-[14px] bg-purple-500/15 text-purple-400 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <div>
+            <h3 class="font-black text-lg text-slate-800 dark:text-white">تفاصيل الفاتورة #INV-2026-001</h3>
+            <span class="text-xs text-slate-400 font-mono">الصادرة بتاريخ 01-08-2026</span>
+          </div>
+        </div>
+        <button onclick="closeModal('invoiceDetailModal')" class="w-9 h-9 rounded-full bg-black/6 dark:bg-white/8 hover:bg-black/10 dark:hover:bg-white/12 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Customer & Info Card -->
+      <div class="p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 flex items-center justify-between text-xs font-bold">
+        <div>
+          <span class="text-slate-400 block mb-0.5">اسم العميل المسجل:</span>
+          <span class="text-slate-800 dark:text-white text-sm font-black">عبدالسلام الورفلي</span>
+        </div>
+        <div class="text-left">
+          <span class="text-slate-400 block mb-0.5">طريقة الدفع:</span>
+          <span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-500 font-mono">نقداً (كاش)</span>
+        </div>
+      </div>
+
+      <!-- Itemized List Table -->
+      <div class="space-y-3">
+        <h4 class="text-xs font-black uppercase text-slate-400 tracking-wider">الأصناف المشمولة بالفاتورة:</h4>
+        <div class="space-y-2 max-h-48 overflow-y-auto custom-scroll">
+          <div class="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 text-xs font-bold">
+            <span>2x عطر كوكو شانيل فاخر 100مل</span>
+            <span class="font-mono text-slate-800 dark:text-white">500.00 د.ل</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 text-xs font-bold">
+            <span>1x عطر ديور سوافي أوريجينال 50مل</span>
+            <span class="font-mono text-slate-800 dark:text-white">320.00 د.ل</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 text-xs font-bold">
+            <span>3x زيت عود صندل كمبودي خام</span>
+            <span class="font-mono text-slate-800 dark:text-white">540.00 د.ل</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Total -->
+      <div class="p-4 rounded-[20px] bg-primary/10 border border-primary/20 flex items-center justify-between">
+        <span class="font-black text-sm text-slate-800 dark:text-white">المبلغ النهائي المفلتر:</span>
+        <span class="text-xl font-black text-primary font-mono">1,360.00 د.ل</span>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="flex items-center gap-3">
+        <button onclick="closeModal('invoiceDetailModal')" class="flex-1 h-12 rounded-[16px] bg-black/6 dark:bg-white/10 text-slate-700 dark:text-white font-bold text-xs hover:bg-black/10 transition-all">إغلاق</button>
+        <button onclick="alert('جاري إرسال الفاتورة للمطبعة...')" class="flex-1 h-12 rounded-[16px] bg-primary text-white font-black text-xs hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          طباعة الفاتورة
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Functions for Live Interaction -->
+  <script>
+    // Clipboard helper notification
+    function copyToClipboard(text, msg) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(msg);
+      });
+    }
+
+    // Typography Live Tester
+    function updateFontPreview() {
+      const slider = document.getElementById('fontSlider');
+      const textInput = document.getElementById('fontTextInput');
+      const livePreview = document.getElementById('fontLivePreview');
+      const sizeDisplay = document.getElementById('fontSizeDisplay');
+
+      if (slider && livePreview && sizeDisplay) {
+        const val = slider.value;
+        sizeDisplay.innerText = val + 'px';
+        livePreview.style.fontSize = val + 'px';
+      }
+      if (textInput && livePreview) {
+        livePreview.innerText = textInput.value || 'نظام إدارة المبيعات الفضائي';
+      }
+    }
+
+    // Input Character Counter
+    function updateCharCounter(inputEl) {
+      const counter = document.getElementById('inputCharCounter');
+      if (counter) {
+        const len = inputEl.value.length;
+        counter.innerText = len + ' / 40 حرفاً';
+        if (len > 30) {
+          counter.className = 'text-[11px] font-mono font-bold text-amber-500';
+        } else {
+          counter.className = 'text-[11px] font-mono font-bold text-primary';
+        }
+      }
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility() {
+      const input = document.getElementById('demoPasswordInput');
+      if (input) {
+        if (input.type === 'password') {
+          input.type = 'text';
+        } else {
+          input.type = 'password';
+        }
+      }
+    }
+
+    // Button Loading Simulation
+    function simulateBtnLoading(btn) {
+      const textSpan = btn.querySelector('.btn-text');
+      const originalText = textSpan ? textSpan.innerText : 'حفظ التغييرات';
+      if (textSpan) textSpan.innerText = 'جاري الحفظ والتحقق...';
+      btn.disabled = true;
+      btn.classList.add('opacity-80');
+      
+      setTimeout(() => {
+        if (textSpan) textSpan.innerText = '✓ تم الحفظ بنجاح!';
+        btn.classList.remove('opacity-80');
+        btn.classList.add('bg-emerald-500');
+        setTimeout(() => {
+          if (textSpan) textSpan.innerText = originalText;
+          btn.classList.remove('bg-emerald-500');
+          btn.disabled = false;
+        }, 1800);
+      }, 1200);
+    }
+
+    // Data Table Filtering Logic
+    function filterTableRows() {
+      const query = document.getElementById('tableSearchInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#spatialTableBody tr');
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(query)) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const badge = document.getElementById('tableRecordBadge');
+      if (badge) badge.innerText = visibleCount + ' سجلات متاحة';
+    }
+
+    function filterTableByStatus(status) {
+      ['all', 'paid', 'due'].forEach(s => {
+        const btn = document.getElementById('tbl-btn-' + s);
+        if (btn) {
+          btn.className = "px-3 py-1.5 rounded-lg text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all";
+        }
+      });
+
+      const activeKey = status === 'all' ? 'all' : (status === 'مكتمل' ? 'paid' : 'due');
+      const activeBtn = document.getElementById('tbl-btn-' + activeKey);
+      if (activeBtn) activeBtn.className = "px-3 py-1.5 rounded-lg bg-primary text-white font-bold transition-all";
+
+      const rows = document.querySelectorAll('#spatialTableBody tr');
+      let count = 0;
+      rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        if (status === 'all' || rowStatus === status) {
+          row.style.display = '';
+          count++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const badge = document.getElementById('tableRecordBadge');
+      if (badge) badge.innerText = count + ' سجلات متاحة';
+    }
+
+    // Bulk Row Selection Logic
+    function toggleSelectAllRows(masterCheckbox) {
+      const checkboxes = document.querySelectorAll('.row-checkbox');
+      checkboxes.forEach(cb => {
+        cb.checked = masterCheckbox.checked;
+      });
+      updateBulkBar();
+    }
+
+    function updateBulkBar() {
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      const bulkBar = document.getElementById('bulkActionBar');
+      const bulkText = document.getElementById('bulkSelectedText');
+
+      if (checkboxes.length > 0) {
+        if (bulkBar) bulkBar.classList.remove('hidden');
+        if (bulkText) bulkText.innerText = 'تم تحديد ' + checkboxes.length + ' عناصر من الجدول';
+      } else {
+        if (bulkBar) bulkBar.classList.add('hidden');
+        const master = document.getElementById('selectAllCheckbox');
+        if (master) master.checked = false;
+      }
+    }
+
+    function unselectAllTableRows() {
+      const master = document.getElementById('selectAllCheckbox');
+      if (master) master.checked = false;
+      toggleSelectAllRows(master);
+    }
+    // Theme Switcher Logic
+    function toggleTheme() {
+      const html = document.documentElement;
+      const body = document.body;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        body.classList.remove('body-bg-dark');
+        body.classList.add('body-bg-light');
+      } else {
+        html.classList.add('dark');
+        body.classList.remove('body-bg-light');
+        body.classList.add('body-bg-dark');
+      }
+      // Re-position open dropdowns if theme toggled
+      repositionOpenDropdowns();
+    }
+
+    // Sidebar Collapse Logic
+    let sidebarOpen = true;
+    function toggleSidebar() {
+      const sidebar = document.getElementById('mainSidebar');
+      const textElements = document.querySelectorAll('.sidebar-text');
+      sidebarOpen = !sidebarOpen;
+      if (sidebarOpen) {
+        sidebar.classList.remove('w-20');
+        sidebar.classList.add('w-64');
+        textElements.forEach(el => el.classList.remove('hidden'));
+      } else {
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-20');
+        textElements.forEach(el => el.classList.add('hidden'));
+      }
+      setTimeout(repositionOpenDropdowns, 300);
+    }
+
+    // High Z-Index Floating Dropdown Logic (matching React Portal)
+    let activeOpenTriggerId = null;
+    let activeOpenMenuId = null;
+
+    function openDropdown(triggerId, menuId) {
+      const trigger = document.getElementById(triggerId);
+      const menu = document.getElementById(menuId);
+      const arrow = trigger.querySelector('.transition-transform');
+      
+      const isAlreadyOpen = !menu.classList.contains('hidden');
+
+      // Close all active dropdowns first
+      closeAllDropdowns();
+
+      if (!isAlreadyOpen) {
+        activeOpenTriggerId = triggerId;
+        activeOpenMenuId = menuId;
+
+        const rect = trigger.getBoundingClientRect();
+        menu.style.top = (rect.bottom + 8) + 'px';
+        menu.style.left = rect.left + 'px';
+        menu.style.width = rect.width + 'px';
+
+        menu.classList.remove('hidden');
+        trigger.classList.add('ring-2', 'ring-primary/40', 'border-primary/50', 'dark:border-primary/40', 'bg-white', 'dark:bg-black/40');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+
+        // Auto focus search box inside dropdown
+        const searchInput = menu.querySelector('input[type="text"]');
+        if (searchInput) setTimeout(() => searchInput.focus(), 50);
+      }
+    }
+
+    function closeAllDropdowns() {
+      document.querySelectorAll('.dropdown-portal').forEach(menu => {
+        menu.classList.add('hidden');
+      });
+      document.querySelectorAll('#singleSelectTrigger, #multiSelectTrigger').forEach(trigger => {
+        trigger.classList.remove('ring-2', 'ring-primary/40', 'border-primary/50', 'dark:border-primary/40', 'bg-white', 'dark:bg-black/40');
+        const arrow = trigger.querySelector('.transition-transform');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      });
+      activeOpenTriggerId = null;
+      activeOpenMenuId = null;
+    }
+
+    function repositionOpenDropdowns() {
+      if (activeOpenTriggerId && activeOpenMenuId) {
+        const trigger = document.getElementById(activeOpenTriggerId);
+        const menu = document.getElementById(activeOpenMenuId);
+        if (trigger && menu && !menu.classList.contains('hidden')) {
+          const rect = trigger.getBoundingClientRect();
+          menu.style.top = (rect.bottom + 8) + 'px';
+          menu.style.left = rect.left + 'px';
+          menu.style.width = rect.width + 'px';
+        }
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#singleSelectTrigger') && 
+          !e.target.closest('#singleSelectMenu') && 
+          !e.target.closest('#multiSelectTrigger') && 
+          !e.target.closest('#multiSelectMenu')) {
+        closeAllDropdowns();
+      }
+    });
+
+    window.addEventListener('resize', repositionOpenDropdowns);
+    document.querySelector('main')?.addEventListener('scroll', repositionOpenDropdowns);
+
+    // Single Select Option Handler
+    function selectSingleOption(optionEl, valueText) {
+      document.getElementById('singleSelectValue').innerText = valueText;
+      
+      // Update items active style
+      const optionsList = document.querySelectorAll('#singleSelectOptions div[onclick]');
+      optionsList.forEach(item => {
+        item.className = "flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white";
+        const radio = item.querySelector('.opt-radio');
+        if (radio) {
+          radio.className = "opt-radio shrink-0 rounded-full border-2 border-slate-300 dark:border-white/20 w-4 h-4 flex items-center justify-center transition-all";
+          radio.innerHTML = "";
+        }
+        const badge = item.querySelector('.opt-badge');
+        if (badge) badge.className = "opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white";
+      });
+
+      // Highlight selected item
+      optionEl.className = "flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] bg-primary text-white";
+      const radio = optionEl.querySelector('.opt-radio');
+      if (radio) {
+        radio.className = "opt-radio shrink-0 rounded-full border-2 border-white bg-white/30 w-4 h-4 flex items-center justify-center transition-all";
+        radio.innerHTML = '<svg width="8" height="8" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      const badge = optionEl.querySelector('.opt-badge');
+      if (badge) badge.className = "opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-white/25 text-white";
+
+      closeAllDropdowns();
+    }
+
+    // Filter Dropdown Items
+    function filterDropdownOptions(inputId, listId) {
+      const query = document.getElementById(inputId).value.toLowerCase();
+      const items = document.querySelectorAll('#' + listId + ' > li');
+      items.forEach(li => {
+        const text = li.innerText.toLowerCase();
+        if (text.includes(query)) {
+          li.style.display = 'block';
+          if (li.nextElementSibling && li.nextElementSibling.classList.contains('h-px')) {
+            li.nextElementSibling.style.display = 'block';
+          }
+        } else {
+          li.style.display = 'none';
+          if (li.nextElementSibling && li.nextElementSibling.classList.contains('h-px')) {
+            li.nextElementSibling.style.display = 'none';
+          }
+        }
+      });
+    }
+
+    // Multi Select Handler
+    let selectedMultiValues = ['نقداً (كاش)', 'بطاقة تداول / سداد'];
+
+    function toggleMultiOption(optionEl, valueText) {
+      if (selectedMultiValues.includes(valueText)) {
+        selectedMultiValues = selectedMultiValues.filter(v => v !== valueText);
+      } else {
+        selectedMultiValues.push(valueText);
+      }
+      renderMultiSelectUI();
+      repositionOpenDropdowns();
+    }
+
+    function removeMultiTag(valueText) {
+      selectedMultiValues = selectedMultiValues.filter(v => v !== valueText);
+      renderMultiSelectUI();
+      repositionOpenDropdowns();
+    }
+
+    function renderMultiSelectUI() {
+      // 1. Render tags box
+      const tagsContainer = document.getElementById('multiSelectTags');
+      if (selectedMultiValues.length === 0) {
+        tagsContainer.innerHTML = '<span class="text-[15px] font-bold text-slate-400 dark:text-white/50 mt-1 ml-2">اختر...</span>';
+      } else {
+        tagsContainer.innerHTML = selectedMultiValues.map(val => `
+          <span class="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+            ${val}
+            <button onclick="event.stopPropagation(); removeMultiTag('${val}')" class="hover:bg-primary/20 rounded-full p-0.5 transition-colors">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </span>
+        `).join('');
+      }
+
+      // 2. Update list checkboxes
+      const multiItems = document.querySelectorAll('#multiSelectOptions div[data-value]');
+      multiItems.forEach(item => {
+        const val = item.getAttribute('data-value');
+        const isSelected = selectedMultiValues.includes(val);
+        const check = item.querySelector('.opt-check');
+        const badge = item.querySelector('.opt-badge');
+
+        if (isSelected) {
+          item.className = "flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light";
+          if (check) {
+            check.className = "opt-check w-5 h-5 rounded-[6px] border-2 bg-primary border-primary flex items-center justify-center transition-all";
+            check.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          }
+          if (badge) badge.className = "opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-primary text-white";
+        } else {
+          item.className = "flex items-center justify-between gap-3 px-4 py-3 rounded-[14px] cursor-pointer font-bold transition-all duration-150 text-[15px] text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white";
+          if (check) {
+            check.className = "opt-check w-5 h-5 rounded-[6px] border-2 border-slate-300 dark:border-white/20 flex items-center justify-center transition-all";
+            check.innerHTML = '';
+          }
+          if (badge) badge.className = "opt-badge text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/60";
+        }
+      });
+    }
+
+    // Modal Control Logic
+    function openModal(modalId) {
+      closeAllDropdowns();
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // Keypad Logic
+    let posValue = '800.00';
+    function appendPosDigit(digit) {
+      const display = document.getElementById('posDisplay');
+      if (posValue === '0' || posValue === '800.00') {
+        posValue = digit;
+      } else {
+        posValue += digit;
+      }
+      display.innerText = posValue;
+    }
+
+    function clearPosDisplay() {
+      posValue = '0';
+      document.getElementById('posDisplay').innerText = '0';
+    }
+
+    // Tabs Switching
+    function switchTab(tabId) {
+      ['tab1', 'tab2', 'tab3'].forEach(id => {
+        const btn = document.getElementById('btn-' + id);
+        const panel = document.getElementById('panel-' + id);
+        if (id === tabId) {
+          btn.className = "px-6 py-2.5 rounded-[14px] bg-primary text-white font-bold text-sm shadow-md transition-all";
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = "px-6 py-2.5 rounded-[14px] text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white font-bold text-sm transition-all";
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    // Smooth Scroll Link Anchor Handling
+    function scrollToSection(id) {
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // SECTION 2: Interactive POS Cart & Container View Switching Logic
+    let posItems = [
+      { name: 'عطر كوكو شانيل فاخر 100مل', price: 250, qty: 2 },
+      { name: 'عطر ديور سوافي أوريجينال 50مل', price: 320, qty: 1 },
+      { name: 'زيت عود صندل كمبودي خام', price: 180, qty: 3 }
+    ];
+    let posDiscountPercent = 5;
+
+    function changePosItemQty(index, delta) {
+      if (posItems[index]) {
+        posItems[index].qty = Math.max(1, posItems[index].qty + delta);
+        updatePosCartCalculations();
+      }
+    }
+
+    function removePosItem(index) {
+      posItems.splice(index, 1);
+      renderPosItemsList();
+      updatePosCartCalculations();
+    }
+
+    function resetPosCart() {
+      posItems = [
+        { name: 'عطر كوكو شانيل فاخر 100مل', price: 250, qty: 2 },
+        { name: 'عطر ديور سوافي أوريجينال 50مل', price: 320, qty: 1 },
+        { name: 'زيت عود صندل كمبودي خام', price: 180, qty: 3 }
+      ];
+      posDiscountPercent = 5;
+      setPosDiscountPercent(5);
+      renderPosItemsList();
+      updatePosCartCalculations();
+    }
+
+    function setPosDiscountPercent(percent) {
+      posDiscountPercent = percent;
+      document.querySelectorAll('.disc-btn').forEach(btn => {
+        btn.className = "disc-btn py-2 rounded-xl text-xs font-bold bg-black/5 dark:bg-white/10 text-slate-700 dark:text-white border border-transparent transition-all";
+      });
+      const activeBtn = document.getElementById('disc-btn-' + percent);
+      if (activeBtn) {
+        activeBtn.className = "disc-btn py-2 rounded-xl text-xs font-bold bg-primary text-white border border-primary transition-all shadow-sm";
+      }
+      document.getElementById('posDiscDisplay').innerText = percent;
+      updatePosCartCalculations();
+    }
+
+    function selectPaymentMethod(btnEl) {
+      document.querySelectorAll('.pay-method-btn').forEach(b => {
+        b.className = "pay-method-btn p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 text-slate-700 dark:text-white font-bold text-xs flex flex-col items-center gap-1 transition-all";
+      });
+      btnEl.className = "pay-method-btn p-3 rounded-xl bg-primary/10 border-2 border-primary text-primary font-bold text-xs flex flex-col items-center gap-1 transition-all";
+    }
+
+    function updatePosCartCalculations() {
+      let subtotal = 0;
+      let totalItemsCount = 0;
+
+      posItems.forEach((item, idx) => {
+        const itemSubtotal = item.price * item.qty;
+        subtotal += itemSubtotal;
+        totalItemsCount += item.qty;
+
+        const qtyEl = document.getElementById('qty-item-' + idx);
+        const subtotalEl = document.getElementById('subtotal-item-' + idx);
+        if (qtyEl) qtyEl.innerText = item.qty;
+        if (subtotalEl) subtotalEl.innerText = itemSubtotal.toFixed(2) + ' د.ل';
+      });
+
+      const countBadge = document.getElementById('posCartItemCount');
+      if (countBadge) countBadge.innerText = posItems.length + ' أصناف مختارة (' + totalItemsCount + ' قطعة)';
+
+      const discVal = subtotal * (posDiscountPercent / 100);
+      const netTotal = subtotal - discVal;
+
+      const subtotalBox = document.getElementById('posSubtotal');
+      const discValBox = document.getElementById('posDiscountVal');
+      const netTotalBox = document.getElementById('posNetTotal');
+
+      if (subtotalBox) subtotalBox.innerText = subtotal.toFixed(2) + ' د.ل';
+      if (discValBox) discValBox.innerText = '- ' + discVal.toFixed(2) + ' د.ل';
+      if (netTotalBox) netTotalBox.innerText = netTotal.toFixed(2) + ' د.ل';
+      
+      const checkoutText = document.getElementById('posCheckoutBtnText');
+      if (checkoutText) checkoutText.innerText = 'دفع الفاتورة والطباعة (' + netTotal.toFixed(2) + ' د.ل)';
+    }
+
+    function renderPosItemsList() {
+      const container = document.getElementById('posCartItemsList');
+      if (!container) return;
+      if (posItems.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-xs font-bold text-slate-400">السلة فارغة حالياً</div>';
+        return;
+      }
+      container.innerHTML = posItems.map((item, idx) => `
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8 gap-4 hover:border-primary/30 transition-all">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-[16px] bg-primary/20 text-primary font-black text-sm flex items-center justify-center shrink-0">${idx + 1}</div>
+            <div>
+              <div class="font-black text-sm text-slate-800 dark:text-white">${item.name}</div>
+              <div class="text-xs font-bold text-slate-500 dark:text-white/50 flex items-center gap-2 mt-0.5">
+                <span>السعر الفردي: ${item.price.toFixed(2)} د.ل</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-4">
+            <div class="flex items-center gap-1.5 bg-black/5 dark:bg-white/10 p-1 rounded-xl border border-black/5 dark:border-white/10">
+              <button onclick="changePosItemQty(${idx}, -1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">-</button>
+              <span id="qty-item-${idx}" class="w-7 text-center font-black text-sm font-mono text-slate-800 dark:text-white">${item.qty}</span>
+              <button onclick="changePosItemQty(${idx}, 1)" class="w-7 h-7 rounded-lg bg-white dark:bg-white/10 hover:bg-primary hover:text-white text-slate-700 dark:text-white font-black text-sm flex items-center justify-center transition-all">+</button>
+            </div>
+            <span id="subtotal-item-${idx}" class="font-black text-sm font-mono text-slate-900 dark:text-white shrink-0 min-w-[80px] text-left">${(item.price * item.qty).toFixed(2)} د.ل</span>
+            <button onclick="removePosItem(${idx})" class="text-slate-400 hover:text-red-500 transition-colors p-1" title="حذف الصنف"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function triggerPosModalWithCalculatedAmount() {
+      let subtotal = 0;
+      posItems.forEach(i => subtotal += i.price * i.qty);
+      const netTotal = subtotal * (1 - posDiscountPercent / 100);
+      
+      const display = document.getElementById('posDisplay');
+      if (display) display.innerText = netTotal.toFixed(2);
+      posValue = netTotal.toFixed(2);
+      openModal('numberPadModal');
+    }
+
+    function filterContainerView(mode) {
+      ['all', 'kpi', 'split'].forEach(m => {
+        const btn = document.getElementById('btn-cnt-' + m);
+        if (btn) {
+          if (m === mode) {
+            btn.className = "px-4 py-2 rounded-xl bg-primary text-white font-bold transition-all shadow-sm";
+          } else {
+            btn.className = "px-4 py-2 rounded-xl text-slate-600 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all";
+          }
+        }
+      });
+
+      const kpiGroup = document.getElementById('cntGroupKpi');
+      const splitGroup = document.getElementById('cntGroupSplit');
+
+      if (kpiGroup && splitGroup) {
+        if (mode === 'all') {
+          kpiGroup.style.display = 'grid';
+          splitGroup.style.display = 'block';
+        } else if (mode === 'kpi') {
+          kpiGroup.style.display = 'grid';
+          splitGroup.style.display = 'none';
+        } else if (mode === 'split') {
+          kpiGroup.style.display = 'none';
+          splitGroup.style.display = 'block';
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
