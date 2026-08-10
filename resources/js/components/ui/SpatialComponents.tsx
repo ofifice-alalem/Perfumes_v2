@@ -708,27 +708,27 @@ export function ModernMultiSelect({
             }
             setIsOpen(!isOpen);
           }}
-          className={`spatial-input min-h-[56px] rounded-[20px] px-4 py-2 flex items-center justify-between cursor-pointer ${isOpen ? 'ring-2 ring-primary/40 border-primary/50 dark:border-primary/40 bg-white dark:bg-black/40' : ''}`}
+          className={`spatial-input min-h-[64px] sm:min-h-[80px] rounded-[22px] px-5 sm:px-6 py-3 text-base sm:text-lg font-black w-full flex items-center justify-between cursor-pointer select-none border-2 transition-all ${isOpen ? 'ring-2 ring-primary/40 border-primary/50 dark:border-primary/40 bg-white dark:bg-black/40 shadow-lg' : 'hover:border-primary/30'}`}
         >
-          <div className="flex flex-wrap gap-2 flex-1">
+          <div className="flex flex-wrap gap-2 flex-1 items-center">
             {selected.length === 0 ? (
-              <span className="text-[15px] font-bold text-slate-400 dark:text-white/50 mt-1.5 ml-2">{placeholder}</span>
+              <span className="text-base sm:text-lg font-black text-slate-500 dark:text-white/50">{placeholder}</span>
             ) : (
               selected.map(val => {
                 const opt = options.find(o => o.value === val);
                 return (
-                  <span key={val} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-[13px] font-bold">
+                  <span key={val} className="flex items-center gap-2 px-3.5 py-1.5 rounded-[12px] bg-primary/15 dark:bg-primary/25 text-primary dark:text-primary-light text-sm sm:text-base font-black border border-primary/30">
                     {opt?.label || val}
-                    <button onClick={(e) => { e.stopPropagation(); toggleOption(val); }} className="hover:bg-primary/20 rounded-full p-0.5 transition-colors">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                    <button onClick={(e) => { e.stopPropagation(); toggleOption(val); }} className="hover:bg-primary/20 rounded-full p-1 transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
                     </button>
                   </span>
                 )
               })
             )}
           </div>
-          <div className="text-slate-400 dark:text-white/50 transition-transform duration-300 ml-1" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+          <div className="text-slate-400 dark:text-white/50 transition-transform duration-300 ml-1 shrink-0" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
           </div>
         </div>
 
