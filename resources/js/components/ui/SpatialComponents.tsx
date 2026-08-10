@@ -76,13 +76,15 @@ export function ModernInput({
   );
 }
 
-function DraggableOnScreenKeyboard({
+export function DraggableOnScreenKeyboard({
+  value,
   onKeyPress,
   onBackspace,
   onClear,
   onSpace,
   onClose,
 }: {
+  value?: string;
   onKeyPress: (char: string) => void;
   onBackspace: () => void;
   onClear: () => void;
@@ -201,6 +203,34 @@ function DraggableOnScreenKeyboard({
             ✕
           </button>
         </div>
+      </div>
+
+      {/* Live Written Text Preview Box */}
+      <div className="flex items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-slate-800 rounded-[20px] border-2 border-amber-500/40 shadow-inner">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="text-xs sm:text-sm font-black text-amber-600 dark:text-amber-400 shrink-0 select-none">
+            النص المكتوب:
+          </span>
+          <span className="font-black text-lg sm:text-2xl text-slate-900 dark:text-white truncate dir-auto inline-flex items-center">
+            {value !== undefined && value !== '' ? (
+              <span>{value}</span>
+            ) : (
+              <span className="text-slate-400 dark:text-slate-500 text-sm sm:text-base font-bold italic">
+                اكتب هنا...
+              </span>
+            )}
+            <span className="inline-block w-[3px] h-6 sm:h-7 bg-amber-500 dark:bg-amber-400 rounded-full mx-1.5 animate-pulse shrink-0" />
+          </span>
+        </div>
+        {value !== undefined && value !== '' && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            className="text-xs sm:text-sm font-black px-3 py-1.5 rounded-[12px] bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white transition-all shrink-0 cursor-pointer active:scale-95"
+          >
+            مسح الكل
+          </button>
+        )}
       </div>
 
       {/* Numbers & Backspace Bar */}
@@ -436,6 +466,7 @@ export function ModernSelect({
       {/* Virtual Touch Keyboard Component */}
       {showKeyboard && (
         <DraggableOnScreenKeyboard
+          value={search}
           onKeyPress={(char) => setSearch((prev) => prev + char)}
           onBackspace={() => setSearch((prev) => prev.slice(0, -1))}
           onClear={() => setSearch('')}
