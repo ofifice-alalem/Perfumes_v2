@@ -1,9 +1,26 @@
 import { router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
-import { ArrowUp, ArrowDown, Package, SlidersHorizontal, ChevronDown, Search, TrendingUp, TrendingDown, FileSpreadsheet, FileText } from 'lucide-react';
+import {
+    ArrowUp,
+    ArrowDown,
+    Package,
+    SlidersHorizontal,
+    Search,
+    TrendingUp,
+    TrendingDown,
+    FileSpreadsheet,
+    FileText,
+    RotateCcw,
+    X,
+    Calendar,
+    Hash,
+    Layers,
+    Download
+} from 'lucide-react';
 
 interface Category { id: number; name: string; unit: string; }
 interface Product   { id: number; name: string; stock: string; category: Category; qrcode?: string | null; }
@@ -39,13 +56,13 @@ const typeOptions = [
     { value: 'waste',      label: 'تالف' },
 ];
 
-const typeConfig: Record<string, { label: string; color: string }> = {
-    purchase:   { label: 'شراء',          color: 'text-emerald-600 dark:text-emerald-400' },
-    sale:       { label: 'بيع',           color: 'text-red-500 dark:text-red-400' },
-    return_in:  { label: 'مرتجع عميل',   color: 'text-blue-500 dark:text-blue-400' },
-    return_out: { label: 'مرتجع مورد',   color: 'text-orange-500 dark:text-orange-400' },
-    waste:      { label: 'تالف',          color: 'text-slate-500 dark:text-white/40' },
-    opening_balance: { label: 'رصيد افتتاحي', color: 'text-indigo-500 dark:text-indigo-400' },
+const typeConfig: Record<string, { label: string; bg: string; text: string; border: string }> = {
+    purchase:        { label: 'شراء',          bg: 'bg-emerald-500/15', text: 'text-emerald-700 dark:text-emerald-300', border: 'border-emerald-500/30' },
+    sale:            { label: 'بيع',           bg: 'bg-rose-500/15',    text: 'text-rose-700 dark:text-rose-300',       border: 'border-rose-500/30' },
+    return_in:       { label: 'مرتجع عميل',   bg: 'bg-blue-500/15',    text: 'text-blue-700 dark:text-blue-300',       border: 'border-blue-500/30' },
+    return_out:      { label: 'مرتجع مورد',   bg: 'bg-amber-500/15',   text: 'text-amber-700 dark:text-amber-300',     border: 'border-amber-500/30' },
+    waste:           { label: 'تالف',          bg: 'bg-slate-500/15',   text: 'text-slate-700 dark:text-slate-300',     border: 'border-slate-500/30' },
+    opening_balance: { label: 'رصيد افتتاحي', bg: 'bg-purple-500/15',  text: 'text-purple-700 dark:text-purple-300',   border: 'border-purple-500/30' },
 };
 
 function fmt(n: number | null, unit?: string): string {
@@ -62,8 +79,161 @@ function fmtDate(v: string) {
     return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
 }
 
+/* =========================================================================
+   RIGHT FILTER DRAWER
+   ========================================================================= */
+function FilterDrawer({
+    isOpen,
+    onClose,
+    products,
+    productId,
+    setProductId,
+    type,
+    setType,
+    dateFrom,
+    setDateFrom,
+    dateTo,
+    setDateTo,
+    onSearch,
+    onReset
+}: {
+    isOpen: boolean;
+    onClose: () => void;
+    products: Product[];
+    productId: string;
+    setProductId: (v: string) => void;
+    type: string;
+    setType: (v: string) => void;
+    dateFrom: string;
+    setDateFrom: (v: string) => void;
+    dateTo: string;
+    setDateTo: (v: string) => void;
+    onSearch: () => void;
+    onReset: () => void;
+}) {
+    if (!isOpen) return null;
+
+    const selectedProductLabel = products.find(p => p.id === +productId)
+        ? `${products.find(p => p.id === +productId)!.name} (${products.find(p => p.id === +productId)!.stock} ${products.find(p => p.id === +productId)!.category.unit})`
+        : '';
+
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex justify-start select-none dir-rtl">
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-slate-950/70 backdrop-blur-md transition-opacity animate-in fade-in duration-300"
+                onClick={onClose}
+            />
+
+            {/* Right Drawer Panel */}
+            <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl border-l-2 border-slate-200 dark:border-slate-800 shadow-[10px_0_50px_rgba(0,0,0,0.5)] flex flex-col animate-in slide-in-from-right duration-300 z-[10000]">
+                
+                {/* Drawer Header */}
+                <div className="flex items-center justify-between p-6 sm:p-8 border-b-2 border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-800/60">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-[22px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shadow-md">
+                            <SlidersHorizontal className="w-7 h-7" />
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">خيارات تصفية الحركة</h3>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                                حدد المنتج والفترة الزمنية لنشاط المخزون
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-14 h-14 rounded-[20px] bg-slate-200 dark:bg-slate-800 hover:bg-red-500 hover:text-white text-slate-700 dark:text-slate-200 flex items-center justify-center transition-all cursor-pointer border-2 border-slate-300 dark:border-slate-700 active:scale-95 shrink-0"
+                    >
+                        <X className="w-7 h-7" />
+                    </button>
+                </div>
+
+                {/* Drawer Body */}
+                <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col gap-6">
+                    {/* Row 1: Product Select + Movement Type side by side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <ModernSelect
+                            label="المنتج *"
+                            placeholder="اختر المنتج..."
+                            options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})`, searchKey: p.qrcode ?? undefined }))}
+                            defaultValue={selectedProductLabel}
+                            onSelect={val => {
+                                const p = products.find(pr => `${pr.name} (${pr.stock} ${pr.category.unit})` === val);
+                                setProductId(p ? String(p.id) : '');
+                            }}
+                        />
+
+                        {/* Movement Type Options (Extra Large POS Chips) */}
+                        <div className="flex flex-col gap-3">
+                            <label className="text-lg sm:text-xl font-black text-slate-800 dark:text-white">نوع الحركة</label>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                {typeOptions.map(t => {
+                                    const isSelected = type === t.value;
+                                    return (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => setType(t.value)}
+                                            className={`h-16 sm:h-20 px-5 rounded-[22px] font-black text-lg sm:text-xl border-2 sm:border-3 transition-all cursor-pointer select-none active:scale-95 flex items-center justify-center text-center touch-manipulation shadow-md ${
+                                                isSelected
+                                                    ? 'bg-primary text-white border-primary shadow-xl shadow-primary/30 ring-4 ring-primary/20 scale-[1.02]'
+                                                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                                            }`}
+                                        >
+                                            {t.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Row 2: Date From + Date To Stacked Vertically */}
+                    <div className="flex flex-col gap-5 pt-2 border-t-2 border-slate-200/60 dark:border-slate-800/60">
+                        <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
+                        <DateFilterInput label="إلى تاريخ" value={dateTo} onChange={setDateTo} />
+                    </div>
+                </div>
+
+                {/* Drawer Footer Actions */}
+                <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-800/90 flex items-center gap-4">
+                    <button
+                        type="button"
+                        disabled={!productId}
+                        onClick={() => {
+                            onSearch();
+                            onClose();
+                        }}
+                        className="h-16 sm:h-18 px-8 rounded-[18px] bg-primary hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-xl flex-1 flex items-center justify-center gap-3 shadow-xl shadow-primary/30 border-2 border-primary/40 active:scale-95 transition-all cursor-pointer touch-manipulation select-none"
+                    >
+                        <Search className="w-6 h-6 shrink-0" />
+                        <span>عرض التقرير</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            onReset();
+                            onClose();
+                        }}
+                        className="h-16 sm:h-18 px-6 rounded-[18px] bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-black text-lg flex items-center justify-center gap-2 border-2 border-slate-300 dark:border-slate-700 active:scale-95 transition-all cursor-pointer shrink-0 touch-manipulation shadow-md select-none"
+                    >
+                        <RotateCcw className="w-5 h-5 shrink-0 text-slate-700 dark:text-slate-300" />
+                        <span>إعادة تعيين</span>
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+}
+
+/* =========================================================================
+   MAIN PRODUCT MOVEMENT PAGE
+   ========================================================================= */
 export default function ProductMovement({ products, product, filters, data }: Props) {
-    const [filterOpen, setFilterOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const [productId, setProductId] = useState(filters.productId ? String(filters.productId) : '');
     const [dateFrom,  setDateFrom]  = useState(filters.dateFrom ?? '');
@@ -108,7 +278,7 @@ export default function ProductMovement({ products, product, filters, data }: Pr
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [products, dateFrom, dateTo, type]);
 
-    const hasFilter = productId || dateFrom || dateTo || type;
+    const activeFilterCount = (productId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (type ? 1 : 0);
 
     function search() {
         if (!productId) return;
@@ -125,10 +295,6 @@ export default function ProductMovement({ products, product, filters, data }: Pr
         router.get('/reports/product-movement', {}, { preserveScroll: true });
     }
 
-    const selectedProductLabel = products.find(p => p.id === +productId)
-        ? `${products.find(p => p.id === +productId)!.name} (${products.find(p => p.id === +productId)!.stock} ${products.find(p => p.id === +productId)!.category.unit})`
-        : '';
-
     function buildExportUrl(format: 'excel' | 'pdf') {
         const params = new URLSearchParams();
         if (productId) params.set('product_id', productId);
@@ -138,218 +304,237 @@ export default function ProductMovement({ products, product, filters, data }: Pr
         return `/reports/product-movement/${format}?${params.toString()}`;
     }
 
-    const FilterPanel = () => (
-        <div className="flex flex-col gap-4">
-            <ModernSelect
-                label="المنتج *"
-                placeholder="اختر المنتج"
-                options={products.map(p => ({ label: `${p.name} (${p.stock} ${p.category.unit})`, searchKey: p.qrcode ?? undefined }))}
-                defaultValue={selectedProductLabel}
-                onSelect={val => {
-                    const p = products.find(pr => `${pr.name} (${pr.stock} ${pr.category.unit})` === val);
-                    setProductId(p ? String(p.id) : '');
-                }}
-            />
-            <ModernSelect
-                label="نوع الحركة"
-                placeholder="جميع الحركات"
-                options={typeOptions.map(t => ({ label: t.label }))}
-                defaultValue={typeOptions.find(t => t.value === type)?.label ?? 'جميع الحركات'}
-                onSelect={val => setType(typeOptions.find(t => t.label === val)?.value ?? '')}
-            />
-            <DateFilterInput label="من تاريخ" value={dateFrom} onChange={setDateFrom} />
-            <DateFilterInput label="إلى تاريخ" value={dateTo}   onChange={setDateTo} />
-            <button onClick={search} disabled={!productId}
-                className="w-full h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                <Search className="w-4 h-4" /> عرض التقرير
-            </button>
-            {hasFilter && (
-                <button onClick={reset}
-                    className="w-full h-10 rounded-[14px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 font-bold text-sm transition-all">
-                    إعادة تعيين
-                </button>
-            )}
-        </div>
-    );
-
     return (
         <AppShell pageTitle="حركة المنتج">
-            <div className="flex flex-col gap-6 pb-32 lg:pb-6">
+            <div className="flex flex-col gap-8 pb-32 lg:pb-8 dir-rtl">
 
-                {/* Header */}
-                <div>
-                    <h1 className="text-2xl font-black text-slate-800 dark:text-white">تقرير حركة المنتج</h1>
-                    <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">تتبع دخول وخروج المخزون لمنتج معين</p>
+                {/* Top Header Banner */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-100/80 dark:bg-slate-800/40 p-6 sm:p-8 rounded-[30px] border-2 border-slate-200/80 dark:border-slate-700/60 shadow-lg">
+                    <div className="flex items-center gap-5">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[26px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black shrink-0 shadow-md">
+                            <Package className="w-8 h-8 sm:w-10 sm:h-10" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                تقرير حركة المنتج
+                            </h1>
+                            <p className="text-base sm:text-xl font-bold text-slate-500 dark:text-slate-400 mt-1">
+                                تتبع حركة وتغيرات مخزون الصنف بكل تفاصيل الوارد والمنصرف
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                        <button
+                            onClick={() => setIsFilterOpen(true)}
+                            className="h-16 sm:h-18 px-8 sm:px-10 rounded-[22px] bg-slate-200 dark:bg-slate-800 hover:bg-primary hover:text-white text-slate-800 dark:text-slate-200 font-black text-base sm:text-xl flex items-center justify-center gap-3 active:scale-95 shadow-xl border-2 border-slate-300 dark:border-slate-700 touch-manipulation cursor-pointer transition-all relative"
+                        >
+                            <SlidersHorizontal className="w-6 h-6" />
+                            <span>تصفية وفلترة</span>
+                            {activeFilterCount > 0 && (
+                                <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-black flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
-                {/* Mobile Filter */}
-                <div className="lg:hidden">
-                    <button onClick={() => setFilterOpen(p => !p)}
-                        className="w-full flex items-center justify-between px-5 h-12 rounded-[18px] spatial-input font-bold text-[14px] text-slate-700 dark:text-white/70">
-                        <div className="flex items-center gap-2">
-                            <SlidersHorizontal className="w-4 h-4" /> فلترة
-                            {hasFilter && <span className="w-2 h-2 rounded-full bg-primary" />}
-                        </div>
-                        <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${filterOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    {filterOpen && (
-                        <div className="mt-3 spatial-card p-5 animate-in fade-in slide-in-from-top-2 duration-200">
-                            <FilterPanel />
-                        </div>
-                    )}
-                </div>
+                {/* Filter Drawer Portal */}
+                <FilterDrawer
+                    isOpen={isFilterOpen}
+                    onClose={() => setIsFilterOpen(false)}
+                    products={products}
+                    productId={productId}
+                    setProductId={setProductId}
+                    type={type}
+                    setType={setType}
+                    dateFrom={dateFrom}
+                    setDateFrom={setDateFrom}
+                    dateTo={dateTo}
+                    setDateTo={setDateTo}
+                    onSearch={search}
+                    onReset={reset}
+                />
 
-                <div className="flex gap-6">
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0 flex flex-col gap-6">
+                {/* Main Content Area */}
+                {!data || !product ? (
+                    <SpatialCard headerDot={false} className="p-16 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4 text-center">
+                        <div className="w-24 h-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-primary shadow-inner">
+                            <Package className="w-12 h-12 opacity-60" />
+                        </div>
+                        <span className="font-black text-2xl text-slate-700 dark:text-slate-300">الرجاء اختيار صنف لعرض حركة المخزون</span>
+                        <p className="text-lg font-bold text-slate-500 dark:text-slate-400 max-w-md">
+                            اضغط على زر "تصفية وفلترة" لاختيار المنتج أو امسح الباركود مباشرة من الشاشة.
+                        </p>
+                        <button
+                            onClick={() => setIsFilterOpen(true)}
+                            className="h-16 px-8 rounded-[20px] bg-primary text-white font-black text-lg flex items-center gap-3 shadow-xl active:scale-95 cursor-pointer mt-2"
+                        >
+                            <Search className="w-6 h-6" />
+                            <span>اختر المنتج من الفلاتر</span>
+                        </button>
+                    </SpatialCard>
+                ) : (
+                    <div className="flex flex-col gap-6">
 
-                        {/* Export + Summary Cards */}
-                        {data && product && (
-                            <>
-                                <div className="flex items-center gap-2">
-                                    <a href={buildExportUrl('excel')} target="_blank"
-                                        className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
-                                        <FileSpreadsheet className="w-4 h-4" /> Excel
-                                    </a>
-                                    <a href={buildExportUrl('pdf')} target="_blank"
-                                        className="flex items-center gap-2 px-4 h-10 rounded-[14px] bg-red-500/10 border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-sm">
-                                        <FileText className="w-4 h-4" /> PDF
-                                    </a>
+                        {/* Summary Metric Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            <SpatialCard headerDot={false} className="p-6 sm:p-8 flex flex-col justify-between gap-4 border-2 border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm sm:text-base font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">رصيد أول الفترة</span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="spatial-card p-5 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">رصيد أول الفترة</p>
-                                    <p className="text-2xl font-black text-slate-800 dark:text-white">
-                                        {fmt(data.opening_stock)} <span className="text-sm font-bold text-slate-400">{product.category.unit}</span>
-                                    </p>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">
+                                        {fmt(data.opening_stock)}
+                                    </span>
+                                    <span className="text-lg font-bold text-slate-500 dark:text-slate-400">
+                                        {product.category.unit}
+                                    </span>
                                 </div>
-                                <div className="spatial-card p-5 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">عدد الحركات</p>
-                                    <p className="text-2xl font-black text-slate-800 dark:text-white">{data.movements.length}</p>
+                            </SpatialCard>
+
+                            <SpatialCard headerDot={false} className="p-6 sm:p-8 flex flex-col justify-between gap-4 border-2 border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm sm:text-base font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">عدد الحركات</span>
                                 </div>
-                                <div className="spatial-card p-5 flex flex-col gap-1">
-                                    <p className="text-xs font-black text-slate-400 dark:text-white/40 uppercase tracking-widest">رصيد آخر الفترة</p>
-                                    <p className="text-2xl font-black text-slate-800 dark:text-white">
-                                        {fmt(data.closing_stock)} <span className="text-sm font-bold text-slate-400">{product.category.unit}</span>
-                                    </p>
+                                <div>
+                                    <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">
+                                        {data.movements.length}
+                                    </span>
+                                    <span className="text-lg font-bold text-slate-500 dark:text-slate-400 mr-2">حركة</span>
+                                </div>
+                            </SpatialCard>
+
+                            <SpatialCard headerDot={false} className="p-6 sm:p-8 flex flex-col justify-between gap-4 border-2 border-primary/40 bg-primary/5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm sm:text-base font-black text-primary uppercase tracking-wider">رصيد آخر الفترة</span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl sm:text-5xl font-black text-primary">
+                                            {fmt(data.closing_stock)}
+                                        </span>
+                                        <span className="text-lg font-bold text-primary/80">
+                                            {product.category.unit}
+                                        </span>
+                                    </div>
                                     {data.closing_stock !== data.opening_stock && (
-                                        <div className={`flex items-center gap-1 text-xs font-bold mt-1 ${data.closing_stock > data.opening_stock ? 'text-emerald-500' : 'text-red-500'}`}>
-                                            {data.closing_stock > data.opening_stock
-                                                ? <TrendingUp className="w-3.5 h-3.5" />
-                                                : <TrendingDown className="w-3.5 h-3.5" />}
-                                            {fmt(Math.abs(data.closing_stock - data.opening_stock))} {product.category.unit}
+                                        <div className={`flex items-center gap-1.5 text-base font-black mt-2 ${data.closing_stock > data.opening_stock ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                            {data.closing_stock > data.opening_stock ? (
+                                                <TrendingUp className="w-5 h-5" />
+                                            ) : (
+                                                <TrendingDown className="w-5 h-5" />
+                                            )}
+                                            <span>
+                                                {data.closing_stock > data.opening_stock ? '+' : ''}
+                                                {fmt(data.closing_stock - data.opening_stock)} {product.category.unit} (تغير الصافي)
+                                            </span>
                                         </div>
                                     )}
                                 </div>
-                                </div>
-                            </>
-                        )}
+                            </SpatialCard>
+                        </div>
 
-                        {/* Movements Table */}
+                        {/* Movements Table Card */}
                         <SpatialCard
-                            title={data && product ? `حركات ${product.name} (${data.movements.length})` : 'الحركات'}
-                            icon={<Package className="w-4 h-4" />}
-                        >
-                            {!data ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
-                                    <Package className="w-12 h-12 opacity-30" />
-                                    <p className="font-bold">اختر منتجاً لعرض التقرير</p>
+                            headerDot={false}
+                            title={`سجل حركات المنتج: ${product.name} (${data.movements.length} حركة)`}
+                            icon={<Package className="w-7 h-7 text-primary" />}
+                            action={
+                                <div className="flex items-center gap-3">
+                                    <a
+                                        href={buildExportUrl('excel')}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="h-12 px-5 rounded-[16px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white border-2 border-emerald-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
+                                        title="تصدير إكسيل"
+                                    >
+                                        <FileSpreadsheet className="w-5 h-5" />
+                                        <span className="hidden sm:inline">تصدير إكسيل</span>
+                                    </a>
+                                    <a
+                                        href={buildExportUrl('pdf')}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="h-12 px-5 rounded-[16px] bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500 hover:text-white border-2 border-rose-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
+                                        title="تصدير PDF"
+                                    >
+                                        <Download className="w-5 h-5" />
+                                        <span className="hidden sm:inline">تصدير PDF</span>
+                                    </a>
                                 </div>
-                            ) : data.movements.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-white/30 gap-2">
-                                    <span className="text-3xl">📦</span>
-                                    <span className="font-bold text-sm">لا توجد حركات في هذه الفترة</span>
+                            }
+                        >
+                            {data.movements.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-2">
+                                    <Package className="w-14 h-14 opacity-30" />
+                                    <p className="font-bold text-xl">لا توجد حركات مسجلة لهذا المنتج في الفترة المحددة</p>
                                 </div>
                             ) : (
-                                <>
-                                    {/* Desktop Table */}
-                                    <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-[16px]">
-                                            <thead>
-                                                <tr className="bg-black/3 dark:bg-white/3 border-b border-black/5 dark:border-white/5">
-                                                    {['التاريخ', 'النوع', 'الكمية', 'السعر', 'المرجع', 'الرصيد'].map(h => (
-                                                        <th key={h} className="text-right px-4 py-4 text-sm font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                    ))}
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                                {data.movements.map((m, i) => (
-                                                    <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/20 cursor-pointer group transition-colors">
-                                                        <td className="px-4 py-4 font-bold text-slate-500 dark:text-white/60 whitespace-nowrap text-xs"><span className="px-2.5 py-1 rounded-[8px] bg-black/5 dark:bg-white/10 border border-black/5 dark:border-white/5 text-[16px]">{fmtDate(m.date)}</span></td>
-                                                        <td className="px-4 py-4">
-                                                            <span className={`font-black text-xs ${typeConfig[m.type]?.color}`}>
-                                                                {typeConfig[m.type]?.label}
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-right border-collapse min-w-[850px]">
+                                        <thead>
+                                            <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base sm:text-lg font-black uppercase">
+                                                <th className="p-5 rounded-r-[18px]">التاريخ</th>
+                                                <th className="p-5">نوع الحركة</th>
+                                                <th className="p-5">الكمية</th>
+                                                <th className="p-5">سعر الوحدة</th>
+                                                <th className="p-5">رقم المرجع / الفاتورة</th>
+                                                <th className="p-5 rounded-l-[18px]">الرصيد المتبقي</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-black text-lg sm:text-xl">
+                                            {data.movements.map((m, i) => {
+                                                const cfg = typeConfig[m.type] || { label: m.type, bg: 'bg-slate-500/15', text: 'text-slate-700', border: 'border-slate-500/30' };
+                                                return (
+                                                    <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                                                        <td className="p-5 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-black text-base">
+                                                                {fmtDate(m.date)}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className={`flex items-center gap-1 font-black whitespace-nowrap ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : (m.quantity === 0 ? 'text-slate-500 dark:text-white/40' : 'text-red-500 dark:text-red-400')}`}>
-                                                                {m.quantity > 0
-                                                                    ? <ArrowUp className="w-3.5 h-3.5" />
-                                                                    : (m.quantity === 0 ? null : <ArrowDown className="w-3.5 h-3.5" />)}
-                                                                {fmt(Math.abs(m.quantity))} {product!.category.unit}
+                                                        <td className="p-5 whitespace-nowrap">
+                                                            <span className={`px-4 py-2 rounded-xl font-black text-base border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                                                                {cfg.label}
+                                                            </span>
+                                                        </td>
+                                                        <td className="p-5 whitespace-nowrap">
+                                                            <div className={`flex items-center gap-1.5 font-black ${
+                                                                m.quantity > 0
+                                                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                                                    : m.quantity === 0
+                                                                    ? 'text-slate-500'
+                                                                    : 'text-rose-600 dark:text-rose-400'
+                                                            }`}>
+                                                                {m.quantity > 0 ? (
+                                                                    <ArrowUp className="w-5 h-5 shrink-0" />
+                                                                ) : m.quantity < 0 ? (
+                                                                    <ArrowDown className="w-5 h-5 shrink-0" />
+                                                                ) : null}
+                                                                <span>{fmt(Math.abs(m.quantity))} {product.category.unit}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4 font-bold text-slate-700 dark:text-white/80 whitespace-nowrap">
-                                                            {m.unit_price !== null ? fmt(m.unit_price) : '—'}
+                                                        <td className="p-5 text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                            {m.unit_price !== null ? `${fmt(m.unit_price)} د.ل` : '—'}
                                                         </td>
-                                                        <td className="px-4 py-4 font-bold text-primary text-xs">{m.reference}</td>
-                                                        <td className="px-4 py-4 font-black text-slate-800 dark:text-white whitespace-nowrap">
-                                                            {fmt(m.balance)} {product!.category.unit}
+                                                        <td className="p-5 text-primary font-black text-base whitespace-nowrap">
+                                                            {m.reference}
+                                                        </td>
+                                                        <td className="p-5 text-slate-900 dark:text-white font-black whitespace-nowrap">
+                                                            {fmt(m.balance)} {product.category.unit}
                                                         </td>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {/* Mobile Cards */}
-                                    <div className="flex flex-col gap-3 lg:hidden">
-                                        {data.movements.map((m, i) => (
-                                            <div key={i} className="rounded-[20px] border border-black/8 dark:border-white/12 overflow-hidden">
-                                                <div className="px-4 py-3 bg-black/3 dark:bg-white/6 flex items-center justify-between">
-                                                    <span className={`font-black text-sm ${typeConfig[m.type]?.color}`}>
-                                                        {typeConfig[m.type]?.label}
-                                                    </span>
-                                                    <span className="text-xs font-bold text-slate-400 dark:text-white/40">{fmtDate(m.date)}</span>
-                                                </div>
-                                                <div className="px-4 py-2 flex flex-col gap-1.5 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">الكمية</span>
-                                                        <span className={`font-black flex items-center gap-1 ${m.quantity > 0 ? 'text-emerald-600 dark:text-emerald-400' : (m.quantity === 0 ? 'text-slate-500 dark:text-white/40' : 'text-red-500')}`}>
-                                                            {m.quantity > 0 ? <ArrowUp className="w-3 h-3" /> : (m.quantity === 0 ? null : <ArrowDown className="w-3 h-3" />)}
-                                                            {fmt(Math.abs(m.quantity))} {product!.category.unit}
-                                                        </span>
-                                                    </div>
-                                                    {m.unit_price !== null && (
-                                                        <div className="flex justify-between">
-                                                            <span className="font-bold text-slate-400 dark:text-white/40">السعر</span>
-                                                            <span className="font-bold text-slate-700 dark:text-white/80">{fmt(m.unit_price)}</span>
-                                                        </div>
-                                                    )}
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">المرجع</span>
-                                                        <span className="font-bold text-primary text-xs">{m.reference}</span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="font-bold text-slate-400 dark:text-white/40">الرصيد</span>
-                                                        <span className="font-black text-slate-800 dark:text-white">{fmt(m.balance)} {product!.category.unit}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </SpatialCard>
-                    </div>
 
-                    {/* Desktop Filter */}
-                    <div className="hidden lg:block w-[360px] shrink-0">
-                        <SpatialCard title="فلترة" icon={<SlidersHorizontal className="w-4 h-4" />}>
-                            <FilterPanel />
-                        </SpatialCard>
                     </div>
-                </div>
+                )}
 
             </div>
         </AppShell>
