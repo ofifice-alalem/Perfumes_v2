@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle } from 'lucide-react';
+import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
+import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -201,14 +202,24 @@ function QrModal({ product, onClose }: QrModalProps) {
 export default function ProductsIndex({ products, categories, tiers, flash }: Props) {
     const [showCreate, setShowCreate] = useState(false);
     const [editingId, setEditingId]   = useState<number | null>(null);
-    const [filterCat, setFilterCat]   = useState<number | null>(null);
+
+    // الفلاتر المطبقة حالياً على قائمة الجدول الرئيسي
+    const [filterCat, setFilterCat]       = useState<number | null>(null);
     const [searchProdId, setSearchProdId] = useState<number | null>(null);
     const [lowStockOnly, setLowStockOnly] = useState(false);
+
+    // الفلاتر المعلقة المؤقتة داخل الـ Drawer (قبل الضغط على عرض النتائج)
+    const [draftCat, setDraftCat]               = useState<number | null>(null);
+    const [draftSearchProdId, setDraftSearchProdId] = useState<number | null>(null);
+    const [draftLowStockOnly, setDraftLowStockOnly] = useState(false);
+
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [qrProduct, setQrProduct]   = useState<Product | null>(null);
     const [generatingAll, setGeneratingAll] = useState(false);
+    const [padConfig, setPadConfig] = useState<{ title: string; field: string; initial: string } | null>(null);
 
     const hasActiveFilter = !!searchProdId || !!filterCat || lowStockOnly;
+    const hasDraftFilter  = !!draftSearchProdId || !!draftCat || draftLowStockOnly;
 
     // توليد QR لمنتج واحد
     function handleGenerate(p: Product) {
@@ -295,10 +306,35 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         router.delete(`/products/${id}`);
     }
 
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 20;
+
     const filtered = products.filter(p => {
         if (searchProdId && p.id !== searchProdId) return false;
         if (filterCat && p.category.id !== filterCat) return false;
         if (lowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
+        return true;
+    });
+
+    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const paginatedProducts = filtered.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
+
+    const paginationLinks = [
+        { url: safeCurrentPage > 1 ? '#' : null, label: 'السابق', active: false, page: safeCurrentPage - 1 },
+        ...Array.from({ length: totalPages }, (_, i) => ({
+            url: '#',
+            label: String(i + 1),
+            active: i + 1 === safeCurrentPage,
+            page: i + 1,
+        })),
+        { url: safeCurrentPage < totalPages ? '#' : null, label: 'التالي', active: false, page: safeCurrentPage + 1 },
+    ];
+
+    const draftFiltered = products.filter(p => {
+        if (draftSearchProdId && p.id !== draftSearchProdId) return false;
+        if (draftCat && p.category.id !== draftCat) return false;
+        if (draftLowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
         return true;
     });
 
@@ -322,29 +358,38 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <QrCode className="w-5 h-5 text-violet-500" />
                         رمز QR Code
                     </label>
-                    <button
-                        type="button"
-                        onClick={() => form.setData('qrcode', generateQrCode())}
-                        className="flex items-center gap-2 px-4 h-11 rounded-[14px] bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all text-sm font-black border-2 border-violet-500/30"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                        {hasQr ? 'تجديد الرمز' : 'توليد تلقائي'}
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        {hasQr ? (
+                            <button
+                                type="button"
+                                onClick={() => form.setData('qrcode', '')}
+                                className="px-3 py-1.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-xs transition-all border border-red-500/30"
+                            >
+                                إزالة الرمز
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => form.setData('qrcode', generateQrCode())}
+                                className="px-3 py-1.5 rounded-xl bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white font-black text-xs transition-all border border-violet-500/30"
+                            >
+                                توليد QR جديد ⚡
+                            </button>
+                        )}
+                    </div>
                 </div>
-                <div className="flex items-center gap-3 mt-1">
+
+                <div className="relative">
                     <input
+                        type="text"
+                        inputMode="text"
                         value={form.data.qrcode}
                         onChange={e => form.setData('qrcode', e.target.value)}
-                        placeholder="أدخل كود QR أو اضغط توليد..."
-                        className="spatial-input h-14 rounded-[18px] px-5 text-lg font-mono flex-1 font-bold border-2"
+                        placeholder="أدخل كود الـ QR أو اضغط توليد تلقائي..."
+                        className="spatial-input h-14 rounded-[16px] px-4 text-base font-bold border-2 w-full font-mono dir-ltr"
                     />
-                    {hasQr && (
-                        <div className="rounded-[16px] overflow-hidden border-2 border-slate-300 dark:border-slate-600 bg-white p-2 shrink-0 shadow-md">
-                            <QRCodeSVG value={form.data.qrcode} size={54} level="M" />
-                        </div>
-                    )}
                 </div>
-                {form.errors.qrcode && <p className="text-sm text-red-500 font-black">{form.errors.qrcode}</p>}
             </div>
         );
     };
@@ -354,7 +399,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const activeIsOriginal = editingId !== null ? editIsOriginal : createIsOriginal;
 
     return (
-        <AppShell pageTitle="المنتجات">
+        <AppShell title="إدارة المنتجات">
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
                 {/* Header */}
@@ -365,8 +410,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     </div>
                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                         <button
-                            onClick={() => setFilterDrawerOpen(true)}
-                            className={`flex items-center justify-center gap-3 px-6 h-14 rounded-[20px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer shrink-0 shadow-md ${
+                            onClick={() => {
+                                setDraftCat(filterCat);
+                                setDraftSearchProdId(searchProdId);
+                                setDraftLowStockOnly(lowStockOnly);
+                                setFilterDrawerOpen(true);
+                            }}
+                            className={`flex items-center justify-center gap-3 px-6 h-14 rounded-[20px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer shrink-0 shadow-md touch-manipulation select-none ${
                                 hasActiveFilter
                                     ? 'bg-primary text-white border-primary shadow-primary/30'
                                     : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -378,6 +428,23 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
                             )}
                         </button>
+                        {hasActiveFilter && (
+                            <button
+                                onClick={() => {
+                                    setSearchProdId(null);
+                                    setFilterCat(null);
+                                    setLowStockOnly(false);
+                                    setDraftSearchProdId(null);
+                                    setDraftCat(null);
+                                    setDraftLowStockOnly(false);
+                                }}
+                                className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base border-2 border-red-500/30 shrink-0 shadow-sm touch-manipulation select-none"
+                                title="إعادة تعيين الفلاتر"
+                            >
+                                <RotateCcw className="w-5 h-5" />
+                                <span>إعادة تعيين</span>
+                            </button>
+                        )}
                         {products.some(p => !p.qrcode) && (
                             <button
                                 onClick={handleGenerateAll}
@@ -461,6 +528,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             <div className="flex flex-col gap-2.5">
                                                 <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">اسم المنتج</label>
                                                 <input
+                                                    type="text"
+                                                    inputMode="text"
                                                     value={activeForm.data.name}
                                                     onChange={e => activeForm.setData('name', e.target.value)}
                                                     placeholder="مثال: Sauvage Elixir..."
@@ -542,25 +611,65 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="flex flex-col gap-2">
                                                             <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — عادي</label>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.01"
-                                                                value={activeForm.data.price_per_unit_regular}
-                                                                onChange={e => activeForm.setData('price_per_unit_regular', e.target.value)}
-                                                                className="spatial-input h-14 rounded-[16px] px-4 text-lg font-bold border-2"
-                                                            />
+                                                            <div className="relative flex items-center">
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={activeForm.data.price_per_unit_regular}
+                                                                    onChange={e => activeForm.setData('price_per_unit_regular', e.target.value)}
+                                                                    onClick={() => setPadConfig({
+                                                                        title: `سعر ${unitLabels[activeCat.unit]} — عادي`,
+                                                                        field: 'price_per_unit_regular',
+                                                                        initial: String(activeForm.data.price_per_unit_regular || '')
+                                                                    })}
+                                                                    className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPadConfig({
+                                                                        title: `سعر ${unitLabels[activeCat.unit]} — عادي`,
+                                                                        field: 'price_per_unit_regular',
+                                                                        initial: String(activeForm.data.price_per_unit_regular || '')
+                                                                    })}
+                                                                    className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                    title="فتح لوحة الأرقام اللمسية"
+                                                                >
+                                                                    <Calculator className="w-5 h-5" />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <div className="flex flex-col gap-2">
                                                             <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — VIP</label>
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.01"
-                                                                value={activeForm.data.price_per_unit_vip}
-                                                                onChange={e => activeForm.setData('price_per_unit_vip', e.target.value)}
-                                                                className="spatial-input h-14 rounded-[16px] px-4 text-lg font-bold border-2"
-                                                            />
+                                                            <div className="relative flex items-center">
+                                                                <input
+                                                                    type="number"
+                                                                    inputMode="decimal"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    value={activeForm.data.price_per_unit_vip}
+                                                                    onChange={e => activeForm.setData('price_per_unit_vip', e.target.value)}
+                                                                    onClick={() => setPadConfig({
+                                                                        title: `سعر ${unitLabels[activeCat.unit]} — VIP`,
+                                                                        field: 'price_per_unit_vip',
+                                                                        initial: String(activeForm.data.price_per_unit_vip || '')
+                                                                    })}
+                                                                    className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setPadConfig({
+                                                                        title: `سعر ${unitLabels[activeCat.unit]} — VIP`,
+                                                                        field: 'price_per_unit_vip',
+                                                                        initial: String(activeForm.data.price_per_unit_vip || '')
+                                                                    })}
+                                                                    className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                    title="فتح لوحة الأرقام اللمسية"
+                                                                >
+                                                                    <Calculator className="w-5 h-5" />
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -568,38 +677,98 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         <div className="flex flex-col gap-5 pt-4 border-t border-slate-200 dark:border-slate-700">
                                                             <div className="flex flex-col gap-2">
                                                                 <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">حجم العبوة الأصلية (مليلتر)</label>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0.01"
-                                                                    step="0.01"
-                                                                    value={activeForm.data.bottle_volume}
-                                                                    onChange={e => activeForm.setData('bottle_volume', e.target.value)}
-                                                                    placeholder="200"
-                                                                    className="spatial-input h-14 rounded-[16px] px-4 text-lg font-bold border-2"
-                                                                />
+                                                                <div className="relative flex items-center">
+                                                                    <input
+                                                                        type="number"
+                                                                        inputMode="decimal"
+                                                                        min="0.01"
+                                                                        step="0.01"
+                                                                        value={activeForm.data.bottle_volume}
+                                                                        onChange={e => activeForm.setData('bottle_volume', e.target.value)}
+                                                                        onClick={() => setPadConfig({
+                                                                            title: 'حجم العبوة الأصلية (مليلتر)',
+                                                                            field: 'bottle_volume',
+                                                                            initial: String(activeForm.data.bottle_volume || '')
+                                                                        })}
+                                                                        placeholder="200"
+                                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setPadConfig({
+                                                                            title: 'حجم العبوة الأصلية (مليلتر)',
+                                                                            field: 'bottle_volume',
+                                                                            initial: String(activeForm.data.bottle_volume || '')
+                                                                        })}
+                                                                        className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                        title="فتح لوحة الأرقام اللمسية"
+                                                                    >
+                                                                        <Calculator className="w-5 h-5" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-4">
                                                                 <div className="flex flex-col gap-2">
                                                                     <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — عادي</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.01"
-                                                                        value={activeForm.data.full_bottle_regular}
-                                                                        onChange={e => activeForm.setData('full_bottle_regular', e.target.value)}
-                                                                        className="spatial-input h-14 rounded-[16px] px-4 text-lg font-bold border-2"
-                                                                    />
+                                                                    <div className="relative flex items-center">
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="decimal"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            value={activeForm.data.full_bottle_regular}
+                                                                            onChange={e => activeForm.setData('full_bottle_regular', e.target.value)}
+                                                                            onClick={() => setPadConfig({
+                                                                                title: 'سعر العبوة كاملة — عادي',
+                                                                                field: 'full_bottle_regular',
+                                                                                initial: String(activeForm.data.full_bottle_regular || '')
+                                                                            })}
+                                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setPadConfig({
+                                                                                title: 'سعر العبوة كاملة — عادي',
+                                                                                field: 'full_bottle_regular',
+                                                                                initial: String(activeForm.data.full_bottle_regular || '')
+                                                                            })}
+                                                                            className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                            title="فتح لوحة الأرقام اللمسية"
+                                                                        >
+                                                                            <Calculator className="w-5 h-5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                                 <div className="flex flex-col gap-2">
                                                                     <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — VIP</label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.01"
-                                                                        value={activeForm.data.full_bottle_vip}
-                                                                        onChange={e => activeForm.setData('full_bottle_vip', e.target.value)}
-                                                                        className="spatial-input h-14 rounded-[16px] px-4 text-lg font-bold border-2"
-                                                                    />
+                                                                    <div className="relative flex items-center">
+                                                                        <input
+                                                                            type="number"
+                                                                            inputMode="decimal"
+                                                                            min="0"
+                                                                            step="0.01"
+                                                                            value={activeForm.data.full_bottle_vip}
+                                                                            onChange={e => activeForm.setData('full_bottle_vip', e.target.value)}
+                                                                            onClick={() => setPadConfig({
+                                                                                title: 'سعر العبوة كاملة — VIP',
+                                                                                field: 'full_bottle_vip',
+                                                                                initial: String(activeForm.data.full_bottle_vip || '')
+                                                                            })}
+                                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setPadConfig({
+                                                                                title: 'سعر العبوة كاملة — VIP',
+                                                                                field: 'full_bottle_vip',
+                                                                                initial: String(activeForm.data.full_bottle_vip || '')
+                                                                            })}
+                                                                            className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                            title="فتح لوحة الأرقام اللمسية"
+                                                                        >
+                                                                            <Calculator className="w-5 h-5" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -617,15 +786,35 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                             <div className="flex flex-col gap-2.5">
                                                 <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">حد تنبيه نقصان المخزون</label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    value={activeForm.data.min_stock}
-                                                    onChange={e => activeForm.setData('min_stock', e.target.value)}
-                                                    placeholder="0"
-                                                    className="spatial-input h-14 rounded-[18px] px-5 text-lg font-bold border-2"
-                                                />
+                                                <div className="relative flex items-center">
+                                                    <input
+                                                        type="number"
+                                                        inputMode="decimal"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={activeForm.data.min_stock}
+                                                        onChange={e => activeForm.setData('min_stock', e.target.value)}
+                                                        onClick={() => setPadConfig({
+                                                            title: 'حد تنبيه نقصان المخزون',
+                                                            field: 'min_stock',
+                                                            initial: String(activeForm.data.min_stock || '')
+                                                        })}
+                                                        placeholder="0"
+                                                        className="spatial-input h-14 rounded-[18px] px-5 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPadConfig({
+                                                            title: 'حد تنبيه نقصان المخزون',
+                                                            field: 'min_stock',
+                                                            initial: String(activeForm.data.min_stock || '')
+                                                        })}
+                                                        className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                        title="فتح لوحة الأرقام اللمسية"
+                                                    >
+                                                        <Calculator className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -665,13 +854,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     }}
                 >
                     <div
-                        className={`relative w-full max-w-2xl sm:w-[620px] lg:w-[680px] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 transition-all duration-300 ease-out cursor-default ${
+                        className={`relative w-full sm:w-[840px] md:w-[1000px] lg:w-[1140px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 transition-all duration-300 ease-out cursor-default ${
                             filterDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                         }`}
                     >
                             
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
+                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 select-none">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-[20px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black p-3 shadow-md">
                                         <SlidersHorizontal className="w-7 h-7" />
@@ -683,111 +872,116 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 </div>
                                 <button
                                     onClick={() => setFilterDrawerOpen(false)}
-                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600"
+                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600 touch-manipulation"
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
 
                             {/* Drawer Content — الحاويات المقسمة */}
-                            <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col gap-6 scrollbar-none">
+                            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 flex flex-col gap-6 scrollbar-none">
                                 
-                                {/* حاوية 1: البحث والمعلومات الأساسية */}
-                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                                        <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
-                                        <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
-                                    </h4>
-                                    
-                                    <div className="flex flex-col gap-3">
-                                        <label className="text-sm font-black text-slate-700 dark:text-slate-300">بحث بالاسم أو كود QR</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1">
-                                                <ModernSelect
-                                                    label=""
-                                                    placeholder="ابحث بالاسم أو كود QR..."
-                                                    options={products.map(p => ({
-                                                        label: p.name,
-                                                        badge: p.category.name,
-                                                        meta: fmt(p.stock),
-                                                        searchKey: p.qrcode ?? undefined
-                                                    }))}
-                                                    onSelect={val => {
-                                                        const prod = products.find(p => p.name === val);
-                                                        if (prod) setSearchProdId(prod.id);
-                                                    }}
-                                                />
+                                {/* صف شبكي: البحث والمعلومات الأساسية + تصنيف المنتجات (جنباً إلى جنب) */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                                    {/* حاوية 1: البحث والمعلومات الأساسية */}
+                                    <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm h-full">
+                                        <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
+                                            <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
+                                            <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                                        </h4>
+                                        
+                                        <div className="flex flex-col gap-3">
+                                            <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">بحث بالاسم أو كود QR</label>
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex-1">
+                                                    <ModernSelect
+                                                        label=""
+                                                        placeholder="ابحث بالاسم أو كود QR..."
+                                                        options={products.map(p => ({
+                                                            label: p.name,
+                                                            badge: p.category.name,
+                                                            meta: fmt(p.stock),
+                                                            searchKey: p.qrcode ?? undefined
+                                                        }))}
+                                                        onSelect={val => {
+                                                            const prod = products.find(p => p.name === val);
+                                                            if (prod) setDraftSearchProdId(prod.id);
+                                                        }}
+                                                    />
+                                                </div>
+                                                {draftSearchProdId && (
+                                                    <button onClick={() => setDraftSearchProdId(null)}
+                                                        className="flex items-center gap-2 px-4 h-14 rounded-[18px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-sm shrink-0 border-2 border-red-500/30 select-none touch-manipulation">
+                                                        <X className="w-4 h-4" /> إلغاء البحث
+                                                    </button>
+                                                )}
                                             </div>
-                                            {searchProdId && (
-                                                <button onClick={() => setSearchProdId(null)}
-                                                    className="flex items-center gap-2 px-4 h-14 rounded-[18px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-sm shrink-0 border-2 border-red-500/30">
-                                                    <X className="w-4 h-4" /> إلغاء البحث
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* حاوية 2: تصنيف المنتجات والفرز */}
-                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                                        <span className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 border border-purple-500/30">🏷️</span>
-                                        <span className="text-slate-900 dark:text-white tracking-wide">تصنيف المنتجات</span>
-                                    </h4>
+                                    {/* حاوية 2: تصنيف المنتجات والفرز (كاردات مكبرة ومريحة للمس) */}
+                                    <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm h-full">
+                                        <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
+                                            <span className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 border border-purple-500/30">🏷️</span>
+                                            <span className="text-slate-900 dark:text-white tracking-wide">تصنيف المنتجات</span>
+                                        </h4>
 
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={() => setFilterCat(null)}
-                                            className={`flex items-center justify-between px-5 h-14 rounded-[18px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer ${
-                                                !filterCat
-                                                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                            }`}>
-                                            <span>جميع التصنيفات</span>
-                                            <span className={`text-xs font-black px-3 py-1 rounded-full ${
-                                                !filterCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                            }`}>{products.length}</span>
-                                        </button>
-                                        {categories.map(cat => {
-                                            const count = products.filter(p => p.category.id === cat.id).length;
-                                            const active = filterCat === cat.id;
-                                            return (
-                                                <button key={cat.id} onClick={() => setFilterCat(cat.id)}
-                                                    className={`flex items-center justify-between px-5 h-14 rounded-[18px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer ${
-                                                        active
-                                                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                                    }`}>
-                                                    <span className="truncate">{cat.name}</span>
-                                                    <span className={`text-xs font-black px-3 py-1 rounded-full ${
-                                                        active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                                    }`}>{count}</span>
-                                                </button>
-                                            );
-                                        })}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <button onClick={() => setDraftCat(null)}
+                                                className={`flex items-center justify-between px-6 h-20 sm:h-24 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                    !draftCat
+                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
+                                                        : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                }`}>
+                                                <span>جميع التصنيفات</span>
+                                                <span className={`text-sm sm:text-base font-black px-4 py-2 rounded-2xl ${
+                                                    !draftCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                }`}>{products.length}</span>
+                                            </button>
+                                            {categories.map(cat => {
+                                                const count = products.filter(p => p.category.id === cat.id).length;
+                                                const active = draftCat === cat.id;
+                                                return (
+                                                    <button key={cat.id} onClick={() => setDraftCat(cat.id)}
+                                                        className={`flex items-center justify-between px-6 h-20 sm:h-24 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                            active
+                                                                ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
+                                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                        }`}>
+                                                        <span className="truncate">{cat.name}</span>
+                                                        <span className={`text-sm sm:text-base font-black px-4 py-2 rounded-2xl ${
+                                                            active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                        }`}>{count}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
+
                                 </div>
 
                                 {/* حاوية 3: حالة المخزون والتنبيهات */}
                                 <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
+                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
                                         <span className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg shrink-0 border border-amber-500/30">⚠️</span>
                                         <span className="text-slate-900 dark:text-white tracking-wide">حالة المخزون والتنبيهات</span>
                                     </h4>
 
                                     <button
-                                        onClick={() => setLowStockOnly(!lowStockOnly)}
-                                        className={`flex items-center justify-between px-5 h-16 rounded-[18px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer ${
-                                            lowStockOnly
+                                        onClick={() => setDraftLowStockOnly(!draftLowStockOnly)}
+                                        className={`flex items-center justify-between px-6 h-18 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation ${
+                                            draftLowStockOnly
                                                 ? 'bg-amber-500 text-white border-amber-500 shadow-xl shadow-amber-500/30'
                                                 : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <AlertTriangle className={`w-6 h-6 ${lowStockOnly ? 'text-white' : 'text-amber-500'}`} />
+                                        <div className="flex items-center gap-3.5">
+                                            <AlertTriangle className={`w-7 h-7 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
                                             <span>المنتجات التي أوشكت على النفاد</span>
                                         </div>
-                                        <span className={`text-xs font-black px-3 py-1.5 rounded-full ${
-                                            lowStockOnly ? 'bg-white/30 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                                        <span className={`text-xs sm:text-sm font-black px-4 py-2 rounded-xl ${
+                                            draftLowStockOnly ? 'bg-white/30 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                                         }`}>
                                             {products.filter(p => Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0).length} منتج
                                         </span>
@@ -797,22 +991,27 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </div>
 
                             {/* Drawer Footer Actions */}
-                            <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4">
+                            <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4 select-none">
                                 <button
-                                    onClick={() => setFilterDrawerOpen(false)}
-                                    className="flex-1 spatial-button h-16 rounded-[22px] text-lg font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30"
+                                    onClick={() => {
+                                        setFilterCat(draftCat);
+                                        setSearchProdId(draftSearchProdId);
+                                        setLowStockOnly(draftLowStockOnly);
+                                        setFilterDrawerOpen(false);
+                                    }}
+                                    className="flex-1 spatial-button h-16 sm:h-18 rounded-[22px] text-lg sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 touch-manipulation"
                                 >
                                     <Check className="w-6 h-6" />
-                                    عرض النتائج ({filtered.length})
+                                    عرض النتائج ({draftFiltered.length})
                                 </button>
-                                {hasActiveFilter && (
+                                {hasDraftFilter && (
                                     <button
                                         onClick={() => {
-                                            setSearchProdId(null);
-                                            setFilterCat(null);
-                                            setLowStockOnly(false);
+                                            setDraftSearchProdId(null);
+                                            setDraftCat(null);
+                                            setDraftLowStockOnly(false);
                                         }}
-                                        className="h-16 px-6 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0"
+                                        className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0 touch-manipulation"
                                     >
                                         <RotateCcw className="w-5 h-5" />
                                         إعادة تعيين
@@ -833,24 +1032,31 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             {searchProdId && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
                                     بحث: {products.find(p => p.id === searchProdId)?.name}
-                                    <button onClick={() => setSearchProdId(null)}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setSearchProdId(null); setDraftSearchProdId(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                             {filterCat && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
                                     التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => setFilterCat(null)}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                             {lowStockOnly && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                                     أوشكت على النفاد
-                                    <button onClick={() => setLowStockOnly(false)}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                         </div>
                         <button
-                            onClick={() => { setSearchProdId(null); setFilterCat(null); setLowStockOnly(false); }}
+                            onClick={() => {
+                                setSearchProdId(null);
+                                setFilterCat(null);
+                                setLowStockOnly(false);
+                                setDraftSearchProdId(null);
+                                setDraftCat(null);
+                                setDraftLowStockOnly(false);
+                            }}
                             className="text-xs font-black text-red-500 hover:underline shrink-0"
                         >
                             إلغاء الكل
@@ -878,7 +1084,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y-2 divide-slate-200/80 dark:divide-slate-700/60">
-                                        {filtered.map((product) => (
+                                        {paginatedProducts.map((product) => (
                                             <tr key={product.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors group">
                                                 <td className="px-5 py-5">
                                                     <div className="flex items-center gap-2.5">
@@ -974,7 +1180,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                             {/* كاردات — Mobile Touch */}
                             <div className="flex flex-col gap-5 lg:hidden">
-                                {filtered.map(product => {
+                                {paginatedProducts.map(product => {
                                     const hasPrice = product.selling_type === 'unit_priced' && product.product_price;
                                     const hasBottle = !!product.product_price?.full_bottle_regular;
                                     const lowStock = Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0;
@@ -1088,6 +1294,17 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     );
                                 })}
                             </div>
+
+                            {/* الترقيم (Pagination) لمطابقة صفحة الفواتير */}
+                            <Pagination
+                                links={paginationLinks}
+                                currentPage={safeCurrentPage}
+                                lastPage={totalPages}
+                                onPageChange={(p) => {
+                                    setCurrentPage(p);
+                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                }}
+                            />
                         </>
                     )}
                 </SpatialCard>
@@ -1098,6 +1315,20 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             {/* QR Modal */}
             {qrProduct && (
                 <QrModal product={qrProduct} onClose={() => setQrProduct(null)} />
+            )}
+
+            {/* NumberPad Modal للأرقام والأسعار اللمسية */}
+            {padConfig && (
+                <NumberPadModal
+                    isOpen={!!padConfig}
+                    title={padConfig.title}
+                    initialValue={padConfig.initial}
+                    onConfirm={(val) => {
+                        activeForm.setData(padConfig.field as any, val);
+                        setPadConfig(null);
+                    }}
+                    onClose={() => setPadConfig(null)}
+                />
             )}
         </AppShell>
     );

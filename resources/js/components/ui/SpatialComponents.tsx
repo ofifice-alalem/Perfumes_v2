@@ -695,10 +695,12 @@ export function Pagination({
     links,
     currentPage,
     lastPage,
+    onPageChange,
 }: {
-    links: { url: string | null; label: string; active: boolean }[];
+    links: { url: string | null; label: string; active: boolean; page?: number }[];
     currentPage?: number;
     lastPage?: number;
+    onPageChange?: (page: number) => void;
 }) {
     const [showJumpPad, setShowJumpPad] = useState(false);
 
@@ -747,13 +749,40 @@ export function Pagination({
         const target = parseInt(val);
         if (isNaN(target) || target < 1) return;
         const validPage = Math.min(target, maxPage);
-        const params = new URLSearchParams(window.location.search);
-        params.set('page', String(validPage));
-        router.get(window.location.pathname + '?' + params.toString(), {}, { preserveScroll: true });
+        if (onPageChange) {
+            onPageChange(validPage);
+        } else {
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', String(validPage));
+            router.get(window.location.pathname + '?' + params.toString(), {}, { preserveScroll: true });
+        }
     }
 
-    const renderNavBtn = (link: { url: string | null; label: string; active: boolean } | undefined, isPrevious: boolean) => {
+    const renderNavBtn = (link: { url: string | null; label: string; active: boolean; page?: number } | undefined, isPrevious: boolean) => {
         const text = isPrevious ? 'السابق →' : '← التالي';
+        const targetPage = isPrevious ? curPage - 1 : curPage + 1;
+        const isDisabled = isPrevious ? curPage <= 1 : curPage >= maxPage;
+
+        if (isDisabled) {
+            return (
+                <span className="h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed text-center shrink-0">
+                    {text}
+                </span>
+            );
+        }
+
+        if (onPageChange) {
+            return (
+                <button
+                    type="button"
+                    onClick={() => onPageChange(targetPage)}
+                    className="spatial-input h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center transition-all shadow-md active:scale-95 border-2 bg-primary/10 text-primary border-primary/30 hover:bg-primary hover:text-white hover:border-primary text-center shrink-0"
+                >
+                    {text}
+                </button>
+            );
+        }
+
         if (!link || !link.url) {
             return (
                 <span className="h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed text-center shrink-0">
@@ -761,6 +790,7 @@ export function Pagination({
                 </span>
             );
         }
+
         return (
             <Link
                 href={link.url}
@@ -782,16 +812,8 @@ export function Pagination({
                 <div className="flex items-center justify-start sm:justify-center gap-2.5 overflow-x-auto overflow-y-hidden max-w-full flex-1 min-w-0 py-1.5 px-1 scrollbar-thin">
                     {max10PageLinks.map((link, i) => {
                         const label = formatLabel(link.label);
-                        if (!link.url) {
-                            return (
-                                <span
-                                    key={i}
-                                    className="h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed shrink-0"
-                                >
-                                    {label}
-                                </span>
-                            );
-                        }
+                        const pageNum = link.page ?? parseInt(label);
+
                         if (link.active) {
                             return (
                                 <span
@@ -802,6 +824,31 @@ export function Pagination({
                                 </span>
                             );
                         }
+
+                        if (onPageChange && !isNaN(pageNum)) {
+                            return (
+                                <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => onPageChange(pageNum)}
+                                    className="spatial-input h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-800 dark:text-white hover:border-primary/40 transition-all shadow-md active:scale-95 border-2 shrink-0"
+                                >
+                                    {label}
+                                </button>
+                            );
+                        }
+
+                        if (!link.url) {
+                            return (
+                                <span
+                                    key={i}
+                                    className="h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed shrink-0"
+                                >
+                                    {label}
+                                </span>
+                            );
+                        }
+
                         return (
                             <Link
                                 key={i}
