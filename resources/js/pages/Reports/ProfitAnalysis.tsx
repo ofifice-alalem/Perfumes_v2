@@ -75,18 +75,19 @@ interface Props {
     categories: Category[];
     products: Product[];
     filters: {
-        dateFrom: string;
-        dateTo: string;
-        stockDateFrom: string;
-        stockDateTo: string;
-        stockCategoryId: number | null;
-        productIds: number[];
-        stockProductIds: number[];
+        dateFrom?: string;
+        dateTo?: string;
+        stockDateFrom?: string;
+        stockDateTo?: string;
+        stockCategoryId?: number | null;
+        productIds?: number[];
+        stockProductIds?: number[];
         searchName?: string;
         stockSearchName?: string;
         activeTab?: 'daily' | 'stock_profit';
     };
-    hasSearched: boolean;
+    hasDailySearched: boolean;
+    hasStockSearched: boolean;
 }
 
 function fmt(n: number | null): string {
@@ -139,7 +140,9 @@ function FilterDrawer({
     onSearchStock: () => void;
     onResetStock: () => void;
 }) {
-    if (!isOpen) return null;    return createPortal(
+    if (!isOpen) return null;
+
+    return createPortal(
         <div className="fixed inset-0 z-[9999] flex justify-start select-none dir-rtl">
             {/* Backdrop */}
             <div
@@ -265,7 +268,15 @@ function FilterDrawer({
 /* =========================================================================
    MAIN PROFIT ANALYSIS PAGE
    ========================================================================= */
-export default function ProfitAnalysis({ profitSummary, stockProfitData, categories, products, filters, hasSearched }: Props) {
+export default function ProfitAnalysis({
+    profitSummary,
+    stockProfitData,
+    categories,
+    products,
+    filters,
+    hasDailySearched,
+    hasStockSearched
+}: Props) {
     const [activeTab, setActiveTab] = useState<'daily' | 'stock_profit'>(filters.activeTab ?? 'daily');
     const [expanded, setExpanded]   = useState<Set<string>>(new Set());
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -315,32 +326,40 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
         const stockSNames = stockMultiSearch.filter(v => isNaN(Number(v)));
 
-        router.get('/reports/profit-analysis', {
-            date_from:         dateFrom         || undefined,
-            date_to:           dateTo           || undefined,
-            product_ids:       pIds.length ? pIds.join(',') : undefined,
-            search_name:       sNames.length ? sNames.join(',') : undefined,
-            stock_date_from:   stockDateFrom    || undefined,
-            stock_date_to:     stockDateTo      || undefined,
-            stock_category_id: stockCategoryId  || undefined,
-            stock_product_ids: stockPIds.length ? stockPIds.join(',') : undefined,
-            stock_search_name: stockSNames.length ? stockSNames.join(',') : undefined,
-            active_tab:        'daily',
-        }, { preserveScroll: true });
+        const query: Record<string, any> = {
+            date_from:   dateFrom   || undefined,
+            date_to:     dateTo     || undefined,
+            product_ids: pIds.length ? pIds.join(',') : undefined,
+            search_name: sNames.length ? sNames.join(',') : undefined,
+            active_tab:  'daily',
+        };
+
+        if (hasStockSearched) {
+            query.stock_date_from   = stockDateFrom   || undefined;
+            query.stock_date_to     = stockDateTo     || undefined;
+            query.stock_category_id = stockCategoryId || undefined;
+            query.stock_product_ids = stockPIds.length ? stockPIds.join(',') : undefined;
+            query.stock_search_name = stockSNames.length ? stockSNames.join(',') : undefined;
+        }
+
+        router.get('/reports/profit-analysis', query, { preserveScroll: true });
     }
 
     function resetDaily() {
         setDateFrom('');
         setDateTo('');
         setMultiSearch([]);
-        router.get('/reports/profit-analysis', {
-            stock_date_from:   stockDateFrom    || undefined,
-            stock_date_to:     stockDateTo      || undefined,
-            stock_category_id: stockCategoryId  || undefined,
-            stock_product_ids: stockMultiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined,
-            stock_search_name: stockMultiSearch.filter(v => isNaN(Number(v))).join(',') || undefined,
-            active_tab:        'daily',
-        });
+        const query: Record<string, any> = {
+            active_tab: 'daily',
+        };
+        if (hasStockSearched) {
+            query.stock_date_from   = stockDateFrom   || undefined;
+            query.stock_date_to     = stockDateTo     || undefined;
+            query.stock_category_id = stockCategoryId || undefined;
+            query.stock_product_ids = stockMultiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined;
+            query.stock_search_name = stockMultiSearch.filter(v => isNaN(Number(v))).join(',') || undefined;
+        }
+        router.get('/reports/profit-analysis', query);
     }
 
     function searchStock() {
@@ -350,18 +369,23 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         const stockPIds = stockMultiSearch.filter(v => !isNaN(Number(v)));
         const stockSNames = stockMultiSearch.filter(v => isNaN(Number(v)));
 
-        router.get('/reports/profit-analysis', {
-            date_from:         dateFrom         || undefined,
-            date_to:           dateTo           || undefined,
-            product_ids:       pIds.length ? pIds.join(',') : undefined,
-            search_name:       sNames.length ? sNames.join(',') : undefined,
+        const query: Record<string, any> = {
             stock_date_from:   stockDateFrom    || undefined,
             stock_date_to:     stockDateTo      || undefined,
             stock_category_id: stockCategoryId  || undefined,
             stock_product_ids: stockPIds.length ? stockPIds.join(',') : undefined,
             stock_search_name: stockSNames.length ? stockSNames.join(',') : undefined,
             active_tab:        'stock_profit',
-        }, { preserveScroll: true });
+        };
+
+        if (hasDailySearched) {
+            query.date_from   = dateFrom   || undefined;
+            query.date_to     = dateTo     || undefined;
+            query.product_ids = pIds.length ? pIds.join(',') : undefined;
+            query.search_name = sNames.length ? sNames.join(',') : undefined;
+        }
+
+        router.get('/reports/profit-analysis', query, { preserveScroll: true });
     }
 
     function resetStock() {
@@ -370,13 +394,16 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
         setStockCategoryId('');
         setStockMultiSearch([]);
         setCompactView(false);
-        router.get('/reports/profit-analysis', {
-            date_from:   dateFrom || undefined,
-            date_to:     dateTo || undefined,
-            product_ids: multiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined,
-            search_name: multiSearch.filter(v => isNaN(Number(v))).join(',') || undefined,
-            active_tab:  'stock_profit',
-        });
+        const query: Record<string, any> = {
+            active_tab: 'stock_profit',
+        };
+        if (hasDailySearched) {
+            query.date_from   = dateFrom   || undefined;
+            query.date_to     = dateTo     || undefined;
+            query.product_ids = multiSearch.filter(v => !isNaN(Number(v))).join(',') || undefined;
+            query.search_name = multiSearch.filter(v => isNaN(Number(v))).join(',') || undefined;
+        }
+        router.get('/reports/profit-analysis', query);
     }
 
     function buildDailyExportUrl(format: 'excel' | 'pdf') {
@@ -475,7 +502,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                 {/* Tab Content */}
                 {activeTab === 'daily' && (
                     <div className="flex flex-col gap-6">
-                        {!hasSearched ? (
+                        {!hasDailySearched ? (
                             <SpatialCard className="p-16 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4 text-center">
                                 <div className="w-24 h-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-primary shadow-inner">
                                     <Search className="w-12 h-12 opacity-60" />
@@ -637,7 +664,7 @@ export default function ProfitAnalysis({ profitSummary, stockProfitData, categor
                 {/* Tab 2: Stock Profit */}
                 {activeTab === 'stock_profit' && (
                     <div className="flex flex-col gap-6">
-                        {!hasSearched ? (
+                        {!hasStockSearched ? (
                             <SpatialCard className="p-16 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4 text-center">
                                 <div className="w-24 h-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-primary shadow-inner">
                                     <Search className="w-12 h-12 opacity-60" />

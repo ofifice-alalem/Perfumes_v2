@@ -19,10 +19,10 @@ class ReportController extends Controller
 
     public function profitAnalysisSummary(Request $request): Response
     {
-        $dateFrom        = $request->input('date_from', now()->startOfMonth()->toDateString());
-        $dateTo          = $request->input('date_to', now()->endOfMonth()->toDateString());
-        $stockDateFrom   = $request->input('stock_date_from', now()->startOfMonth()->toDateString());
-        $stockDateTo     = $request->input('stock_date_to', now()->endOfMonth()->toDateString());
+        $dateFrom        = $request->input('date_from');
+        $dateTo          = $request->input('date_to');
+        $stockDateFrom   = $request->input('stock_date_from');
+        $stockDateTo     = $request->input('stock_date_to');
         $stockCategoryId = $request->integer('stock_category_id') ?: null;
         $productIds      = $request->input('product_ids', []);
         $stockProductIds = $request->input('stock_product_ids', []);
@@ -35,30 +35,39 @@ class ReportController extends Controller
         $productIds = array_filter(array_map('intval', (array)$productIds));
         $stockProductIds = array_filter(array_map('intval', (array)$stockProductIds));
 
-        $isSearch = count($request->except('active_tab')) > 0;
+        $hasDailySearch = $request->has('date_from') || $request->has('date_to') || $request->has('product_ids') || $request->has('search_name');
+        $hasStockSearch = $request->has('stock_date_from') || $request->has('stock_date_to') || $request->has('stock_category_id') || $request->has('stock_product_ids') || $request->has('stock_search_name');
 
-        if ($isSearch) {
-            $cacheKeyDaily = 'profit_daily_' . md5(json_encode([$dateFrom, $dateTo, $productIds, $searchName]));
-            $profitSummary = \Illuminate\Support\Facades\Cache::remember($cacheKeyDaily, now()->addHours(1), function() use ($dateFrom, $dateTo, $productIds, $searchName) {
-                return $this->reports->dailyProfitSummary($dateFrom, $dateTo, $productIds, null, $searchName);
-            });
-
-            $cacheKeyStock = 'profit_stock_' . md5(json_encode([$stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName]));
-            $stockProfitData = \Illuminate\Support\Facades\Cache::remember($cacheKeyStock, now()->addHours(1), function() use ($stockCategoryId, $stockDateFrom, $stockDateTo, $stockProductIds, $stockSearchName) {
-                return $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $stockDateFrom, $stockDateTo, $stockProductIds, null, $stockSearchName);
+        if ($hasDailySearch) {
+            $dFrom = $dateFrom ?: now()->startOfMonth()->toDateString();
+            $dTo   = $dateTo   ?: now()->endOfMonth()->toDateString();
+            $cacheKeyDaily = 'profit_daily_' . md5(json_encode([$dFrom, $dTo, $productIds, $searchName]));
+            $profitSummary = \Illuminate\Support\Facades\Cache::remember($cacheKeyDaily, now()->addHours(1), function() use ($dFrom, $dTo, $productIds, $searchName) {
+                return $this->reports->dailyProfitSummary($dFrom, $dTo, $productIds, null, $searchName);
             });
         } else {
             $profitSummary = ['total_profit' => 0, 'monthly' => [], 'daily' => [], 'included_products' => []];
+        }
+
+        if ($hasStockSearch) {
+            $sFrom = $stockDateFrom ?: now()->startOfMonth()->toDateString();
+            $sTo   = $stockDateTo   ?: now()->endOfMonth()->toDateString();
+            $cacheKeyStock = 'profit_stock_' . md5(json_encode([$stockCategoryId, $sFrom, $sTo, $stockProductIds, $stockSearchName]));
+            $stockProfitData = \Illuminate\Support\Facades\Cache::remember($cacheKeyStock, now()->addHours(1), function() use ($stockCategoryId, $sFrom, $sTo, $stockProductIds, $stockSearchName) {
+                return $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $sFrom, $sTo, $stockProductIds, null, $stockSearchName);
+            });
+        } else {
             $stockProfitData = [];
         }
 
         return Inertia::render('Reports/ProfitAnalysis', [
-            'hasSearched'     => $isSearch,
-            'profitSummary'   => $profitSummary,
-            'stockProfitData' => $stockProfitData,
-            'categories'      => \App\Models\Category::orderBy('name')->get(['id', 'name']),
-            'products'        => \App\Models\Product::orderBy('name')->get(['id', 'name']),
-            'filters'         => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId', 'productIds', 'stockProductIds', 'searchName', 'stockSearchName') + ['activeTab' => $request->input('active_tab', 'daily')],
+            'hasDailySearched' => $hasDailySearch,
+            'hasStockSearched' => $hasStockSearch,
+            'profitSummary'    => $profitSummary,
+            'stockProfitData'  => $stockProfitData,
+            'categories'       => \App\Models\Category::orderBy('name')->get(['id', 'name']),
+            'products'         => \App\Models\Product::orderBy('name')->get(['id', 'name']),
+            'filters'          => compact('dateFrom', 'dateTo', 'stockDateFrom', 'stockDateTo', 'stockCategoryId', 'productIds', 'stockProductIds', 'searchName', 'stockSearchName') + ['activeTab' => $request->input('active_tab', 'daily')],
         ]);
     }
 
