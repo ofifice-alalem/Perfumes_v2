@@ -538,6 +538,7 @@ export function ModernMultiSelect({
   onSelect,
   defaultValues = [],
   allowFreeText = false,
+  enableVirtualKeyboard = true,
 }: {
   label: string;
   options: { value: string; label: string; meta?: string; badge?: string; searchKey?: string }[];
@@ -546,10 +547,12 @@ export function ModernMultiSelect({
   onSelect?: (values: string[]) => void;
   defaultValues?: string[];
   allowFreeText?: boolean;
+  enableVirtualKeyboard?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>(defaultValues);
   const [search, setSearch] = useState('');
+  const [showKeyboard, setShowKeyboard] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -567,7 +570,7 @@ export function ModernMultiSelect({
     function handleClick(e: MouseEvent) {
       if (isMobile) return;
       if (ref.current && !ref.current.contains(e.target as Node) && !(e.target as Element).closest('[data-dropdown-portal]')) {
-        setIsOpen(false); setSearch('');
+        setIsOpen(false); setSearch(''); setShowKeyboard(false);
       }
     }
     document.addEventListener('mousedown', handleClick);
@@ -576,7 +579,7 @@ export function ModernMultiSelect({
 
   useEffect(() => {
     if (isOpen) setTimeout(() => searchRef.current?.focus(), 50);
-    else setSearch('');
+    else { setSearch(''); setShowKeyboard(false); }
   }, [isOpen]);
 
   const filtered = options.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || (o.searchKey && o.searchKey.toLowerCase().includes(search.toLowerCase())));
@@ -590,23 +593,23 @@ export function ModernMultiSelect({
   const showFreeTextOption = allowFreeText && search.trim() && !options.some(o => o.label.toLowerCase() === search.trim().toLowerCase());
 
   const optionsList = (size: 'sm' | 'lg') => (
-    <ul className={`overflow-y-auto p-2 ${size === 'sm' ? 'max-h-52' : 'flex-1'}`}>
+    <ul className={`overflow-y-auto p-2.5 ${size === 'sm' ? 'max-h-[380px] sm:max-h-[460px]' : 'flex-1'}`}>
       {filtered.length === 0 && !showFreeTextOption ? (
-        <li className="px-4 py-4 text-center text-sm font-bold text-slate-400 dark:text-white/30">لا توجد نتائج</li>
+        <li className="px-4 py-6 text-center text-base font-bold text-slate-400 dark:text-white/40">لا توجد نتائج</li>
       ) : (
         <>
           {showFreeTextOption && (
             <div key="free-text">
               <li
                 onClick={() => { toggleOption(search.trim()); setSearch(''); searchRef.current?.focus(); }}
-                className={`flex items-center justify-between gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} text-primary hover:bg-black/5 dark:hover:bg-white/8`}
+                className={`flex items-center justify-between gap-3 px-4 rounded-[16px] cursor-pointer font-black transition-all duration-150 ${size === 'lg' ? 'py-4 text-[17px]' : 'py-3.5 text-[16px]'} text-primary hover:bg-black/5 dark:hover:bg-white/8`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-[6px] border-2 border-slate-300 dark:border-white/20 flex items-center justify-center transition-all"></div>
+                  <div className="w-6 h-6 rounded-[8px] border-2 border-slate-300 dark:border-white/20 flex items-center justify-center transition-all"></div>
                   إضافة "{search.trim()}"
                 </div>
               </li>
-              {filtered.length > 0 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+              {filtered.length > 0 && <div className="h-px bg-black/5 dark:bg-white/5 my-1.5 mx-2" />}
             </div>
           )}
           {filtered.map((opt, idx) => {
@@ -615,21 +618,21 @@ export function ModernMultiSelect({
             <div key={opt.value}>
               <li
                 onClick={() => toggleOption(opt.value)}
-                className={`flex items-center justify-between gap-3 px-4 rounded-[14px] cursor-pointer font-bold transition-all duration-150 ${size === 'lg' ? 'py-4 text-[16px]' : 'py-3 text-[15px]'} ${isSelected ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light' : 'text-slate-700 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/8 hover:text-slate-900 dark:hover:text-white'}`}
+                className={`flex items-center justify-between gap-3 px-4 rounded-[16px] cursor-pointer font-black transition-all duration-150 min-h-[56px] ${size === 'lg' ? 'py-4 text-lg' : 'py-3.5 text-base'} ${isSelected ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-primary-light border-2 border-primary/30' : 'text-slate-800 dark:text-white/90 hover:bg-black/5 dark:hover:bg-white/8'}`}
               >
-                <div className="flex items-center gap-3">
-                  <div className={`w-5 h-5 rounded-[6px] border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-primary border-primary' : 'border-slate-300 dark:border-white/20'}`}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`w-6 h-6 rounded-[8px] border-2 flex items-center justify-center transition-all shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-slate-300 dark:border-white/20'}`}>
                     {isSelected && (
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="12" height="12" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </div>
-                  {opt.badge && <span className="text-[13px]">{opt.badge}</span>}
-                  {opt.label}
+                  {opt.badge && <span className="text-sm font-bold shrink-0 px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{opt.badge}</span>}
+                  <span className="truncate font-black">{opt.label}</span>
                 </div>
                 {opt.meta && (
-                  <span className={`text-[14px] font-black shrink-0 px-3 py-1.5 rounded-xl ${isSelected ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/60'}`}>{opt.meta}</span>
+                  <span className={`text-base font-black shrink-0 px-3 py-1.5 rounded-xl ${isSelected ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/60'}`}>{opt.meta}</span>
                 )}
               </li>
               {idx < filtered.length - 1 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
@@ -642,14 +645,49 @@ export function ModernMultiSelect({
   );
 
   const searchInput = (
-    <div className="relative">
-      <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-      </svg>
-      <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث سريع..."
-        className="w-full rounded-[14px] pr-11 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-11 text-[14px]"
-        onClick={(e) => e.stopPropagation()}
-      />
+    <div className="flex flex-col">
+      <div className="flex items-center gap-3 p-3">
+        <div className="relative flex-1">
+          <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-white/40 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+          </svg>
+          <input ref={searchRef} type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="بحث سريع..."
+            className="w-full rounded-[16px] pr-12 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-14 sm:h-16 text-base sm:text-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+        {enableVirtualKeyboard && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowKeyboard(!showKeyboard);
+            }}
+            className={`h-14 sm:h-16 px-4 sm:px-6 rounded-[16px] border-2 flex items-center gap-2 font-black text-sm sm:text-base transition-all shrink-0 cursor-pointer shadow-md active:scale-95 ${
+              showKeyboard
+                ? 'bg-amber-500 text-white border-amber-500 shadow-amber-500/30'
+                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border-amber-500/40'
+            }`}
+            title="لوحة مفاتيح الشاشة"
+          >
+            <svg className="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="20" height="16" x="2" y="4" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10" />
+            </svg>
+            <span className="hidden sm:inline">الكيبورد</span>
+          </button>
+        )}
+      </div>
+
+      {showKeyboard && (
+        <DraggableOnScreenKeyboard
+          value={search}
+          onKeyPress={(char) => setSearch((prev) => prev + char)}
+          onBackspace={() => setSearch((prev) => prev.slice(0, -1))}
+          onClear={() => setSearch('')}
+          onSpace={() => setSearch((prev) => prev + ' ')}
+          onClose={() => setShowKeyboard(false)}
+        />
+      )}
     </div>
   );
 
