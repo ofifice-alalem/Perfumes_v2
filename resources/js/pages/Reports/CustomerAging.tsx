@@ -378,17 +378,17 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                         <div className="overflow-x-auto">
                             <table className="w-full text-right border-collapse min-w-[1100px]">
                                 <thead>
-                                    <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base sm:text-lg font-black uppercase">
-                                        <th className="p-5 rounded-r-[18px]">اسم العميل</th>
-                                        <th className="p-5">إجمالي الدين</th>
-                                        <th className="p-5">جارية (0-30)</th>
-                                        <th className="p-5">30-60 يوم</th>
-                                        <th className="p-5">60-90 يوم</th>
-                                        <th className="p-5">&gt; 90 يوم (حرج)</th>
-                                        <th className="p-5 rounded-l-[18px] text-center">التفاصيل والحركات</th>
+                                    <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
+                                        <th className="p-6 rounded-r-[18px]">اسم العميل</th>
+                                        <th className="p-6">إجمالي الدين</th>
+                                        <th className="p-6">جارية (0-30)</th>
+                                        <th className="p-6">30-60 يوم</th>
+                                        <th className="p-6">60-90 يوم</th>
+                                        <th className="p-6">&gt; 90 يوم (حرج)</th>
+                                        <th className="p-6 rounded-l-[18px] text-center">التفاصيل والحركات</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-black text-lg sm:text-xl">
+                                <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-black text-xl sm:text-2xl">
                                     {data.map(c => {
                                         const isExpanded = expanded.has(c.customer_id);
                                         return (
@@ -398,20 +398,20 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                     onClick={() => toggleExpand(c.customer_id)}
                                                     className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors cursor-pointer"
                                                 >
-                                                    <td className="p-5 text-slate-900 dark:text-white font-black">{c.customer_name}</td>
-                                                    <td className="p-5 text-slate-900 dark:text-white font-black whitespace-nowrap">{fmt(c.total_debt)} د.ل</td>
-                                                    <td className="p-5 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
-                                                    <td className="p-5 text-amber-500 whitespace-nowrap">{fmt(c.days_30_60)}</td>
-                                                    <td className="p-5 text-orange-500 whitespace-nowrap">{fmt(c.days_60_90)}</td>
-                                                    <td className="p-5 text-rose-500 whitespace-nowrap">{fmt(c.over_90)}</td>
-                                                    <td className="p-5 text-center whitespace-nowrap">
+                                                    <td className="p-6 text-slate-900 dark:text-white font-black">{c.customer_name}</td>
+                                                    <td className="p-6 text-slate-900 dark:text-white font-black whitespace-nowrap">{fmt(c.total_debt)} د.ل</td>
+                                                    <td className="p-6 text-emerald-600 dark:text-emerald-400 whitespace-nowrap">{fmt(c.current)}</td>
+                                                    <td className="p-6 text-amber-500 whitespace-nowrap">{fmt(c.days_30_60)}</td>
+                                                    <td className="p-6 text-orange-500 whitespace-nowrap">{fmt(c.days_60_90)}</td>
+                                                    <td className="p-6 text-rose-500 whitespace-nowrap">{fmt(c.over_90)}</td>
+                                                    <td className="p-6 text-center whitespace-nowrap">
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 toggleExpand(c.customer_id);
                                                             }}
-                                                            className={`px-5 py-2.5 rounded-[16px] border-2 font-black text-base inline-flex items-center gap-2.5 shadow-sm active:scale-95 transition-all cursor-pointer ${
+                                                            className={`px-6 py-3 rounded-[18px] border-2 font-black text-lg inline-flex items-center gap-3 shadow-md active:scale-95 transition-all cursor-pointer ${
                                                                 isExpanded
                                                                     ? 'bg-primary text-white border-primary shadow-primary/20'
                                                                     : 'bg-primary/10 dark:bg-primary/20 text-primary border-primary/30 hover:bg-primary hover:text-white'
@@ -419,7 +419,7 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                         >
                                                             <ChevronRight className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
                                                             <span>{isExpanded ? 'إخفاء التفاصيل' : 'عرض الحركات'}</span>
-                                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
+                                                            <span className={`px-3 py-0.5 rounded-full text-sm font-black ${
                                                                 isExpanded ? 'bg-white text-primary' : 'bg-primary text-white'
                                                             }`}>
                                                                 {c.movements?.length || 0}
@@ -437,31 +437,31 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                                 {/* Summary Strip */}
                                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b-2 border-slate-200/80 dark:border-slate-700/80">
                                                                     <div className="flex items-center gap-4">
-                                                                        <div className="w-14 h-14 rounded-[20px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shadow-sm">
-                                                                            <Users className="w-7 h-7" />
+                                                                        <div className="w-16 h-16 rounded-[22px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shadow-sm">
+                                                                            <Users className="w-8 h-8" />
                                                                         </div>
                                                                         <div>
-                                                                            <h4 className="text-2xl font-black text-slate-900 dark:text-white">
+                                                                            <h4 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
                                                                                 كشف حساب العميل: <span className="text-primary">{c.customer_name}</span>
                                                                             </h4>
-                                                                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                                                                            <p className="text-base font-bold text-slate-500 dark:text-slate-400 mt-1">
                                                                                 تفاصيل حركة الفواتير والتحصيلات والتسويات
                                                                             </p>
                                                                         </div>
                                                                     </div>
 
                                                                     <div className="flex flex-wrap items-center gap-4">
-                                                                        <div className="px-5 py-3 rounded-[16px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
+                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
                                                                             <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي الفواتير</span>
-                                                                            <span className="text-xl font-black text-rose-600 dark:text-rose-400">{fmt(c.total_invoiced)} د.ل</span>
+                                                                            <span className="text-2xl font-black text-rose-600 dark:text-rose-400">{fmt(c.total_invoiced)} د.ل</span>
                                                                         </div>
-                                                                        <div className="px-5 py-3 rounded-[16px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
+                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
                                                                             <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي المسدد</span>
-                                                                            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{fmt(c.total_paid)} د.ل</span>
+                                                                            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(c.total_paid)} د.ل</span>
                                                                         </div>
-                                                                        <div className="px-5 py-3 rounded-[16px] bg-primary/10 border-2 border-primary/30 flex flex-col">
+                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-primary/10 border-2 border-primary/30 flex flex-col">
                                                                             <span className="text-xs font-black text-primary uppercase">الرصيد المتبقي</span>
-                                                                            <span className="text-xl font-black text-primary">{fmt(c.total_debt)} د.ل</span>
+                                                                            <span className="text-2xl font-black text-primary">{fmt(c.total_debt)} د.ل</span>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -470,48 +470,48 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                                 {(!c.movements || c.movements.length === 0) ? (
                                                                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-2">
                                                                         <History className="w-12 h-12 opacity-30" />
-                                                                        <p className="font-bold text-lg">لا توجد حركات سابقة مسجلة لهذا العميل</p>
+                                                                        <p className="font-bold text-xl">لا توجد حركات سابقة مسجلة لهذا العميل</p>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
                                                                         <table className="w-full text-right border-collapse min-w-[850px]">
                                                                             <thead>
-                                                                                <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base font-black uppercase">
-                                                                                    <th className="p-4 rounded-r-[18px]">رقم المرجع</th>
-                                                                                    <th className="p-4">نوع الحركة</th>
-                                                                                    <th className="p-4">التاريخ</th>
-                                                                                    <th className="p-4">المبلغ</th>
-                                                                                    <th className="p-4">عمر الحركة</th>
-                                                                                    <th className="p-4 rounded-l-[18px]">رصيد ما بعد الحركة</th>
+                                                                                <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
+                                                                                    <th className="p-5 rounded-r-[18px]">رقم المرجع</th>
+                                                                                    <th className="p-5">نوع الحركة</th>
+                                                                                    <th className="p-5">التاريخ</th>
+                                                                                    <th className="p-5">المبلغ</th>
+                                                                                    <th className="p-5">عمر الحركة</th>
+                                                                                    <th className="p-5 rounded-l-[18px]">رصيد ما بعد الحركة</th>
                                                                                 </tr>
                                                                             </thead>
-                                                                            <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-lg sm:text-xl">
+                                                                            <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
                                                                                 {c.movements.map((m, idx) => {
                                                                                     const cfg = typeConfig[m.type] || typeConfig.invoice;
                                                                                     return (
                                                                                         <tr key={idx} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                                                                                            <td className="p-4 font-black text-primary flex items-center gap-2">
-                                                                                                <FileText className="w-4 h-4 text-primary/70 shrink-0" />
+                                                                                            <td className="p-5 font-black text-primary flex items-center gap-2">
+                                                                                                <FileText className="w-5 h-5 text-primary/70 shrink-0" />
                                                                                                 <span>{m.ref}</span>
                                                                                             </td>
-                                                                                            <td className="p-4 whitespace-nowrap">
-                                                                                                <span className={`px-4 py-1.5 rounded-xl text-sm font-black inline-flex items-center gap-1.5 ${cfg.class}`}>
+                                                                                            <td className="p-5 whitespace-nowrap">
+                                                                                                <span className={`px-4 py-2 rounded-xl text-base font-black inline-flex items-center gap-2 ${cfg.class}`}>
                                                                                                     {cfg.label}
                                                                                                 </span>
                                                                                             </td>
-                                                                                            <td className="p-4 text-slate-600 dark:text-slate-400 font-bold text-base whitespace-nowrap">{m.date ? m.date.slice(0, 10) : '—'}</td>
-                                                                                            <td className={`p-4 whitespace-nowrap ${cfg.amountClass}`}>
-                                                                                                {m.amount > 0 ? '+' : ''}{fmt(m.amount)} <span className="text-sm font-normal">د.ل</span>
+                                                                                            <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">{m.date ? m.date.slice(0, 10) : '—'}</td>
+                                                                                            <td className={`p-5 whitespace-nowrap ${cfg.amountClass}`}>
+                                                                                                {m.amount > 0 ? '+' : ''}{fmt(m.amount)} <span className="text-base font-normal">د.ل</span>
                                                                                             </td>
-                                                                                            <td className="p-4 text-slate-600 dark:text-slate-400 font-bold text-base whitespace-nowrap">
+                                                                                            <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">
                                                                                                 {m.days_old !== null ? (
-                                                                                                    <span className="inline-flex items-center gap-1">
-                                                                                                        <Clock className="w-4 h-4 text-slate-400" />
+                                                                                                    <span className="inline-flex items-center gap-1.5">
+                                                                                                        <Clock className="w-5 h-5 text-slate-400" />
                                                                                                         <span>{m.days_old} يوم</span>
                                                                                                     </span>
                                                                                                 ) : '—'}
                                                                                             </td>
-                                                                                            <td className="p-4 font-black text-slate-900 dark:text-white whitespace-nowrap">{fmt(m.balance)} <span className="text-sm font-bold text-slate-400">د.ل</span></td>
+                                                                                            <td className="p-5 font-black text-slate-900 dark:text-white whitespace-nowrap">{fmt(m.balance)} <span className="text-base font-bold text-slate-400">د.ل</span></td>
                                                                                         </tr>
                                                                                     );
                                                                                 })}
