@@ -485,12 +485,28 @@ export function ModernSelect({
           onClick={() => {
             if (!isOpen && !isMobile && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              const width = Math.max(rect.width, 380);
-              let left = rect.left;
-              if (left + width > window.innerWidth - 10) {
-                left = Math.max(10, window.innerWidth - width - 10);
+              const drawerEl = triggerRef.current.closest('[data-drawer], .max-w-lg, .shadow-2xl, [role="dialog"]');
+              let width: number;
+              let left: number;
+
+              if (drawerEl) {
+                const drawerRect = drawerEl.getBoundingClientRect();
+                width = drawerRect.width - 40;
+                left = drawerRect.left + 20;
+              } else {
+                width = Math.max(rect.width, 380);
+                left = rect.left;
+                if (left + width > window.innerWidth - 10) {
+                  left = Math.max(10, window.innerWidth - width - 10);
+                }
               }
-              setDropdownPos({ top: rect.bottom + 8, left: left, width: width });
+
+              let top = rect.bottom + 8;
+              if (top + 420 > window.innerHeight && rect.top > 300) {
+                top = Math.max(10, rect.top - 430);
+              }
+
+              setDropdownPos({ top, left, width });
             }
             setIsOpen(!isOpen);
           }}
@@ -699,12 +715,28 @@ export function ModernMultiSelect({
           onClick={() => {
             if (!isOpen && !isMobile && triggerRef.current) {
               const rect = triggerRef.current.getBoundingClientRect();
-              const width = Math.max(rect.width, 320);
-              let left = rect.left;
-              if (left + width > window.innerWidth - 10) {
-                left = Math.max(10, window.innerWidth - width - 10);
+              const drawerEl = triggerRef.current.closest('[data-drawer], .max-w-lg, .shadow-2xl, [role="dialog"]');
+              let width: number;
+              let left: number;
+
+              if (drawerEl) {
+                const drawerRect = drawerEl.getBoundingClientRect();
+                width = drawerRect.width - 40;
+                left = drawerRect.left + 20;
+              } else {
+                width = Math.max(rect.width, 380);
+                left = rect.left;
+                if (left + width > window.innerWidth - 10) {
+                  left = Math.max(10, window.innerWidth - width - 10);
+                }
               }
-              setDropdownPos({ top: rect.bottom + 8, left: left, width: width });
+
+              let top = rect.bottom + 8;
+              if (top + 420 > window.innerHeight && rect.top > 300) {
+                top = Math.max(10, rect.top - 430);
+              }
+
+              setDropdownPos({ top, left, width });
             }
             setIsOpen(!isOpen);
           }}
