@@ -53,9 +53,9 @@
         table.items td.num { font-weight: bold; color: #0f172a; direction: ltr; text-align: right; unicode-bidi: bidi-override; }
         table.items tfoot td { background: #E8EAF6; font-weight: bold; font-size: 9px; padding: 3px 5px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; direction: rtl; }
 
-        .footer { display: table; width: 100%; margin-top: 12px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
-        .footer-r { display: table-cell; text-align: right; font-size: 7.5px; color: #94a3b8; }
-        .footer-l { display: table-cell; text-align: left;  font-size: 7.5px; color: #94a3b8; }
+        .footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #e2e8f0; font-size: 8.5px; color: #64748b; text-align: right; }
+        .footer-line1 { font-weight: bold; color: #1e293b; margin-bottom: 3px; }
+        .footer-line2 { color: #64748b; }
     </style>
 </head>
 <body>
@@ -65,7 +65,13 @@
         <div class="ph-l"><img src="{{ public_path('images/logo.jpg') }}" style="max-height: 40px; max-width: 80px;"></div>
         <div class="ph-r">
             <div class="ph-title">{{ $labels['title'] }}</div>
-            <div class="ph-sub">{{ $labels['labelFrom'] }} {{ $labels['dateFrom'] }} &mdash; {{ $labels['labelTo'] }} {{ $labels['dateTo'] }}</div>
+            <div class="ph-sub">
+                <span dir="ltr" style="font-family: sans-serif; margin-left: 2px;">{{ $labels['dateTo'] }}</span>
+                <span style="margin-left: 4px;">{{ $labels['labelTo'] }}</span>
+                <span style="margin: 0 6px; color: #94a3b8;">&mdash;</span>
+                <span dir="ltr" style="font-family: sans-serif; margin-left: 2px;">{{ $labels['dateFrom'] }}</span>
+                <span style="margin-left: 4px;">{{ $labels['labelFrom'] }}</span>
+            </div>
         </div>
     </div>
 </div>
@@ -209,8 +215,21 @@
 @endforeach
 
 <div class="footer">
-    <div class="footer-r">{{ $labels['title'] }} &mdash; {{ $labels['labelFrom'] }} {{ $labels['dateFrom'] }} {{ $labels['labelTo'] }} {{ $labels['dateTo'] }}</div>
-    <div class="footer-l">{{ now()->format('Y-m-d H:i') }}</div>
+    <div class="footer-line1">
+        <span dir="ltr" style="font-family: sans-serif; margin-left: 2px;">{{ $labels['dateTo'] }}</span>
+        <span style="margin-left: 4px;">{{ $labels['labelTo'] }}</span>
+        <span dir="ltr" style="font-family: sans-serif; margin-left: 2px;">{{ $labels['dateFrom'] }}</span>
+        <span style="margin-left: 4px;">{{ $labels['labelFrom'] }}</span>
+        <span style="margin: 0 8px; color: #94a3b8;">|</span>
+        <span style="font-weight: bold; color: #0f172a;">{{ $labels['title'] }}</span>
+    </div>
+    <div class="footer-line2">
+        <span dir="ltr" style="font-family: sans-serif; font-weight: bold; margin-left: 2px;">{{ now()->format('H:i') }}</span>
+        <span style="margin-left: 4px;">{{ $g('الساعة:') }}</span>
+        <span style="margin: 0 8px; color: #cbd5e1;">|</span>
+        <span dir="ltr" style="font-family: sans-serif; font-weight: bold; margin-left: 2px;">{{ now()->format('Y-m-d') }}</span>
+        <span style="margin-left: 4px;">{{ $g('تاريخ الإنشاء:') }}</span>
+    </div>
 </div>
 
 </body>
