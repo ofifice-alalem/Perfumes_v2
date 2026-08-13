@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Repositories\Contracts\ReportRepositoryInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -3631,21 +3632,36 @@ class ReportRepository implements ReportRepositoryInterface
 
                 $returnsList = [];
                 foreach ($returns as $r) {
-                    $items = DB::table('purchase_return_items')
+                    $hasPriSize = Schema::hasColumn('purchase_return_items', 'size_id');
+                    $priQuery = DB::table('purchase_return_items')
                         ->join('products', 'products.id', '=', 'purchase_return_items.product_id')
-                        ->leftJoin('sizes', 'sizes.id', '=', 'purchase_return_items.size_id')
                         ->where('purchase_return_items.purchase_return_id', $r->id)
-                        ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
-                        ->select(
-                            'products.name as product_name',
-                            'purchase_return_items.unit_cost as unit_price',
-                            'sizes.label as size_label',
-                            DB::raw('MIN(purchase_return_items.quantity) as quantity'),
-                            DB::raw('COUNT(*) as count'),
-                            DB::raw('SUM(purchase_return_items.line_total) as line_total')
-                        )
-                        ->groupBy('products.name', 'purchase_return_items.unit_cost', 'sizes.label')
-                        ->get()
+                        ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId));
+
+                    if ($hasPriSize) {
+                        $priQuery->leftJoin('sizes', 'sizes.id', '=', 'purchase_return_items.size_id')
+                            ->select(
+                                'products.name as product_name',
+                                'purchase_return_items.unit_cost as unit_price',
+                                'sizes.label as size_label',
+                                DB::raw('MIN(purchase_return_items.quantity) as quantity'),
+                                DB::raw('COUNT(*) as count'),
+                                DB::raw('SUM(purchase_return_items.line_total) as line_total')
+                            )
+                            ->groupBy('products.name', 'purchase_return_items.unit_cost', 'sizes.label');
+                    } else {
+                        $priQuery->select(
+                                'products.name as product_name',
+                                'purchase_return_items.unit_cost as unit_price',
+                                DB::raw('NULL as size_label'),
+                                DB::raw('MIN(purchase_return_items.quantity) as quantity'),
+                                DB::raw('COUNT(*) as count'),
+                                DB::raw('SUM(purchase_return_items.line_total) as line_total')
+                            )
+                            ->groupBy('products.name', 'purchase_return_items.unit_cost');
+                    }
+
+                    $items = $priQuery->get()
                         ->map(fn($i) => (object)[
                             'product_name' => $i->product_name,
                             'quantity'     => (float)$i->quantity,
