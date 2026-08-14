@@ -19,6 +19,8 @@ class ReportController extends Controller
 
     public function profitAnalysisSummary(Request $request): Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $dateFrom        = $request->input('date_from');
         $dateTo          = $request->input('date_to');
         $stockDateFrom   = $request->input('stock_date_from');

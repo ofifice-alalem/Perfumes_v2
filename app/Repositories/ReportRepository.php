@@ -456,6 +456,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $scopePeriod = function ($q, string $table) use ($periodId) {
             if ($periodId) {
                 $q->where(fn($sq) => $sq->where("{$table}.period_id", $periodId)->orWhereNull("{$table}.period_id"));
@@ -1103,6 +1105,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerCustomer = 30): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         // If not showing all history and no dateFrom provided, default to the latest snapshot date
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
@@ -1572,6 +1576,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerSupplier = 30): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
             ->orderBy('period_snapshots.id', 'desc')
@@ -4393,6 +4399,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         if ($searchName) {
             $searchNames = explode(',', $searchName);
             $q = DB::table('products');
