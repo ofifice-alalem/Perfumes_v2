@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
@@ -45,6 +45,7 @@ interface CustomerAging {
     days_60_90: number;
     over_90: number;
     movements: Movement[];
+    movements_count?: number;
 }
 
 interface Props {
@@ -217,6 +218,81 @@ export default function CustomerAging({ customers, filters, data }: Props) {
     const [dateTo,         setDateTo]         = useState(filters.dateTo ?? '');
     const [showAllHistory, setShowAllHistory] = useState(filters.showAllHistory ?? false);
     const [expanded,       setExpanded]       = useState<Set<number>>(new Set());
+
+    // Dynamic Pagination State per Customer
+    const [customerMovementsMap, setCustomerMovementsMap] = useState<Record<number, Movement[]>>(() => {
+        const map: Record<number, Movement[]> = {};
+        data.forEach(c => { map[c.customer_id] = c.movements ?? []; });
+        return map;
+    });
+
+    const [customerHasMoreMap, setCustomerHasMoreMap] = useState<Record<number, boolean>>(() => {
+        const map: Record<number, boolean> = {};
+        data.forEach(c => {
+            const loaded = c.movements?.length ?? 0;
+            const total = c.movements_count ?? loaded;
+            map[c.customer_id] = loaded < total;
+        });
+        return map;
+    });
+
+    const [loadingCustomerMap, setLoadingCustomerMap] = useState<Record<number, boolean>>({});
+
+    useEffect(() => {
+        const map: Record<number, Movement[]> = {};
+        const hasMoreMap: Record<number, boolean> = {};
+        data.forEach(c => {
+            const loaded = c.movements?.length ?? 0;
+            const total = c.movements_count ?? loaded;
+            map[c.customer_id] = c.movements ?? [];
+            hasMoreMap[c.customer_id] = loaded < total;
+        });
+        setCustomerMovementsMap(map);
+        setCustomerHasMoreMap(hasMoreMap);
+    }, [data]);
+
+    async function handleLoadMoreMovements(c: CustomerAging) {
+        const cid = c.customer_id;
+        if (loadingCustomerMap[cid]) return;
+
+        const currentMovements = customerMovementsMap[cid] || c.movements || [];
+        const offset = currentMovements.length;
+
+        setLoadingCustomerMap(prev => ({ ...prev, [cid]: true }));
+
+        try {
+            const params = new URLSearchParams();
+            params.append('customer_id', String(cid));
+            params.append('offset', String(offset));
+            params.append('limit', '30');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (showAllHistory) params.append('show_all_history', '1');
+
+            const res = await fetch(`/reports/customer-aging/load-more?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to load more');
+
+            const json = await res.json();
+            const newMovements: Movement[] = json.movements || [];
+
+            setCustomerMovementsMap(prev => {
+                const existing = prev[cid] || c.movements || [];
+                return {
+                    ...prev,
+                    [cid]: [...existing, ...newMovements],
+                };
+            });
+
+            setCustomerHasMoreMap(prev => ({
+                ...prev,
+                [cid]: json.has_more ?? false,
+            }));
+        } catch (e) {
+            console.error('Error loading more customer movements:', e);
+        } finally {
+            setLoadingCustomerMap(prev => ({ ...prev, [cid]: false }));
+        }
+    }
 
     const activeFilterCount = (customerId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (showAllHistory ? 1 : 0);
 
@@ -422,7 +498,7 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                             <span className={`px-3 py-0.5 rounded-full text-sm font-black ${
                                                                 isExpanded ? 'bg-white text-primary' : 'bg-primary text-white'
                                                             }`}>
-                                                                {c.movements?.length || 0}
+                                                                {c.movements_count ?? c.movements?.length ?? 0}
                                                             </span>
                                                         </button>
                                                     </td>
@@ -486,7 +562,7 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
-                                                                                {c.movements.map((m, idx) => {
+                                                                                {(customerMovementsMap[c.customer_id] || c.movements || []).map((m, idx) => {
                                                                                     const cfg = typeConfig[m.type] || typeConfig.invoice;
                                                                                     return (
                                                                                         <tr key={idx} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
@@ -517,6 +593,30 @@ export default function CustomerAging({ customers, filters, data }: Props) {
                                                                                 })}
                                                                             </tbody>
                                                                         </table>
+
+                                                                        {/* Load More Button per Customer Movements */}
+                                                                        {(customerHasMoreMap[c.customer_id] || (customerMovementsMap[c.customer_id]?.length ?? 0) < (c.movements_count ?? c.movements?.length ?? 0)) && (
+                                                                            <div className="p-4 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950/30 flex items-center justify-center">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleLoadMoreMovements(c)}
+                                                                                    disabled={loadingCustomerMap[c.customer_id]}
+                                                                                    className="px-8 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-60 border-2 border-primary/40 touch-manipulation"
+                                                                                >
+                                                                                    {loadingCustomerMap[c.customer_id] ? (
+                                                                                        <>
+                                                                                            <RotateCcw className="w-6 h-6 animate-spin" />
+                                                                                            <span>جاري تحميل 30 حركة إضافية...</span>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <>
+                                                                                            <Download className="w-6 h-6" />
+                                                                                            <span>رؤية المزيد من الحركات (تم عرض {customerMovementsMap[c.customer_id]?.length || (c.movements?.length || 0)} من أصل {c.movements_count || c.movements?.length || 0})</span>
+                                                                                        </>
+                                                                                    )}
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
                                                                 )}
                                                             </div>

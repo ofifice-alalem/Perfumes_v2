@@ -1068,7 +1068,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Customer Aging ────────────────────────────────────────────────────────
 
-    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): array
+    public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerCustomer = 30): array
     {
         // If not showing all history and no dateFrom provided, default to the latest snapshot date
         $latestSnapshot = DB::table('period_snapshots')
@@ -1141,12 +1141,12 @@ class ReportRepository implements ReportRepositoryInterface
             return $items->groupBy('customer_id');
         };
 
-        $loadMovements = $customerId !== null;
+        $loadMovements = true;
 
-        $invoicesMovements = $loadMovements ? $getChunkedMovements('invoices', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
-        $paymentsMovements = $loadMovements ? $getChunkedMovements('payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
-        $settlementsMovements = $loadMovements ? $getChunkedMovements('settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
-        $returnsMovements = $loadMovements ? $getChunkedMovements('invoice_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
+        $invoicesMovements = $getChunkedMovements('invoices', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $paymentsMovements = $getChunkedMovements('payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $settlementsMovements = $getChunkedMovements('settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $returnsMovements = $getChunkedMovements('invoice_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
 
         // Get Unpaid invoices for aging buckets
         $unpaidInvoices = collect();
@@ -1168,7 +1168,7 @@ class ReportRepository implements ReportRepositoryInterface
             $newInvoicedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
             $totalInvoicedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
             $futureInvoicedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
-            $invoicesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidByCustomer, $loadMovements
+            $invoicesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidByCustomer, $loadMovements, $movementsLimitPerCustomer
         ) {
             $cid = $customer->id;
 
@@ -1309,26 +1309,59 @@ class ReportRepository implements ReportRepositoryInterface
             }
             if ($remainingDebt > 0) $current += $remainingDebt;
 
+            $totalMovementsCount = count($movementsList);
+            $slicedMovements = $movementsLimitPerCustomer !== null ? array_slice($movementsList, 0, $movementsLimitPerCustomer) : $movementsList;
+
             return [
-                'customer_id'    => $customer->id,
-                'customer_name'  => $customer->name,
-                'total_debt'     => round($totalDebt, 2),
-                'total_invoiced' => round($totalInvoiced, 2),
-                'total_paid'     => round($totalPaid, 2),
-                'total_settled'  => round($totalSettled, 2),
-                'total_returned' => round($totalReturned, 2),
-                'current'        => round($current, 2),
-                'days_30_60'     => round($days30_60, 2),
-                'days_60_90'     => round($days60_90, 2),
-                'over_90'        => round($over90, 2),
-                'movements'      => $movementsList,
+                'customer_id'     => $customer->id,
+                'customer_name'   => $customer->name,
+                'total_debt'      => round($totalDebt, 2),
+                'total_invoiced'  => round($totalInvoiced, 2),
+                'total_paid'      => round($totalPaid, 2),
+                'total_settled'   => round($totalSettled, 2),
+                'total_returned'  => round($totalReturned, 2),
+                'current'         => round($current, 2),
+                'days_30_60'      => round($days30_60, 2),
+                'days_60_90'      => round($days60_90, 2),
+                'over_90'         => round($over90, 2),
+                'movements'       => $slicedMovements,
+                'movements_count' => $totalMovementsCount,
             ];
         })->filter()->values()->toArray();
     }
 
+    public function loadMoreCustomerMovements(
+        int $customerId,
+        int $offset = 30,
+        int $limit = 30,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        bool $showAllHistory = false
+    ): array {
+        $full = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory, null);
+        if (empty($full)) {
+            return ['movements' => [], 'has_more' => false, 'next_offset' => $offset];
+        }
+
+        $allMovements = $full[0]['movements'] ?? [];
+        $total = count($allMovements);
+        $slice = array_slice($allMovements, $offset, $limit);
+        $nextOffset = $offset + count($slice);
+        $hasMore = $nextOffset < $total;
+
+        return [
+            'movements'   => $slice,
+            'has_more'    => $hasMore,
+            'next_offset' => $nextOffset,
+        ];
+    }
+
     public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        $data = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory);
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $data = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory, null);
 
         $customerName = $customerId
             ? DB::table('customers')->where('id', $customerId)->value('name')
@@ -1448,10 +1481,13 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory);
+        $data    = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory, null);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

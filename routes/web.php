@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('inventory-logs/{id}', [\App\Http\Controllers\InventoryLogController::class, 'destroy'])->name('inventory-logs.destroy');
 
         Route::get('reports/customer-aging', [ReportController::class, 'customerAging'])->name('reports.customer-aging');
+        Route::get('reports/customer-aging/load-more', [ReportController::class, 'customerAgingLoadMore'])->name('reports.customer-aging.load-more');
         Route::get('reports/customer-aging/excel', [ReportController::class, 'customerAgingExcel'])->name('reports.customer-aging.excel');
         Route::get('reports/customer-aging/pdf', [ReportController::class, 'customerAgingPdf'])->name('reports.customer-aging.pdf');
         Route::get('reports/supplier-aging', [ReportController::class, 'supplierAging'])->name('reports.supplier-aging');
