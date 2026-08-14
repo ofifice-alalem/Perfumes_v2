@@ -13,7 +13,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportRepository implements ReportRepositoryInterface
 {
-    public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): array
+    public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 30): array
     {
         $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -230,10 +230,37 @@ class ReportRepository implements ReportRepositoryInterface
             ];
         });
 
+        $allMovements = $result->values();
+        $totalMovementsCount = count($allMovements);
+        $slicedMovements = $limit !== null ? $allMovements->take($limit)->all() : $allMovements->all();
+
         return [
-            'opening_stock' => round((float) $openingStock, 2),
-            'movements'     => $result->values(),
-            'closing_stock' => round($balance, 2),
+            'opening_stock'         => round((float) $openingStock, 2),
+            'movements'             => $slicedMovements,
+            'total_movements_count' => $totalMovementsCount,
+            'closing_stock'         => round($balance, 2),
+        ];
+    }
+
+    public function loadMoreProductMovements(
+        int $productId,
+        int $offset = 30,
+        int $limit = 30,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        ?string $type = null
+    ): array {
+        $full = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
+        $allMovements = $full['movements'] ?? [];
+        $total = count($allMovements);
+        $slice = array_slice($allMovements, $offset, $limit);
+        $nextOffset = $offset + count($slice);
+        $hasMore = $nextOffset < $total;
+
+        return [
+            'movements'   => $slice,
+            'has_more'    => $hasMore,
+            'next_offset' => $nextOffset,
         ];
     }
 
@@ -241,13 +268,16 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportProductMovementExcel(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $product = DB::table('products')
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->where('products.id', $productId)
             ->select('products.name', 'categories.unit')
             ->first();
 
-        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type);
+        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
 
         $typeLabels = [
             'purchase'   => 'شراء',
@@ -356,6 +386,9 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
@@ -365,7 +398,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->select('products.name', 'categories.unit')
             ->first();
 
-        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type);
+        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
 
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);

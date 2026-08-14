@@ -4,7 +4,8 @@ namespace App\Repositories\Contracts;
 
 interface ReportRepositoryInterface
 {
-    public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): array;
+    public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 30): array;
+    public function loadMoreProductMovements(int $productId, int $offset = 30, int $limit = 30, ?string $dateFrom = null, ?string $dateTo = null, ?string $type = null): array;
     public function exportProductMovementExcel(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): void;
     public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): \Illuminate\Http\Response;
     public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold, bool $showWasted, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array;

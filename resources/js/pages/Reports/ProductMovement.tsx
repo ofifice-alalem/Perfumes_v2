@@ -37,6 +37,7 @@ interface Movement {
 interface ReportData {
     opening_stock: number;
     movements: Movement[];
+    total_movements_count?: number;
     closing_stock: number;
 }
 
@@ -275,8 +276,53 @@ export default function ProductMovement({ products, product, filters, data }: Pr
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [products, dateFrom, dateTo, type]);
+
+    // Dynamic Pagination State
+    const [movementsList, setMovementsList] = useState<Movement[]>(() => data?.movements ?? []);
+    const [hasMore, setHasMore] = useState<boolean>(() => {
+        if (!data) return false;
+        const loaded = data.movements?.length ?? 0;
+        const total = data.total_movements_count ?? loaded;
+        return loaded < total;
+    });
+    const [loadingMore, setLoadingMore] = useState<boolean>(false);
+
+    useEffect(() => {
+        const loaded = data?.movements?.length ?? 0;
+        const total = data?.total_movements_count ?? loaded;
+        setMovementsList(data?.movements ?? []);
+        setHasMore(loaded < total);
+    }, [data]);
+
+    async function handleLoadMore() {
+        if (!productId || loadingMore) return;
+        const offset = movementsList.length;
+        setLoadingMore(true);
+
+        try {
+            const params = new URLSearchParams();
+            params.append('product_id', productId);
+            params.append('offset', String(offset));
+            params.append('limit', '30');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (type) params.append('type', type);
+
+            const res = await fetch(`/reports/product-movement/load-more?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to load more');
+
+            const json = await res.json();
+            const newItems: Movement[] = json.movements || [];
+
+            setMovementsList(prev => [...prev, ...newItems]);
+            setHasMore(json.has_more ?? false);
+        } catch (e) {
+            console.error('Error loading more product movements:', e);
+        } finally {
+            setLoadingMore(false);
+        }
+    }
 
     const activeFilterCount = (productId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (type ? 1 : 0);
 
@@ -400,7 +446,7 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                 </div>
                                 <div>
                                     <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white">
-                                        {data.movements.length}
+                                        {data.total_movements_count ?? data.movements.length}
                                     </span>
                                     <span className="text-lg font-bold text-slate-500 dark:text-slate-400 mr-2">حركة</span>
                                 </div>
@@ -439,7 +485,7 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                         {/* Movements Table Card */}
                         <SpatialCard
                             headerDot={false}
-                            title={`سجل حركات المنتج: ${product.name} (${data.movements.length} حركة)`}
+                            title={`سجل حركات المنتج: ${product.name} (${data.total_movements_count ?? data.movements.length} حركة)`}
                             icon={<Package className="w-7 h-7 text-primary" />}
                             action={
                                 <div className="flex items-center gap-3">
@@ -472,63 +518,89 @@ export default function ProductMovement({ products, product, filters, data }: Pr
                                     <p className="font-bold text-xl">لا توجد حركات مسجلة لهذا المنتج في الفترة المحددة</p>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-right border-collapse min-w-[850px]">
-                                        <thead>
-                                            <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base sm:text-lg font-black uppercase">
-                                                <th className="p-5 rounded-r-[18px]">التاريخ</th>
-                                                <th className="p-5">نوع الحركة</th>
-                                                <th className="p-5">الكمية</th>
-                                                <th className="p-5">سعر الوحدة</th>
-                                                <th className="p-5">رقم المرجع / الفاتورة</th>
-                                                <th className="p-5 rounded-l-[18px]">الرصيد المتبقي</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-black text-lg sm:text-xl">
-                                            {data.movements.map((m, i) => {
-                                                const cfg = typeConfig[m.type] || { label: m.type, bg: 'bg-slate-500/15', text: 'text-slate-700', border: 'border-slate-500/30' };
-                                                return (
-                                                    <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                                                        <td className="p-5 text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-black text-base">
-                                                                {fmtDate(m.date)}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-5 whitespace-nowrap">
-                                                            <span className={`px-4 py-2 rounded-xl font-black text-base border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                                                {cfg.label}
-                                                            </span>
-                                                        </td>
-                                                        <td className="p-5 whitespace-nowrap">
-                                                            <div className={`flex items-center gap-1.5 font-black ${
-                                                                m.quantity > 0
-                                                                    ? 'text-emerald-600 dark:text-emerald-400'
-                                                                    : m.quantity === 0
-                                                                    ? 'text-slate-500'
-                                                                    : 'text-rose-600 dark:text-rose-400'
-                                                            }`}>
-                                                                {m.quantity > 0 ? (
-                                                                    <ArrowUp className="w-5 h-5 shrink-0" />
-                                                                ) : m.quantity < 0 ? (
-                                                                    <ArrowDown className="w-5 h-5 shrink-0" />
-                                                                ) : null}
-                                                                <span>{fmt(Math.abs(m.quantity))} {product.category.unit}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="p-5 text-slate-800 dark:text-slate-200 whitespace-nowrap">
-                                                            {m.unit_price !== null ? `${fmt(m.unit_price)} د.ل` : '—'}
-                                                        </td>
-                                                        <td className="p-5 text-primary font-black text-base whitespace-nowrap">
-                                                            {m.reference}
-                                                        </td>
-                                                        <td className="p-5 text-slate-900 dark:text-white font-black whitespace-nowrap">
-                                                            {fmt(m.balance)} {product.category.unit}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                <div className="flex flex-col gap-6">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-right border-collapse min-w-[850px]">
+                                            <thead>
+                                                <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-base sm:text-lg font-black uppercase">
+                                                    <th className="p-5 rounded-r-[18px]">التاريخ</th>
+                                                    <th className="p-5">نوع الحركة</th>
+                                                    <th className="p-5">الكمية</th>
+                                                    <th className="p-5">سعر الوحدة</th>
+                                                    <th className="p-5">رقم المرجع / الفاتورة</th>
+                                                    <th className="p-5 rounded-l-[18px]">الرصيد المتبقي</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-black text-lg sm:text-xl">
+                                                {movementsList.map((m, i) => {
+                                                    const cfg = typeConfig[m.type] || { label: m.type, bg: 'bg-slate-500/15', text: 'text-slate-700', border: 'border-slate-500/30' };
+                                                    return (
+                                                        <tr key={i} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                                                            <td className="p-5 text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                                                                <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-black text-base">
+                                                                    {fmtDate(m.date)}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-5 whitespace-nowrap">
+                                                                <span className={`px-4 py-2 rounded-xl font-black text-base border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                                                                    {cfg.label}
+                                                                </span>
+                                                            </td>
+                                                            <td className="p-5 whitespace-nowrap">
+                                                                <div className={`flex items-center gap-1.5 font-black ${
+                                                                    m.quantity > 0
+                                                                        ? 'text-emerald-600 dark:text-emerald-400'
+                                                                        : m.quantity === 0
+                                                                        ? 'text-slate-500'
+                                                                        : 'text-rose-600 dark:text-rose-400'
+                                                                }`}>
+                                                                    {m.quantity > 0 ? (
+                                                                        <ArrowUp className="w-5 h-5 shrink-0" />
+                                                                    ) : m.quantity < 0 ? (
+                                                                        <ArrowDown className="w-5 h-5 shrink-0" />
+                                                                    ) : null}
+                                                                    <span>{fmt(Math.abs(m.quantity))} {product.category.unit}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-5 text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                                                {m.unit_price !== null ? `${fmt(m.unit_price)} د.ل` : '—'}
+                                                            </td>
+                                                            <td className="p-5 text-primary font-black text-base whitespace-nowrap">
+                                                                {m.reference}
+                                                            </td>
+                                                            <td className="p-5 text-slate-900 dark:text-white font-black whitespace-nowrap">
+                                                                {fmt(m.balance)} {product.category.unit}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Load More Button */}
+                                    {hasMore && (
+                                        <div className="pt-4 flex items-center justify-center">
+                                            <button
+                                                type="button"
+                                                onClick={handleLoadMore}
+                                                disabled={loadingMore}
+                                                className="px-8 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-60 border-2 border-primary/40 touch-manipulation"
+                                            >
+                                                {loadingMore ? (
+                                                    <>
+                                                        <RotateCcw className="w-6 h-6 animate-spin" />
+                                                        <span>جاري تحميل 30 حركة إضافية...</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Download className="w-6 h-6" />
+                                                        <span>رؤية المزيد من الحركات (تم عرض {movementsList.length} من أصل {data.total_movements_count ?? data.movements.length})</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </SpatialCard>

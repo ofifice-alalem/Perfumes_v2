@@ -122,6 +122,31 @@ class ReportController extends Controller
         ]);
     }
 
+    public function productMovementLoadMore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $productId = $request->integer('product_id');
+        $offset    = $request->integer('offset', 30);
+        $limit     = $request->integer('limit', 30);
+        $dateFrom  = $request->input('date_from');
+        $dateTo    = $request->input('date_to');
+        $type      = $request->input('type');
+
+        if (!$productId) {
+            return response()->json(['movements' => [], 'has_more' => false, 'next_offset' => $offset]);
+        }
+
+        $result = $this->reports->loadMoreProductMovements(
+            $productId,
+            $offset,
+            $limit,
+            $dateFrom,
+            $dateTo,
+            $type
+        );
+
+        return response()->json($result);
+    }
+
     public function productMovementExcel(Request $request)
     {
         $productId = $request->integer('product_id');
