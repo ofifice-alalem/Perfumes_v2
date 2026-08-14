@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { AppSidebar } from './AppSidebar';
 import { TopNav } from './TopNav';
 
@@ -9,6 +9,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, pageTitle }: AppShellProps) {
+  const page = usePage();
   const [isDark, setIsDark] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.innerWidth >= 1024);
 
@@ -82,7 +83,7 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
 
           <TopNav isDark={isDark} onToggleTheme={toggleTheme} pageTitle={pageTitle} />
 
-          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+          <div key={page.url} className="app-page-transition flex-1 flex flex-col min-h-0">
             {children}
           </div>
         </div>

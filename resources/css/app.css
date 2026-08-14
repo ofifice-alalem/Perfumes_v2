@@ -135,6 +135,22 @@
   }
 }
 
+@keyframes appPageEnter {
+  0% {
+    opacity: 0.65;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-page-transition {
+  animation: appPageEnter 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
 /* Date input — توحيد مظهر حقل التاريخ مع spatial-input */
 input[type="date"] {
   color-scheme: light;
