@@ -2677,7 +2677,7 @@ class ReportRepository implements ReportRepositoryInterface
             $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
             $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
 
-            $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), ii.quantity, ii.unit_price, ii.line_total FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' ORDER BY c.name ASC, i.id DESC, ii.id ASC";
+            $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COUNT(ii.id) AS item_count, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), SUM(ii.quantity), ii.unit_price, SUM(ii.line_total) FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' GROUP BY i.id, c.name, i.created_at, i.total, ii.product_id, ii.size_id, ii.unit_price, p.name, sz.label ORDER BY c.name ASC, i.id DESC";
 
             $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
             $f = fopen($tmpTsv, 'w');

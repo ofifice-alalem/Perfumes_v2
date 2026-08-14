@@ -1,7 +1,6 @@
 /*
  * High-Performance Native C++ Exporter for Perfumes_v2
- * Direct TSV Stream Engine with full Arabic layout,Tajawal font,
- * 3-Column Invoice Headers, Included Products, Created At, & Dinar (د.ل) currency
+ * Direct TSV Stream Engine with Item Grouping/Aggregation (العدد) & Dinar currency
  */
 
 #include <stdio.h>
@@ -34,11 +33,11 @@ int main(int argc, char *argv[]) {
     worksheet_right_to_left(worksheet);
 
     // Column Widths
-    worksheet_set_column(worksheet, 0, 0, 48, NULL);
-    worksheet_set_column(worksheet, 1, 1, 42, NULL);
-    worksheet_set_column(worksheet, 2, 2, 22, NULL);
-    worksheet_set_column(worksheet, 3, 3, 22, NULL);
-    worksheet_set_column(worksheet, 4, 4, 26, NULL);
+    worksheet_set_column(worksheet, 0, 0, 16, NULL); // Column A: العدد / فاتورة رقم
+    worksheet_set_column(worksheet, 1, 1, 48, NULL); // Column B: المنتج / اسم العميل / التاريخ
+    worksheet_set_column(worksheet, 2, 2, 22, NULL); // Column C: الحجم / الإجمالي
+    worksheet_set_column(worksheet, 3, 3, 22, NULL); // Column D: السعر
+    worksheet_set_column(worksheet, 4, 4, 26, NULL); // Column E: الإجمالي
 
     // Formats
     lxw_format *title_format = workbook_add_format(workbook);
@@ -97,6 +96,11 @@ int main(int argc, char *argv[]) {
     format_set_font_name(row_format, "Tajawal");
     format_set_font_size(row_format, 12);
 
+    lxw_format *row_center_format = workbook_add_format(workbook);
+    format_set_font_name(row_center_format, "Tajawal");
+    format_set_font_size(row_center_format, 12);
+    format_set_align(row_center_format, LXW_ALIGN_CENTER);
+
     // Title Block
     worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
     
@@ -128,17 +132,18 @@ int main(int argc, char *argv[]) {
             while (std::getline(ss, item, '\t')) {
                 cols.push_back(item);
             }
-            if (cols.size() < 9) continue;
+            if (cols.size() < 10) continue;
 
             std::string custName = cols[0];
             int invId            = atoi(cols[1].c_str());
             std::string invDate  = cols[2];
             double invTotal      = atof(cols[3].c_str());
-            std::string pName    = cols[4];
-            std::string pSize    = cols[5];
-            double qty           = atof(cols[6].c_str());
-            double unitPrice     = atof(cols[7].c_str());
-            double lineTotal     = atof(cols[8].c_str());
+            int itemCount        = atoi(cols[4].c_str());
+            std::string pName    = cols[5];
+            std::string pSize    = cols[6];
+            double qty           = atof(cols[7].c_str());
+            double unitPrice     = atof(cols[8].c_str());
+            double lineTotal     = atof(cols[9].c_str());
 
             if (currentCustomer != custName) {
                 currentCustomer = custName;
@@ -155,7 +160,7 @@ int main(int argc, char *argv[]) {
                 currentInvoiceId = invId;
 
                 char invIdBuf[128];
-                snprintf(invIdBuf, sizeof(invIdBuf), "فاتورة #%d", invId);
+                snprintf(invIdBuf, sizeof(invIdBuf), "INV#%d", invId);
                 worksheet_write_string(worksheet, r, 0, invIdBuf, inv_id_format);
 
                 worksheet_write_string(worksheet, r, 1, invDate.c_str(), inv_date_format);
@@ -165,17 +170,23 @@ int main(int argc, char *argv[]) {
                 worksheet_write_string(worksheet, r, 2, invTotalBuf, inv_total_format);
                 r++;
 
-                worksheet_write_string(worksheet, r, 0, "اسم المنتج / الصنف", header_format);
-                worksheet_write_string(worksheet, r, 1, "الحجم", header_format);
-                worksheet_write_string(worksheet, r, 2, "الكمية", header_format);
-                worksheet_write_string(worksheet, r, 3, "السعر (د.ل)", header_format);
-                worksheet_write_string(worksheet, r, 4, "الإجمالي (د.ل)", header_format);
+                worksheet_write_string(worksheet, r, 0, "العدد", header_format);
+                worksheet_write_string(worksheet, r, 1, "المنتج", header_format);
+                worksheet_write_string(worksheet, r, 2, "الحجم", header_format);
+                worksheet_write_string(worksheet, r, 3, "السعر", header_format);
+                worksheet_write_string(worksheet, r, 4, "الإجمالي", header_format);
                 r++;
             }
 
-            worksheet_write_string(worksheet, r, 0, pName.c_str(), row_format);
-            worksheet_write_string(worksheet, r, 1, pSize.c_str(), row_format);
-            worksheet_write_number(worksheet, r, 2, qty, row_format);
+            // Item Row with Count Aggregation
+            if (itemCount > 1) {
+                worksheet_write_number(worksheet, r, 0, itemCount, row_center_format);
+            } else {
+                worksheet_write_string(worksheet, r, 0, "", row_center_format);
+            }
+
+            worksheet_write_string(worksheet, r, 1, pName.c_str(), row_format);
+            worksheet_write_string(worksheet, r, 2, pSize.c_str(), row_format);
             worksheet_write_number(worksheet, r, 3, unitPrice, row_format);
             worksheet_write_number(worksheet, r, 4, lineTotal, row_format);
             r++;
