@@ -2666,13 +2666,77 @@ class ReportRepository implements ReportRepositoryInterface
         @ini_set('memory_limit', '2048M');
         @set_time_limit(600);
 
+        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin/export_xlsx.exe') : base_path('bin/export_xlsx');
+        if (file_exists($cppExe)) {
+            $tmpTsv  = tempnam(sys_get_temp_dir(), 'cpp_db_') . '.tsv';
+            $tmpXlsx = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.xlsx';
+
+            $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
+            $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
+
+            $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), ii.quantity, ii.unit_price, ii.line_total FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' ORDER BY c.name ASC, i.id DESC, ii.id ASC";
+
+            $mysqlExe = PHP_OS_FAMILY === 'Windows' ? '"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe"' : 'mysql';
+            $dbUser   = config('database.connections.mysql.username', 'root');
+            $dbPass   = config('database.connections.mysql.password', '12255');
+            $dbName   = config('database.connections.mysql.database', 'perfumes_v2');
+
+            $cmdDb = "{$mysqlExe} -u {$dbUser} -p{$dbPass} {$dbName} --default-character-set=utf8mb4 -B -N -e \"{$sql}\" > \"{$tmpTsv}\"";
+            exec($cmdDb);
+
+            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . ($dateFrom ?? 'null') . '" "' . ($dateTo ?? 'null') . '" "' . $tmpTsv . '"';
+            exec($cmdCpp, $out, $code);
+
+            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
+                $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+                header('X-Export-Engine: C++ Direct Stream Engine (Zero PHP DB Fetch)');
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Length: ' . filesize($tmpXlsx));
+                readfile($tmpXlsx);
+                @unlink($tmpTsv);
+                @unlink($tmpXlsx);
+                exit;
+            }
+        }
+
         $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
 
         $totalInvoices = array_sum(array_column($data, 'invoice_count'));
 
-        // Use OpenSpout Ultra-Fast Streamed XLSX Writer for large datasets to prevent memory exhaustion and browser timeouts
+        $cppExe = base_path('bin/export_xlsx.exe');
+        if (file_exists($cppExe)) {
+            $t1 = microtime(true);
+            $tmpJson = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.json';
+            $tmpXlsx = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.xlsx';
+
+            file_put_contents($tmpJson, json_encode([
+                'date_from' => $dateFrom ?? 'البداية',
+                'date_to'   => $dateTo ?? now()->format('Y-m-d'),
+                'entries'   => $data,
+            ], JSON_UNESCAPED_UNICODE));
+
+            exec('"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpJson . '"', $out, $code);
+            $tCpp = microtime(true) - $t1;
+
+            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
+                $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+                header('X-Export-Engine: C++ libxlsxwriter (Native Binary)');
+                header('X-PHP-Query-Time-Sec: ' . round($tQuery, 3));
+                header('X-CPP-Execution-Time-Sec: ' . round($tCpp, 3));
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Length: ' . filesize($tmpXlsx));
+                readfile($tmpXlsx);
+                @unlink($tmpJson);
+                @unlink($tmpXlsx);
+                exit;
+            }
+        }
+
+        // Fallback to OpenSpout Streamed XLSX Writer
         if ($totalInvoices > 2000) {
             $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
             header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
