@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor User as Store Manager
+    participant UI as React UI (Inertia)
+    participant Route as Laravel Router
+    participant Ctrl as ReportController
+    participant Repo as ReportRepository
+    participant DB as MySQL DB
+    participant Cache as Redis Cache
+
+    User->>UI: Request Report (e.g., Customer Aging / Product Movement)
+    UI->>Route: GET /reports/customer-aging?limit=30
+    Route->>Ctrl: customerAging(Request $request)
+    Ctrl->>Repo: customerAging(customerId, dateFrom, dateTo, showAllHistory, 30)
+    Repo->>DB: Query DB::table('invoices', 'payments', 'settlements') Aggregates
+    DB-->>Repo: Financial Aggregates & Initial 30 Movements
+    Repo->>Repo: Slice movements to 30 & compute movements_count
+    Repo-->>Ctrl: Array Data (opening_stock, movements, total_count)
+    Ctrl-->>UI: Inertia::render('Reports/CustomerAging', data)
+    UI-->>User: Render Spatial Table + "Load More" Button
+
+    opt Load More Clicked
+        User->>UI: Click "رؤية المزيد من الحركات"
+        UI->>Route: GET /reports/customer-aging/load-more?offset=30&limit=30
+        Route->>Ctrl: customerAgingLoadMore(Request $request)
+        Ctrl->>Repo: loadMoreCustomerMovements(customerId, 30, 30, ...)
+        Repo->>DB: Fetch next offset slice
+        DB-->>Repo: Next 30 Movements
+        Repo-->>Ctrl: JSON Response { movements, has_more }
+        Ctrl-->>UI: JSON Response
+        UI-->>User: Append Rows Dynamically to Table
+    end

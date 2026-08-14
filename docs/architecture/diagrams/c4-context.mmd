@@ -1,0 +1,11 @@
+graph TD
+    User["Store Manager / POS Operator / Super Admin"]
+    System["Perfumes_v2 POS & Inventory ERP System (Laravel 13 + Inertia + React)"]
+    MySQL[("MySQL 8.0 Database")]
+    Redis[("Redis 7.0 Cache & Sessions")]
+    ExternalPrinter["POS Barcode & Receipt Printers"]
+
+    User -->|HTTP / HTTPS (SSL)| System
+    System -->|Eloquent / SQL QueryBuilder| MySQL
+    System -->|Cache / Sessions / Queues| Redis
+    System -->|Thermal Print / Direct PDF| ExternalPrinter
