@@ -16,7 +16,8 @@ interface ReportRepositoryInterface
     public function loadMoreCustomerMovements(int $customerId, int $offset = 30, int $limit = 30, ?string $dateFrom = null, ?string $dateTo = null, bool $showAllHistory = false): array;
     public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void;
     public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response;
-    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): array;
+    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerSupplier = 30): array;
+    public function loadMoreSupplierMovements(int $supplierId, int $offset = 30, int $limit = 30, ?string $dateFrom = null, ?string $dateTo = null, bool $showAllHistory = false): array;
     public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void;
     public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response;
     public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array;

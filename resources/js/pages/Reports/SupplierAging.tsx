@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
@@ -43,6 +43,7 @@ interface SupplierAging {
     days_60_90: number;
     over_90: number;
     movements: Movement[];
+    movements_count?: number;
 }
 
 interface Props {
@@ -215,6 +216,81 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
     const [dateTo,         setDateTo]         = useState(filters.dateTo ?? '');
     const [showAllHistory, setShowAllHistory] = useState(filters.showAllHistory ?? false);
     const [expanded,       setExpanded]       = useState<Set<number>>(new Set());
+
+    // Dynamic Pagination State per Supplier
+    const [supplierMovementsMap, setSupplierMovementsMap] = useState<Record<number, Movement[]>>(() => {
+        const map: Record<number, Movement[]> = {};
+        data.forEach(s => { map[s.supplier_id] = s.movements ?? []; });
+        return map;
+    });
+
+    const [supplierHasMoreMap, setSupplierHasMoreMap] = useState<Record<number, boolean>>(() => {
+        const map: Record<number, boolean> = {};
+        data.forEach(s => {
+            const loaded = s.movements?.length ?? 0;
+            const total = s.movements_count ?? loaded;
+            map[s.supplier_id] = loaded < total;
+        });
+        return map;
+    });
+
+    const [loadingSupplierMap, setLoadingSupplierMap] = useState<Record<number, boolean>>({});
+
+    useEffect(() => {
+        const map: Record<number, Movement[]> = {};
+        const hasMoreMap: Record<number, boolean> = {};
+        data.forEach(s => {
+            const loaded = s.movements?.length ?? 0;
+            const total = s.movements_count ?? loaded;
+            map[s.supplier_id] = s.movements ?? [];
+            hasMoreMap[s.supplier_id] = loaded < total;
+        });
+        setSupplierMovementsMap(map);
+        setSupplierHasMoreMap(hasMoreMap);
+    }, [data]);
+
+    async function handleLoadMoreMovements(s: SupplierAging) {
+        const sid = s.supplier_id;
+        if (loadingSupplierMap[sid]) return;
+
+        const currentMovements = supplierMovementsMap[sid] || s.movements || [];
+        const offset = currentMovements.length;
+
+        setLoadingSupplierMap(prev => ({ ...prev, [sid]: true }));
+
+        try {
+            const params = new URLSearchParams();
+            params.append('supplier_id', String(sid));
+            params.append('offset', String(offset));
+            params.append('limit', '30');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (showAllHistory) params.append('show_all_history', '1');
+
+            const res = await fetch(`/reports/supplier-aging/load-more?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to load more');
+
+            const json = await res.json();
+            const newMovements: Movement[] = json.movements || [];
+
+            setSupplierMovementsMap(prev => {
+                const existing = prev[sid] || s.movements || [];
+                return {
+                    ...prev,
+                    [sid]: [...existing, ...newMovements],
+                };
+            });
+
+            setSupplierHasMoreMap(prev => ({
+                ...prev,
+                [sid]: json.has_more ?? false,
+            }));
+        } catch (e) {
+            console.error('Error loading more supplier movements:', e);
+        } finally {
+            setLoadingSupplierMap(prev => ({ ...prev, [sid]: false }));
+        }
+    }
 
     const activeFilterCount = (supplierId ? 1 : 0) + (dateFrom ? 1 : 0) + (dateTo ? 1 : 0) + (showAllHistory ? 1 : 0);
 
@@ -420,102 +496,126 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                                             <span className={`px-3 py-0.5 rounded-full text-sm font-black ${
                                                                 isExpanded ? 'bg-white text-primary' : 'bg-primary text-white'
                                                             }`}>
-                                                                {c.movements?.length || 0}
+                                                                {c.movements_count ?? c.movements?.length ?? 0}
                                                             </span>
                                                         </button>
-                                                    </td>
-                                                </tr>
+                                                     </td>
+                                                 </tr>
 
-                                                {/* Expanded Movements Table */}
-                                                {isExpanded && (
-                                                    <tr key={`${c.supplier_id}-details`}>
-                                                        <td colSpan={7} className="p-4 sm:p-6 bg-slate-200/50 dark:bg-slate-900/60 border-y-2 border-slate-300 dark:border-slate-700">
-                                                            <div className="p-6 sm:p-8 bg-white/90 dark:bg-slate-800/90 rounded-[28px] border-2 border-primary/30 shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
-                                                                
-                                                                {/* Summary Strip */}
-                                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b-2 border-slate-200/80 dark:border-slate-700/80">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <div className="w-16 h-16 rounded-[22px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shadow-sm">
-                                                                            <Truck className="w-8 h-8" />
-                                                                        </div>
-                                                                        <div>
-                                                                            <h4 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
-                                                                                كشف حساب المورد: <span className="text-primary">{c.supplier_name}</span>
-                                                                            </h4>
-                                                                            <p className="text-base font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                                                                تفاصيل حركة الشراء، المسدّد، والمستحقات المتبقية
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
+                                                 {/* Expanded Movements Table */}
+                                                 {isExpanded && (
+                                                     <tr key={`${c.supplier_id}-details`}>
+                                                         <td colSpan={7} className="p-4 sm:p-6 bg-slate-200/50 dark:bg-slate-900/60 border-y-2 border-slate-300 dark:border-slate-700">
+                                                             <div className="p-6 sm:p-8 bg-white/90 dark:bg-slate-800/90 rounded-[28px] border-2 border-primary/30 shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+                                                                 
+                                                                 {/* Summary Strip */}
+                                                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b-2 border-slate-200/80 dark:border-slate-700/80">
+                                                                     <div className="flex items-center gap-4">
+                                                                         <div className="w-16 h-16 rounded-[22px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shadow-sm">
+                                                                             <Truck className="w-8 h-8" />
+                                                                         </div>
+                                                                         <div>
+                                                                             <h4 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
+                                                                                 كشف حساب المورد: <span className="text-primary">{c.supplier_name}</span>
+                                                                             </h4>
+                                                                             <p className="text-base font-bold text-slate-500 dark:text-slate-400 mt-1">
+                                                                                 تفاصيل حركة الشراء، المسدّد، والمستحقات المتبقية
+                                                                             </p>
+                                                                         </div>
+                                                                     </div>
 
-                                                                    <div className="flex flex-wrap items-center gap-4">
-                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
-                                                                            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي الشراء</span>
-                                                                            <span className="text-2xl font-black text-rose-600 dark:text-rose-400">{fmt(c.total_purchased)} د.ل</span>
-                                                                        </div>
-                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
-                                                                            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي المسدد للمورد</span>
-                                                                            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(c.total_paid)} د.ل</span>
-                                                                        </div>
-                                                                        <div className="px-6 py-3.5 rounded-[18px] bg-primary/10 border-2 border-primary/30 flex flex-col">
-                                                                            <span className="text-xs font-black text-primary uppercase font-bold">المتبقي للمورد</span>
-                                                                            <span className="text-2xl font-black text-primary">{fmt(c.total_debt)} د.ل</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
+                                                                     <div className="flex flex-wrap items-center gap-4">
+                                                                         <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
+                                                                             <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي الشراء</span>
+                                                                             <span className="text-2xl font-black text-rose-600 dark:text-rose-400">{fmt(c.total_purchased)} د.ل</span>
+                                                                         </div>
+                                                                         <div className="px-6 py-3.5 rounded-[18px] bg-slate-100 dark:bg-slate-700/50 border-2 border-slate-200 dark:border-slate-600 flex flex-col">
+                                                                             <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase">إجمالي المسدد للمورد</span>
+                                                                             <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(c.total_paid)} د.ل</span>
+                                                                         </div>
+                                                                         <div className="px-6 py-3.5 rounded-[18px] bg-primary/10 border-2 border-primary/30 flex flex-col">
+                                                                             <span className="text-xs font-black text-primary uppercase font-bold">المتبقي للمورد</span>
+                                                                             <span className="text-2xl font-black text-primary">{fmt(c.total_debt)} د.ل</span>
+                                                                         </div>
+                                                                     </div>
+                                                                 </div>
 
-                                                                {/* Movements Grid / Table */}
-                                                                {(!c.movements || c.movements.length === 0) ? (
-                                                                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-2">
-                                                                        <History className="w-12 h-12 opacity-30" />
-                                                                        <p className="font-bold text-xl">لا توجد حركات سابقة مسجلة لهذا المورد</p>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
-                                                                        <table className="w-full text-right border-collapse min-w-[850px]">
-                                                                            <thead>
-                                                                                <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
-                                                                                    <th className="p-5 rounded-r-[18px]">رقم المرجع</th>
-                                                                                    <th className="p-5">نوع الحركة</th>
-                                                                                    <th className="p-5">التاريخ</th>
-                                                                                    <th className="p-5">المبلغ</th>
-                                                                                    <th className="p-5">عمر الحركة</th>
-                                                                                    <th className="p-5 rounded-l-[18px]">رصيد ما بعد الحركة</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
-                                                                                {c.movements.map((m, idx) => {
-                                                                                    const cfg = typeConfig[m.type] || typeConfig.purchase;
-                                                                                    return (
-                                                                                        <tr key={idx} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
-                                                                                            <td className="p-5 font-black text-primary flex items-center gap-2">
-                                                                                                <FileText className="w-5 h-5 text-primary/70 shrink-0" />
-                                                                                                <span>{m.ref}</span>
-                                                                                            </td>
-                                                                                            <td className="p-5 whitespace-nowrap">
-                                                                                                <span className={`px-4 py-2 rounded-xl text-base font-black inline-flex items-center gap-2 ${cfg.class}`}>
-                                                                                                    {cfg.label}
-                                                                                                </span>
-                                                                                            </td>
-                                                                                            <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">{m.date ? m.date.slice(0, 10) : '—'}</td>
-                                                                                            <td className={`p-5 whitespace-nowrap ${cfg.amountClass}`}>
-                                                                                                {m.amount > 0 ? '+' : ''}{fmt(m.amount)} <span className="text-base font-normal">د.ل</span>
-                                                                                            </td>
-                                                                                            <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">
-                                                                                                {m.days_old !== null ? (
-                                                                                                    <span className="inline-flex items-center gap-1.5">
-                                                                                                        <Clock className="w-5 h-5 text-slate-400" />
-                                                                                                        <span>{m.days_old} يوم</span>
-                                                                                                    </span>
-                                                                                                ) : '—'}
-                                                                                            </td>
-                                                                                            <td className="p-5 font-black text-slate-900 dark:text-white whitespace-nowrap">{fmt(m.balance)} <span className="text-base font-bold text-slate-400">د.ل</span></td>
-                                                                                        </tr>
-                                                                                    );
-                                                                                })}
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
+                                                                 {/* Movements Grid / Table */}
+                                                                 {(!c.movements || c.movements.length === 0) ? (
+                                                                     <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-2">
+                                                                         <History className="w-12 h-12 opacity-30" />
+                                                                         <p className="font-bold text-xl">لا توجد حركات سابقة مسجلة لهذا المورد</p>
+                                                                     </div>
+                                                                 ) : (
+                                                                     <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
+                                                                         <table className="w-full text-right border-collapse min-w-[850px]">
+                                                                             <thead>
+                                                                                 <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
+                                                                                     <th className="p-5 rounded-r-[18px]">رقم المرجع</th>
+                                                                                     <th className="p-5">نوع الحركة</th>
+                                                                                     <th className="p-5">التاريخ</th>
+                                                                                     <th className="p-5">المبلغ</th>
+                                                                                     <th className="p-5">عمر الحركة</th>
+                                                                                     <th className="p-5 rounded-l-[18px]">رصيد ما بعد الحركة</th>
+                                                                                 </tr>
+                                                                             </thead>
+                                                                             <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
+                                                                                 {(supplierMovementsMap[c.supplier_id] || c.movements || []).map((m, idx) => {
+                                                                                     const cfg = typeConfig[m.type] || typeConfig.purchase;
+                                                                                     return (
+                                                                                         <tr key={idx} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
+                                                                                             <td className="p-5 font-black text-primary flex items-center gap-2">
+                                                                                                 <FileText className="w-5 h-5 text-primary/70 shrink-0" />
+                                                                                                 <span>{m.ref}</span>
+                                                                                             </td>
+                                                                                             <td className="p-5 whitespace-nowrap">
+                                                                                                 <span className={`px-4 py-2 rounded-xl text-base font-black inline-flex items-center gap-2 ${cfg.class}`}>
+                                                                                                     {cfg.label}
+                                                                                                 </span>
+                                                                                             </td>
+                                                                                             <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">{m.date ? m.date.slice(0, 10) : '—'}</td>
+                                                                                             <td className={`p-5 whitespace-nowrap ${cfg.amountClass}`}>
+                                                                                                 {m.amount > 0 ? '+' : ''}{fmt(m.amount)} <span className="text-base font-normal">د.ل</span>
+                                                                                             </td>
+                                                                                             <td className="p-5 text-slate-600 dark:text-slate-400 font-bold text-lg whitespace-nowrap">
+                                                                                                 {m.days_old !== null ? (
+                                                                                                     <span className="inline-flex items-center gap-1.5">
+                                                                                                         <Clock className="w-5 h-5 text-slate-400" />
+                                                                                                         <span>{m.days_old} يوم</span>
+                                                                                                     </span>
+                                                                                                 ) : '—'}
+                                                                                             </td>
+                                                                                             <td className="p-5 font-black text-slate-900 dark:text-white whitespace-nowrap">{fmt(m.balance)} <span className="text-base font-bold text-slate-400">د.ل</span></td>
+                                                                                         </tr>
+                                                                                     );
+                                                                                 })}
+                                                                             </tbody>
+                                                                         </table>
+
+                                                                         {/* Load More Button per Supplier Movements */}
+                                                                         {(supplierHasMoreMap[c.supplier_id] || (supplierMovementsMap[c.supplier_id]?.length ?? 0) < (c.movements_count ?? c.movements?.length ?? 0)) && (
+                                                                             <div className="p-4 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-950/30 flex items-center justify-center">
+                                                                                 <button
+                                                                                     type="button"
+                                                                                     onClick={() => handleLoadMoreMovements(c)}
+                                                                                     disabled={loadingSupplierMap[c.supplier_id]}
+                                                                                     className="px-8 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-60 border-2 border-primary/40 touch-manipulation"
+                                                                                 >
+                                                                                     {loadingSupplierMap[c.supplier_id] ? (
+                                                                                         <>
+                                                                                             <RotateCcw className="w-6 h-6 animate-spin" />
+                                                                                             <span>جاري تحميل 30 حركة إضافية...</span>
+                                                                                         </>
+                                                                                     ) : (
+                                                                                         <>
+                                                                                             <Download className="w-6 h-6" />
+                                                                                             <span>رؤية المزيد من الحركات (تم عرض {supplierMovementsMap[c.supplier_id]?.length || (c.movements?.length || 0)} من أصل {c.movements_count || c.movements?.length || 0})</span>
+                                                                                         </>
+                                                                                     )}
+                                                                                 </button>
+                                                                             </div>
+                                                                         )}
+                                                                     </div>
                                                                 )}
                                                             </div>
                                                         </td>

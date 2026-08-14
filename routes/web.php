@@ -112,6 +112,7 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/customer-aging/excel', [ReportController::class, 'customerAgingExcel'])->name('reports.customer-aging.excel');
         Route::get('reports/customer-aging/pdf', [ReportController::class, 'customerAgingPdf'])->name('reports.customer-aging.pdf');
         Route::get('reports/supplier-aging', [ReportController::class, 'supplierAging'])->name('reports.supplier-aging');
+        Route::get('reports/supplier-aging/load-more', [ReportController::class, 'supplierAgingLoadMore'])->name('reports.supplier-aging.load-more');
         Route::get('reports/supplier-aging/excel', [ReportController::class, 'supplierAgingExcel'])->name('reports.supplier-aging.excel');
         Route::get('reports/supplier-aging/pdf', [ReportController::class, 'supplierAgingPdf'])->name('reports.supplier-aging.pdf');
         Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');

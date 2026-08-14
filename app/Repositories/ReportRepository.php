@@ -1537,7 +1537,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Supplier Aging ────────────────────────────────────────────────────
 
-    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): array
+    public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerSupplier = 30): array
     {
         $latestSnapshot = DB::table('period_snapshots')
             ->join('accounting_periods', 'accounting_periods.id', '=', 'period_snapshots.period_id')
@@ -1609,12 +1609,12 @@ class ReportRepository implements ReportRepositoryInterface
             return $items->groupBy('supplier_id');
         };
 
-        $loadMovements = $supplierId !== null;
+        $loadMovements = true;
 
-        $purchasesMovements = $loadMovements ? $getChunkedMovements('purchases', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
-        $paymentsMovements = $loadMovements ? $getChunkedMovements('supplier_payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
-        $settlementsMovements = $loadMovements ? $getChunkedMovements('supplier_settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery))) : collect();
-        $returnsMovements = $loadMovements ? $getChunkedMovements('purchase_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery)) : collect();
+        $purchasesMovements = $getChunkedMovements('purchases', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
+        $paymentsMovements = $getChunkedMovements('supplier_payments', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $settlementsMovements = $getChunkedMovements('supplier_settlements', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where(fn($q) => $q->whereNull('created_at')->orWhere('created_at', '<=', $dateToQuery)));
+        $returnsMovements = $getChunkedMovements('purchase_returns', fn($q) => $q->when($dateFromQuery, fn($q) => $q->where('created_at', '>=', $dateFromQuery))->where('created_at', '<=', $dateToQuery));
 
         // Get Unpaid purchases for aging buckets
         $unpaidPurchases = collect();
@@ -1636,7 +1636,7 @@ class ReportRepository implements ReportRepositoryInterface
             $newPurchasedSums, $newPaidSums, $newSettledSums, $newReturnedSums,
             $totalPurchasedSums, $totalPaidSums, $totalSettledSums, $totalReturnedSums,
             $futurePurchasedSums, $futurePaidSums, $futureSettledSums, $futureReturnedSums,
-            $purchasesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidBySupplier, $loadMovements
+            $purchasesMovements, $paymentsMovements, $settlementsMovements, $returnsMovements, $unpaidBySupplier, $loadMovements, $movementsLimitPerSupplier
         ) {
             $sid = $supplier->id;
 
@@ -1774,6 +1774,9 @@ class ReportRepository implements ReportRepositoryInterface
             }
             if ($remainingDebt > 0) $current += $remainingDebt;
 
+            $totalMovementsCount = count($movementsList);
+            $slicedMovements = $movementsLimitPerSupplier !== null ? array_slice($movementsList, 0, $movementsLimitPerSupplier) : $movementsList;
+
             return [
                 'supplier_id'     => $supplier->id,
                 'supplier_name'   => $supplier->name,
@@ -1786,14 +1789,44 @@ class ReportRepository implements ReportRepositoryInterface
                 'days_30_60'      => round($days30_60, 2),
                 'days_60_90'      => round($days60_90, 2),
                 'over_90'         => round($over90, 2),
-                'movements'       => $movementsList,
+                'movements'       => $slicedMovements,
+                'movements_count' => $totalMovementsCount,
             ];
         })->filter()->values()->toArray();
     }
 
+    public function loadMoreSupplierMovements(
+        int $supplierId,
+        int $offset = 30,
+        int $limit = 30,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        bool $showAllHistory = false
+    ): array {
+        $full = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory, null);
+        if (empty($full)) {
+            return ['movements' => [], 'has_more' => false, 'next_offset' => $offset];
+        }
+
+        $allMovements = $full[0]['movements'] ?? [];
+        $total = count($allMovements);
+        $slice = array_slice($allMovements, $offset, $limit);
+        $nextOffset = $offset + count($slice);
+        $hasMore = $nextOffset < $total;
+
+        return [
+            'movements'   => $slice,
+            'has_more'    => $hasMore,
+            'next_offset' => $nextOffset,
+        ];
+    }
+
     public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory);
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory, null);
 
         $supplierName = $supplierId
             ? DB::table('suppliers')->where('id', $supplierId)->value('name')
@@ -1900,10 +1933,13 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
-        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory);
+        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory, null);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

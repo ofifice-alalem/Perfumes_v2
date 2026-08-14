@@ -413,6 +413,27 @@ class ReportController extends Controller
         ]);
     }
 
+    public function supplierAgingLoadMore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $supplierId     = $request->integer('supplier_id');
+        $offset         = $request->integer('offset', 30);
+        $limit          = $request->integer('limit', 30);
+        $dateFrom       = $request->input('date_from');
+        $dateTo         = $request->input('date_to');
+        $showAllHistory = $request->boolean('show_all_history');
+
+        $result = $this->reports->loadMoreSupplierMovements(
+            $supplierId,
+            $offset,
+            $limit,
+            $dateFrom,
+            $dateTo,
+            $showAllHistory
+        );
+
+        return response()->json($result);
+    }
+
     public function supplierAgingExcel(Request $request)
     {
         $this->reports->exportSupplierAgingExcel(
