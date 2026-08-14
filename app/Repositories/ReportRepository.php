@@ -3016,7 +3016,7 @@ class ReportRepository implements ReportRepositoryInterface
         return $pdf->stream('purchases-' . now()->format('Y-m-d') . '.pdf');
     }
 
-    public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): array
+    public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerSupplier = 30): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -3128,12 +3128,14 @@ class ReportRepository implements ReportRepositoryInterface
                 continue;
             }
 
-            $suppliersData[$sid]['purchases'][] = [
-                'id'    => $p->id,
-                'total' => (float) $p->total,
-                'date'  => $p->created_at,
-                'items' => $pItems,
-            ];
+            if ($invoicesLimitPerSupplier === null || count($suppliersData[$sid]['purchases']) < $invoicesLimitPerSupplier) {
+                $suppliersData[$sid]['purchases'][] = [
+                    'id'    => $p->id,
+                    'total' => (float) $p->total,
+                    'date'  => $p->created_at,
+                    'items' => $pItems,
+                ];
+            }
             
             $suppliersData[$sid]['purchase_count']++;
             $suppliersData[$sid]['total_amount'] += (float)$p->total;
@@ -3145,9 +3147,138 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
+    public function loadMoreSupplierInvoices(
+        int $supplierId,
+        int $offset = 30,
+        int $limit = 30,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        ?int $userId = null,
+        ?int $categoryId = null,
+        ?array $filterProductIds = null,
+        ?string $searchName = null
+    ): array {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $purchasesQuery = DB::table('purchases')
+            ->whereNull('purchases.deleted_at')
+            ->where('purchases.supplier_id', $supplierId)
+            ->when($df,     fn($q) => $q->where('purchases.created_at', '>=', $df))
+            ->when($dt,     fn($q) => $q->where('purchases.created_at', '<=', $dt))
+            ->when($userId, fn($q) => $q->where('purchases.user_id', $userId));
+
+        if ($categoryId) {
+            $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        if (!empty($filterProductIds) || !empty($searchName)) {
+            $purchasesQuery->whereExists(fn($q) => $q->from('purchase_items')
+                ->join('products', 'products.id', '=', 'purchase_items.product_id')
+                ->whereColumn('purchase_items.purchase_id', 'purchases.id')
+                ->where(function($sub) use ($filterProductIds, $searchName) {
+                    if (!empty($filterProductIds)) {
+                        $sub->whereIn('products.id', $filterProductIds);
+                    }
+                    if ($searchName) {
+                        $terms = explode(',', $searchName);
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if ($term !== '') {
+                                $sub->orWhere('products.name', 'like', '%' . $term . '%');
+                            }
+                        }
+                    }
+                }));
+        }
+
+        $totalPurchases = (clone $purchasesQuery)->count();
+
+        $purchases = (clone $purchasesQuery)
+            ->select('purchases.id', 'purchases.total', 'purchases.created_at')
+            ->orderBy('purchases.created_at')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        if ($purchases->isEmpty()) {
+            return [
+                'purchases'   => [],
+                'has_more'    => false,
+                'next_offset' => $offset,
+            ];
+        }
+
+        $purchaseIds = $purchases->pluck('id')->toArray();
+
+        $itemsQuery = DB::table('purchase_items')
+            ->join('products', 'products.id', '=', 'purchase_items.product_id')
+            ->whereIn('purchase_items.purchase_id', $purchaseIds)
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->select(
+                'purchase_items.purchase_id',
+                'products.id as product_id',
+                'products.name as product_name',
+                'purchase_items.unit_cost',
+                DB::raw('MIN(purchase_items.quantity) as quantity'),
+                DB::raw('COUNT(*) as count')
+            )
+            ->groupBy('purchase_items.purchase_id', 'products.id', 'products.name', 'purchase_items.unit_cost')
+            ->get();
+
+        $itemsByPurchase = [];
+        foreach ($itemsQuery as $item) {
+            $isMatched = false;
+            if (!empty($filterProductIds) || !empty($searchName)) {
+                if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                    $isMatched = true;
+                } elseif (!empty($searchName)) {
+                    $terms = explode(',', $searchName);
+                    foreach ($terms as $term) {
+                        if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                            $isMatched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $item->is_matched = $isMatched;
+            $itemsByPurchase[$item->purchase_id][] = (array)$item;
+        }
+
+        $purchasesFormatted = [];
+        foreach ($purchases as $p) {
+            $pItems = $itemsByPurchase[$p->id] ?? [];
+            if (empty($pItems) && $categoryId) {
+                continue;
+            }
+            $purchasesFormatted[] = [
+                'id'    => $p->id,
+                'total' => (float) $p->total,
+                'date'  => $p->created_at,
+                'items' => $pItems,
+            ];
+        }
+
+        $nextOffset = $offset + count($purchasesFormatted);
+        $hasMore    = $nextOffset < $totalPurchases;
+
+        return [
+            'purchases'   => $purchasesFormatted,
+            'has_more'    => $hasMore,
+            'next_offset' => $nextOffset,
+        ];
+    }
+
     public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName);
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
         $isWhole = fn($n) => $n == floor($n);
@@ -3295,10 +3426,13 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName);
+        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, null);
 
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();

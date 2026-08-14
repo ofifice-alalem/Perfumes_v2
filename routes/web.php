@@ -124,6 +124,7 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/purchases/excel', [ReportController::class, 'purchasesExcel'])->name('reports.purchases.excel');
         Route::get('reports/purchases/pdf', [ReportController::class, 'purchasesPdf'])->name('reports.purchases.pdf');
         Route::get('reports/purchases/supplier-invoices', [ReportController::class, 'purchasesSupplierInvoices'])->name('reports.purchases.supplier-invoices');
+        Route::get('reports/purchases/supplier-invoices/load-more', [ReportController::class, 'purchasesSupplierInvoicesLoadMore'])->name('reports.purchases.supplier-invoices.load-more');
         Route::get('reports/purchases/supplier-invoices/excel', [ReportController::class, 'purchasesSupplierInvoicesExcel'])->name('reports.purchases.supplier-invoices.excel');
         Route::get('reports/purchases/supplier-invoices/pdf', [ReportController::class, 'purchasesSupplierInvoicesPdf'])->name('reports.purchases.supplier-invoices.pdf');
         Route::get('reports/returns', [ReportController::class, 'returns'])->name('reports.returns');

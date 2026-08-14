@@ -1,5 +1,5 @@
 import { router, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
@@ -225,6 +225,80 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
     ]);
     const [expandedSuppliers,  setExpandedSuppliers]  = useState<Set<number>>(new Set());
     const [expandedPurchases,  setExpandedPurchases]  = useState<Set<number>>(new Set());
+
+    // Dynamic Pagination State per Supplier
+    const [supplierPurchasesMap, setSupplierPurchasesMap] = useState<Record<number, Purchase[]>>(() => {
+        const map: Record<number, Purchase[]> = {};
+        data.forEach(s => { map[s.supplier_id] = s.purchases ?? []; });
+        return map;
+    });
+
+    const [supplierHasMoreMap, setSupplierHasMoreMap] = useState<Record<number, boolean>>(() => {
+        const map: Record<number, boolean> = {};
+        data.forEach(s => { map[s.supplier_id] = (s.purchases?.length ?? 0) < s.purchase_count; });
+        return map;
+    });
+
+    const [loadingSupplierMap, setLoadingSupplierMap] = useState<Record<number, boolean>>({});
+
+    useEffect(() => {
+        const map: Record<number, Purchase[]> = {};
+        const hasMoreMap: Record<number, boolean> = {};
+        data.forEach(s => {
+            map[s.supplier_id] = s.purchases ?? [];
+            hasMoreMap[s.supplier_id] = (s.purchases?.length ?? 0) < s.purchase_count;
+        });
+        setSupplierPurchasesMap(map);
+        setSupplierHasMoreMap(hasMoreMap);
+    }, [data]);
+
+    async function handleLoadMorePurchases(supplier: SupplierEntry) {
+        const sid = supplier.supplier_id;
+        if (loadingSupplierMap[sid]) return;
+
+        const currentPurchases = supplierPurchasesMap[sid] || supplier.purchases || [];
+        const offset = currentPurchases.length;
+
+        setLoadingSupplierMap(prev => ({ ...prev, [sid]: true }));
+
+        try {
+            const params = new URLSearchParams();
+            params.append('supplier_id', String(sid));
+            params.append('offset', String(offset));
+            params.append('limit', '30');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (userId) params.append('user_id', userId);
+            if (categoryId) params.append('category_id', categoryId);
+            const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+            const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+            if (prodIds.length > 0) params.append('product_ids', prodIds.join(','));
+            if (sName) params.append('search_name', sName);
+
+            const res = await fetch(`/reports/purchases/supplier-invoices/load-more?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to load more');
+
+            const json = await res.json();
+            const newPurchases: Purchase[] = json.purchases || [];
+
+            setSupplierPurchasesMap(prev => {
+                const existing = prev[sid] || supplier.purchases || [];
+                return {
+                    ...prev,
+                    [sid]: [...existing, ...newPurchases],
+                };
+            });
+
+            setSupplierHasMoreMap(prev => ({
+                ...prev,
+                [sid]: json.has_more ?? false,
+            }));
+        } catch (e) {
+            console.error('Error loading more supplier purchases:', e);
+        } finally {
+            setLoadingSupplierMap(prev => ({ ...prev, [sid]: false }));
+        }
+    }
 
     const activeFilterCount =
         (dateFrom ? 1 : 0) +
@@ -481,8 +555,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                             <div className="p-4 sm:p-6 bg-slate-200/50 dark:bg-slate-900/60 border-y-2 border-slate-300 dark:border-slate-700">
                                                 <div className="p-6 sm:p-8 bg-white/90 dark:bg-slate-800/90 rounded-[28px] border-2 border-primary/30 shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
 
-                                                    {/* Invoices Sub-Table */}
-                                                    <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
+                            <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
                                                         <table className="w-full text-right border-collapse min-w-[750px]">
                                                             <thead>
                                                                 <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
@@ -493,7 +566,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
-                                                                {supplier.purchases.map(p => {
+                                                                {(supplierPurchasesMap[supplier.supplier_id] || supplier.purchases || []).map(p => {
                                                                     const isPurchaseExpanded = expandedPurchases.has(p.id);
                                                                     return (
                                                                         <>
@@ -593,6 +666,30 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                                             </tbody>
                                                         </table>
                                                     </div>
+
+                                                    {/* Load More Button per Supplier */}
+                                                    {(supplierHasMoreMap[supplier.supplier_id] || (supplierPurchasesMap[supplier.supplier_id]?.length ?? 0) < supplier.purchase_count) && (
+                                                        <div className="flex items-center justify-center pt-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleLoadMorePurchases(supplier)}
+                                                                disabled={loadingSupplierMap[supplier.supplier_id]}
+                                                                className="px-8 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-60 border-2 border-primary/40 touch-manipulation"
+                                                            >
+                                                                {loadingSupplierMap[supplier.supplier_id] ? (
+                                                                    <>
+                                                                        <RotateCcw className="w-6 h-6 animate-spin" />
+                                                                        <span>جاري تحميل 30 فاتورة إضافية...</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Download className="w-6 h-6" />
+                                                                        <span>رؤية المزيد من الفواتير (تم عرض {supplierPurchasesMap[supplier.supplier_id]?.length || 0} من أصل {supplier.purchase_count})</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}

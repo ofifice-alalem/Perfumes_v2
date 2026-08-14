@@ -651,6 +651,36 @@ class ReportController extends Controller
         ]);
     }
 
+    public function purchasesSupplierInvoicesLoadMore(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $supplierId      = $request->integer('supplier_id');
+        $offset          = $request->integer('offset', 30);
+        $limit           = $request->integer('limit', 30);
+        $dateFrom        = $request->input('date_from');
+        $dateTo          = $request->input('date_to');
+        $userId          = $request->integer('user_id') ?: null;
+        $categoryId      = $request->integer('category_id') ?: null;
+        $searchName      = $request->input('search_name');
+
+        $productIds = $request->input('product_ids', []);
+        if (is_string($productIds)) $productIds = explode(',', $productIds);
+        $productIds = array_filter(array_map('intval', (array)$productIds));
+
+        $result = $this->reports->loadMoreSupplierInvoices(
+            $supplierId,
+            $offset,
+            $limit,
+            $dateFrom,
+            $dateTo,
+            $userId,
+            $categoryId,
+            $productIds,
+            $searchName
+        );
+
+        return response()->json($result);
+    }
+
     public function purchasesSupplierInvoicesExcel(Request $request)
     {
         $productIds = $request->input('product_ids', []);
