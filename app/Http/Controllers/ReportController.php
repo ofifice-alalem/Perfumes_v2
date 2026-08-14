@@ -633,7 +633,9 @@ class ReportController extends Controller
             $request->integer('payment_method_id') ?: null,
             $request->integer('category_id') ?: null,
             $productIds,
-            $request->input('search_name')
+            $request->input('search_name'),
+            $request->integer('limit') ?: 500,
+            $request->integer('offset') ?: 0
         );
     }
 
@@ -780,7 +782,9 @@ class ReportController extends Controller
             $request->integer('supplier_id') ?: null,
             $request->integer('category_id') ?: null,
             $productIds,
-            $request->input('search_name')
+            $request->input('search_name'),
+            $request->integer('limit') ?: 500,
+            $request->integer('offset') ?: 0
         );
     }
 

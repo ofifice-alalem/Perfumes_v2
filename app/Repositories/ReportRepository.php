@@ -2900,7 +2900,7 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 200): \Illuminate\Http\Response
+    public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
         @ini_set('memory_limit', '1024M');
         @set_time_limit(300);
@@ -2909,7 +2909,7 @@ class ReportRepository implements ReportRepositoryInterface
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
 
-        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $limit ?? 200);
+        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $limit ?? 500, $offset ?? 0);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
@@ -3721,7 +3721,7 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 200): \Illuminate\Http\Response
+    public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
         @ini_set('memory_limit', '1024M');
         @set_time_limit(300);
@@ -3730,7 +3730,7 @@ class ReportRepository implements ReportRepositoryInterface
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
         
-        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, $limit ?? 200);
+        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, $limit ?? 500, $offset ?? 0);
 
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();

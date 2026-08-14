@@ -546,7 +546,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                 <FileSpreadsheet className="w-5 h-5" />
                                 <span className="hidden sm:inline">تصدير إكسيل</span>
                             </a>
-                            <PdfExportButton href={buildExportUrl('pdf')} excelHref={buildExportUrl('excel')} />
+                            <PdfExportButton href={buildExportUrl('pdf')} excelHref={buildExportUrl('excel')} totalCount={grandCount} />
                             <Link
                                 href="/reports/sales"
                                 className="h-12 px-5 rounded-[16px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm border-2 border-slate-300 dark:border-slate-700"
