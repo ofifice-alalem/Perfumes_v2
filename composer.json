@@ -17,6 +17,7 @@
         "laravel/tinker": "^3.0",
         "maatwebsite/excel": "^3.1",
         "moneyphp/money": "^4.8",
+        "openspout/openspout": "^5.10",
         "owen-it/laravel-auditing": "^14.0",
         "predis/predis": "^3.5",
         "prettus/l5-repository": "^1.0",

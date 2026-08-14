@@ -2672,53 +2672,100 @@ class ReportRepository implements ReportRepositoryInterface
 
         $totalInvoices = array_sum(array_column($data, 'invoice_count'));
 
-        // If dataset is huge (over 2,000 invoices), stream as UTF-8 CSV with Excel BOM to avoid PhpSpreadsheet memory limit crash
+        // Use OpenSpout Ultra-Fast Streamed XLSX Writer for large datasets to prevent memory exhaustion and browser timeouts
         if ($totalInvoices > 2000) {
-            $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.csv';
-            header('Content-Type: text/csv; charset=UTF-8');
+            $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Cache-Control: max-age=0');
 
-            $fp = fopen('php://output', 'w');
-            fputs($fp, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+            $writer = new \OpenSpout\Writer\XLSX\Writer();
+            
+            // Set Natural Wide Column Widths to prevent text compression
+            $options = $writer->getOptions();
+            $options->setColumnWidth(48, 1); // Column A: Customer / Title
+            $options->setColumnWidth(42, 2); // Column B: Product Name / Date
+            $options->setColumnWidth(22, 3); // Column C: Size / Quantity
+            $options->setColumnWidth(22, 4); // Column D: Price
+            $options->setColumnWidth(26, 5); // Column E: Line Total
+
+            $writer->openToFile('php://output');
+
+            // Set Sheet Orientation Right-To-Left (RTL) for Arabic Excel layout
+            $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
 
             $isWhole = fn($n) => $n == floor($n);
             $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
-            fputcsv($fp, ['تقرير فواتير المبيعات حسب العملاء']);
-            fputcsv($fp, ['من تاريخ', $dateFrom ?? 'البداية']);
-            fputcsv($fp, ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')]);
-            fputcsv($fp, ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل']);
-            fputcsv($fp, ['تاريخ الإنشاء', now()->format('Y-m-d H:i')]);
-            fputcsv($fp, []);
+            // Style definitions with Tajawal font, colors, bolding, and alignment
+            $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+                ->withBackgroundColor('E3F2FD');
+
+            $customerStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
+
+            $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+                ->withBackgroundColor('BBDEFB');
+
+            $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
+                ->withBackgroundColor('F5F5F5')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(12);
+
+            $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+                ->withBackgroundColor('E8EAF6');
+
+            $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير المبيعات حسب العملاء'], $titleStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
 
             foreach ($data as $entry) {
-                fputcsv($fp, [$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])]);
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])], $customerStyle));
                 
                 foreach ($entry['invoices'] as $inv) {
-                    fputcsv($fp, ['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])]);
-                    fputcsv($fp, ['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي']);
+                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], $invHeaderStyle));
+                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
 
                     foreach ($inv['items'] as $item) {
                         $item = (array) $item;
-                        fputcsv($fp, [
+                        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
                             $item['count'] > 1 ? $item['count'] : '',
                             (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
                             $fmtN($item['quantity']),
                             $fmtN($item['unit_price']),
                             $fmtN($item['line_total']),
-                        ]);
+                        ], $rowStyle));
                     }
                 }
 
-                fputcsv($fp, ['الإجمالي', '', '', '', $fmtN($entry['total_amount'])]);
-                fputcsv($fp, []);
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], $subtotalStyle));
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
             }
 
             $grandAmount = array_sum(array_column($data, 'total_amount'));
-            fputcsv($fp, ['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)]);
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], $grandTotalStyle));
 
-            fclose($fp);
+            $writer->close();
             exit;
         }
 
@@ -3455,49 +3502,97 @@ class ReportRepository implements ReportRepositoryInterface
 
         $totalPurchases = array_sum(array_column($data, 'purchase_count'));
 
+        // Use OpenSpout Ultra-Fast Streamed XLSX Writer for large datasets to prevent memory exhaustion and browser timeouts
         if ($totalPurchases > 2000) {
-            $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.csv';
-            header('Content-Type: text/csv; charset=UTF-8');
+            $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Cache-Control: max-age=0');
 
-            $fp = fopen('php://output', 'w');
-            fputs($fp, "\xEF\xBB\xBF");
+            $writer = new \OpenSpout\Writer\XLSX\Writer();
 
-            fputcsv($fp, ['تقرير فواتير الموردين']);
-            fputcsv($fp, ['من تاريخ', $dateFrom ?? 'البداية']);
-            fputcsv($fp, ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')]);
-            fputcsv($fp, ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل']);
-            fputcsv($fp, ['تاريخ الإنشاء', now()->format('Y-m-d H:i')]);
-            fputcsv($fp, []);
+            // Set Natural Wide Column Widths to prevent text compression
+            $options = $writer->getOptions();
+            $options->setColumnWidth(48, 1); // Column A: Supplier / Title
+            $options->setColumnWidth(42, 2); // Column B: Product Name / Date
+            $options->setColumnWidth(22, 3); // Column C: Size / Quantity
+            $options->setColumnWidth(22, 4); // Column D: Cost
+            $options->setColumnWidth(26, 5); // Column E: Line Total
+
+            $writer->openToFile('php://output');
+
+            // Set Sheet Orientation Right-To-Left (RTL) for Arabic Excel layout
+            $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
+
+            // Style definitions with Tajawal font, colors, bolding, and alignment
+            $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+                ->withBackgroundColor('E3F2FD');
+
+            $supplierStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
+
+            $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+                ->withBackgroundColor('BBDEFB');
+
+            $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
+                ->withBackgroundColor('F5F5F5')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(12);
+
+            $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+                ->withBackgroundColor('E8EAF6');
+
+            $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير الموردين'], $titleStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
 
             foreach ($data as $entry) {
-                fputcsv($fp, [$entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])]);
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])], $supplierStyle));
                 
                 foreach ($entry['purchases'] as $inv) {
-                    fputcsv($fp, ['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])]);
-                    fputcsv($fp, ['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي']);
+                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], $invHeaderStyle));
+                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
 
                     foreach ($inv['items'] as $item) {
                         $item = (array) $item;
-                        fputcsv($fp, [
+                        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
                             $item['count'] > 1 ? $item['count'] : '',
                             (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
                             $fmtN($item['quantity']),
                             $fmtN($item['unit_cost']),
                             $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
-                        ]);
+                        ], $rowStyle));
                     }
                 }
 
-                fputcsv($fp, ['الإجمالي', '', '', '', $fmtN($entry['total_amount'])]);
-                fputcsv($fp, []);
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], $subtotalStyle));
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
             }
 
             $grandAmount = array_sum(array_column($data, 'total_amount'));
-            fputcsv($fp, ['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)]);
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], $grandTotalStyle));
 
-            fclose($fp);
+            $writer->close();
             exit;
         }
 
