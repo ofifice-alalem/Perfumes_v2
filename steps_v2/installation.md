@@ -8,6 +8,24 @@
 - Node.js >= 18 + npm
 - MySQL >= 8.0
 - Redis (مطلوب للـ Cache والـ Sessions)
+- **C++ Compiler (مترجم C++)**: مطلوبة لتوليد تقارير الإكسيل الفائقة بـ C++ (`g++` أو `MinGW-w64`).
+
+### تثبيت C++ Compiler ومحرك التصدير (`/bin`)
+يعتمد النظام على محرك تصدير خارجي عالي السرعة مكتوب بـ C++ داخل مجلد `/bin`:
+- **Windows**: `bin/export_xlsx.exe` (ملف مدمج مسبقاً جاهز للعمل).
+- **Linux**: `bin/export_xlsx` (يمكن تجميعه عبر `g++ -O3 ...`).
+
+تجميع محرك C++ تلقائياً على Windows:
+```powershell
+powershell -ExecutionPolicy Bypass -File scratch/build_cpp_exporter.ps1
+```
+
+تجميع محرك C++ على Linux (Ubuntu/Debian):
+```bash
+sudo apt install build-essential zlib1g-dev
+g++ -O3 -DHAVE_LIBXLSXWRITER -I bin/libxlsxwriter/include -I bin/zlib bin/export_xlsx.cpp bin/libxlsxwriter/obj/*.o -o bin/export_xlsx
+chmod +x bin/export_xlsx
+```
 
 ### تثبيت Redis على Windows
 ```bash

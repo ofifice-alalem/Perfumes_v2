@@ -28,8 +28,9 @@ steps_v2/deployment_and_maintenance/
 3. **Composer**: أحدث إصدار إدارة حزم PHP.
 4. **MySQL / MariaDB**: منفذ `3306`.
 5. **Redis Server**: منفذ `6379` (لتحسين أداء الكاش والجلسات والصفوف).
-6. **Apache HTTP Server 2.4**: مثبت على `C:\Apache24`.
-7. **mkcert**: مثبت وموجود في `C:\Apache24\bin\mkcert.exe` لتوليد الشهادات المحلية.
+6. **C++ Exporter Engine (`/bin`)**: محرك تصدير الإكسيل الفائق (`bin/export_xlsx.exe` أو `bin/export_xlsx`) لتوليد التقارير في 7-11 ثانية.
+7. **Apache HTTP Server 2.4**: مثبت على `C:\Apache24`.
+8. **mkcert**: مثبت وموجود في `C:\Apache24\bin\mkcert.exe` لتوليد الشهادات المحلية.
 
 ---
 
