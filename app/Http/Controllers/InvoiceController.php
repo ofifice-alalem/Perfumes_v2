@@ -86,48 +86,75 @@ class InvoiceController extends Controller
                 'notes'           => $data['notes'] ?? null,
             ]);
 
-            foreach ($data['items'] as $item) {
-                InvoiceItem::create([
-                    'invoice_id'  => $invoice->id,
-                    'product_id'  => $item['product_id'],
-                    'size_id'     => $item['size_id'] ?? null,
-                    'sale_type'   => $item['sale_type'],
-                    'quantity'    => $item['quantity'],
-                    'unit_price'  => $item['unit_price'],
-                    'line_total'  => $item['line_total'],
-                ]);
-            }
+            InvoiceItem::withoutEvents(function () use ($invoice, $data) {
+                Payment::withoutEvents(function () use ($invoice, $data) {
+                    $totalInvoiceAmount = 0.0;
 
-            $invoice->refresh();
+                    foreach ($data['items'] as $item) {
+                        $lineTotal = (float) $item['line_total'];
+                        $qty       = (float) $item['quantity'];
 
-            foreach ($data['payments'] ?? [] as $payment) {
-                $amount = (float) $payment['amount'];
-                if ($amount <= 0) continue;
+                        InvoiceItem::create([
+                            'invoice_id'  => $invoice->id,
+                            'product_id'  => $item['product_id'],
+                            'size_id'     => $item['size_id'] ?? null,
+                            'sale_type'   => $item['sale_type'],
+                            'quantity'    => $qty,
+                            'unit_price'  => $item['unit_price'],
+                            'line_total'  => $lineTotal,
+                        ]);
 
-                Payment::create([
-                    'customer_id'       => $invoice->customer_id,
-                    'user_id'           => Auth::id(),
-                    'invoice_id'        => $invoice->id,
-                    'payment_method_id' => $payment['payment_method_id'],
-                    'amount'            => $amount,
-                    'notes'             => $payment['notes'] ?? null,
-                    'created_at'        => now(),
-                ]);
-            }
+                        \App\Models\Product::where('id', $item['product_id'])->decrement('stock', $qty);
+                        $totalInvoiceAmount += $lineTotal;
+                    }
 
-            // دفعة سداد الدين المستقلة (غير مرتبطة بالفاتورة)
-            if (!empty($data['debt_payment']) && $invoice->customer_id) {
-                $dp = $data['debt_payment'];
-                Payment::create([
-                    'customer_id'       => $invoice->customer_id,
-                    'user_id'           => Auth::id(),
-                    'invoice_id'        => null,
-                    'payment_method_id' => $dp['payment_method_id'],
-                    'amount'            => (float) $dp['amount'],
-                    'notes'             => 'سداد دين',
-                    'created_at'        => now(),
-                ]);
-            }
+                    $totalPaidAmount = 0.0;
+                    foreach ($data['payments'] ?? [] as $payment) {
+                        $amount = (float) $payment['amount'];
+                        if ($amount <= 0) continue;
+
+                        Payment::create([
+                            'customer_id'       => $invoice->customer_id,
+                            'user_id'           => Auth::id(),
+                            'invoice_id'        => $invoice->id,
+                            'payment_method_id' => $payment['payment_method_id'],
+                            'amount'            => $amount,
+                            'notes'             => $payment['notes'] ?? null,
+                            'created_at'        => now(),
+                        ]);
+
+                        $totalPaidAmount += $amount;
+                    }
+
+                    // دفعة سداد الدين المستقلة (غير مرتبطة بالفاتورة)
+                    if (!empty($data['debt_payment']) && $invoice->customer_id) {
+                        $dp = $data['debt_payment'];
+                        Payment::create([
+                            'customer_id'       => $invoice->customer_id,
+                            'user_id'           => Auth::id(),
+                            'invoice_id'        => null,
+                            'payment_method_id' => $dp['payment_method_id'],
+                            'amount'            => (float) $dp['amount'],
+                            'notes'             => 'سداد دين',
+                            'created_at'        => now(),
+                        ]);
+                    }
+
+                    $invoice->total       = round($totalInvoiceAmount, 2);
+                    $invoice->paid_amount = round($totalPaidAmount, 2);
+                    $invoice->due_amount  = round($totalInvoiceAmount - $totalPaidAmount, 2);
+                    $invoice->payment_status = match (true) {
+                        $totalPaidAmount <= 0                   => 'unpaid',
+                        $totalPaidAmount >= $totalInvoiceAmount => 'paid',
+                        default                                 => 'partial',
+                    };
+                    $invoice->saveQuietly();
+
+                    if ($invoice->customer_id) {
+                        \App\Observers\InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
+                    }
+                });
+            });
 
             return $invoice;
         });
