@@ -1,6 +1,7 @@
 /*
  * High-Performance Native C++ Exporter for Perfumes_v2
- * Direct TSV Stream Engine with Item Grouping/Aggregation (العدد) & Dinar currency
+ * Direct TSV Stream Engine with Customer Summaries, Customer Subtotals,
+ * Grand Total (الإجمالي الكلي), Item Aggregation & Dinar (د.ل) Currency
  */
 
 #include <stdio.h>
@@ -10,8 +11,112 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <sstream>
 #include <xlsxwriter.h>
+
+struct ItemRow {
+    int invoiceId;
+    std::string invoiceDate;
+    double invoiceTotal;
+    int itemCount;
+    std::string productName;
+    std::string sizeLabel;
+    double quantity;
+    double unitPrice;
+    double lineTotal;
+};
+
+void renderCustomerBlock(
+    lxw_worksheet *worksheet,
+    uint32_t &r,
+    const std::string &customerName,
+    const std::vector<ItemRow> &items,
+    double &grandTotalSum,
+    lxw_format *customer_format,
+    lxw_format *inv_id_format,
+    lxw_format *inv_date_format,
+    lxw_format *inv_total_format,
+    lxw_format *header_format,
+    lxw_format *row_format,
+    lxw_format *row_center_format,
+    lxw_format *subtotal_format
+) {
+    if (items.empty()) return;
+
+    // Calculate customer total & unique invoice count
+    std::set<int> customerInvoices;
+    double customerTotalSum = 0.0;
+
+    for (size_t i = 0; i < items.size(); i++) {
+        if (customerInvoices.find(items[i].invoiceId) == customerInvoices.end()) {
+            customerInvoices.insert(items[i].invoiceId);
+            customerTotalSum += items[i].invoiceTotal;
+        }
+    }
+
+    grandTotalSum += customerTotalSum;
+
+    // Customer Bar: منصور — 100 فاتورة — 94,500.00 د.ل
+    char custBuf[1024];
+    snprintf(custBuf, sizeof(custBuf), "العميل: %s — %zu فاتورة — %.2f د.ل",
+             customerName.c_str(), customerInvoices.size(), customerTotalSum);
+    worksheet_write_string(worksheet, r, 0, custBuf, customer_format);
+    r++;
+
+    int currentInvoiceId = -1;
+
+    for (size_t i = 0; i < items.size(); i++) {
+        const ItemRow &row = items[i];
+
+        // Invoice Header Row (3 Separate Columns)
+        if (currentInvoiceId != row.invoiceId) {
+            currentInvoiceId = row.invoiceId;
+
+            char invIdBuf[128];
+            snprintf(invIdBuf, sizeof(invIdBuf), "INV#%d", row.invoiceId);
+            worksheet_write_string(worksheet, r, 0, invIdBuf, inv_id_format);
+
+            worksheet_write_string(worksheet, r, 1, row.invoiceDate.c_str(), inv_date_format);
+
+            char invTotalBuf[128];
+            snprintf(invTotalBuf, sizeof(invTotalBuf), "الإجمالي: %.2f د.ل", row.invoiceTotal);
+            worksheet_write_string(worksheet, r, 2, invTotalBuf, inv_total_format);
+            r++;
+
+            worksheet_write_string(worksheet, r, 0, "العدد", header_format);
+            worksheet_write_string(worksheet, r, 1, "المنتج", header_format);
+            worksheet_write_string(worksheet, r, 2, "الحجم", header_format);
+            worksheet_write_string(worksheet, r, 3, "السعر", header_format);
+            worksheet_write_string(worksheet, r, 4, "الإجمالي", header_format);
+            r++;
+        }
+
+        // Item Data Row
+        if (row.itemCount > 1) {
+            worksheet_write_number(worksheet, r, 0, row.itemCount, row_center_format);
+        } else {
+            worksheet_write_string(worksheet, r, 0, "", row_center_format);
+        }
+
+        worksheet_write_string(worksheet, r, 1, row.productName.c_str(), row_format);
+        worksheet_write_string(worksheet, r, 2, row.sizeLabel.c_str(), row_format);
+        worksheet_write_number(worksheet, r, 3, row.unitPrice, row_format);
+        worksheet_write_number(worksheet, r, 4, row.lineTotal, row_format);
+        r++;
+    }
+
+    // Customer Subtotal Row
+    worksheet_write_string(worksheet, r, 0, "إجمالي العميل", subtotal_format);
+    worksheet_write_string(worksheet, r, 1, "", subtotal_format);
+    worksheet_write_string(worksheet, r, 2, "", subtotal_format);
+    worksheet_write_string(worksheet, r, 3, "", subtotal_format);
+
+    char subtotalBuf[128];
+    snprintf(subtotalBuf, sizeof(subtotalBuf), "%.2f د.ل", customerTotalSum);
+    worksheet_write_string(worksheet, r, 4, subtotalBuf, subtotal_format);
+    r += 2; // Extra space between customers
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -37,7 +142,7 @@ int main(int argc, char *argv[]) {
     worksheet_set_column(worksheet, 1, 1, 48, NULL); // Column B: المنتج / اسم العميل / التاريخ
     worksheet_set_column(worksheet, 2, 2, 22, NULL); // Column C: الحجم / الإجمالي
     worksheet_set_column(worksheet, 3, 3, 22, NULL); // Column D: السعر
-    worksheet_set_column(worksheet, 4, 4, 26, NULL); // Column E: الإجمالي
+    worksheet_set_column(worksheet, 4, 4, 28, NULL); // Column E: الإجمالي
 
     // Formats
     lxw_format *title_format = workbook_add_format(workbook);
@@ -66,7 +171,6 @@ int main(int argc, char *argv[]) {
     format_set_font_color(customer_format, LXW_COLOR_WHITE);
     format_set_bg_color(customer_format, 0x1565C0);
 
-    // Invoice Header 3 Separate Fields
     lxw_format *inv_id_format = workbook_add_format(workbook);
     format_set_font_name(inv_id_format, "Tajawal");
     format_set_font_size(inv_id_format, 13);
@@ -101,6 +205,20 @@ int main(int argc, char *argv[]) {
     format_set_font_size(row_center_format, 12);
     format_set_align(row_center_format, LXW_ALIGN_CENTER);
 
+    lxw_format *subtotal_format = workbook_add_format(workbook);
+    format_set_font_name(subtotal_format, "Tajawal");
+    format_set_font_size(subtotal_format, 13);
+    format_set_bold(subtotal_format);
+    format_set_bg_color(subtotal_format, 0xE8EAF6);
+
+    lxw_format *grand_total_format = workbook_add_format(workbook);
+    format_set_font_name(grand_total_format, "Tajawal");
+    format_set_font_size(grand_total_format, 15);
+    format_set_bold(grand_total_format);
+    format_set_font_color(grand_total_format, LXW_COLOR_WHITE);
+    format_set_bg_color(grand_total_format, 0x1565C0);
+    format_set_align(grand_total_format, LXW_ALIGN_CENTER);
+
     // Title Block
     worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
     
@@ -117,13 +235,14 @@ int main(int argc, char *argv[]) {
     worksheet_write_string(worksheet, 4, 1, createdAtStr, info_val_format);
 
     uint32_t r = 6;
-
-    std::string currentCustomer = "";
-    int currentInvoiceId = -1;
+    double grandTotalSum = 0.0;
 
     if (tsvFilePath != NULL) {
         std::ifstream file(tsvFilePath);
         std::string line;
+        std::string currentCustomer = "";
+        std::vector<ItemRow> currentCustomerItems;
+
         while (std::getline(file, line)) {
             if (line.empty()) continue;
             std::stringstream ss(line);
@@ -135,66 +254,57 @@ int main(int argc, char *argv[]) {
             if (cols.size() < 10) continue;
 
             std::string custName = cols[0];
-            int invId            = atoi(cols[1].c_str());
-            std::string invDate  = cols[2];
-            double invTotal      = atof(cols[3].c_str());
-            int itemCount        = atoi(cols[4].c_str());
-            std::string pName    = cols[5];
-            std::string pSize    = cols[6];
-            double qty           = atof(cols[7].c_str());
-            double unitPrice     = atof(cols[8].c_str());
-            double lineTotal     = atof(cols[9].c_str());
+            ItemRow row;
+            row.invoiceId   = atoi(cols[1].c_str());
+            row.invoiceDate = cols[2];
+            row.invoiceTotal= atof(cols[3].c_str());
+            row.itemCount   = atoi(cols[4].c_str());
+            row.productName = cols[5];
+            row.sizeLabel   = cols[6];
+            row.quantity    = atof(cols[7].c_str());
+            row.unitPrice   = atof(cols[8].c_str());
+            row.lineTotal   = atof(cols[9].c_str());
+
+            if (currentCustomer.empty()) {
+                currentCustomer = custName;
+            }
 
             if (currentCustomer != custName) {
+                renderCustomerBlock(
+                    worksheet, r, currentCustomer, currentCustomerItems, grandTotalSum,
+                    customer_format, inv_id_format, inv_date_format, inv_total_format,
+                    header_format, row_format, row_center_format, subtotal_format
+                );
                 currentCustomer = custName;
-                currentInvoiceId = -1;
-
-                char custBuf[512];
-                snprintf(custBuf, sizeof(custBuf), "العميل: %s", custName.c_str());
-                worksheet_write_string(worksheet, r, 0, custBuf, customer_format);
-                r++;
+                currentCustomerItems.clear();
             }
 
-            // 3 Separate Columns for Invoice Header
-            if (currentInvoiceId != invId) {
-                currentInvoiceId = invId;
+            currentCustomerItems.push_back(row);
+        }
 
-                char invIdBuf[128];
-                snprintf(invIdBuf, sizeof(invIdBuf), "INV#%d", invId);
-                worksheet_write_string(worksheet, r, 0, invIdBuf, inv_id_format);
-
-                worksheet_write_string(worksheet, r, 1, invDate.c_str(), inv_date_format);
-
-                char invTotalBuf[128];
-                snprintf(invTotalBuf, sizeof(invTotalBuf), "الإجمالي: %.2f د.ل", invTotal);
-                worksheet_write_string(worksheet, r, 2, invTotalBuf, inv_total_format);
-                r++;
-
-                worksheet_write_string(worksheet, r, 0, "العدد", header_format);
-                worksheet_write_string(worksheet, r, 1, "المنتج", header_format);
-                worksheet_write_string(worksheet, r, 2, "الحجم", header_format);
-                worksheet_write_string(worksheet, r, 3, "السعر", header_format);
-                worksheet_write_string(worksheet, r, 4, "الإجمالي", header_format);
-                r++;
-            }
-
-            // Item Row with Count Aggregation
-            if (itemCount > 1) {
-                worksheet_write_number(worksheet, r, 0, itemCount, row_center_format);
-            } else {
-                worksheet_write_string(worksheet, r, 0, "", row_center_format);
-            }
-
-            worksheet_write_string(worksheet, r, 1, pName.c_str(), row_format);
-            worksheet_write_string(worksheet, r, 2, pSize.c_str(), row_format);
-            worksheet_write_number(worksheet, r, 3, unitPrice, row_format);
-            worksheet_write_number(worksheet, r, 4, lineTotal, row_format);
-            r++;
+        // Render last customer block
+        if (!currentCustomerItems.empty()) {
+            renderCustomerBlock(
+                worksheet, r, currentCustomer, currentCustomerItems, grandTotalSum,
+                customer_format, inv_id_format, inv_date_format, inv_total_format,
+                header_format, row_format, row_center_format, subtotal_format
+            );
         }
     }
 
+    // Grand Total Row at the bottom
+    r++;
+    worksheet_write_string(worksheet, r, 0, "الإجمالي الكلي", grand_total_format);
+    worksheet_write_string(worksheet, r, 1, "", grand_total_format);
+    worksheet_write_string(worksheet, r, 2, "", grand_total_format);
+    worksheet_write_string(worksheet, r, 3, "", grand_total_format);
+
+    char grandTotalBuf[128];
+    snprintf(grandTotalBuf, sizeof(grandTotalBuf), "%.2f د.ل", grandTotalSum);
+    worksheet_write_string(worksheet, r, 4, grandTotalBuf, grand_total_format);
+
     workbook_close(workbook);
-    printf("SUCCESS: C++ Engine generated %d rows at %s\n", r, outputPath);
+    printf("SUCCESS: C++ Engine generated %d rows at %s (Grand Total: %.2f)\n", r, outputPath, grandTotalSum);
 
     return 0;
 }
