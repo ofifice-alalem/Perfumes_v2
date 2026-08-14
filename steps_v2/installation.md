@@ -1,5 +1,7 @@
 # 🚀 تثبيت المشروع على جهاز جديد
 
+> 💡 **ملاحظة هامّة**: للتعرف على الدليل الشامل والمفصل لتثبيت وإعداد Apache + SSL + Redis وسكريبتات الطوارئ التلقائية، يرجى مراجعة [MASTER_DEPLOYMENT_GUIDE.md](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/deployment_and_maintenance/MASTER_DEPLOYMENT_GUIDE.md).
+
 ## المتطلبات
 - PHP >= 8.2
 - Composer
