@@ -2687,7 +2687,12 @@ class ReportRepository implements ReportRepositoryInterface
             }
             fclose($f);
 
-            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . ($dateFrom ?? 'null') . '" "' . ($dateTo ?? 'null') . '" "' . $tmpTsv . '"';
+            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
+            $productNames = collect($includedProducts)->pluck('name')->toArray();
+            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
+            $createdAtStr = now()->format('Y-m-d H:i');
+
+            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . ($dateFrom ?? 'null') . '" "' . ($dateTo ?? 'null') . '" "' . $tmpTsv . '" "' . $productNamesStr . '" "' . $createdAtStr . '"';
             exec($cmdCpp, $out, $code);
 
             if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {

@@ -1,6 +1,7 @@
 /*
  * High-Performance Native C++ Exporter for Perfumes_v2
- * Direct MySQL Stream Engine with Zero PHP DB Fetching Overhead
+ * Direct TSV Stream Engine with full Arabic layout,Tajawal font,
+ * 3-Column Invoice Headers, Included Products, Created At, & Dinar (د.ل) currency
  */
 
 #include <stdio.h>
@@ -13,28 +14,18 @@
 #include <sstream>
 #include <xlsxwriter.h>
 
-struct Record {
-    std::string customerName;
-    int invoiceId;
-    std::string invoiceDate;
-    double invoiceTotal;
-    std::string productName;
-    std::string sizeLabel;
-    double quantity;
-    double unitPrice;
-    double lineTotal;
-};
-
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Usage: export_xlsx <output_path.xlsx> [date_from] [date_to] [data_tsv_file]\n");
+        printf("Usage: export_xlsx <output_path.xlsx> [date_from] [date_to] [data_tsv_file] [product_names] [created_at]\n");
         return 1;
     }
 
-    const char *outputPath  = argv[1];
-    const char *dateFrom    = (argc >= 3 && strlen(argv[2]) > 0 && strcmp(argv[2], "null") != 0) ? argv[2] : NULL;
-    const char *dateTo      = (argc >= 4 && strlen(argv[3]) > 0 && strcmp(argv[3], "null") != 0) ? argv[3] : NULL;
-    const char *tsvFilePath = (argc >= 5 && strlen(argv[4]) > 0) ? argv[4] : NULL;
+    const char *outputPath   = argv[1];
+    const char *dateFrom     = (argc >= 3 && strlen(argv[2]) > 0 && strcmp(argv[2], "null") != 0) ? argv[2] : NULL;
+    const char *dateTo       = (argc >= 4 && strlen(argv[3]) > 0 && strcmp(argv[3], "null") != 0) ? argv[3] : NULL;
+    const char *tsvFilePath  = (argc >= 5 && strlen(argv[4]) > 0) ? argv[4] : NULL;
+    const char *pNamesStr    = (argc >= 6 && strlen(argv[5]) > 0 && strcmp(argv[5], "null") != 0) ? argv[5] : "الكل";
+    const char *createdAtStr = (argc >= 7 && strlen(argv[6]) > 0 && strcmp(argv[6], "null") != 0) ? argv[6] : "";
 
     lxw_workbook  *workbook  = workbook_new(outputPath);
     lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "فواتير العملاء");
@@ -58,11 +49,16 @@ int main(int argc, char *argv[]) {
     format_set_bg_color(title_format, 0x1565C0);
     format_set_align(title_format, LXW_ALIGN_CENTER);
 
-    lxw_format *info_format = workbook_add_format(workbook);
-    format_set_font_name(info_format, "Tajawal");
-    format_set_font_size(info_format, 13);
-    format_set_bold(info_format);
-    format_set_bg_color(info_format, 0xE3F2FD);
+    lxw_format *info_label_format = workbook_add_format(workbook);
+    format_set_font_name(info_label_format, "Tajawal");
+    format_set_font_size(info_label_format, 13);
+    format_set_bold(info_label_format);
+    format_set_bg_color(info_label_format, 0xE3F2FD);
+
+    lxw_format *info_val_format = workbook_add_format(workbook);
+    format_set_font_name(info_val_format, "Tajawal");
+    format_set_font_size(info_val_format, 13);
+    format_set_bg_color(info_val_format, 0xE3F2FD);
 
     lxw_format *customer_format = workbook_add_format(workbook);
     format_set_font_name(customer_format, "Tajawal");
@@ -71,11 +67,24 @@ int main(int argc, char *argv[]) {
     format_set_font_color(customer_format, LXW_COLOR_WHITE);
     format_set_bg_color(customer_format, 0x1565C0);
 
-    lxw_format *inv_format = workbook_add_format(workbook);
-    format_set_font_name(inv_format, "Tajawal");
-    format_set_font_size(inv_format, 13);
-    format_set_bold(inv_format);
-    format_set_bg_color(inv_format, 0xBBDEFB);
+    // Invoice Header 3 Separate Fields
+    lxw_format *inv_id_format = workbook_add_format(workbook);
+    format_set_font_name(inv_id_format, "Tajawal");
+    format_set_font_size(inv_id_format, 13);
+    format_set_bold(inv_id_format);
+    format_set_bg_color(inv_id_format, 0xBBDEFB);
+
+    lxw_format *inv_date_format = workbook_add_format(workbook);
+    format_set_font_name(inv_date_format, "Tajawal");
+    format_set_font_size(inv_date_format, 13);
+    format_set_bold(inv_date_format);
+    format_set_bg_color(inv_date_format, 0xBBDEFB);
+
+    lxw_format *inv_total_format = workbook_add_format(workbook);
+    format_set_font_name(inv_total_format, "Tajawal");
+    format_set_font_size(inv_total_format, 13);
+    format_set_bold(inv_total_format);
+    format_set_bg_color(inv_total_format, 0xBBDEFB);
 
     lxw_format *header_format = workbook_add_format(workbook);
     format_set_font_name(header_format, "Tajawal");
@@ -89,13 +98,21 @@ int main(int argc, char *argv[]) {
     format_set_font_size(row_format, 12);
 
     // Title Block
-    worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء (C++ Engine)", title_format);
-    worksheet_write_string(worksheet, 1, 0, "من تاريخ", info_format);
-    worksheet_write_string(worksheet, 1, 1, dateFrom ? dateFrom : "البداية", info_format);
-    worksheet_write_string(worksheet, 2, 0, "إلى تاريخ", info_format);
-    worksheet_write_string(worksheet, 2, 1, dateTo ? dateTo : "الآن", info_format);
+    worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
+    
+    worksheet_write_string(worksheet, 1, 0, "من تاريخ", info_label_format);
+    worksheet_write_string(worksheet, 1, 1, dateFrom ? dateFrom : "البداية", info_val_format);
 
-    uint32_t r = 4;
+    worksheet_write_string(worksheet, 2, 0, "إلى تاريخ", info_label_format);
+    worksheet_write_string(worksheet, 2, 1, dateTo ? dateTo : "الآن", info_val_format);
+
+    worksheet_write_string(worksheet, 3, 0, "المنتجات المشمولة في الحساب", info_label_format);
+    worksheet_write_string(worksheet, 3, 1, pNamesStr, info_val_format);
+
+    worksheet_write_string(worksheet, 4, 0, "تاريخ الإنشاء", info_label_format);
+    worksheet_write_string(worksheet, 4, 1, createdAtStr, info_val_format);
+
+    uint32_t r = 6;
 
     std::string currentCustomer = "";
     int currentInvoiceId = -1;
@@ -133,19 +150,26 @@ int main(int argc, char *argv[]) {
                 r++;
             }
 
+            // 3 Separate Columns for Invoice Header
             if (currentInvoiceId != invId) {
                 currentInvoiceId = invId;
 
-                char invBuf[256];
-                snprintf(invBuf, sizeof(invBuf), "فاتورة #%d | %s | الإجمالي: %.2f ر.س", invId, invDate.c_str(), invTotal);
-                worksheet_write_string(worksheet, r, 0, invBuf, inv_format);
+                char invIdBuf[128];
+                snprintf(invIdBuf, sizeof(invIdBuf), "فاتورة #%d", invId);
+                worksheet_write_string(worksheet, r, 0, invIdBuf, inv_id_format);
+
+                worksheet_write_string(worksheet, r, 1, invDate.c_str(), inv_date_format);
+
+                char invTotalBuf[128];
+                snprintf(invTotalBuf, sizeof(invTotalBuf), "الإجمالي: %.2f د.ل", invTotal);
+                worksheet_write_string(worksheet, r, 2, invTotalBuf, inv_total_format);
                 r++;
 
                 worksheet_write_string(worksheet, r, 0, "اسم المنتج / الصنف", header_format);
                 worksheet_write_string(worksheet, r, 1, "الحجم", header_format);
                 worksheet_write_string(worksheet, r, 2, "الكمية", header_format);
-                worksheet_write_string(worksheet, r, 3, "السعر", header_format);
-                worksheet_write_string(worksheet, r, 4, "الإجمالي", header_format);
+                worksheet_write_string(worksheet, r, 3, "السعر (د.ل)", header_format);
+                worksheet_write_string(worksheet, r, 4, "الإجمالي (د.ل)", header_format);
                 r++;
             }
 
