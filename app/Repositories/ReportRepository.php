@@ -3571,6 +3571,53 @@ class ReportRepository implements ReportRepositoryInterface
         @ini_set('memory_limit', '2048M');
         @set_time_limit(600);
 
+        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx.exe') : base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx');
+        if (file_exists($cppExe)) {
+            $storageDir = storage_path('app');
+            if (!file_exists($storageDir)) { @mkdir($storageDir, 0777, true); }
+
+            $tmpTsv  = $storageDir . DIRECTORY_SEPARATOR . 'cpp_db_' . uniqid() . '.tsv';
+            $tmpXlsx = $storageDir . DIRECTORY_SEPARATOR . 'cpp_exp_' . uniqid() . '.xlsx';
+
+            $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
+            $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
+
+            $sql = "SELECT COALESCE(sp.name, 'مورد عام'), p.id, DATE_FORMAT(p.created_at, '%Y-%m-%d'), p.total, COUNT(pi.id) AS item_count, COALESCE(pr.name, 'منتج'), '-', SUM(pi.quantity), pi.unit_cost, SUM(pi.line_total) FROM purchases p LEFT JOIN suppliers sp ON sp.id = p.supplier_id LEFT JOIN purchase_items pi ON pi.purchase_id = p.id LEFT JOIN products pr ON pr.id = pi.product_id WHERE p.deleted_at IS NULL AND p.created_at >= '{$dfStr}' AND p.created_at <= '{$dtStr}' GROUP BY p.id, sp.name, p.created_at, p.total, pi.product_id, pi.unit_cost, pr.name ORDER BY sp.name ASC, p.id DESC";
+
+            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
+            $productNames = collect($includedProducts)->pluck('name')->toArray();
+            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
+            $createdAtStr = now()->format('Y-m-d H:i');
+
+            $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $f = fopen($tmpTsv, 'w');
+
+            fwrite($f, "#META\t" . ($dateFrom ?? 'البداية') . "\t" . ($dateTo ?? now()->format('Y-m-d')) . "\t" . $productNamesStr . "\t" . $createdAtStr . "\tتقرير فواتير المشتريات حسب الموردين\tالمورد\n");
+
+            $stmt = $pdo->query($sql);
+            while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
+                fwrite($f, implode("\t", $row) . "\n");
+            }
+            fclose($f);
+
+            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpTsv . '"';
+            exec($cmdCpp, $out, $code);
+
+            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
+                $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
+                header('X-Export-Engine: C++ Static Binary Exporter');
+                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Content-Length: ' . filesize($tmpXlsx));
+                readfile($tmpXlsx);
+                @unlink($tmpTsv);
+                @unlink($tmpXlsx);
+                exit;
+            }
+            @unlink($tmpTsv);
+            @unlink($tmpXlsx);
+        }
+
         $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();

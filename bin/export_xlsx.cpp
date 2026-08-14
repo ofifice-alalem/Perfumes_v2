@@ -1,7 +1,7 @@
 /*
  * High-Performance Native C++ Exporter for Perfumes_v2
- * Direct TSV Stream Engine with Customer Summaries, Customer Subtotals,
- * Grand Total (الإجمالي الكلي), Item Aggregation & Dinar (د.ل) Currency
+ * Multi-Report Stream Engine (Sales & Purchases Invoices) with Dynamic Entity Labels
+ * (العميل / المورد), Customer/Supplier Subtotals, Grand Total (الإجمالي الكلي) & Dinar (د.ل) Currency
  */
 
 #include <stdio.h>
@@ -27,10 +27,11 @@ struct ItemRow {
     double lineTotal;
 };
 
-void renderCustomerBlock(
+void renderEntityBlock(
     lxw_worksheet *worksheet,
     uint32_t &r,
-    const std::string &customerName,
+    const std::string &entityName,
+    const std::string &entityLabel,
     const std::vector<ItemRow> &items,
     double &grandTotalSum,
     lxw_format *customer_format,
@@ -44,24 +45,23 @@ void renderCustomerBlock(
 ) {
     if (items.empty()) return;
 
-    // Calculate customer total & unique invoice count
-    std::set<int> customerInvoices;
-    double customerTotalSum = 0.0;
+    std::set<int> uniqueInvoices;
+    double entityTotalSum = 0.0;
 
     for (size_t i = 0; i < items.size(); i++) {
-        if (customerInvoices.find(items[i].invoiceId) == customerInvoices.end()) {
-            customerInvoices.insert(items[i].invoiceId);
-            customerTotalSum += items[i].invoiceTotal;
+        if (uniqueInvoices.find(items[i].invoiceId) == uniqueInvoices.end()) {
+            uniqueInvoices.insert(items[i].invoiceId);
+            entityTotalSum += items[i].invoiceTotal;
         }
     }
 
-    grandTotalSum += customerTotalSum;
+    grandTotalSum += entityTotalSum;
 
-    // Customer Bar: العميل: منصور — 100 فاتورة — 94,500.00 د.ل
-    char custBuf[1024];
-    snprintf(custBuf, sizeof(custBuf), "العميل: %s — %zu فاتورة — %.2f د.ل",
-             customerName.c_str(), customerInvoices.size(), customerTotalSum);
-    worksheet_write_string(worksheet, r, 0, custBuf, customer_format);
+    // Entity Summary Bar (العميل/المورد: اسم — 100 فاتورة — 94,500.00 د.ل)
+    char barBuf[1024];
+    snprintf(barBuf, sizeof(barBuf), "%s: %s — %zu فاتورة — %.2f د.ل",
+             entityLabel.c_str(), entityName.c_str(), uniqueInvoices.size(), entityTotalSum);
+    worksheet_write_string(worksheet, r, 0, barBuf, customer_format);
     r++;
 
     int currentInvoiceId = -1;
@@ -106,16 +106,18 @@ void renderCustomerBlock(
         r++;
     }
 
-    // Customer Subtotal Row
-    worksheet_write_string(worksheet, r, 0, "إجمالي العميل", subtotal_format);
+    // Entity Subtotal Row (إجمالي العميل / إجمالي المورد)
+    char subLabelBuf[128];
+    snprintf(subLabelBuf, sizeof(subLabelBuf), "إجمالي %s", entityLabel.c_str());
+    worksheet_write_string(worksheet, r, 0, subLabelBuf, subtotal_format);
     worksheet_write_string(worksheet, r, 1, "", subtotal_format);
     worksheet_write_string(worksheet, r, 2, "", subtotal_format);
     worksheet_write_string(worksheet, r, 3, "", subtotal_format);
 
     char subtotalBuf[128];
-    snprintf(subtotalBuf, sizeof(subtotalBuf), "%.2f د.ل", customerTotalSum);
+    snprintf(subtotalBuf, sizeof(subtotalBuf), "%.2f د.ل", entityTotalSum);
     worksheet_write_string(worksheet, r, 4, subtotalBuf, subtotal_format);
-    r += 2; // Extra space between customers
+    r += 2;
 }
 
 int main(int argc, char *argv[]) {
@@ -124,17 +126,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const char *outputPath   = argv[1];
-    const char *tsvFilePath  = (argc >= 3) ? argv[2] : argv[1];
-    if (argc >= 3) {
-        outputPath = argv[1];
-        tsvFilePath = argv[2];
-    } else {
-        tsvFilePath = argv[1];
-    }
+    const char *outputPath  = argv[1];
+    const char *tsvFilePath = (argc >= 3) ? argv[2] : argv[1];
 
     lxw_workbook  *workbook  = workbook_new(outputPath);
-    lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "فواتير العملاء");
+    lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "تقرير الفواتير");
 
     // Enable Right-To-Left (RTL) Arabic layout
     worksheet_right_to_left(worksheet);
@@ -224,16 +220,18 @@ int main(int argc, char *argv[]) {
     uint32_t r = 6;
     double grandTotalSum = 0.0;
 
-    std::string metaDateFrom = "البداية";
-    std::string metaDateTo   = "الآن";
-    std::string metaProducts = "الكل";
-    std::string metaCreatedAt = "";
+    std::string metaDateFrom    = "البداية";
+    std::string metaDateTo      = "الآن";
+    std::string metaProducts    = "الكل";
+    std::string metaCreatedAt   = "";
+    std::string metaReportTitle = "تقرير فواتير المبيعات حسب العملاء";
+    std::string metaEntityLabel = "العميل";
 
     if (tsvFilePath != NULL) {
         std::ifstream file(tsvFilePath);
         std::string line;
-        std::string currentCustomer = "";
-        std::vector<ItemRow> currentCustomerItems;
+        std::string currentEntity = "";
+        std::vector<ItemRow> currentEntityItems;
 
         while (std::getline(file, line)) {
             if (line.empty()) continue;
@@ -246,16 +244,18 @@ int main(int argc, char *argv[]) {
 
             // Check for #META header line
             if (!cols.empty() && cols[0] == "#META") {
-                if (cols.size() >= 2 && !cols[1].empty()) metaDateFrom = cols[1];
-                if (cols.size() >= 3 && !cols[2].empty()) metaDateTo   = cols[2];
-                if (cols.size() >= 4 && !cols[3].empty()) metaProducts = cols[3];
-                if (cols.size() >= 5 && !cols[4].empty()) metaCreatedAt= cols[4];
+                if (cols.size() >= 2 && !cols[1].empty()) metaDateFrom    = cols[1];
+                if (cols.size() >= 3 && !cols[2].empty()) metaDateTo      = cols[2];
+                if (cols.size() >= 4 && !cols[3].empty()) metaProducts    = cols[3];
+                if (cols.size() >= 5 && !cols[4].empty()) metaCreatedAt   = cols[4];
+                if (cols.size() >= 6 && !cols[5].empty()) metaReportTitle = cols[5];
+                if (cols.size() >= 7 && !cols[6].empty()) metaEntityLabel = cols[6];
                 continue;
             }
 
             if (cols.size() < 10) continue;
 
-            std::string custName = cols[0];
+            std::string entName = cols[0];
             ItemRow row;
             row.invoiceId   = atoi(cols[1].c_str());
             row.invoiceDate = cols[2];
@@ -267,27 +267,27 @@ int main(int argc, char *argv[]) {
             row.unitPrice   = atof(cols[8].c_str());
             row.lineTotal   = atof(cols[9].c_str());
 
-            if (currentCustomer.empty()) {
-                currentCustomer = custName;
+            if (currentEntity.empty()) {
+                currentEntity = entName;
             }
 
-            if (currentCustomer != custName) {
-                renderCustomerBlock(
-                    worksheet, r, currentCustomer, currentCustomerItems, grandTotalSum,
+            if (currentEntity != entName) {
+                renderEntityBlock(
+                    worksheet, r, currentEntity, metaEntityLabel, currentEntityItems, grandTotalSum,
                     customer_format, inv_id_format, inv_date_format, inv_total_format,
                     header_format, row_format, row_center_format, subtotal_format
                 );
-                currentCustomer = custName;
-                currentCustomerItems.clear();
+                currentEntity = entName;
+                currentEntityItems.clear();
             }
 
-            currentCustomerItems.push_back(row);
+            currentEntityItems.push_back(row);
         }
 
-        // Render last customer block
-        if (!currentCustomerItems.empty()) {
-            renderCustomerBlock(
-                worksheet, r, currentCustomer, currentCustomerItems, grandTotalSum,
+        // Render last entity block
+        if (!currentEntityItems.empty()) {
+            renderEntityBlock(
+                worksheet, r, currentEntity, metaEntityLabel, currentEntityItems, grandTotalSum,
                 customer_format, inv_id_format, inv_date_format, inv_total_format,
                 header_format, row_format, row_center_format, subtotal_format
             );
@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Write Title Block using accurate parsed metadata
-    worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
+    worksheet_write_string(worksheet, 0, 0, metaReportTitle.c_str(), title_format);
     
     worksheet_write_string(worksheet, 1, 0, "من تاريخ", info_label_format);
     worksheet_write_string(worksheet, 1, 1, metaDateFrom.c_str(), info_val_format);
