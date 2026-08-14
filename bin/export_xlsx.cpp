@@ -74,7 +74,7 @@ void renderCustomerBlock(
             currentInvoiceId = row.invoiceId;
 
             char invIdBuf[128];
-            snprintf(invIdBuf, sizeof(invIdBuf), "INV#%d", row.invoiceId);
+            snprintf(invIdBuf, sizeof(invIdBuf), "فاتورة: %d", row.invoiceId);
             worksheet_write_string(worksheet, r, 0, invIdBuf, inv_id_format);
 
             worksheet_write_string(worksheet, r, 1, row.invoiceDate.c_str(), inv_date_format);
