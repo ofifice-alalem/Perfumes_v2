@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { PdfExportButton } from '@/components/ui/PdfExportButton';
 import {
     Truck,
     SlidersHorizontal,
@@ -430,16 +431,7 @@ export default function SupplierAging({ suppliers, filters, data }: Props) {
                                 <FileSpreadsheet className="w-5 h-5" />
                                 <span className="hidden sm:inline">تصدير إكسيل</span>
                             </a>
-                            <a
-                                href={buildExportUrl('pdf')}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="h-12 px-5 rounded-[16px] bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500 hover:text-white border-2 border-rose-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
-                                title="تصدير PDF"
-                            >
-                                <Download className="w-5 h-5" />
-                                <span className="hidden sm:inline">تصدير PDF</span>
-                            </a>
+                            <PdfExportButton href={buildExportUrl('pdf')} excelHref={buildExportUrl('excel')} />
                         </div>
                     }
                 >

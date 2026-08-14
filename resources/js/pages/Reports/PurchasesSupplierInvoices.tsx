@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
+import { PdfExportButton } from '@/components/ui/PdfExportButton';
 import {
     Truck,
     SlidersHorizontal,
@@ -493,16 +494,7 @@ export default function PurchasesSupplierInvoices({ users, suppliers, categories
                                 <FileSpreadsheet className="w-5 h-5" />
                                 <span className="hidden sm:inline">تصدير إكسيل</span>
                             </a>
-                            <a
-                                href={buildExportUrl('pdf')}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="h-12 px-5 rounded-[16px] bg-rose-500/15 text-rose-700 dark:text-rose-300 hover:bg-rose-500 hover:text-white border-2 border-rose-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
-                                title="تصدير PDF"
-                            >
-                                <Download className="w-5 h-5" />
-                                <span className="hidden sm:inline">تصدير PDF</span>
-                            </a>
+                            <PdfExportButton href={buildExportUrl('pdf')} excelHref={buildExportUrl('excel')} />
                             <Link
                                 href="/reports/purchases"
                                 className="h-12 px-5 rounded-[16px] bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-300 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm border-2 border-slate-300 dark:border-slate-700"
