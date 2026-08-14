@@ -28,3 +28,11 @@ Thumbs.db
 **/caddy
 frankenphp
 frankenphp-worker.php
+
+# Ignore temporary C++ build libraries and source headers in /bin/
+/bin/libxlsxwriter
+/bin/zlib
+/bin/nlohmann
+/bin/*.o
+/bin/*.lib
+/bin/libmysql.dll
