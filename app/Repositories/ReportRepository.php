@@ -2663,12 +2663,64 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
+        @ini_set('memory_limit', '2048M');
+        @set_time_limit(600);
 
         $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
+
+        $totalInvoices = array_sum(array_column($data, 'invoice_count'));
+
+        // If dataset is huge (over 2,000 invoices), stream as UTF-8 CSV with Excel BOM to avoid PhpSpreadsheet memory limit crash
+        if ($totalInvoices > 2000) {
+            $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $fp = fopen('php://output', 'w');
+            fputs($fp, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+
+            $isWhole = fn($n) => $n == floor($n);
+            $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+            fputcsv($fp, ['تقرير فواتير المبيعات حسب العملاء']);
+            fputcsv($fp, ['من تاريخ', $dateFrom ?? 'البداية']);
+            fputcsv($fp, ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')]);
+            fputcsv($fp, ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل']);
+            fputcsv($fp, ['تاريخ الإنشاء', now()->format('Y-m-d H:i')]);
+            fputcsv($fp, []);
+
+            foreach ($data as $entry) {
+                fputcsv($fp, [$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])]);
+                
+                foreach ($entry['invoices'] as $inv) {
+                    fputcsv($fp, ['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])]);
+                    fputcsv($fp, ['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي']);
+
+                    foreach ($inv['items'] as $item) {
+                        $item = (array) $item;
+                        fputcsv($fp, [
+                            $item['count'] > 1 ? $item['count'] : '',
+                            (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
+                            $fmtN($item['quantity']),
+                            $fmtN($item['unit_price']),
+                            $fmtN($item['line_total']),
+                        ]);
+                    }
+                }
+
+                fputcsv($fp, ['الإجمالي', '', '', '', $fmtN($entry['total_amount'])]);
+                fputcsv($fp, []);
+            }
+
+            $grandAmount = array_sum(array_column($data, 'total_amount'));
+            fputcsv($fp, ['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)]);
+
+            fclose($fp);
+            exit;
+        }
 
         $spreadsheet = new Spreadsheet();
         $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
@@ -2716,9 +2768,7 @@ class ReportRepository implements ReportRepositoryInterface
         }
         $row++;
 
-
         foreach ($data as $entry) {
-            // رأس العميل
             $sheet->setCellValue('A' . $row, $entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
             $sheet->mergeCells('A' . $row . ':E' . $row);
             $sheet->getStyle('A' . $row)->applyFromArray([
@@ -2730,7 +2780,6 @@ class ReportRepository implements ReportRepositoryInterface
             $row++;
 
             foreach ($entry['invoices'] as $inv) {
-                // رأس الفاتورة
                 $sheet->fromArray(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
                     'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
@@ -2739,7 +2788,6 @@ class ReportRepository implements ReportRepositoryInterface
                 ]);
                 $row++;
 
-                // رؤوس أعمدة المنتجات
                 $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], null, 'A' . $row);
                 $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                     'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
@@ -2749,38 +2797,23 @@ class ReportRepository implements ReportRepositoryInterface
                 ]);
                 $row++;
 
+                $itemsData = [];
                 foreach ($inv['items'] as $item) {
                     $item = (array) $item;
-                    $sheet->fromArray([
+                    $itemsData[] = [
                         $item['count'] > 1 ? $item['count'] : '',
-                        ($item['is_matched'] ? '★ ' : '') . $item['product_name'],
+                        (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
                         $fmtN($item['quantity']),
                         $fmtN($item['unit_price']),
                         $fmtN($item['line_total']),
-                    ], null, 'A' . $row);
-                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    ]);
-                    if ($item['count'] > 1) {
-                        $sheet->getStyle('A' . $row)->applyFromArray([
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
-                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                        ]);
-                    }
-                    if ($item['is_matched']) {
-                        $sheet->getStyle('B' . $row)->applyFromArray([
-                            'font' => ['color' => ['rgb' => 'D97706']], // amber color for text
-                        ]);
-                        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']], // amber-50 background
-                        ]);
-                    }
-                    $row++;
+                    ];
+                }
+                if (!empty($itemsData)) {
+                    $sheet->fromArray($itemsData, null, 'A' . $row);
+                    $row += count($itemsData);
                 }
             }
 
-            // إجمالي العميل
             $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
             $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
                 'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
@@ -2808,7 +2841,6 @@ class ReportRepository implements ReportRepositoryInterface
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
         $row++;
-
 
         foreach (range('A', 'E') as $col)
             $sheet->getColumnDimension($col)->setAutoSize(true);
@@ -3412,14 +3444,62 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
+        @ini_set('memory_limit', '2048M');
+        @set_time_limit(600);
 
         $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
+
+        $totalPurchases = array_sum(array_column($data, 'purchase_count'));
+
+        if ($totalPurchases > 2000) {
+            $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Cache-Control: max-age=0');
+
+            $fp = fopen('php://output', 'w');
+            fputs($fp, "\xEF\xBB\xBF");
+
+            fputcsv($fp, ['تقرير فواتير الموردين']);
+            fputcsv($fp, ['من تاريخ', $dateFrom ?? 'البداية']);
+            fputcsv($fp, ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')]);
+            fputcsv($fp, ['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل']);
+            fputcsv($fp, ['تاريخ الإنشاء', now()->format('Y-m-d H:i')]);
+            fputcsv($fp, []);
+
+            foreach ($data as $entry) {
+                fputcsv($fp, [$entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])]);
+                
+                foreach ($entry['purchases'] as $inv) {
+                    fputcsv($fp, ['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])]);
+                    fputcsv($fp, ['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي']);
+
+                    foreach ($inv['items'] as $item) {
+                        $item = (array) $item;
+                        fputcsv($fp, [
+                            $item['count'] > 1 ? $item['count'] : '',
+                            (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
+                            $fmtN($item['quantity']),
+                            $fmtN($item['unit_cost']),
+                            $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
+                        ]);
+                    }
+                }
+
+                fputcsv($fp, ['الإجمالي', '', '', '', $fmtN($entry['total_amount'])]);
+                fputcsv($fp, []);
+            }
+
+            $grandAmount = array_sum(array_column($data, 'total_amount'));
+            fputcsv($fp, ['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)]);
+
+            fclose($fp);
+            exit;
+        }
 
         $spreadsheet = new Spreadsheet();
         $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
@@ -3435,21 +3515,6 @@ class ReportRepository implements ReportRepositoryInterface
             ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
             ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
         ];
-        $matchedTotal = 0;
-        foreach ($data as $entry) {
-            foreach ($entry['purchases'] as $inv) {
-                foreach ($inv['items'] as $item) {
-                    $itemArray = (array) $item;
-                    if (!empty($itemArray['is_matched'])) {
-                        $matchedTotal += (float) ($itemArray['quantity'] * $itemArray['count'] * $itemArray['unit_cost']);
-                    }
-                }
-            }
-        }
-
-        if ($matchedTotal > 0) {
-            $infoRows[] = ['إجمالي نتائج البحث', $fmtN($matchedTotal)];
-        }
 
         foreach ($infoRows as $info) {
             $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
@@ -3468,7 +3533,7 @@ class ReportRepository implements ReportRepositoryInterface
             $sheet->setCellValue('A' . $row, $entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
             $sheet->mergeCells('A' . $row . ':E' . $row);
             $sheet->getStyle('A' . $row)->applyFromArray([
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '0a2540']],
+                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
                 'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
                 'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],

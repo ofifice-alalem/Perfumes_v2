@@ -22,7 +22,7 @@ Large PDF/Excel reports are protected against out-of-memory errors:
 @ini_set('memory_limit', '1024M');
 @set_time_limit(300);
 ```
-- **Excel Export (`.xlsx`)**: Standard format for full, unrestricted exports of massive datasets (e.g. 50,000+ invoices and 300,000+ items).
+- **Excel Export (`.xlsx` / `.csv`)**: Optimized streaming format for full exports of massive datasets, engineered to scale up to **~300,000 invoice items** (approx. 50,000 invoices at an average 1:6 ratio of invoices to line items).
 - **PDF Export (`DomPDF`)**: Intended for formatted printable documents (filtered by date range, customer, or supplier). For unfiltered exports over giant datasets, a safe cap of **200 invoices per customer/supplier** is applied to guarantee sub-10-second PDF rendering and prevent 500 timeouts. This policy is formally documented in Section 8.4 of [`resources/js/data/policyData.ts`](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/resources/js/data/policyData.ts#L1206-L1245).
 
 ---
