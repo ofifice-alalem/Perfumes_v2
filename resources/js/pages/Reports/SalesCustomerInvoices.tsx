@@ -1,5 +1,5 @@
 import { router, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, ModernMultiSelect } from '@/components/ui/SpatialComponents';
@@ -267,6 +267,82 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
     const [expandedCustomers, setExpandedCustomers] = useState<Set<number>>(new Set());
     const [expandedInvoices,  setExpandedInvoices]  = useState<Set<number>>(new Set());
 
+    // Dynamic Pagination State per Customer
+    const [customerInvoicesMap, setCustomerInvoicesMap] = useState<Record<number, Invoice[]>>(() => {
+        const map: Record<number, Invoice[]> = {};
+        data.forEach(c => { map[c.customer_id] = c.invoices ?? []; });
+        return map;
+    });
+
+    const [customerHasMoreMap, setCustomerHasMoreMap] = useState<Record<number, boolean>>(() => {
+        const map: Record<number, boolean> = {};
+        data.forEach(c => { map[c.customer_id] = (c.invoices?.length ?? 0) < c.invoice_count; });
+        return map;
+    });
+
+    const [loadingCustomerMap, setLoadingCustomerMap] = useState<Record<number, boolean>>({});
+
+    // Sync when data prop updates (e.g. after filter applied)
+    useEffect(() => {
+        const map: Record<number, Invoice[]> = {};
+        const hasMoreMap: Record<number, boolean> = {};
+        data.forEach(c => {
+            map[c.customer_id] = c.invoices ?? [];
+            hasMoreMap[c.customer_id] = (c.invoices?.length ?? 0) < c.invoice_count;
+        });
+        setCustomerInvoicesMap(map);
+        setCustomerHasMoreMap(hasMoreMap);
+    }, [data]);
+
+    async function handleLoadMoreInvoices(customer: CustomerEntry) {
+        const cid = customer.customer_id;
+        if (loadingCustomerMap[cid]) return;
+
+        const currentInvoices = customerInvoicesMap[cid] || customer.invoices || [];
+        const offset = currentInvoices.length;
+
+        setLoadingCustomerMap(prev => ({ ...prev, [cid]: true }));
+
+        try {
+            const params = new URLSearchParams();
+            params.append('customer_id', String(cid));
+            params.append('offset', String(offset));
+            params.append('limit', '30');
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (userId) params.append('user_id', userId);
+            if (paymentMethodId) params.append('payment_method_id', paymentMethodId);
+            if (categoryId) params.append('category_id', categoryId);
+            const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
+            const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
+            if (prodIds.length > 0) params.append('product_ids', prodIds.join(','));
+            if (sName) params.append('search_name', sName);
+
+            const res = await fetch(`/reports/sales/customer-invoices/load-more?${params.toString()}`);
+            if (!res.ok) throw new Error('Failed to load more');
+
+            const json = await res.json();
+            const newInvoices: Invoice[] = json.invoices || [];
+
+            setCustomerInvoicesMap(prev => {
+                const existing = prev[cid] || customer.invoices || [];
+                return {
+                    ...prev,
+                    [cid]: [...existing, ...newInvoices],
+                };
+            });
+
+            setCustomerHasMoreMap(prev => ({
+                ...prev,
+                [cid]: json.has_more ?? false,
+            }));
+        } catch (e) {
+            console.error('Error loading more customer invoices:', e);
+        } finally {
+            setLoadingCustomerMap(prev => ({ ...prev, [cid]: false }));
+        }
+    }
+
     const activeFilterCount =
         (dateFrom ? 1 : 0) +
         (dateTo ? 1 : 0) +
@@ -531,8 +607,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                             <div className="p-4 sm:p-6 bg-slate-200/50 dark:bg-slate-900/60 border-y-2 border-slate-300 dark:border-slate-700">
                                                 <div className="p-6 sm:p-8 bg-white/90 dark:bg-slate-800/90 rounded-[28px] border-2 border-primary/30 shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                                                     
-                                                    {/* Invoices Sub-Table */}
-                                                    <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
+                            <div className="overflow-x-auto rounded-[22px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-md">
                                                         <table className="w-full text-right border-collapse min-w-[750px]">
                                                             <thead>
                                                                 <tr className="border-b-2 border-slate-300 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-lg sm:text-xl font-black uppercase">
@@ -543,7 +618,7 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/80 font-black text-xl sm:text-2xl">
-                                                                {customer.invoices.map(inv => {
+                                                                {(customerInvoicesMap[customer.customer_id] || customer.invoices || []).map(inv => {
                                                                     const isInvoiceExpanded = expandedInvoices.has(inv.id);
                                                                     return (
                                                                         <>
@@ -640,6 +715,30 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                             </tbody>
                                                         </table>
                                                     </div>
+
+                                                    {/* Load More Button per Customer */}
+                                                    {(customerHasMoreMap[customer.customer_id] || (customerInvoicesMap[customer.customer_id]?.length ?? 0) < customer.invoice_count) && (
+                                                        <div className="flex items-center justify-center pt-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleLoadMoreInvoices(customer)}
+                                                                disabled={loadingCustomerMap[customer.customer_id]}
+                                                                className="px-8 py-4 rounded-[22px] bg-primary hover:bg-blue-600 text-white font-black text-lg flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-60 border-2 border-primary/40 touch-manipulation"
+                                                            >
+                                                                {loadingCustomerMap[customer.customer_id] ? (
+                                                                    <>
+                                                                        <RotateCcw className="w-6 h-6 animate-spin" />
+                                                                        <span>جاري تحميل 30 فاتورة إضافية...</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Download className="w-6 h-6" />
+                                                                        <span>رؤية المزيد من الفواتير (عرض {customerInvoicesMap[customer.customer_id]?.length || 0} من أصل {customer.invoice_count})</span>
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         )}

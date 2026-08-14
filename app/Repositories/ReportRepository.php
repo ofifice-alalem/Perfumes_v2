@@ -2201,7 +2201,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Sales Customer Invoices ───────────────────────────────────────────────
 
-    public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): array
+    public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerCustomer = 30): array
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -2349,19 +2349,21 @@ class ReportRepository implements ReportRepositoryInterface
                 continue;
             }
 
-            $customersData[$cid]['invoices'][] = [
-                'id'          => $inv->id,
-                'total'       => (float) $inv->total,
-                'paid_amount' => (float) $inv->paid_amount,
-                'due_amount'  => (float) $inv->due_amount,
-                'date'        => $inv->created_at,
-                'items'       => $invItems,
-            ];
-            
             $customersData[$cid]['invoice_count']++;
             $customersData[$cid]['total_amount'] += (float)$inv->total;
             $customersData[$cid]['total_paid'] += (float)$inv->paid_amount;
             $customersData[$cid]['total_due'] += (float)$inv->due_amount;
+
+            if ($invoicesLimitPerCustomer === null || count($customersData[$cid]['invoices']) < $invoicesLimitPerCustomer) {
+                $customersData[$cid]['invoices'][] = [
+                    'id'          => $inv->id,
+                    'total'       => (float) $inv->total,
+                    'paid_amount' => (float) $inv->paid_amount,
+                    'due_amount'  => (float) $inv->due_amount,
+                    'date'        => $inv->created_at,
+                    'items'       => $invItems,
+                ];
+            }
         }
 
         $result = array_values($customersData);
@@ -2370,9 +2372,172 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
+    public function loadMoreCustomerInvoices(
+        int $customerId,
+        int $offset = 30,
+        int $limit = 30,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+        ?int $userId = null,
+        ?int $paymentMethodId = null,
+        ?int $categoryId = null,
+        ?array $filterProductIds = null,
+        ?string $searchName = null
+    ): array {
+        $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
+        $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
+
+        $invoicesQuery = DB::table('invoices')
+            ->whereNull('invoices.deleted_at')
+            ->where('invoices.customer_id', $customerId)
+            ->when($df,     fn($q) => $q->where('invoices.created_at', '>=', $df))
+            ->when($dt,     fn($q) => $q->where('invoices.created_at', '<=', $dt))
+            ->when($userId, fn($q) => $q->where('invoices.user_id', $userId));
+
+        if ($paymentMethodId) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('payments')
+                ->whereColumn('payments.invoice_id', 'invoices.id')
+                ->whereNull('payments.deleted_at')
+                ->where('payments.payment_method_id', $paymentMethodId));
+        }
+
+        if ($categoryId) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where('products.category_id', $categoryId));
+        }
+
+        if (!empty($filterProductIds) || !empty($searchName)) {
+            $invoicesQuery->whereExists(fn($q) => $q->from('invoice_items')
+                ->join('products', 'products.id', '=', 'invoice_items.product_id')
+                ->whereColumn('invoice_items.invoice_id', 'invoices.id')
+                ->where(function($sub) use ($filterProductIds, $searchName) {
+                    if (!empty($filterProductIds)) {
+                        $sub->whereIn('products.id', $filterProductIds);
+                    }
+                    if ($searchName) {
+                        $terms = explode(',', $searchName);
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if ($term !== '') {
+                                $sub->orWhere('products.name', 'like', '%' . $term . '%');
+                            }
+                        }
+                    }
+                }));
+        }
+
+        $totalInvoices = (clone $invoicesQuery)->count();
+
+        $invoices = (clone $invoicesQuery)
+            ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at')
+            ->orderBy('invoices.created_at')
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return [
+                'invoices'    => [],
+                'has_more'    => false,
+                'next_offset' => $offset,
+            ];
+        }
+
+        $invoiceIds = $invoices->pluck('id')->toArray();
+
+        $itemsQuery = DB::table('invoice_items')
+            ->join('products', 'products.id', '=', 'invoice_items.product_id')
+            ->leftJoin('sizes', 'sizes.id', '=', 'invoice_items.size_id')
+            ->whereIn('invoice_items.invoice_id', $invoiceIds)
+            ->when($categoryId, fn($q) => $q->where('products.category_id', $categoryId))
+            ->select(
+                'invoice_items.invoice_id',
+                'products.id as product_id',
+                'products.name as product_name',
+                'invoice_items.unit_price',
+                'invoice_items.sale_type',
+                'sizes.value as size_value',
+                DB::raw('SUM(invoice_items.quantity) as total_quantity'),
+                DB::raw('SUM(invoice_items.line_total) as line_total')
+            )
+            ->groupBy(
+                'invoice_items.invoice_id',
+                'products.id',
+                'products.name',
+                'invoice_items.unit_price',
+                'invoice_items.sale_type',
+                'sizes.value'
+            )
+            ->get();
+
+        $itemsByInvoice = [];
+        foreach ($itemsQuery as $item) {
+            $isMatched = false;
+            if (!empty($filterProductIds) || !empty($searchName)) {
+                if (!empty($filterProductIds) && in_array($item->product_id, $filterProductIds)) {
+                    $isMatched = true;
+                } elseif (!empty($searchName)) {
+                    $terms = explode(',', $searchName);
+                    foreach ($terms as $term) {
+                        if (trim($term) !== '' && mb_stripos($item->product_name, trim($term)) !== false) {
+                            $isMatched = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            $item->is_matched = $isMatched;
+
+            if ($item->sale_type !== 'unit_based' && !empty($item->size_value) && (float)$item->size_value > 0) {
+                $singleSize = (float)$item->size_value;
+                $calculatedCount = (int)round($item->total_quantity / $singleSize);
+                $calculatedQty = $singleSize;
+            } else {
+                if ($item->sale_type === 'unit_based') {
+                    $calculatedCount = (float)$item->total_quantity;
+                    $calculatedQty = 1.0;
+                } else {
+                    $calculatedCount = 1;
+                    $calculatedQty = (float)$item->total_quantity;
+                }
+            }
+
+            $item->count = $calculatedCount;
+            $item->quantity = $calculatedQty;
+
+            $itemsByInvoice[$item->invoice_id][] = (array)$item;
+        }
+
+        $resultInvoices = [];
+        foreach ($invoices as $inv) {
+            $resultInvoices[] = [
+                'id'          => $inv->id,
+                'total'       => (float) $inv->total,
+                'paid_amount' => (float) $inv->paid_amount,
+                'due_amount'  => (float) $inv->due_amount,
+                'date'        => $inv->created_at,
+                'items'       => $itemsByInvoice[$inv->id] ?? [],
+            ];
+        }
+
+        $nextOffset = $offset + count($resultInvoices);
+        $hasMore = $nextOffset < $totalInvoices;
+
+        return [
+            'invoices'    => $resultInvoices,
+            'has_more'    => $hasMore,
+            'next_offset' => $nextOffset,
+        ];
+    }
+
     public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
+        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
 
@@ -2529,11 +2694,14 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
+
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
 
-        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
+        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
