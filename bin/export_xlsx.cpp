@@ -57,7 +57,7 @@ void renderCustomerBlock(
 
     grandTotalSum += customerTotalSum;
 
-    // Customer Bar: منصور — 100 فاتورة — 94,500.00 د.ل
+    // Customer Bar: العميل: منصور — 100 فاتورة — 94,500.00 د.ل
     char custBuf[1024];
     snprintf(custBuf, sizeof(custBuf), "العميل: %s — %zu فاتورة — %.2f د.ل",
              customerName.c_str(), customerInvoices.size(), customerTotalSum);
@@ -120,16 +120,18 @@ void renderCustomerBlock(
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Usage: export_xlsx <output_path.xlsx> [date_from] [date_to] [data_tsv_file] [product_names] [created_at]\n");
+        printf("Usage: export_xlsx <output_path.xlsx> <data_tsv_file>\n");
         return 1;
     }
 
     const char *outputPath   = argv[1];
-    const char *dateFrom     = (argc >= 3 && strlen(argv[2]) > 0 && strcmp(argv[2], "null") != 0) ? argv[2] : NULL;
-    const char *dateTo       = (argc >= 4 && strlen(argv[3]) > 0 && strcmp(argv[3], "null") != 0) ? argv[3] : NULL;
-    const char *tsvFilePath  = (argc >= 5 && strlen(argv[4]) > 0) ? argv[4] : NULL;
-    const char *pNamesStr    = (argc >= 6 && strlen(argv[5]) > 0 && strcmp(argv[5], "null") != 0) ? argv[5] : "الكل";
-    const char *createdAtStr = (argc >= 7 && strlen(argv[6]) > 0 && strcmp(argv[6], "null") != 0) ? argv[6] : "";
+    const char *tsvFilePath  = (argc >= 3) ? argv[2] : argv[1];
+    if (argc >= 3) {
+        outputPath = argv[1];
+        tsvFilePath = argv[2];
+    } else {
+        tsvFilePath = argv[1];
+    }
 
     lxw_workbook  *workbook  = workbook_new(outputPath);
     lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "فواتير العملاء");
@@ -219,23 +221,13 @@ int main(int argc, char *argv[]) {
     format_set_bg_color(grand_total_format, 0x1565C0);
     format_set_align(grand_total_format, LXW_ALIGN_CENTER);
 
-    // Title Block
-    worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
-    
-    worksheet_write_string(worksheet, 1, 0, "من تاريخ", info_label_format);
-    worksheet_write_string(worksheet, 1, 1, dateFrom ? dateFrom : "البداية", info_val_format);
-
-    worksheet_write_string(worksheet, 2, 0, "إلى تاريخ", info_label_format);
-    worksheet_write_string(worksheet, 2, 1, dateTo ? dateTo : "الآن", info_val_format);
-
-    worksheet_write_string(worksheet, 3, 0, "المنتجات المشمولة في الحساب", info_label_format);
-    worksheet_write_string(worksheet, 3, 1, pNamesStr, info_val_format);
-
-    worksheet_write_string(worksheet, 4, 0, "تاريخ الإنشاء", info_label_format);
-    worksheet_write_string(worksheet, 4, 1, createdAtStr, info_val_format);
-
     uint32_t r = 6;
     double grandTotalSum = 0.0;
+
+    std::string metaDateFrom = "البداية";
+    std::string metaDateTo   = "الآن";
+    std::string metaProducts = "الكل";
+    std::string metaCreatedAt = "";
 
     if (tsvFilePath != NULL) {
         std::ifstream file(tsvFilePath);
@@ -251,6 +243,16 @@ int main(int argc, char *argv[]) {
             while (std::getline(ss, item, '\t')) {
                 cols.push_back(item);
             }
+
+            // Check for #META header line
+            if (!cols.empty() && cols[0] == "#META") {
+                if (cols.size() >= 2 && !cols[1].empty()) metaDateFrom = cols[1];
+                if (cols.size() >= 3 && !cols[2].empty()) metaDateTo   = cols[2];
+                if (cols.size() >= 4 && !cols[3].empty()) metaProducts = cols[3];
+                if (cols.size() >= 5 && !cols[4].empty()) metaCreatedAt= cols[4];
+                continue;
+            }
+
             if (cols.size() < 10) continue;
 
             std::string custName = cols[0];
@@ -291,6 +293,21 @@ int main(int argc, char *argv[]) {
             );
         }
     }
+
+    // Write Title Block using accurate parsed metadata
+    worksheet_write_string(worksheet, 0, 0, "تقرير فواتير المبيعات حسب العملاء", title_format);
+    
+    worksheet_write_string(worksheet, 1, 0, "من تاريخ", info_label_format);
+    worksheet_write_string(worksheet, 1, 1, metaDateFrom.c_str(), info_val_format);
+
+    worksheet_write_string(worksheet, 2, 0, "إلى تاريخ", info_label_format);
+    worksheet_write_string(worksheet, 2, 1, metaDateTo.c_str(), info_val_format);
+
+    worksheet_write_string(worksheet, 3, 0, "المنتجات المشمولة في الحساب", info_label_format);
+    worksheet_write_string(worksheet, 3, 1, metaProducts.c_str(), info_val_format);
+
+    worksheet_write_string(worksheet, 4, 0, "تاريخ الإنشاء", info_label_format);
+    worksheet_write_string(worksheet, 4, 1, metaCreatedAt.c_str(), info_val_format);
 
     // Grand Total Row at the bottom
     r++;

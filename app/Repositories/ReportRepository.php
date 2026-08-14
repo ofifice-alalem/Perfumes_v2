@@ -2679,20 +2679,23 @@ class ReportRepository implements ReportRepositoryInterface
 
             $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COUNT(ii.id) AS item_count, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), SUM(ii.quantity), ii.unit_price, SUM(ii.line_total) FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' GROUP BY i.id, c.name, i.created_at, i.total, ii.product_id, ii.size_id, ii.unit_price, p.name, sz.label ORDER BY c.name ASC, i.id DESC";
 
+            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
+            $productNames = collect($includedProducts)->pluck('name')->toArray();
+            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
+            $createdAtStr = now()->format('Y-m-d H:i');
+
             $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
             $f = fopen($tmpTsv, 'w');
+
+            fwrite($f, "#META\t" . ($dateFrom ?? 'البداية') . "\t" . ($dateTo ?? now()->format('Y-m-d')) . "\t" . $productNamesStr . "\t" . $createdAtStr . "\n");
+
             $stmt = $pdo->query($sql);
             while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
                 fwrite($f, implode("\t", $row) . "\n");
             }
             fclose($f);
 
-            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-            $productNames = collect($includedProducts)->pluck('name')->toArray();
-            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
-            $createdAtStr = now()->format('Y-m-d H:i');
-
-            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . ($dateFrom ?? 'null') . '" "' . ($dateTo ?? 'null') . '" "' . $tmpTsv . '" "' . $productNamesStr . '" "' . $createdAtStr . '"';
+            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpTsv . '"';
             exec($cmdCpp, $out, $code);
 
             if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
