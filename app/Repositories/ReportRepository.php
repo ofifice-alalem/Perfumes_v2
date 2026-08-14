@@ -15,6 +15,8 @@ class ReportRepository implements ReportRepositoryInterface
 {
     public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 30): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $dateFrom = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateTo   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -751,6 +753,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds, null, $searchName);
 
         if ($compactView) {
@@ -924,6 +928,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
@@ -1001,6 +1007,8 @@ class ReportRepository implements ReportRepositoryInterface
     
     public function exportInventoryCountExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
 
         $spreadsheet = new Spreadsheet();
@@ -1063,6 +1071,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportInventoryCountPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
@@ -2099,6 +2109,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -2168,6 +2180,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
 
         $spreadsheet = new Spreadsheet();
@@ -2262,6 +2276,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
@@ -2314,6 +2330,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerCustomer = 30): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -2947,6 +2965,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -2996,6 +3016,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $filterProductIds, $searchName);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
@@ -3082,6 +3104,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
         $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $filterProductIds, $searchName);
@@ -3129,6 +3153,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerSupplier = 30): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -3630,6 +3656,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function returns(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -3777,6 +3805,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportReturnsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
@@ -3903,6 +3933,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportReturnsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g    = fn(string $text) => $arabic->utf8Glyphs($text);
         $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
@@ -3946,6 +3978,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
         $result = [];
@@ -4103,6 +4137,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
@@ -4205,6 +4241,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g  = fn($text) => $arabic->utf8Glyphs($text);
         $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
@@ -4286,6 +4324,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo, ?int $categoryId = null): array
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $dateFromFull = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dateToFull   = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
@@ -4610,6 +4650,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportProfitAnalysisExcel(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): void
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
 
         $productNames = collect($data['included_products'])->pluck('name')->toArray();
@@ -4707,6 +4749,8 @@ class ReportRepository implements ReportRepositoryInterface
 
     public function exportProfitAnalysisPdf(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
 
