@@ -1,7 +1,7 @@
 /*
- * High-Performance Native C++ Exporter for Perfumes_v2
- * Multi-Report Stream Engine (Sales & Purchases Invoices) with Dynamic Entity Labels
- * (العميل / المورد), Customer/Supplier Subtotals, Grand Total (الإجمالي الكلي) & Dinar (د.ل) Currency
+ * High-Performance Native C++ Exporter Engine for Perfumes_v2
+ * Universal Multi-Report Engine for ALL Excel Export Routes
+ * Supports: Invoices Grouped, Aging Reports, General Summaries, Stock Status & Product Movements.
  */
 
 #include <stdio.h>
@@ -130,17 +130,18 @@ int main(int argc, char *argv[]) {
     const char *tsvFilePath = (argc >= 3) ? argv[2] : argv[1];
 
     lxw_workbook  *workbook  = workbook_new(outputPath);
-    lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "تقرير الفواتير");
+    lxw_worksheet *worksheet = workbook_add_worksheet(workbook, "التقرير");
 
     // Enable Right-To-Left (RTL) Arabic layout
     worksheet_right_to_left(worksheet);
 
     // Column Widths
-    worksheet_set_column(worksheet, 0, 0, 16, NULL); // Column A: العدد / فاتورة رقم
-    worksheet_set_column(worksheet, 1, 1, 48, NULL); // Column B: المنتج / اسم العميل / التاريخ
-    worksheet_set_column(worksheet, 2, 2, 22, NULL); // Column C: الحجم / الإجمالي
-    worksheet_set_column(worksheet, 3, 3, 22, NULL); // Column D: السعر
-    worksheet_set_column(worksheet, 4, 4, 28, NULL); // Column E: الإجمالي
+    worksheet_set_column(worksheet, 0, 0, 18, NULL);
+    worksheet_set_column(worksheet, 1, 1, 48, NULL);
+    worksheet_set_column(worksheet, 2, 2, 24, NULL);
+    worksheet_set_column(worksheet, 3, 3, 24, NULL);
+    worksheet_set_column(worksheet, 4, 4, 28, NULL);
+    worksheet_set_column(worksheet, 5, 10, 24, NULL);
 
     // Formats
     lxw_format *title_format = workbook_add_format(workbook);
@@ -226,6 +227,9 @@ int main(int argc, char *argv[]) {
     std::string metaCreatedAt   = "";
     std::string metaReportTitle = "تقرير فواتير المبيعات حسب العملاء";
     std::string metaEntityLabel = "العميل";
+    std::string metaReportMode  = "invoices_grouped";
+    std::string metaExtraInfo1  = "";
+    std::string metaExtraInfo2  = "";
 
     if (tsvFilePath != NULL) {
         std::ifstream file(tsvFilePath);
@@ -250,42 +254,81 @@ int main(int argc, char *argv[]) {
                 if (cols.size() >= 5 && !cols[4].empty()) metaCreatedAt   = cols[4];
                 if (cols.size() >= 6 && !cols[5].empty()) metaReportTitle = cols[5];
                 if (cols.size() >= 7 && !cols[6].empty()) metaEntityLabel = cols[6];
+                if (cols.size() >= 8 && !cols[7].empty()) metaReportMode  = cols[7];
+                if (cols.size() >= 9 && !cols[8].empty()) metaExtraInfo1  = cols[8];
+                if (cols.size() >= 10 && !cols[9].empty()) metaExtraInfo2 = cols[9];
                 continue;
             }
 
-            if (cols.size() < 10) continue;
-
-            std::string entName = cols[0];
-            ItemRow row;
-            row.invoiceId   = atoi(cols[1].c_str());
-            row.invoiceDate = cols[2];
-            row.invoiceTotal= atof(cols[3].c_str());
-            row.itemCount   = atoi(cols[4].c_str());
-            row.productName = cols[5];
-            row.sizeLabel   = cols[6];
-            row.quantity    = atof(cols[7].c_str());
-            row.unitPrice   = atof(cols[8].c_str());
-            row.lineTotal   = atof(cols[9].c_str());
-
-            if (currentEntity.empty()) {
-                currentEntity = entName;
+            // Mode: SUMMARY_ROW / TABLE_HEADER / TABLE_ROW
+            if (!cols.empty() && cols[0] == "#SUMMARY") {
+                if (cols.size() >= 3) {
+                    worksheet_write_string(worksheet, r, 0, cols[1].c_str(), info_label_format);
+                    worksheet_write_string(worksheet, r, 1, cols[2].c_str(), info_val_format);
+                    r++;
+                }
+                continue;
             }
 
-            if (currentEntity != entName) {
-                renderEntityBlock(
-                    worksheet, r, currentEntity, metaEntityLabel, currentEntityItems, grandTotalSum,
-                    customer_format, inv_id_format, inv_date_format, inv_total_format,
-                    header_format, row_format, row_center_format, subtotal_format
-                );
-                currentEntity = entName;
-                currentEntityItems.clear();
+            if (!cols.empty() && cols[0] == "#TABLE_HEADER") {
+                r++;
+                for (size_t c = 1; c < cols.size(); c++) {
+                    worksheet_write_string(worksheet, r, c - 1, cols[c].c_str(), header_format);
+                }
+                r++;
+                continue;
             }
 
-            currentEntityItems.push_back(row);
+            if (!cols.empty() && cols[0] == "#TABLE_ROW") {
+                for (size_t c = 1; c < cols.size(); c++) {
+                    worksheet_write_string(worksheet, r, c - 1, cols[c].c_str(), row_format);
+                }
+                r++;
+                continue;
+            }
+
+            if (cols.size() < 4) continue;
+
+            // Invoices Grouped Mode
+            if (metaReportMode == "invoices_grouped" && cols.size() >= 10) {
+                std::string entName = cols[0];
+                ItemRow row;
+                row.invoiceId   = atoi(cols[1].c_str());
+                row.invoiceDate = cols[2];
+                row.invoiceTotal= atof(cols[3].c_str());
+                row.itemCount   = atoi(cols[4].c_str());
+                row.productName = cols[5];
+                row.sizeLabel   = cols[6];
+                row.quantity    = atof(cols[7].c_str());
+                row.unitPrice   = atof(cols[8].c_str());
+                row.lineTotal   = atof(cols[9].c_str());
+
+                if (currentEntity.empty()) {
+                    currentEntity = entName;
+                }
+
+                if (currentEntity != entName) {
+                    renderEntityBlock(
+                        worksheet, r, currentEntity, metaEntityLabel, currentEntityItems, grandTotalSum,
+                        customer_format, inv_id_format, inv_date_format, inv_total_format,
+                        header_format, row_format, row_center_format, subtotal_format
+                    );
+                    currentEntity = entName;
+                    currentEntityItems.clear();
+                }
+
+                currentEntityItems.push_back(row);
+            } else {
+                // General row writing
+                for (size_t c = 0; c < cols.size(); c++) {
+                    worksheet_write_string(worksheet, r, c, cols[c].c_str(), row_format);
+                }
+                r++;
+            }
         }
 
-        // Render last entity block
-        if (!currentEntityItems.empty()) {
+        // Render last entity block if in invoices_grouped mode
+        if (metaReportMode == "invoices_grouped" && !currentEntityItems.empty()) {
             renderEntityBlock(
                 worksheet, r, currentEntity, metaEntityLabel, currentEntityItems, grandTotalSum,
                 customer_format, inv_id_format, inv_date_format, inv_total_format,
@@ -309,19 +352,26 @@ int main(int argc, char *argv[]) {
     worksheet_write_string(worksheet, 4, 0, "تاريخ الإنشاء", info_label_format);
     worksheet_write_string(worksheet, 4, 1, metaCreatedAt.c_str(), info_val_format);
 
-    // Grand Total Row at the bottom
-    r++;
-    worksheet_write_string(worksheet, r, 0, "الإجمالي الكلي", grand_total_format);
-    worksheet_write_string(worksheet, r, 1, "", grand_total_format);
-    worksheet_write_string(worksheet, r, 2, "", grand_total_format);
-    worksheet_write_string(worksheet, r, 3, "", grand_total_format);
+    if (!metaExtraInfo1.empty()) {
+        worksheet_write_string(worksheet, 5, 0, "ملاحظات الإحصاء", info_label_format);
+        worksheet_write_string(worksheet, 5, 1, metaExtraInfo1.c_str(), info_val_format);
+    }
 
-    char grandTotalBuf[128];
-    snprintf(grandTotalBuf, sizeof(grandTotalBuf), "%.2f د.ل", grandTotalSum);
-    worksheet_write_string(worksheet, r, 4, grandTotalBuf, grand_total_format);
+    // Grand Total Row at the bottom if invoices_grouped
+    if (metaReportMode == "invoices_grouped" && grandTotalSum > 0.0) {
+        r++;
+        worksheet_write_string(worksheet, r, 0, "الإجمالي الكلي", grand_total_format);
+        worksheet_write_string(worksheet, r, 1, "", grand_total_format);
+        worksheet_write_string(worksheet, r, 2, "", grand_total_format);
+        worksheet_write_string(worksheet, r, 3, "", grand_total_format);
+
+        char grandTotalBuf[128];
+        snprintf(grandTotalBuf, sizeof(grandTotalBuf), "%.2f د.ل", grandTotalSum);
+        worksheet_write_string(worksheet, r, 4, grandTotalBuf, grand_total_format);
+    }
 
     workbook_close(workbook);
-    printf("SUCCESS: C++ Engine generated %d rows at %s (Grand Total: %.2f)\n", r, outputPath, grandTotalSum);
+    printf("SUCCESS: C++ Universal Engine generated %d rows at %s\n", r, outputPath);
 
     return 0;
 }
