@@ -2666,30 +2666,33 @@ class ReportRepository implements ReportRepositoryInterface
         @ini_set('memory_limit', '2048M');
         @set_time_limit(600);
 
-        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin/export_xlsx.exe') : base_path('bin/export_xlsx');
+        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx.exe') : base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx');
         if (file_exists($cppExe)) {
-            $tmpTsv  = tempnam(sys_get_temp_dir(), 'cpp_db_') . '.tsv';
-            $tmpXlsx = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.xlsx';
+            $storageDir = storage_path('app');
+            if (!file_exists($storageDir)) { @mkdir($storageDir, 0777, true); }
+
+            $tmpTsv  = $storageDir . DIRECTORY_SEPARATOR . 'cpp_db_' . uniqid() . '.tsv';
+            $tmpXlsx = $storageDir . DIRECTORY_SEPARATOR . 'cpp_exp_' . uniqid() . '.xlsx';
 
             $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
             $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
 
             $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), ii.quantity, ii.unit_price, ii.line_total FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' ORDER BY c.name ASC, i.id DESC, ii.id ASC";
 
-            $mysqlExe = PHP_OS_FAMILY === 'Windows' ? '"C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe"' : 'mysql';
-            $dbUser   = config('database.connections.mysql.username', 'root');
-            $dbPass   = config('database.connections.mysql.password', '12255');
-            $dbName   = config('database.connections.mysql.database', 'perfumes_v2');
-
-            $cmdDb = "{$mysqlExe} -u {$dbUser} -p{$dbPass} {$dbName} --default-character-set=utf8mb4 -B -N -e \"{$sql}\" > \"{$tmpTsv}\"";
-            exec($cmdDb);
+            $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $f = fopen($tmpTsv, 'w');
+            $stmt = $pdo->query($sql);
+            while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
+                fwrite($f, implode("\t", $row) . "\n");
+            }
+            fclose($f);
 
             $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . ($dateFrom ?? 'null') . '" "' . ($dateTo ?? 'null') . '" "' . $tmpTsv . '"';
             exec($cmdCpp, $out, $code);
 
             if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
                 $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-                header('X-Export-Engine: C++ Direct Stream Engine (Zero PHP DB Fetch)');
+                header('X-Export-Engine: C++ Static Binary Exporter');
                 header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
                 header('Content-Disposition: attachment; filename="' . $filename . '"');
                 header('Content-Length: ' . filesize($tmpXlsx));
@@ -2698,6 +2701,8 @@ class ReportRepository implements ReportRepositoryInterface
                 @unlink($tmpXlsx);
                 exit;
             }
+            @unlink($tmpTsv);
+            @unlink($tmpXlsx);
         }
 
         $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
