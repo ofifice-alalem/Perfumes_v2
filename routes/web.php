@@ -32,7 +32,10 @@ use App\Http\Controllers\LicenseController;
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
 Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
 Route::post('/license/deactivate', [LicenseController::class, 'deactivate'])->name('license.deactivate');
-Route::get('/license/developer', [LicenseController::class, 'developer'])->name('license.developer');
+// ─── POS Thermal Receipt Preview (Public Test Route for Xprinter POS 80) ────
+Route::get('/thermal-receipt', function () {
+    return view('thermal-receipt');
+})->name('thermal-receipt');
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {

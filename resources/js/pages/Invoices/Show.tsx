@@ -5,7 +5,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { RestoreModal } from '@/components/ui/RestoreModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit, Printer } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
@@ -191,6 +191,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                         </p>
                     </div>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <a href="/thermal-receipt" target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all font-black text-lg sm:text-2xl shadow-md active:scale-95">
+                            <Printer className="w-6 h-6 sm:w-7 sm:h-7" /> طباعة حرارية (POS 80)
+                        </a>
                         {!isCancelled && (
                             <Link href={`/invoices/${invoice.id}/edit`} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-slate-300 dark:border-white/20 bg-black/5 dark:bg-white/8 text-slate-800 dark:text-white hover:bg-black/10 transition-all font-black text-lg sm:text-2xl shadow-md active:scale-95">
                                 <Edit className="w-6 h-6 sm:w-7 sm:h-7" /> تعديل
