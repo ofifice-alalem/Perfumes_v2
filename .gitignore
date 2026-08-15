@@ -36,3 +36,8 @@ frankenphp-worker.php
 /bin/*.o
 /bin/*.lib
 /bin/libmysql.dll
+
+# Ignore dynamic user uploaded store and receipt logos
+/public/images/logo_*
+/public/images/receipt/*
+!/public/images/receipt/.gitkeep

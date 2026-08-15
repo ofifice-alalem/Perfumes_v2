@@ -4,7 +4,7 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
-  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive, BookOpen,
+  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive, BookOpen, Settings
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -68,12 +68,13 @@ const navSections: NavSection[] = [
     title: 'الإعدادات العامة والسياسات',
     roles: ['super-admin', 'admin', 'saler', 'cashier'],
     items: [
+      { icon: <Settings className="w-5 h-5 text-primary" />, label: 'إعدادات الفاتورة والنظام', href: '/settings', roles: ['super-admin', 'admin'] },
       { icon: <BarChart2 className="w-5 h-5" />, label: 'التقارير', href: '/reports', roles: ['super-admin', 'admin'] },
       { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods', roles: ['super-admin', 'admin'] },
       { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users', roles: ['super-admin', 'admin'] },
       { icon: <HardDrive className="w-5 h-5" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
       { icon: <RefreshCw className="w-5 h-5" />, label: 'الإقفال والجرد', href: '/periods', roles: ['super-admin'] },
-      { icon: <BookOpen className="w-5 h-5 text-primary" />, label: 'سياسات ودليل النظام', href: '/policy' },
+      { icon: <BookOpen className="w-5 h-5" />, label: 'سياسات ودليل النظام', href: '/policy' },
     ],
   },
 ];

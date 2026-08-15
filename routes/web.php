@@ -25,16 +25,39 @@ use App\Http\Controllers\BackupController;
 use App\Http\Controllers\PeriodController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PolicyController;
-
 use App\Http\Controllers\LicenseController;
+use App\Http\Controllers\SettingController;
 
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
 Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
 Route::post('/license/deactivate', [LicenseController::class, 'deactivate'])->name('license.deactivate');
-// ─── POS Thermal Receipt Preview (Public Test Route for Xprinter POS 80) ────
-Route::get('/thermal-receipt', function () {
-    return view('thermal-receipt');
+
+// ─── POS Thermal Receipt Preview & Printing (Dynamic by Invoice ID) ──────────
+Route::get('/thermal-receipt/{id?}', function ($id = 50621) {
+    $invoice = \App\Models\Invoice::with([
+        'customer', 
+        'user', 
+        'items.product', 
+        'items.size', 
+        'payments.paymentMethod', 
+        'settlements'
+    ])->find($id);
+
+    if (!$invoice) {
+        $invoice = \App\Models\Invoice::with([
+            'customer', 
+            'user', 
+            'items.product', 
+            'items.size', 
+            'payments.paymentMethod', 
+            'settlements'
+        ])->latest()->first();
+    }
+
+    $settings = \App\Models\Setting::getAll();
+
+    return view('thermal-receipt', compact('invoice', 'settings'));
 })->name('thermal-receipt');
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
@@ -78,6 +101,10 @@ Route::middleware('auth')->group(function () {
 
     // ── إدارة النظام — super-admin + admin ──────────────────────────────────
     Route::middleware('role:super-admin|admin')->group(function () {
+        // الإعدادات العامة للمحل والفاتورة
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
+
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
         Route::resource('sizes', SizeController::class)->except(['create', 'edit', 'show']);
         Route::resource('price-tiers', PriceTierController::class)->except(['create', 'edit', 'show']);
