@@ -27,38 +27,15 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\ThermalReceiptController;
 
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
 Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
 Route::post('/license/deactivate', [LicenseController::class, 'deactivate'])->name('license.deactivate');
 
-// ─── POS Thermal Receipt Preview & Printing (Dynamic by Invoice ID) ──────────
-Route::get('/thermal-receipt/{id?}', function ($id = 50621) {
-    $invoice = \App\Models\Invoice::with([
-        'customer', 
-        'user', 
-        'items.product', 
-        'items.size', 
-        'payments.paymentMethod', 
-        'settlements'
-    ])->find($id);
-
-    if (!$invoice) {
-        $invoice = \App\Models\Invoice::with([
-            'customer', 
-            'user', 
-            'items.product', 
-            'items.size', 
-            'payments.paymentMethod', 
-            'settlements'
-        ])->latest()->first();
-    }
-
-    $settings = \App\Models\Setting::getAll();
-
-    return view('thermal-receipt', compact('invoice', 'settings'));
-})->name('thermal-receipt');
+// ─── POS Thermal Receipt Preview & Printing ─────────────────────────────────
+Route::get('/thermal-receipt/{id?}', [ThermalReceiptController::class, 'show'])->name('thermal-receipt');
 
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {

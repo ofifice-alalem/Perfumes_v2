@@ -41,6 +41,9 @@ use App\Repositories\Contracts\ReportRepositoryInterface;
 use App\Repositories\ReportRepository;
 use App\Repositories\Contracts\AccountingPeriodRepositoryInterface;
 use App\Repositories\AccountingPeriodRepository;
+use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Repositories\SettingRepository;
+
 use App\Models\Category;
 use App\Models\Size;
 use App\Models\PriceTier;
@@ -59,6 +62,7 @@ use App\Models\Settlement;
 use App\Models\InvoiceReturn;
 use App\Models\WasteLog;
 use App\Models\AccountingPeriod;
+use App\Models\Setting;
 
 class RepositoryServiceProvider extends ServiceProvider
 {
@@ -83,5 +87,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(WasteLogRepositoryInterface::class, fn() => new WasteLogRepository(new WasteLog()));
         $this->app->bind(ReportRepositoryInterface::class, fn() => new ReportRepository());
         $this->app->bind(AccountingPeriodRepositoryInterface::class, fn() => new AccountingPeriodRepository(new AccountingPeriod()));
+        $this->app->bind(SettingRepositoryInterface::class, fn() => new SettingRepository(new Setting()));
     }
 }

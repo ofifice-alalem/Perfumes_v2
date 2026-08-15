@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>فاتورة #{{ $invoice->id }} - Xprinter POS 80</title>
+    <title>فاتورة مبيعات حرارية - Xprinter POS 80</title>
     <!-- Tajawal Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,9 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
         }
 
         html, body {
@@ -111,7 +114,7 @@
         }
 
         /* 
-           إزاحة 10mm إلى اليمين مع ألوان أسود وأبيض حرارية ناصعة 100%
+           إزاحة 10mm إلى اليمين مع حجم خط قابل للتعديل
         */
         .receipt-paper {
             width: 70mm;
@@ -122,7 +125,7 @@
             margin-right: 0 !important;
             padding: 4mm 3mm 10mm 3mm;
             box-sizing: border-box;
-            font-size: 10px;
+            font-size: {{ $settings['receipt_font_size'] ?? '10' }}px;
             line-height: 1.35;
             position: relative;
             border-top: 4px solid #1e293b;
@@ -174,14 +177,14 @@
         }
 
         .store-name {
-            font-size: 16px;
+            font-size: 1.5em;
             font-weight: 900;
             line-height: 1.2;
             margin-bottom: 2px;
         }
 
         .store-subname {
-            font-size: 8.5px;
+            font-size: 0.85em;
             font-weight: 800;
             color: #000;
             margin-bottom: 3px;
@@ -189,16 +192,19 @@
         }
 
         .store-details {
-            font-size: 8.5px;
+            font-size: 0.85em;
             line-height: 1.35;
             font-weight: 700;
         }
 
+        /* إجبار إظهار خلفية السوداء عند الطباعة */
         .receipt-title-badge {
             display: inline-block;
-            background: #000;
-            color: #fff;
-            font-size: 10px;
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            font-size: 0.95em;
             font-weight: 900;
             padding: 2.5px 8px;
             border-radius: 4px;
@@ -227,7 +233,7 @@
         .meta-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9.5px;
+            font-size: 0.95em;
         }
 
         .meta-table td {
@@ -262,7 +268,7 @@
             width: 100%;
             border-collapse: collapse;
             margin: 5px 0;
-            font-size: 9.5px;
+            font-size: 0.95em;
             table-layout: fixed;
         }
 
@@ -271,7 +277,7 @@
             border-bottom: 1.5px solid #000;
             padding: 3.5px 0;
             font-weight: 900;
-            font-size: 8.5px;
+            font-size: 0.85em;
         }
 
         .items-table td {
@@ -303,33 +309,40 @@
 
         .item-name {
             font-weight: 900;
-            font-size: 9.5px;
+            font-size: 0.95em;
             display: block;
             line-height: 1.25;
             word-wrap: break-word;
         }
 
-        /* الوسوم بالكامل أسود وأبيض تباين عالي */
+        /* الوسوم بالكامل أسود وأبيض تباين عالي مع إجبار ألوان الطباعة */
         .item-type-tag {
             display: inline-block;
-            font-size: 7.5px;
+            font-size: 0.75em;
             font-weight: 900;
             padding: 1px 4px;
             border-radius: 3px;
             margin-top: 2px;
             border: 1px solid #000;
             white-space: nowrap;
-            background: #ffffff;
+            background-color: #ffffff;
             color: #000000;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
         }
 
-        .tag-original { background: #000000; color: #ffffff; }
-        .tag-decant   { background: #ffffff; color: #000000; border: 1px solid #000; }
-        .tag-oil      { background: #ffffff; color: #000000; border: 1px solid #000; }
-        .tag-product  { background: #ffffff; color: #000000; border: 1px solid #000; }
+        .tag-original { 
+            background-color: #000000 !important; 
+            color: #ffffff !important; 
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .tag-decant   { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
+        .tag-oil      { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
+        .tag-product  { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
 
         .qty-price-text {
-            font-size: 8.5px;
+            font-size: 0.85em;
             color: #000;
             font-weight: 900;
             white-space: nowrap;
@@ -339,7 +352,7 @@
 
         .line-total-text {
             font-weight: 900;
-            font-size: 9.5px;
+            font-size: 0.95em;
             text-align: left;
             white-space: nowrap;
             direction: ltr;
@@ -350,7 +363,7 @@
         .totals-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9.5px;
+            font-size: 0.95em;
             margin-top: 4px;
         }
 
@@ -383,9 +396,9 @@
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
             padding: 5px 0;
-            font-size: 11.5px;
+            font-size: 1.1em;
             font-weight: 900;
-            background: #ffffff;
+            background-color: #ffffff;
             color: #000000;
         }
 
@@ -411,20 +424,20 @@
 
         .barcode-wrapper {
             font-family: 'Courier Prime', monospace;
-            font-size: 11px;
+            font-size: 1.1em;
             font-weight: 700;
             letter-spacing: 2px;
             margin: 3px 0;
         }
 
         .thank-you-msg {
-            font-size: 10px;
+            font-size: 1em;
             font-weight: 900;
             margin-top: 5px;
         }
 
         .policy-text {
-            font-size: 8px;
+            font-size: 0.8em;
             line-height: 1.35;
             font-weight: 700;
             margin-top: 6px;
@@ -446,6 +459,12 @@
            PRINT MEDIA QUERIES FOR XPRINTER POS 80
            ========================================================= */
         @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
             @page {
                 size: 80mm auto;
                 margin: 0mm !important;
@@ -485,6 +504,20 @@
                 display: none !important;
             }
 
+            .receipt-title-badge {
+                background-color: #000000 !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .tag-original {
+                background-color: #000000 !important;
+                color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
             .paper-feed-spacer {
                 height: 25mm !important;
                 display: block !important;
@@ -497,7 +530,7 @@
     <!-- ─── Control Bar for Web Preview & Printer Testing ─── -->
     <div class="controls-bar">
         <div class="controls-title">
-            <span>🖨️ معاينة فاتورة #{{ $invoice->id }} (حراري - أسود وأبيض)</span>
+            <span>🖨️ معاينة فاتورة مبيعات حرارية - Xprinter POS 80</span>
             <span class="badge-printer">80mm Thermal</span>
         </div>
 
@@ -670,7 +703,7 @@
                 <!-- Vector QR Code SVG -->
                 <div class="qr-wrapper">
                     <svg viewBox="0 0 100 100" fill="#000000">
-                        <path d="M0 0h30v30H0zM5 5v20h20V5zM10 10h10v10H10zM70 0h30v30H70zM75 5v20h20V5zM80 10h10v10H80zM0 70h30v30H0zM5 75v20h20V5zM10 80h10v10H10zM35 5h10v10H35zM50 5h10v5H50zM40 20h20v10H40zM35 35h10v10H35zM55 35h10v10H55zM75 35h10v10H75zM35 50h10v10H35zM50 50h15v5H50zM80 50h15v10H80zM35 65h10v10H35zM65 65h10v10H65zM35 80h10v20H35zM50 75h10v10H50zM65 85h25v15H65z"/>
+                        <path d="M0 0h30v30H0zM5 5v20h20V5zM10 10h10v10H10zM70 0h30v30H70zM75 5v20h20V5zM80 10h10v10H80zM0 70h30v30H0zM5 75v20h20V5zM10 80h10v10H10zM35 5h10v10H35zM50 5h10v5H50zM40 20h20v10H40zM35 35h10v10H35zM55 35h10v10H75zM35 50h10v10H35zM50 50h15v5H50zM80 50h15v10H80zM35 65h10v10H35zM65 65h10v10H65zM35 80h10v20H35zM50 75h10v10H50zM65 85h25v15H65z"/>
                     </svg>
                 </div>
 

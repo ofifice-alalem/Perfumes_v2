@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import {
   Settings as SettingsIcon, Printer, DollarSign, Users,
   RefreshCw, HardDrive, BookOpen, ChevronLeft, Store,
-  FileText, CheckCircle2, Save, Upload, Eye, ArrowRight, Sparkles
+  FileText, CheckCircle2, Save, Upload, Eye, ArrowRight, Type
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -15,6 +15,7 @@ interface SettingsProps {
     store_logo?: string;
     thank_you_message?: string;
     policy_notes?: string;
+    receipt_font_size?: string;
   };
   flash?: {
     success?: string;
@@ -35,6 +36,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     store_details: settings.store_details || '',
     thank_you_message: settings.thank_you_message || '',
     policy_notes: settings.policy_notes || '',
+    receipt_font_size: settings.receipt_font_size || '10',
     store_logo_file: null as File | null,
   });
 
@@ -60,7 +62,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
       id: 'receipt',
       icon: <Printer className="w-8 h-8" />,
       label: 'إعدادات الفاتورة الحرارية وترويسة المحل',
-      desc: 'تخصيص الشعار، اسم المحل، العناوين، ورسائل الشكر والسياسات المطبوعة على الفاتورة',
+      desc: 'تخصيص الشعار، حجم الخط، اسم المحل، العناوين، ورسائل الشكر والسياسات المطبوعة على الفاتورة',
       action: () => setActiveTab('receipt'),
       badge: 'تخصيص الفاتورة',
       active: true,
@@ -122,7 +124,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                 لوحة إعدادات النظام وتخصيص الفواتير
               </h1>
               <p className="text-base sm:text-xl font-bold text-slate-500 dark:text-slate-400 mt-1">
-                إدارة كاملة لهوية المحل، الفاتورة الحرارية، وسائل الدفع، والمستخدمين
+                إدارة كاملة لهوية المحل، الفاتورة الحرارية، حجم الخط، وسائل الدفع، والمستخدمين
               </p>
             </div>
           </div>
@@ -238,7 +240,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   </div>
 
                   <a
-                    href="/thermal-receipt/50621"
+                    href="/thermal-receipt"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary font-black text-xs hover:bg-primary/20 transition-all"
@@ -275,6 +277,35 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                         <span className="text-xs font-black text-rose-500">{errors.store_logo_file}</span>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                {/* Font Size Selector Control */}
+                <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/8">
+                  <label className="block text-sm font-black text-slate-700 dark:text-white/90 flex items-center gap-2">
+                    <Type className="w-4 h-4 text-primary" />
+                    حجم الخط الرئيسي للفاتورة (Font Size)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { size: '9', label: 'صغير (9px)' },
+                      { size: '10', label: 'عادي (10px)' },
+                      { size: '11', label: 'كبير (11px)' },
+                      { size: '12', label: 'كبير جداً (12px)' },
+                    ].map(opt => (
+                      <button
+                        type="button"
+                        key={opt.size}
+                        onClick={() => setData('receipt_font_size', opt.size)}
+                        className={`px-4 py-3 rounded-xl font-black text-sm border transition-all ${
+                          data.receipt_font_size === opt.size
+                            ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                            : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-white/80 hover:border-primary/40'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -400,25 +431,28 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   <span className="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600">POS 80mm</span>
                 </div>
 
-                {/* Simulated Paper Content */}
-                <div className="p-4 rounded-2xl bg-white text-black font-sans border border-slate-300 shadow-inner space-y-3 text-center text-xs leading-tight">
+                {/* Simulated Paper Content with Dynamic Font Size */}
+                <div
+                  className="p-4 rounded-2xl bg-white text-black font-sans border border-slate-300 shadow-inner space-y-3 text-center leading-tight transition-all"
+                  style={{ fontSize: `${data.receipt_font_size}px` }}
+                >
                   {/* Logo */}
                   {previewLogo && (
                     <div className="flex justify-center mb-2">
                       <img src={previewLogo} alt="شعار" className="h-12 w-auto object-contain max-w-[150px]" />
                     </div>
                   )}
-                  <div className="font-black text-sm">{data.store_name || 'اسم المحل'}</div>
-                  {data.store_subname && <div className="text-[10px] font-bold text-slate-600">{data.store_subname}</div>}
-                  <div className="text-[10px] text-slate-700 whitespace-pre-line">{data.store_details || 'تفاصيل المحل'}</div>
+                  <div className="font-black text-[1.4em]">{data.store_name || 'اسم المحل'}</div>
+                  {data.store_subname && <div className="text-[0.85em] font-bold text-slate-600">{data.store_subname}</div>}
+                  <div className="text-[0.85em] text-slate-700 whitespace-pre-line">{data.store_details || 'تفاصيل المحل'}</div>
 
-                  <div className="border-t border-b border-dashed border-black py-2 my-2 text-slate-400 font-mono text-[10px]">
+                  <div className="border-t border-b border-dashed border-black py-2 my-2 text-slate-400 font-mono text-[0.85em]">
                     [ ... الأصناف والإجماليات ... ]
                   </div>
 
                   {/* Thank You & Policy */}
-                  <div className="font-bold text-[11px] pt-1">{data.thank_you_message || 'نص الشكر'}</div>
-                  <div className="text-[9px] text-slate-600 border-t border-dashed border-black pt-2 whitespace-pre-line text-center">
+                  <div className="font-bold text-[1em] pt-1">{data.thank_you_message || 'نص الشكر'}</div>
+                  <div className="text-[0.8em] text-slate-600 border-t border-dashed border-black pt-2 whitespace-pre-line text-center">
                     {data.policy_notes || 'شروط الفاتورة والسياسات'}
                   </div>
                 </div>
