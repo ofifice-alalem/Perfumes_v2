@@ -147,6 +147,29 @@ class CreateInvoiceAction
                 $debtPaymentData
             );
 
+            // 8b. Record Inventory Movement Log (Phase 3 Requirement)
+            $inventoryLog = \App\Models\InventoryLog::create([
+                'user_id' => Auth::id() ?? 1,
+                'notes'   => "فاتورة مبيعات رقم #{$invoice->id}",
+            ]);
+
+            foreach ($itemsData as $itemData) {
+                $pid = $itemData['product_id'];
+                $qty = (float) $itemData['quantity'];
+                // Stock was decremented by InvoiceItemObserver upon InvoiceItem::create
+                $stockAfter = (float) Product::where('id', $pid)->value('stock');
+                $stockBefore = $stockAfter + $qty;
+
+                \App\Models\InventoryLogItem::create([
+                    'inventory_log_id' => $inventoryLog->id,
+                    'product_id'       => $pid,
+                    'system_stock'     => $stockBefore,
+                    'actual_stock'     => $stockAfter,
+                    'difference'       => -$qty,
+                    'reason'           => "بيع فاتورة #{$invoice->id}",
+                ]);
+            }
+
             // 9. Update final invoice totals & status using exact cent math
             $dueCents = max(0, $totalInvoiceCents - $totalPaidCents);
 

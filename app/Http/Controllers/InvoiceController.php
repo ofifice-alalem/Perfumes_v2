@@ -20,7 +20,10 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Http\Requests\UpdateInvoiceRequest;
 use App\Actions\Invoices\CreateInvoiceAction;
+use App\Actions\Invoices\UpdateInvoiceAction;
+use App\Actions\Invoices\CancelInvoiceAction;
 
 class InvoiceController extends Controller
 {
@@ -78,135 +81,19 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function update(Request $request, int $id): RedirectResponse
+    public function update(UpdateInvoiceRequest $request, int $id, UpdateInvoiceAction $action): RedirectResponse
     {
-        $data = $request->validate([
-            'customer_id'                    => 'nullable|exists:customers,id',
-            'customer_type'                  => 'nullable|in:regular,vip',
-            'notes'                          => 'nullable|string',
-            'items'                          => 'required|array|min:1',
-            'items.*.product_id'             => 'required|exists:products,id',
-            'items.*.size_id'                => 'nullable|exists:sizes,id',
-            'items.*.sale_type'              => 'required|in:tier_decant,unit_decant,full_bottle,unit_based',
-            'items.*.quantity'               => 'required|numeric|min:0.01',
-            'items.*.unit_price'             => 'required|numeric|min:0',
-            'items.*.line_total'             => 'required|numeric|min:0',
-            'payments'                       => 'nullable|array',
-            'payments.*.payment_method_id'   => 'required|exists:payment_methods,id',
-            'payments.*.amount'              => 'required|numeric|min:0.01',
-            'payments.*.notes'               => 'nullable|string',
-        ]);
-
-        $customerId = $request->input('customer_id');
-        $data['customer_id'] = ($customerId && $customerId !== 'null') ? (int)$customerId : 1;
-
-        DB::transaction(function () use ($data, $id) {
-            $invoice = \App\Models\Invoice::findOrFail($id);
-            $oldCustomerId = $invoice->customer_id;
-
-            // حذف العناصر القديمة (observer سيرجع المخزون)
-            foreach ($invoice->items as $item) {
-                $item->delete();
-            }
-
-            // تحديث بيانات الفاتورة
-            $customer = Customer::findOrFail($data['customer_id']);
-            $invoice->update([
-                'customer_id'     => $data['customer_id'],
-                'customer_type'   => $data['customer_type'] ?? ($customer->id === 1 ? 'regular' : ($customer->total_debt < 0 ? 'vip' : 'regular')),
-                'notes'           => $data['notes'] ?? null,
-            ]);
-
-            // إضافة العناصر الجديدة (observer سيخصم المخزون)
-            foreach ($data['items'] as $item) {
-                InvoiceItem::create([
-                    'invoice_id'  => $invoice->id,
-                    'product_id'  => $item['product_id'],
-                    'size_id'     => $item['size_id'] ?? null,
-                    'sale_type'   => $item['sale_type'],
-                    'quantity'    => $item['quantity'],
-                    'unit_price'  => $item['unit_price'],
-                    'line_total'  => $item['line_total'],
-                ]);
-            }
-
-            $invoice->refresh();
-
-            $existingPayments = Payment::where('invoice_id', $invoice->id)->get();
-            $newPaymentsList = $data['payments'] ?? [];
-
-            // إضافة وتحديث الدفعات
-            foreach ($newPaymentsList as $paymentData) {
-                $amount = (float) $paymentData['amount'];
-                if ($amount <= 0) continue;
-
-                $existing = $existingPayments->firstWhere('payment_method_id', $paymentData['payment_method_id']);
-                if ($existing) {
-                    $existing->update([
-                        'amount' => $amount,
-                        'notes'  => $paymentData['notes'] ?? null,
-                    ]);
-                    $existingPayments = $existingPayments->reject(fn($p) => $p->id === $existing->id);
-                } else {
-                    Payment::create([
-                        'customer_id'       => $invoice->customer_id,
-                        'user_id'           => Auth::id(),
-                        'invoice_id'        => $invoice->id,
-                        'payment_method_id' => $paymentData['payment_method_id'],
-                        'amount'            => $amount,
-                        'notes'             => $paymentData['notes'] ?? null,
-                        'created_at'        => now(),
-                    ]);
-                }
-            }
-
-            // حذف الدفعات التي لم تعد موجودة في التعديل الجديد
-            foreach ($existingPayments as $oldPayment) {
-                $oldPayment->delete();
-            }
-
-            // إعادة حساب العميل القديم إذا تغير
-            if ($oldCustomerId && $oldCustomerId !== $data['customer_id']) {
-                InvoiceItemObserver::recalculateCustomer($oldCustomerId);
-            }
-            if ($data['customer_id']) {
-                InvoiceItemObserver::recalculateCustomer($data['customer_id']);
-            }
-        });
+        $action->execute($id, $request->validated(), $request->getCustomerId());
 
         return redirect()->route('invoices.show', $id)->with('success', 'تم تحديث الفاتورة بنجاح');
     }
 
-    public function destroy(int $id): RedirectResponse
+    public function destroy(int $id, CancelInvoiceAction $action): RedirectResponse
     {
-        $invoice           = $this->invoices->findWithRelations($id);
-        $isCash            = $invoice->customer_id === 1;
-        $deletePayments    = $isCash ? true : request()->boolean('delete_payments', false);
-        $deleteSettlements = $isCash ? true : request()->boolean('delete_settlements', false);
+        $deletePayments    = request()->boolean('delete_payments', false);
+        $deleteSettlements = request()->boolean('delete_settlements', false);
 
-        DB::transaction(function () use ($invoice, $deletePayments, $deleteSettlements) {
-            foreach ($invoice->items as $item) {
-                Product::where('id', $item->product_id)->increment('stock', $item->quantity);
-            }
-
-            if ($deletePayments) {
-                Payment::where('invoice_id', $invoice->id)->delete();
-            } else {
-                Payment::where('invoice_id', $invoice->id)->update(['invoice_id' => null]);
-            }
-
-            if ($deleteSettlements) {
-                Settlement::where('invoice_id', $invoice->id)->delete();
-            } else {
-                Settlement::where('invoice_id', $invoice->id)->update(['invoice_id' => null]);
-            }
-
-            $invoice->delete();
-
-            if ($invoice->customer_id) {
-                InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
-            }
-        });
+        $action->execute($id, $deletePayments, $deleteSettlements);
 
         return redirect()->route('invoices.index')->with('success', 'تم إلغاء الفاتورة بنجاح');
     }
