@@ -43,13 +43,27 @@ class InvoiceItemObserver
         $this->syncCustomer($item);
     }
 
+    public static bool $muteSync = false;
+
+    public static function withoutSyncing(callable $callback): mixed
+    {
+        static::$muteSync = true;
+        try {
+            return $callback();
+        } finally {
+            static::$muteSync = false;
+        }
+    }
+
     private function syncInvoice(InvoiceItem $item): void
     {
+        if (static::$muteSync) return;
+
         $invoice = $item->invoice ?? \App\Models\Invoice::find($item->invoice_id);
         if (!$invoice) return;
 
         $invoice->total      = $invoice->items()->sum('line_total');
-        $invoice->due_amount = $invoice->total - $invoice->paid_amount;
+        $invoice->due_amount = max(0, $invoice->total - $invoice->paid_amount);
 
         $invoice->payment_status = match (true) {
             $invoice->paid_amount <= 0               => 'unpaid',
@@ -62,6 +76,8 @@ class InvoiceItemObserver
 
     private function syncCustomer(InvoiceItem $item): void
     {
+        if (static::$muteSync) return;
+
         $invoice = $item->invoice ?? \App\Models\Invoice::find($item->invoice_id);
         if (!$invoice || !$invoice->customer_id) return;
 

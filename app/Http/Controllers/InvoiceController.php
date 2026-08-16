@@ -45,9 +45,17 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Create', [
             'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
-            'products'       => Product::with(['category', 'priceTier.tierPrices.size', 'productPrice', 'originalPerfumeDetail'])
+            'products'       => Product::with([
+                    'category:id,name,unit,is_operational',
+                    'priceTier:id,name',
+                    'priceTier.tierPrices:id,tier_id,size_id,price_regular,price_vip',
+                    'priceTier.tierPrices.size:id,label,value,unit',
+                    'productPrice:id,product_id,price_per_unit_regular,price_per_unit_vip,full_bottle_regular,full_bottle_vip',
+                    'originalPerfumeDetail:id,product_id,bottle_volume',
+                ])
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
-                ->orderBy('name')->get(),
+                ->orderBy('name')
+                ->get(['id', 'name', 'category_id', 'price_tier_id', 'selling_type', 'stock', 'qrcode']),
             'sizes'          => Size::orderBy('label')->get(['id', 'label', 'value', 'unit']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
         ]);

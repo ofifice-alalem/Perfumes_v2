@@ -139,12 +139,16 @@ class CreateInvoiceAction
                 }
             }
 
-            // 8. Persist Invoice, Items, and Payments through Repository contract
-            $invoice = $this->invoices->createWithItems(
-                $invoiceData,
-                $itemsData,
-                $paymentsData,
-                $debtPaymentData
+            // 8. Persist Invoice, Items, and Payments through Repository contract without redundant per-item or per-payment syncs
+            $invoice = InvoiceItemObserver::withoutSyncing(
+                fn() => \App\Observers\PaymentObserver::withoutSyncing(
+                    fn() => $this->invoices->createWithItems(
+                        $invoiceData,
+                        $itemsData,
+                        $paymentsData,
+                        $debtPaymentData
+                    )
+                )
             );
 
             // 8b. Record Inventory Movement Log (Phase 3 Requirement)

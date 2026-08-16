@@ -712,8 +712,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 onFinish: () => setProcessing(false),
             });
         } else {
+            // Optimistic POS UI reset — clear form state immediately (0ms latency!)
+            clearForm();
             router.post('/invoices', payload, {
-                onSuccess: clearForm,
+                preserveScroll: true,
                 onFinish: () => setProcessing(false),
             });
         }
