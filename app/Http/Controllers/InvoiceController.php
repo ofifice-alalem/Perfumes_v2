@@ -24,6 +24,7 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Actions\Invoices\CreateInvoiceAction;
 use App\Actions\Invoices\UpdateInvoiceAction;
 use App\Actions\Invoices\CancelInvoiceAction;
+use App\Actions\Invoices\RestoreInvoiceAction;
 
 class InvoiceController extends Controller
 {
@@ -98,31 +99,9 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.index')->with('success', 'تم إلغاء الفاتورة بنجاح');
     }
 
-    public function restore(int $id): RedirectResponse
+    public function restore(int $id, RestoreInvoiceAction $action): RedirectResponse
     {
-        $invoice = \App\Models\Invoice::withTrashed()->findOrFail($id);
-
-        DB::transaction(function () use ($invoice) {
-            $invoice->restore();
-
-            // استعادة الدفعات المحذوفة المرتبطة بالفاتورة
-            Payment::onlyTrashed()
-                ->where('invoice_id', $invoice->id)
-                ->restore();
-
-            // استعادة التسويات المحذوفة المرتبطة بالفاتورة
-            Settlement::onlyTrashed()
-                ->where('invoice_id', $invoice->id)
-                ->restore();
-
-            foreach ($invoice->items as $item) {
-                Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
-            }
-
-            if ($invoice->customer_id && $invoice->customer_id) {
-                InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
-            }
-        });
+        $action->execute($id);
 
         return redirect()->route('invoices.show', $id)->with('success', 'تم استعادة الفاتورة بنجاح');
     }

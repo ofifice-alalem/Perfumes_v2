@@ -271,5 +271,55 @@ class InvoiceLifecycleInventoryTest extends TestCase
         $this->assertEquals(-4.0, (float)$deltaB);
         $this->assertEquals(10.00 + $deltaB, (float)$productB->fresh()->stock);
     }
+
+    public function test_invoice_restore_decrements_stock_records_inventory_log_and_prevents_double_restore()
+    {
+        $this->getAuthenticatedUser();
+
+        $category = Category::firstOrCreate(['name' => 'تست 3.1'], ['is_operational' => false, 'unit' => 'pcs']);
+        $product = Product::create([
+            'name' => 'عطر استعادة الجرد',
+            'category_id' => $category->id,
+            'selling_type' => 'unit_priced',
+            'stock' => 20,
+            'min_stock' => 1,
+        ]);
+        ProductPrice::create(['product_id' => $product->id, 'price_per_unit_regular' => 150.00, 'price_per_unit_vip' => 140.00]);
+
+        // 1. Create invoice for 5 units (stock drops to 15)
+        $this->post(route('invoices.store'), [
+            'customer_id' => 1,
+            'customer_type' => 'regular',
+            'items' => [['product_id' => $product->id, 'sale_type' => 'unit_based', 'quantity' => 5]],
+        ]);
+        $invoice = Invoice::latest()->first();
+        $this->assertEquals(15.00, (float)$product->fresh()->stock);
+
+        // 2. Delete invoice (stock restored back to 20)
+        $this->delete(route('invoices.destroy', $invoice->id));
+        $this->assertEquals(20.00, (float)$product->fresh()->stock);
+
+        // 3. Restore invoice (stock decremented back to 15, restore log recorded with difference -5)
+        $response = $this->post(route('invoices.restore', $invoice->id));
+        $response->assertRedirect(route('invoices.show', $invoice->id));
+        $this->assertEquals(15.00, (float)$product->fresh()->stock);
+
+        $restoreLog = InventoryLog::where('notes', 'like', '%استعادة فاتورة مبيعات%')->latest()->first();
+        $this->assertNotNull($restoreLog);
+
+        $logItem = InventoryLogItem::where('inventory_log_id', $restoreLog->id)
+            ->where('product_id', $product->id)
+            ->first();
+
+        $this->assertNotNull($logItem);
+        $this->assertEquals(20.00, (float)$logItem->system_stock);
+        $this->assertEquals(15.00, (float)$logItem->actual_stock);
+        $this->assertEquals(-5.00, (float)$logItem->difference);
+
+        // 4. Attempt double restore on active invoice -> expect validation error
+        $doubleRestoreResponse = $this->post(route('invoices.restore', $invoice->id));
+        $doubleRestoreResponse->assertSessionHasErrors('invoice');
+        $this->assertEquals(15.00, (float)$product->fresh()->stock);
+    }
 }
 
