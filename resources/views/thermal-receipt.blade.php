@@ -149,7 +149,7 @@
            RECEIPT CONTENT STYLING (PURE MONOCHROME B&W HIGH CONTRAST)
            ========================================================= */
 
-        /* ترويسة المحل واللقب */
+        /* ترويسة المحل واللقب مع الزخرفة الشرقية */
         .store-header {
             text-align: center;
             margin-bottom: 5px;
@@ -158,19 +158,43 @@
             width: 100%;
         }
 
-        /* رفع الشعار وتقليل المسافة من الأعلى فوق الشعار */
+        .logo-with-ornaments {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: -2px;
+            margin-bottom: 2px;
+            gap: 4px;
+        }
+
+        .header-ornament {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 14mm;
+            height: 15mm;
+        }
+
+        .header-ornament svg {
+            width: 100%;
+            height: 100%;
+            max-height: 15mm;
+            object-fit: contain;
+        }
+
         .store-logo-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: -2px;
-            margin-bottom: -4px;
-            width: 100%;
+            flex: 0 0 auto;
+            max-width: 42mm;
         }
 
         .store-logo-img {
-            max-width: 55mm;
-            max-height: 25mm;
+            max-width: 42mm;
+            max-height: 22mm;
             width: auto;
             height: auto;
             object-fit: contain;
@@ -206,18 +230,34 @@
 
         /* الوسم يحتوي على رقم الفاتورة */
         .receipt-title-badge {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             background-color: #000000 !important;
             color: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
             font-size: 0.9em;
             font-weight: 900;
-            padding: 3px 10px;
-            border-radius: 4px;
+            padding: 3px 4px 3px 10px;
+            border-radius: 3px;
             margin: 6px 0 2px 0;
             border: 1px solid #000000;
             letter-spacing: 0.3px;
+            gap: 6px;
+        }
+
+        .badge-number-box {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-weight: 900;
+            direction: ltr;
+            display: inline-block;
+            margin-right: 4px;
         }
 
         /* الخطوط الفاصلة */
@@ -301,6 +341,7 @@
             padding: 5px 4px;
             vertical-align: middle;
             border: 1px solid #000000;
+            font-weight: 500;
         }
 
         /* توسيع عمود المنتج وتصغير عمود الإجمالي لاستيعاب 4 أرقام */
@@ -321,7 +362,7 @@
         }
 
         .item-name {
-            font-weight: 900;
+            font-weight: 500;
             font-size: 0.95em;
             display: block;
             line-height: 1.25;
@@ -332,14 +373,14 @@
         .qty-price-text {
             font-size: 0.85em;
             color: #000000;
-            font-weight: 900;
+            font-weight: 500;
             white-space: nowrap;
             direction: ltr;
             display: inline-block;
         }
 
         .line-total-text {
-            font-weight: 900;
+            font-weight: 500;
             font-size: 0.95em;
             text-align: left;
             white-space: nowrap;
@@ -461,6 +502,8 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
+                image-rendering: pixelated !important;
+                image-rendering: -webkit-optimize-contrast !important;
             }
 
             @page {
@@ -487,6 +530,16 @@
                 display: block !important;
             }
 
+            .logo-with-ornaments {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+            }
+
+            .header-ornament {
+                display: flex !important;
+            }
+
             .receipt-paper {
                 width: 70mm !important;
                 max-width: 70mm !important;
@@ -505,6 +558,14 @@
             .receipt-title-badge {
                 background-color: #000000 !important;
                 color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                display: inline-flex !important;
+            }
+
+            .badge-number-box {
+                background-color: #ffffff !important;
+                color: #000000 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
@@ -548,11 +609,37 @@
 
             <!-- 1. Store Header & Identity (ديناميكي من الإعدادات) -->
             <div class="store-header">
-                @if(!empty($settings['store_logo']))
-                    <div class="store-logo-wrapper">
-                        <img src="{{ asset($settings['store_logo']) }}" alt="الشعار" class="store-logo-img">
+                <div class="logo-with-ornaments">
+                    <!-- زجاجة عطر يمين الشعار -->
+                    <div class="header-ornament ornament-right">
+                        <svg viewBox="0 0 60 70" fill="none" stroke="#000000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                            <rect x="23" y="3" width="14" height="11" rx="2" fill="#000000"/>
+                            <rect x="26" y="14" width="8" height="5" fill="#000000"/>
+                            <path d="M16 23 L26 19 H34 L44 23" stroke-width="2.5"/>
+                            <rect x="12" y="23" width="36" height="43" rx="4" stroke-width="2.5"/>
+                            <rect x="18" y="29" width="24" height="31" stroke-dasharray="2,2" stroke-width="1.5"/>
+                            <polygon points="30,36 34,44 30,52 26,44" fill="#000000" stroke="none"/>
+                        </svg>
                     </div>
-                @endif
+
+                    @if(!empty($settings['store_logo']))
+                        <div class="store-logo-wrapper">
+                            <img src="{{ asset($settings['store_logo']) }}" alt="الشعار" class="store-logo-img">
+                        </div>
+                    @endif
+
+                    <!-- زجاجة عطر يسار الشعار -->
+                    <div class="header-ornament ornament-left">
+                        <svg viewBox="0 0 60 70" fill="none" stroke="#000000" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
+                            <rect x="23" y="3" width="14" height="11" rx="2" fill="#000000"/>
+                            <rect x="26" y="14" width="8" height="5" fill="#000000"/>
+                            <path d="M16 23 L26 19 H34 L44 23" stroke-width="2.5"/>
+                            <rect x="12" y="23" width="36" height="43" rx="4" stroke-width="2.5"/>
+                            <rect x="18" y="29" width="24" height="31" stroke-dasharray="2,2" stroke-width="1.5"/>
+                            <polygon points="30,36 34,44 30,52 26,44" fill="#000000" stroke="none"/>
+                        </svg>
+                    </div>
+                </div>
                 <div class="store-name">{{ $settings['store_name'] ?? 'تاجوري للعطور الفاخرة' }}</div>
                 @if(!empty($settings['store_subname']))
                     <div class="store-subname">{{ $settings['store_subname'] }}</div>
@@ -561,7 +648,10 @@
                     {!! nl2br(e($settings['store_details'] ?? "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432")) !!}
                 </div>
                 <!-- الوسم الرئيسي يحتوي على رقم الفاتورة -->
-                <div class="receipt-title-badge">فاتورة مبيعات #{{ $invoice->id }}</div>
+                <div class="receipt-title-badge">
+                    <span>فاتورة مبيعات</span>
+                    <span class="badge-number-box">{{ $invoice->id }}</span>
+                </div>
             </div>
 
             <!-- 2. Invoice Meta Box -->
@@ -592,7 +682,7 @@
             <table class="items-table">
                 <thead>
                     <tr>
-                        <th class="col-name">البيان / المنتج</th>
+                        <th class="col-name">المنتج</th>
                         <th class="col-qty">الكمية × السعر</th>
                         <th class="col-total">الإجمالي</th>
                     </tr>
