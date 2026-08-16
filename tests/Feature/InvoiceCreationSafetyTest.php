@@ -31,7 +31,7 @@ class InvoiceCreationSafetyTest extends TestCase
         $user = $this->getAuthenticatedUser();
 
         // Create test category & product with price 500.00
-        $category = Category::firstOrCreate(['name' => 'تست'], ['is_operational' => false, 'unit' => 'unit']);
+        $category = Category::firstOrCreate(['name' => 'تست'], ['is_operational' => false, 'unit' => 'pcs']);
         $product = Product::create([
             'name' => 'عطر تست ثغرة الأسعار',
             'category_id' => $category->id,
@@ -102,7 +102,7 @@ class InvoiceCreationSafetyTest extends TestCase
     {
         $user = $this->getAuthenticatedUser();
 
-        $category = Category::firstOrCreate(['name' => 'تست'], ['is_operational' => false, 'unit' => 'unit']);
+        $category = Category::firstOrCreate(['name' => 'تست'], ['is_operational' => false, 'unit' => 'pcs']);
         $product = Product::create([
             'name' => 'عطر كمية محدودة',
             'category_id' => $category->id,
