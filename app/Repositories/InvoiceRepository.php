@@ -63,4 +63,23 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
             ])
             ->findOrFail($id);
     }
+
+    public function createWithItems(array $invoiceData, array $itemsData, array $paymentsData, ?array $debtPaymentData): Invoice
+    {
+        $invoice = $this->model->create($invoiceData);
+
+        foreach ($itemsData as $item) {
+            \App\Models\InvoiceItem::create(array_merge($item, ['invoice_id' => $invoice->id]));
+        }
+
+        foreach ($paymentsData as $payment) {
+            \App\Models\Payment::create(array_merge($payment, ['invoice_id' => $invoice->id]));
+        }
+
+        if (!empty($debtPaymentData)) {
+            \App\Models\Payment::create($debtPaymentData);
+        }
+
+        return $invoice;
+    }
 }
