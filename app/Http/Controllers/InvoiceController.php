@@ -57,8 +57,8 @@ class InvoiceController extends Controller
             'items.*.size_id'                => 'nullable|exists:sizes,id',
             'items.*.sale_type'              => 'required|in:tier_decant,unit_decant,full_bottle,unit_based',
             'items.*.quantity'               => 'required|numeric|min:0.01',
-            'items.*.unit_price'             => 'required|numeric|min:0',
-            'items.*.line_total'             => 'required|numeric|min:0',
+            'items.*.unit_price'             => 'nullable|numeric|min:0',
+            'items.*.line_total'             => 'nullable|numeric|min:0',
             'payments'                       => 'nullable|array',
             'payments.*.payment_method_id'   => 'required|exists:payment_methods,id',
             'payments.*.amount'              => 'required|numeric|min:0.01',
@@ -70,15 +70,49 @@ class InvoiceController extends Controller
 
         // إذا كان customer_id فارغاً أو null → زبون نقدي (id=1)
         $customerId = $request->input('customer_id');
-        $data['customer_id'] = ($customerId && $customerId !== 'null') ? (int)$customerId : 1;
+        $customerId = ($customerId && $customerId !== 'null') ? (int)$customerId : 1;
 
-        $invoice = DB::transaction(function () use ($data) {
-            $customer = Customer::findOrFail($data['customer_id']);
+        $invoice = DB::transaction(function () use ($data, $customerId) {
+            $customer = Customer::findOrFail($customerId);
+            $customerType = $data['customer_type'] ?? ($customer->id === 1 ? 'regular' : ($customer->total_debt < 0 ? 'vip' : 'regular'));
+            $isVip = $customerType === 'vip';
 
+            // 1. تجميع وتحديد الكميات المطلوبة لكل منتج لمنع خصم أكثر من المخزون عند تكرار نفس المنتج
+            $productQuantities = [];
+            foreach ($data['items'] as $item) {
+                $pid = (int) $item['product_id'];
+                $qty = (float) $item['quantity'];
+                $productQuantities[$pid] = ($productQuantities[$pid] ?? 0) + $qty;
+            }
+
+            // 2. حجز وقفل سجلات المنتجات لمنع تزامن الطلبات (Pessimistic Locking / Race Condition Protection)
+            $products = Product::with(['productPrice', 'priceTier.tierPrices', 'originalPerfumeDetail'])
+                ->whereIn('id', array_keys($productQuantities))
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            // 3. التحقق الصارم من توفر رصيد كافٍ قبل أي تعديل (Negative Stock Protection)
+            foreach ($productQuantities as $pid => $totalRequestedQty) {
+                $product = $products->get($pid);
+                if (!$product) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items' => "المنتج غير موجود (رمز: {$pid})"
+                    ]);
+                }
+
+                if ($product->stock < $totalRequestedQty) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items' => "المخزون غير كافٍ للمنتج ({$product->name}). المتاح: " . (float)$product->stock . " ، المطلوب: {$totalRequestedQty}"
+                    ]);
+                }
+            }
+
+            // 4. إنشاء الفاتورة الأساسية (تستدعي PeriodObserver تلقائياً لتثبيت period_id)
             $invoice = \App\Models\Invoice::create([
                 'user_id'         => Auth::id() ?? 1,
-                'customer_id'     => $data['customer_id'],
-                'customer_type'   => $data['customer_type'] ?? ($customer->id === 1 ? 'regular' : ($customer->total_debt < 0 ? 'vip' : 'regular')),
+                'customer_id'     => $customerId,
+                'customer_type'   => $customerType,
                 'total'           => 0,
                 'paid_amount'     => 0,
                 'due_amount'      => 0,
@@ -86,81 +120,141 @@ class InvoiceController extends Controller
                 'notes'           => $data['notes'] ?? null,
             ]);
 
-            InvoiceItem::withoutEvents(function () use ($invoice, $data) {
-                Payment::withoutEvents(function () use ($invoice, $data) {
-                    $totalInvoiceAmount = 0.0;
+            // 5. إنشاء عناصر الفاتورة بأسعار السيرفر الرسمية (بدون withoutEvents لعمل Observers و PeriodObserver و Auditing)
+            $totalInvoiceCents = 0;
 
-                    foreach ($data['items'] as $item) {
-                        $lineTotal = (float) $item['line_total'];
-                        $qty       = (float) $item['quantity'];
+            foreach ($data['items'] as $item) {
+                $pid      = (int) $item['product_id'];
+                $product  = $products->get($pid);
+                $qty      = (float) $item['quantity'];
+                $saleType = $item['sale_type'];
+                $sizeId   = !empty($item['size_id']) && is_numeric($item['size_id']) ? (int) $item['size_id'] : null;
 
-                        InvoiceItem::create([
-                            'invoice_id'  => $invoice->id,
-                            'product_id'  => $item['product_id'],
-                            'size_id'     => $item['size_id'] ?? null,
-                            'sale_type'   => $item['sale_type'],
-                            'quantity'    => $qty,
-                            'unit_price'  => $item['unit_price'],
-                            'line_total'  => $lineTotal,
-                        ]);
+                // احتساب السعر والإجمالي رسمياً في السيرفر (Fix #1: Never Trust Client Prices)
+                [$authoritativeUnitPrice, $authoritativeLineTotal] = $this->calculateAuthoritativePrices(
+                    $product,
+                    $saleType,
+                    $sizeId,
+                    $qty,
+                    $isVip
+                );
 
-                        \App\Models\Product::where('id', $item['product_id'])->decrement('stock', $qty);
-                        $totalInvoiceAmount += $lineTotal;
-                    }
+                // احتساب المبالغ بالأجزاء الصحيحة (Fix #4: Integer Cent Money Calculations)
+                $lineTotalCents = (int) round($authoritativeLineTotal * 100);
+                $totalInvoiceCents += $lineTotalCents;
 
-                    $totalPaidAmount = 0.0;
-                    foreach ($data['payments'] ?? [] as $payment) {
-                        $amount = (float) $payment['amount'];
-                        if ($amount <= 0) continue;
+                // إنشاء عنصر الفاتورة (InvoiceItemObserver يقضي بتنقيص المخزون وتحديث السجلات)
+                InvoiceItem::create([
+                    'invoice_id'  => $invoice->id,
+                    'product_id'  => $pid,
+                    'size_id'     => $sizeId,
+                    'sale_type'   => $saleType,
+                    'quantity'    => $qty,
+                    'unit_price'  => number_format($authoritativeUnitPrice, 2, '.', ''),
+                    'line_total'  => number_format($authoritativeLineTotal, 2, '.', ''),
+                ]);
+            }
 
-                        Payment::create([
-                            'customer_id'       => $invoice->customer_id,
-                            'user_id'           => Auth::id(),
-                            'invoice_id'        => $invoice->id,
-                            'payment_method_id' => $payment['payment_method_id'],
-                            'amount'            => $amount,
-                            'notes'             => $payment['notes'] ?? null,
-                            'created_at'        => now(),
-                        ]);
+            // 6. تسجيل الدفعات المرتبطة للفاتورة (بدون withoutEvents لعمل PeriodObserver و PaymentObserver و Auditing)
+            $totalPaidCents = 0;
+            foreach ($data['payments'] ?? [] as $payment) {
+                $amount = (float) $payment['amount'];
+                if ($amount <= 0) continue;
 
-                        $totalPaidAmount += $amount;
-                    }
+                $paymentCents = (int) round($amount * 100);
+                $totalPaidCents += $paymentCents;
 
-                    // دفعة سداد الدين المستقلة (غير مرتبطة بالفاتورة)
-                    if (!empty($data['debt_payment']) && $invoice->customer_id) {
-                        $dp = $data['debt_payment'];
-                        Payment::create([
-                            'customer_id'       => $invoice->customer_id,
-                            'user_id'           => Auth::id(),
-                            'invoice_id'        => null,
-                            'payment_method_id' => $dp['payment_method_id'],
-                            'amount'            => (float) $dp['amount'],
-                            'notes'             => 'سداد دين',
-                            'created_at'        => now(),
-                        ]);
-                    }
+                Payment::create([
+                    'customer_id'       => $invoice->customer_id,
+                    'user_id'           => Auth::id(),
+                    'invoice_id'        => $invoice->id,
+                    'payment_method_id' => $payment['payment_method_id'],
+                    'amount'            => number_format($amount, 2, '.', ''),
+                    'notes'             => $payment['notes'] ?? null,
+                    'created_at'        => now(),
+                ]);
+            }
 
-                    $invoice->total       = round($totalInvoiceAmount, 2);
-                    $invoice->paid_amount = round($totalPaidAmount, 2);
-                    $invoice->due_amount  = round($totalInvoiceAmount - $totalPaidAmount, 2);
-                    $invoice->payment_status = match (true) {
-                        $totalPaidAmount <= 0                   => 'unpaid',
-                        $totalPaidAmount >= $totalInvoiceAmount => 'paid',
-                        default                                 => 'partial',
-                    };
-                    $invoice->saveQuietly();
+            // 7. تسجيل دفعة سداد الدين المستقلة إن وجدت
+            if (!empty($data['debt_payment']) && $invoice->customer_id) {
+                $dp = $data['debt_payment'];
+                $dpAmount = (float) $dp['amount'];
+                if ($dpAmount > 0) {
+                    Payment::create([
+                        'customer_id'       => $invoice->customer_id,
+                        'user_id'           => Auth::id(),
+                        'invoice_id'        => null,
+                        'payment_method_id' => $dp['payment_method_id'],
+                        'amount'            => number_format($dpAmount, 2, '.', ''),
+                        'notes'             => 'سداد دين',
+                        'created_at'        => now(),
+                    ]);
+                }
+            }
 
-                    if ($invoice->customer_id) {
-                        \App\Observers\InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
-                    }
-                });
-            });
+            // 8. تحديث إجماليات الفاتورة والحالة وحفظ عادي لتأكيد العمليات
+            $dueCents = max(0, $totalInvoiceCents - $totalPaidCents);
+
+            $invoice->total       = number_format($totalInvoiceCents / 100, 2, '.', '');
+            $invoice->paid_amount = number_format($totalPaidCents / 100, 2, '.', '');
+            $invoice->due_amount  = number_format($dueCents / 100, 2, '.', '');
+            $invoice->payment_status = match (true) {
+                $totalPaidCents <= 0                  => 'unpaid',
+                $totalPaidCents >= $totalInvoiceCents => 'paid',
+                default                               => 'partial',
+            };
+            $invoice->save();
+
+            if ($invoice->customer_id) {
+                InvoiceItemObserver::recalculateCustomer($invoice->customer_id);
+            }
 
             return $invoice;
         });
 
         return redirect()->route('invoices.create')
             ->with('success', 'تم إنشاء فاتورة البيع بنجاح');
+    }
+
+    private function calculateAuthoritativePrices(Product $product, string $saleType, ?int $sizeId, float $qty, bool $isVip): array
+    {
+        $pp = $product->productPrice;
+        $pt = $product->priceTier;
+
+        $unitPrice = 0.0;
+        $lineTotal = 0.0;
+
+        switch ($saleType) {
+            case 'tier_decant':
+                if ($sizeId) {
+                    $tp = $pt?->tierPrices?->firstWhere('size_id', $sizeId);
+                    $unitPrice = (float) ($tp ? ($isVip ? $tp->price_vip : $tp->price_regular) : 0);
+
+                    $size = Size::find($sizeId);
+                    $sizeValue = $size ? (float) $size->value : 0;
+                    $count = ($sizeValue > 0) ? ($qty / $sizeValue) : 1;
+                    $lineTotal = $unitPrice * $count;
+                } else {
+                    $unitPrice = (float) ($pp ? ($isVip ? $pp->price_per_unit_vip : $pp->price_per_unit_regular) : 0);
+                    $lineTotal = $unitPrice * $qty;
+                }
+                break;
+
+            case 'unit_decant':
+            case 'unit_based':
+                $unitPrice = (float) ($pp ? ($isVip ? $pp->price_per_unit_vip : $pp->price_per_unit_regular) : 0);
+                $lineTotal = $unitPrice * $qty;
+                break;
+
+            case 'full_bottle':
+                $unitPrice = (float) ($pp ? ($isVip ? ($pp->full_bottle_vip ?? 0) : ($pp->full_bottle_regular ?? 0)) : 0);
+                $bottleVol = (float) ($product->originalPerfumeDetail?->bottle_volume ?? 0);
+                $count = ($bottleVol > 0) ? ($qty / $bottleVol) : 1;
+                $lineTotal = $unitPrice * $count;
+                break;
+        }
+
+        return [$unitPrice, $lineTotal];
     }
 
     public function show(int $id): Response
