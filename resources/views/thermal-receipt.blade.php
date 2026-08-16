@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>فاتورة مبيعات حرارية - Xprinter POS 80</title>
-    <!-- Tajawal Font -->
+    <!-- Tajawal & Courier Prime Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
     <style>
         /* =========================================================
-           RESET & GLOBAL STYLES (MONOCHROME B&W FOR THERMAL)
+           RESET & GLOBAL STYLES (MONOCHROME B&W HIGH CONTRAST)
            ========================================================= */
         *, *::before, *::after {
             box-sizing: border-box;
@@ -24,7 +24,7 @@
         html, body {
             width: 100%;
             background-color: #0f172a;
-            color: #1e293b;
+            color: #000000;
             font-family: 'Tajawal', sans-serif;
             -webkit-font-smoothing: antialiased;
         }
@@ -114,7 +114,7 @@
         }
 
         /* 
-           إزاحة 10mm إلى اليمين مع حجم خط قابل للتعديل
+           إزاحة 10mm محددة خصيصاً لمنع انقطاع الحواف بطابعات POS 80
         */
         .receipt-paper {
             width: 70mm;
@@ -123,12 +123,12 @@
             color: #000000;
             margin-left: 10mm !important;
             margin-right: 0 !important;
-            padding: 4mm 3mm 10mm 3mm;
+            padding: 1mm 3mm 1mm 3mm;
             box-sizing: border-box;
             font-size: {{ $settings['receipt_font_size'] ?? '10' }}px;
             line-height: 1.35;
             position: relative;
-            border-top: 4px solid #1e293b;
+            border-top: 4px solid #000000;
             font-weight: 700;
             direction: rtl;
             text-align: right;
@@ -146,23 +146,25 @@
         }
 
         /* =========================================================
-           RECEIPT CONTENT STYLING (PURE MONOCHROME B&W FOR THERMAL)
+           RECEIPT CONTENT STYLING (PURE MONOCHROME B&W HIGH CONTRAST)
            ========================================================= */
 
+        /* ترويسة المحل واللقب */
         .store-header {
             text-align: center;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
             padding-bottom: 5px;
-            border-bottom: 2px solid #000;
+            border-bottom: 2px solid #000000;
             width: 100%;
         }
 
-        /* صورة الشعار الديناميكية */
+        /* رفع الشعار وتقليل المسافة من الأعلى فوق الشعار */
         .store-logo-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-bottom: 4px;
+            margin-top: -2px;
+            margin-bottom: -4px;
             width: 100%;
         }
 
@@ -177,41 +179,48 @@
         }
 
         .store-name {
-            font-size: 1.5em;
+            font-size: 1.45em;
             font-weight: 900;
-            line-height: 1.2;
-            margin-bottom: 2px;
+            line-height: 1.15;
+            margin-top: -2px;
+            margin-bottom: 6px;
+            color: #000000;
         }
 
         .store-subname {
             font-size: 0.85em;
             font-weight: 800;
-            color: #000;
-            margin-bottom: 3px;
-            letter-spacing: 0.2px;
+            color: #000000;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
         .store-details {
-            font-size: 0.85em;
+            font-size: 0.82em;
             line-height: 1.35;
             font-weight: 700;
+            color: #000000;
+            margin-top: 4px;
         }
 
-        /* إجبار إظهار خلفية السوداء عند الطباعة */
+        /* الوسم يحتوي على رقم الفاتورة */
         .receipt-title-badge {
             display: inline-block;
             background-color: #000000 !important;
             color: #ffffff !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            font-size: 0.95em;
+            font-size: 0.9em;
             font-weight: 900;
-            padding: 2.5px 8px;
+            padding: 3px 10px;
             border-radius: 4px;
-            margin: 5px 0 3px 0;
+            margin: 6px 0 2px 0;
+            border: 1px solid #000000;
+            letter-spacing: 0.3px;
         }
 
-        /* Lines */
+        /* الخطوط الفاصلة */
         .dashed-line {
             border-top: 1px dashed #000000;
             margin: 5px 0;
@@ -224,38 +233,42 @@
             width: 100%;
         }
 
-        /* Invoice Meta Info Grid */
-        .meta-grid {
+        /* شبكة بيانات الفاتورة */
+        .meta-box {
             width: 100%;
-            margin-bottom: 4px;
+            margin-bottom: 5px;
+            border: 1px solid #000000;
+            border-radius: 4px;
+            padding: 4px 6px;
+            background-color: #ffffff;
         }
 
         .meta-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.95em;
+            font-size: 0.9em;
         }
 
         .meta-table td {
-            padding: 2.5px 0;
+            padding: 2px 0;
             vertical-align: middle;
         }
 
         .meta-label-cell {
             text-align: right;
-            font-weight: 700;
+            font-weight: 800;
             white-space: nowrap;
-            width: 36%;
-            padding-right: 1px;
+            width: 38%;
+            color: #000000;
         }
 
         .meta-value-cell {
             text-align: left;
             font-weight: 900;
-            width: 64%;
+            width: 62%;
             padding-left: 2px;
-            padding-right: 1px;
             word-break: break-all;
+            color: #000000;
         }
 
         .ltr-text {
@@ -263,48 +276,48 @@
             display: inline-block;
         }
 
-        /* Items Table */
+        /* جدول المنتجات الحراري المؤطر بحدود واضحة ومقاسات أعمدة مخصصة */
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 5px 0;
-            font-size: 0.95em;
+            margin: 6px 0;
+            font-size: 0.9em;
             table-layout: fixed;
+            border: 1px solid #000000;
         }
 
         .items-table th {
-            border-top: 1.5px solid #000;
-            border-bottom: 1.5px solid #000;
-            padding: 3.5px 0;
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 4px 2px;
             font-weight: 900;
             font-size: 0.85em;
+            border: 1px solid #000000;
         }
 
         .items-table td {
-            padding: 4px 0;
-            vertical-align: top;
-            border-bottom: 1px dashed #000000;
+            padding: 5px 4px;
+            vertical-align: middle;
+            border: 1px solid #000000;
         }
 
-        .items-table tr:last-child td {
-            border-bottom: none;
-        }
-
+        /* توسيع عمود المنتج وتصغير عمود الإجمالي لاستيعاب 4 أرقام */
         .col-name {
-            width: 48%;
+            width: 58%;
             text-align: right;
-            padding-right: 1px;
         }
 
         .col-qty {
-            width: 26%;
+            width: 25%;
             text-align: center;
         }
 
         .col-total {
-            width: 26%;
+            width: 17%;
             text-align: left;
-            padding-left: 2px;
+            white-space: nowrap;
         }
 
         .item-name {
@@ -313,37 +326,12 @@
             display: block;
             line-height: 1.25;
             word-wrap: break-word;
-        }
-
-        /* الوسوم بالكامل أسود وأبيض تباين عالي مع إجبار ألوان الطباعة */
-        .item-type-tag {
-            display: inline-block;
-            font-size: 0.75em;
-            font-weight: 900;
-            padding: 1px 4px;
-            border-radius: 3px;
-            margin-top: 2px;
-            border: 1px solid #000;
-            white-space: nowrap;
-            background-color: #ffffff;
             color: #000000;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
         }
-
-        .tag-original { 
-            background-color: #000000 !important; 
-            color: #ffffff !important; 
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-        .tag-decant   { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
-        .tag-oil      { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
-        .tag-product  { background-color: #ffffff !important; color: #000000 !important; border: 1px solid #000; }
 
         .qty-price-text {
             font-size: 0.85em;
-            color: #000;
+            color: #000000;
             font-weight: 900;
             white-space: nowrap;
             direction: ltr;
@@ -357,22 +345,22 @@
             white-space: nowrap;
             direction: ltr;
             display: inline-block;
+            color: #000000;
         }
 
-        /* Totals Section Table */
+        /* جدول الإجماليات ووسائل الدفع */
         .totals-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.95em;
+            font-size: 0.92em;
             margin-top: 4px;
         }
 
         .totals-table td {
-            padding: 3px 0;
+            padding: 3.5px 0;
             font-weight: 800;
         }
 
-        /* فواصل منقطة dotted بين وسائل الدفع */
         .payment-row td {
             border-top: 1px dotted #000000;
             padding: 3px 0;
@@ -382,6 +370,7 @@
             text-align: right;
             width: 58%;
             padding-right: 1px;
+            color: #000000;
         }
 
         .totals-value {
@@ -390,23 +379,35 @@
             font-weight: 900;
             padding-left: 2px;
             direction: rtl;
-        }
-
-        .grand-total-row td {
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
-            padding: 5px 0;
-            font-size: 1.1em;
-            font-weight: 900;
-            background-color: #ffffff;
             color: #000000;
         }
 
-        /* Footer & Barcodes */
+        /* مربع المتبقي والإجمالي النهائي الحاسم */
+        .grand-total-box {
+            border: 1.5px solid #000000;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin-top: 4px;
+            background-color: #ffffff;
+        }
+
+        .grand-total-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .grand-total-table td {
+            padding: 2px 0;
+            font-size: 1.05em;
+            font-weight: 900;
+            color: #000000;
+        }
+
+        /* التذييل والرموز والسياسات */
         .receipt-footer {
             text-align: center;
-            margin-top: 8px;
-            padding-top: 4px;
+            margin-top: 4px;
+            padding-top: 2px;
             width: 100%;
         }
 
@@ -414,7 +415,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            margin: 6px 0 4px 0;
+            margin: 4px 0 2px 0;
         }
 
         .qr-wrapper svg {
@@ -422,34 +423,31 @@
             height: 65px;
         }
 
-        .barcode-wrapper {
-            font-family: 'Courier Prime', monospace;
-            font-size: 1.1em;
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin: 3px 0;
-        }
-
         .thank-you-msg {
-            font-size: 1em;
+            font-size: 0.95em;
             font-weight: 900;
-            margin-top: 5px;
+            margin-top: 3px;
+            color: #000000;
         }
 
-        .policy-text {
-            font-size: 0.8em;
+        .policy-box {
+            font-size: 0.78em;
             line-height: 1.35;
             font-weight: 700;
-            margin-top: 6px;
-            border-top: 1px dashed #000;
-            padding: 6px 2px 0 2px;
+            margin-top: 4px;
+            border: 1px dashed #000000;
+            border-radius: 4px;
+            padding: 4px;
             text-align: center;
             word-break: break-word;
             width: 100%;
+            background-color: #ffffff;
+            color: #000000;
         }
 
+        /* تقليل المسافة في نهاية الفاتورة لتكون مدمجة للغاية وموفرة للورق */
         .paper-feed-spacer {
-            height: 22mm;
+            height: 3mm;
             width: 100%;
             clear: both;
             display: block;
@@ -494,7 +492,7 @@
                 max-width: 70mm !important;
                 margin-left: 10mm !important;
                 margin-right: 0 !important;
-                padding: 3mm 3mm 0mm 3mm !important;
+                padding: 1mm 3mm 0mm 3mm !important;
                 border-top: none !important;
                 box-shadow: none !important;
                 overflow: visible !important;
@@ -511,7 +509,7 @@
                 print-color-adjust: exact !important;
             }
 
-            .tag-original {
+            .items-table th {
                 background-color: #000000 !important;
                 color: #ffffff !important;
                 -webkit-print-color-adjust: exact !important;
@@ -519,7 +517,7 @@
             }
 
             .paper-feed-spacer {
-                height: 25mm !important;
+                height: 3mm !important;
                 display: block !important;
             }
         }
@@ -548,7 +546,7 @@
     <div class="receipt-paper-wrapper">
         <div class="receipt-paper" id="receiptPaper">
 
-            <!-- Store Header (ديناميكي من الإعدادات) -->
+            <!-- 1. Store Header & Identity (ديناميكي من الإعدادات) -->
             <div class="store-header">
                 @if(!empty($settings['store_logo']))
                     <div class="store-logo-wrapper">
@@ -562,16 +560,17 @@
                 <div class="store-details">
                     {!! nl2br(e($settings['store_details'] ?? "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432")) !!}
                 </div>
-                <div class="receipt-title-badge">فاتورة مبيعات / CASH RECEIPT</div>
+                <!-- الوسم الرئيسي يحتوي على رقم الفاتورة -->
+                <div class="receipt-title-badge">فاتورة مبيعات #{{ $invoice->id }}</div>
             </div>
 
-            <!-- Meta Information Table -->
-            <div class="meta-grid">
+            <!-- 2. Invoice Meta Box -->
+            @php
+                $custName = $invoice->customer->name ?? 'زبون نقدي';
+                $isCashCustomer = empty($custName) || $custName === 'زبون نقدي' || mb_strtolower(trim($custName)) === 'زبون نقدي';
+            @endphp
+            <div class="meta-box">
                 <table class="meta-table">
-                    <tr>
-                        <td class="meta-label-cell">رقم الفاتورة:</td>
-                        <td class="meta-value-cell"><span class="ltr-text">#INV-{{ $invoice->id }}</span></td>
-                    </tr>
                     <tr>
                         <td class="meta-label-cell">التاريخ والوقت:</td>
                         <td class="meta-value-cell"><span class="ltr-text">{{ $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A') }}</span></td>
@@ -580,16 +579,16 @@
                         <td class="meta-label-cell">الكاشير:</td>
                         <td class="meta-value-cell">{{ $invoice->user->name ?? ($invoice->user->username ?? 'سليم') }}</td>
                     </tr>
-                    <tr>
-                        <td class="meta-label-cell">العميل:</td>
-                        <td class="meta-value-cell">{{ $invoice->customer->name ?? 'زبون نقدي' }}</td>
-                    </tr>
+                    @if(!$isCashCustomer)
+                        <tr>
+                            <td class="meta-label-cell">العميل:</td>
+                            <td class="meta-value-cell">{{ $custName }}</td>
+                        </tr>
+                    @endif
                 </table>
             </div>
 
-            <div class="dashed-line"></div>
-
-            <!-- Items Table -->
+            <!-- 3. Items Table (جدول إلكتروني مؤطر بحدود أسود صلبة) -->
             <table class="items-table">
                 <thead>
                     <tr>
@@ -602,21 +601,12 @@
                     @foreach($invoice->items as $item)
                         @php
                             $saleType = (string)($item->sale_type ?? '');
-                            $typeTag = 'tag-product';
-                            $typeLabel = '📦 منتج / عبوة';
-                            if ($saleType === 'full_bottle') {
-                                $typeTag = 'tag-original';
-                                $typeLabel = '✨ عطر أصلي';
-                            } elseif ($saleType === 'unit_decant') {
-                                $typeTag = 'tag-decant';
-                                $typeLabel = '🧪 عطر تقسيم';
-                            } elseif ($saleType === 'tier_decant') {
-                                $typeTag = 'tag-oil';
-                                $typeLabel = '💧 عطر زيتي';
-                            }
-
                             $sizeLabel = $item->size ? ' (' . $item->size->label . ')' : '';
-                            $displayName = ($item->product ? $item->product->name : 'منتج') . $sizeLabel;
+                            
+                            // عند بيع عبوة عطر كاملة يتم إلحاق كلمة (عبوة) بجانب اسم المنتج
+                            $bottleSuffix = ($saleType === 'full_bottle') ? ' (عبوة)' : '';
+                            
+                            $displayName = ($item->product ? $item->product->name : 'منتج') . $sizeLabel . $bottleSuffix;
 
                             $rawQty = (float)$item->quantity;
                             $uPrice = (float)$item->unit_price;
@@ -633,12 +623,11 @@
 
                             $displayQty = (floor($calcQty) == $calcQty) ? number_format($calcQty, 0) : number_format($calcQty, 2);
                             $unitPrice = (floor($uPrice) == $uPrice) ? number_format($uPrice, 0) : number_format($uPrice, 2);
-                            $lineTotal = (floor($lTotal) == $lTotal) ? number_format($lTotal, 0) : number_format($lTotal, 2);
+                            $lineTotal = (floor($lTotal) == $lTotal) ? number_format($lTotal, 0) : number_format($lineTotal, 2);
                         @endphp
                         <tr>
                             <td class="col-name">
                                 <span class="item-name">{{ $displayName }}</span>
-                                <span class="item-type-tag {{ $typeTag }}">{{ $typeLabel }}</span>
                             </td>
                             <td class="col-qty">
                                 <span class="qty-price-text">{{ $unitPrice }} × {{ $displayQty }}</span>
@@ -653,7 +642,7 @@
 
             <div class="double-line"></div>
 
-            <!-- Financial Totals Table (فواصل dotted بين وسائل الدفع) -->
+            <!-- 4. Financial Totals & Payments Summary -->
             <table class="totals-table">
                 @php
                     $invTot = (float)$invoice->total;
@@ -688,26 +677,31 @@
                         <td class="totals-value"><span class="ltr-text">{{ $fmtPPaid }}</span> دينار</td>
                     </tr>
                 @endif
-
-                <tr class="grand-total-row">
-                    <td class="totals-label">المتبقي (Due):</td>
-                    <td class="totals-value"><span class="ltr-text">{{ $fmtInvDue }}</span> دينار</td>
-                </tr>
             </table>
+
+            <!-- Grand Total Box -->
+            <div class="grand-total-box">
+                <table class="grand-total-table">
+                    <tr>
+                        <td class="totals-label">المتبقي (Due):</td>
+                        <td class="totals-value"><span class="ltr-text">{{ $fmtInvDue }}</span> دينار</td>
+                    </tr>
+                </table>
+            </div>
 
             <div class="dashed-line"></div>
 
-            <!-- Receipt Footer & Verification (ديناميكي من الإعدادات) -->
+            <!-- 5. Footer, QR Code & Policy Box -->
             <div class="receipt-footer">
 
-                <!-- Vector QR Code SVG -->
-                <div class="qr-wrapper">
-                    <svg viewBox="0 0 100 100" fill="#000000">
-                        <path d="M0 0h30v30H0zM5 5v20h20V5zM10 10h10v10H10zM70 0h30v30H70zM75 5v20h20V5zM80 10h10v10H80zM0 70h30v30H0zM5 75v20h20V5zM10 80h10v10H10zM35 5h10v10H35zM50 5h10v5H50zM40 20h20v10H40zM35 35h10v10H35zM55 35h10v10H75zM35 50h10v10H35zM50 50h15v5H50zM80 50h15v10H80zM35 65h10v10H35zM65 65h10v10H65zM35 80h10v20H35zM50 75h10v10H50zM65 85h25v15H65z"/>
-                    </svg>
-                </div>
-
-                <div class="barcode-wrapper">*INV-{{ $invoice->id }}*</div>
+                @if(($settings['show_qr_code'] ?? '1') === '1')
+                    <!-- Vector QR Code SVG -->
+                    <div class="qr-wrapper">
+                        <svg viewBox="0 0 100 100" fill="#000000">
+                            <path d="M0 0h30v30H0zM5 5v20h20V5zM10 10h10v10H10zM70 0h30v30H70zM75 5v20h20V5zM80 10h10v10H80zM0 70h30v30H0zM5 75v20h20V5zM10 80h10v10H10zM35 5h10v10H35zM50 5h10v5H50zM40 20h20v10H40zM35 35h10v10H35zM55 35h10v10H75zM35 50h10v10H35zM50 50h15v5H50zM80 50h15v10H80zM35 65h10v10H35zM65 65h10v10H65zM35 80h10v20H35zM50 75h10v10H50zM65 85h25v15H65z"/>
+                        </svg>
+                    </div>
+                @endif
 
                 @if(!empty($settings['thank_you_message']))
                     <div class="thank-you-msg">
@@ -716,13 +710,13 @@
                 @endif
 
                 @if(!empty($settings['policy_notes']))
-                    <div class="policy-text">
+                    <div class="policy-box">
                         {!! nl2br(e($settings['policy_notes'])) !!}
                     </div>
                 @endif
             </div>
 
-            <!-- مسافة تلقيم تلقائي للورقة تمنع قاطع الطابعة من قطع الرمز والسياسات -->
+            <!-- مسافة تلقيم تلقائي مدمجة وموفرة للورق حرارياً -->
             <div class="paper-feed-spacer"></div>
 
         </div>

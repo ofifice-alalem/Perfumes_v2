@@ -34,6 +34,7 @@ class SettingController extends Controller
             'thank_you_message' => 'nullable|string',
             'policy_notes' => 'nullable|string',
             'receipt_font_size' => 'nullable|string|max:10',
+            'show_qr_code' => 'nullable|string|in:0,1',
             'store_logo_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:4096',
         ]);
 
@@ -58,6 +59,9 @@ class SettingController extends Controller
         }
         if ($request->has('receipt_font_size')) {
             $this->settingRepo->set('receipt_font_size', $request->input('receipt_font_size'));
+        }
+        if ($request->has('show_qr_code')) {
+            $this->settingRepo->set('show_qr_code', $request->input('show_qr_code'));
         }
 
         return redirect()->back()->with('success', 'تم حفظ إعدادات المحل والفاتورة بنجاح!');
