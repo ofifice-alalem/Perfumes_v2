@@ -713,7 +713,7 @@
 
                             $displayQty = (floor($calcQty) == $calcQty) ? number_format($calcQty, 0) : number_format($calcQty, 2);
                             $unitPrice = (floor($uPrice) == $uPrice) ? number_format($uPrice, 0) : number_format($uPrice, 2);
-                            $lineTotal = (floor($lTotal) == $lTotal) ? number_format($lTotal, 0) : number_format($lineTotal, 2);
+                            $lineTotal = (floor($lTotal) == $lTotal) ? number_format($lTotal, 0) : number_format($lTotal, 2);
                         @endphp
                         <tr>
                             <td class="col-name">
