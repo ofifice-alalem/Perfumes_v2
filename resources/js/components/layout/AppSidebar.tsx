@@ -68,7 +68,7 @@ const navSections: NavSection[] = [
     title: 'الإعدادات العامة والسياسات',
     roles: ['super-admin', 'admin', 'saler', 'cashier'],
     items: [
-      { icon: <Settings className="w-5 h-5 text-primary" />, label: 'إعدادات الفاتورة والنظام', href: '/settings', roles: ['super-admin', 'admin'] },
+      { icon: <Settings className="w-5 h-5 text-primary" />, label: 'الاعدادات', href: '/settings', roles: ['super-admin', 'admin'] },
       { icon: <BarChart2 className="w-5 h-5" />, label: 'التقارير', href: '/reports', roles: ['super-admin', 'admin'] },
       { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods', roles: ['super-admin', 'admin'] },
       { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users', roles: ['super-admin', 'admin'] },

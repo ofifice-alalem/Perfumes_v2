@@ -470,39 +470,116 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   <span className="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600">POS 80mm</span>
                 </div>
 
-                {/* Simulated Paper Content with Dynamic Font Size */}
+                {/* Simulated Paper Content with Dynamic Font Size and Real Sample Items */}
                 <div
-                  className="p-4 rounded-2xl bg-white text-black font-sans border border-slate-300 shadow-inner space-y-3 text-center leading-tight transition-all"
+                  className="p-3 rounded-2xl bg-white text-black font-sans border border-slate-300 shadow-inner leading-tight transition-all text-right dir-rtl select-none"
                   style={{ fontSize: `${data.receipt_font_size}px` }}
                 >
-                  {/* Logo */}
-                  {previewLogo && (
-                    <div className="flex justify-center mb-2">
-                      <img src={previewLogo} alt="شعار" className="h-12 w-auto object-contain max-w-[150px]" />
-                    </div>
-                  )}
-                  <div className="font-black text-[1.4em]">{data.store_name || 'اسم المحل'}</div>
-                  {data.store_subname && <div className="text-[0.85em] font-bold text-slate-600">{data.store_subname}</div>}
-                  <div className="text-[0.85em] text-slate-700 whitespace-pre-line">{data.store_details || 'تفاصيل المحل'}</div>
-
-                  <div className="border-t border-b border-dashed border-black py-2 my-2 text-slate-400 font-mono text-[0.85em]">
-                    [ ... الأصناف والإجماليات ... ]
-                  </div>
-
-                  {/* QR Code preview if enabled */}
-                  {data.show_qr_code === '1' && (
-                    <div className="flex justify-center my-2">
-                      <div className="w-12 h-12 border border-black p-1 flex items-center justify-center font-mono text-[9px] font-bold">
-                        [QR Code]
+                  {/* Header */}
+                  <div className="text-center pb-2 border-b-2 border-black">
+                    {previewLogo && (
+                      <div className="flex justify-center mb-1 -mt-1">
+                        <img src={previewLogo} alt="شعار" className="h-10 w-auto object-contain max-w-[140px]" />
                       </div>
+                    )}
+                    <div className="font-black text-[1.4em] leading-tight -mt-1 mb-1">{data.store_name || 'تاجوري للعطور الفاخرة'}</div>
+                    {data.store_subname && <div className="text-[0.85em] font-extrabold text-black mb-1 uppercase tracking-wide">{data.store_subname}</div>}
+                    <div className="text-[0.82em] text-black font-bold whitespace-pre-line mt-1">
+                      {data.store_details || "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432"}
                     </div>
-                  )}
-
-                  {/* Thank You & Policy */}
-                  <div className="font-bold text-[1em] pt-1">{data.thank_you_message || 'نص الشكر'}</div>
-                  <div className="text-[0.8em] text-slate-600 border-t border-dashed border-black pt-2 whitespace-pre-line text-center">
-                    {data.policy_notes || 'شروط الفاتورة والسياسات'}
+                    <div className="inline-block bg-black text-white text-[0.9em] font-black px-2.5 py-0.5 rounded mt-1.5 mb-0.5">
+                      فاتورة مبيعات #50621
+                    </div>
                   </div>
+
+                  {/* Meta Box */}
+                  <div className="border border-black rounded p-1.5 my-1.5 bg-white text-[0.9em] font-bold">
+                    <div className="flex justify-between py-0.5">
+                      <span>التاريخ والوقت:</span>
+                      <span dir="ltr" className="font-extrabold">2026-08-16 | 02:00 PM</span>
+                    </div>
+                    <div className="flex justify-between py-0.5">
+                      <span>الكاشير:</span>
+                      <span className="font-extrabold">سليم</span>
+                    </div>
+                  </div>
+
+                  {/* Sample Items Table matching thermal-receipt.blade.php exact layout */}
+                  <table className="w-full border-collapse border border-black my-1.5 text-[0.9em]">
+                    <thead>
+                      <tr className="bg-black text-white font-black text-[0.85em]">
+                        <th className="p-1 border border-black text-right w-[58%]">البيان / المنتج</th>
+                        <th className="p-1 border border-black text-center w-[25%]">الكمية × السعر</th>
+                        <th className="p-1 border border-black text-left w-[17%]">الإجمالي</th>
+                      </tr>
+                    </thead>
+                    <tbody className="font-black">
+                      <tr>
+                        <td className="p-1 border border-black text-right">سواك</td>
+                        <td className="p-1 border border-black text-center" dir="ltr">3 × 2</td>
+                        <td className="p-1 border border-black text-left" dir="ltr">6</td>
+                      </tr>
+                      <tr>
+                        <td class="p-1 border border-black text-right">لاكوست وايت (بخ 35)</td>
+                        <td className="p-1 border border-black text-center" dir="ltr">2 × 35</td>
+                        <td className="p-1 border border-black text-left" dir="ltr">70</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1 border border-black text-right">بوس داسنت (1 ملي)</td>
+                        <td className="p-1 border border-black text-center" dir="ltr">10 × 8</td>
+                        <td className="p-1 border border-black text-left" dir="ltr">80</td>
+                      </tr>
+                      <tr>
+                        <td className="p-1 border border-black text-right">هيرش لهب (عبوة)</td>
+                        <td className="p-1 border border-black text-center" dir="ltr">1 × 440</td>
+                        <td className="p-1 border border-black text-left" dir="ltr">440</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <div className="border-t-2 border-double border-black my-1"></div>
+
+                  {/* Totals Table */}
+                  <div className="space-y-1 text-[0.92em] font-extrabold my-1">
+                    <div className="flex justify-between">
+                      <span>المجموع الإجمالي:</span>
+                      <span><span dir="ltr">596</span> دينار</span>
+                    </div>
+                    <div className="flex justify-between border-t border-dotted border-black pt-1">
+                      <span>المدفوع (نقداً):</span>
+                      <span><span dir="ltr">596</span> دينار</span>
+                    </div>
+                  </div>
+
+                  {/* Grand Total / Due Box */}
+                  <div className="border-[1.5px] border-black rounded p-1 my-1 flex justify-between font-black text-[1em]">
+                    <span>المتبقي (Due):</span>
+                    <span><span dir="ltr">0</span> دينار</span>
+                  </div>
+
+                  <div className="border-t border-dashed border-black my-1"></div>
+
+                  {/* QR Code & Footer */}
+                  <div className="text-center space-y-1 pt-1">
+                    {data.show_qr_code === '1' && (
+                      <div className="flex justify-center my-1">
+                        <svg className="w-14 h-14" viewBox="0 0 100 100" fill="#000000">
+                          <path d="M0 0h30v30H0zM5 5v20h20V5zM10 10h10v10H10zM70 0h30v30H70zM75 5v20h20V5zM80 10h10v10H80zM0 70h30v30H0zM5 75v20h20V5zM10 80h10v10H10zM35 5h10v10H35zM50 5h10v5H50zM40 20h20v10H40zM35 35h10v10H35zM55 35h10v10H75zM35 50h10v10H35zM50 50h15v5H50zM80 50h15v10H80zM35 65h10v10H35zM65 65h10v10H65zM35 80h10v20H35zM50 75h10v10H50zM65 85h25v15H65z"/>
+                        </svg>
+                      </div>
+                    )}
+
+                    <div className="font-black text-[0.95em] pt-0.5">
+                      {data.thank_you_message || '✨ شكراً لزيارتكم! نتمنى لكم يوماً معطراً ✨'}
+                    </div>
+
+                    {data.policy_notes && (
+                      <div className="text-[0.78em] font-bold border border-dashed border-black rounded p-1 mt-1 leading-normal whitespace-pre-line text-center">
+                        {data.policy_notes}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
             </div>

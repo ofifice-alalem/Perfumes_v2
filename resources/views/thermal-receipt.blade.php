@@ -723,6 +723,14 @@
     </div>
 
     <script>
+        window.addEventListener('load', function() {
+            if (window.location.search.includes('autoplay=1') || window.self !== window.top) {
+                setTimeout(function() {
+                    window.print();
+                }, 200);
+            }
+        });
+
         function togglePaperSize() {
             const paper = document.getElementById('receiptPaper');
             const label = document.getElementById('paperWidthLabel');
