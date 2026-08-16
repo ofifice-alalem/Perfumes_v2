@@ -30,12 +30,17 @@ class InvoiceCreationSafetyTest extends TestCase
     {
         $user = $this->getAuthenticatedUser();
 
+        \App\Models\AccountingPeriod::firstOrCreate(
+            ['status' => 'open'],
+            ['name' => 'الفترة 1', 'started_at' => now(), 'created_by' => 1]
+        );
+
         // Create test category & product with price 500.00
         $category = Category::firstOrCreate(['name' => 'تست'], ['is_operational' => false, 'unit' => 'pcs']);
         $product = Product::create([
             'name' => 'عطر تست ثغرة الأسعار',
             'category_id' => $category->id,
-            'selling_type' => 'unit_based',
+            'selling_type' => 'unit_priced',
             'stock' => 10,
             'min_stock' => 1,
         ]);
@@ -106,7 +111,7 @@ class InvoiceCreationSafetyTest extends TestCase
         $product = Product::create([
             'name' => 'عطر كمية محدودة',
             'category_id' => $category->id,
-            'selling_type' => 'unit_based',
+            'selling_type' => 'unit_priced',
             'stock' => 5,
             'min_stock' => 1,
         ]);
