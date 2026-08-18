@@ -247,5 +247,49 @@ UPDATE waste_logs            SET period_id = @period_id WHERE period_id IS NULL;
 UPDATE waste_items           SET period_id = @period_id WHERE period_id IS NULL;
 ```
 
+---
+
+## 🖨️ إعداد وتثبيت محرك الطباعة الحرارية المباشرة (Node Thermal Printer Engine)
+
+يعتمد النظام على محرك طباعة مدمج فائق السرعة (`thermal-printer-engine`) لإرسال أوامر الطباعة المباشرة لجميع طابعات الفواتير (مثل POS-80 / XP-80) في جزء من الثانية (أقل من 0.1 ثانية) دون الحاجة لنوافذ المتصفح.
+
+### 1. تثبيت اعتماديات المحرك
+عند تثبيت المشروع على جهاز جديد، يجب تثبيت حزم النود الخاصة بالمحرك:
+```powershell
+cd thermal-printer-engine
+npm install
+cd ..
+```
+
+### 2. استثناء مجلد المحرك من فحص حماية الويندوز (Windows Defender Exclusion)
+لتفادي أي تأخير أثناء الفحص الأمني لملفات التجميع `raw-print.exe` عند أول طلب طباعة، يوصى بإضافة مجلد المحرك لقائمة الاستثناءات:
+
+**عبر أمر PowerShell (كأدمن):**
+```powershell
+Add-MpPreference -ExclusionPath "C:\path\to\Perfumes_v2\thermal-printer-engine"
+```
+
+**أو يدويًا عبر إعدادات الويندوز:**
+`Windows Security` ➔ `Virus & threat protection` ➔ `Manage settings` ➔ `Exclusions (Add or remove exclusions)` ➔ إضافة مجلد: `thermal-printer-engine`.
+
+### 3. تشغيل خادم الطباعة دائمًا في الخلفية (Background Daemon)
+
+ضمان استجابة الطباعة الفورية فور الضغط على الزر يتطلب تشغيل خادم `server.js` في خلفية النظام:
+
+**عبر مجلد بدء التشغيل تلقائيًا (Windows Startup):**
+1. اضغط `Win + R` واكتب `shell:startup` ثم وافق.
+2. أنشئ ملفاً جديداً باسم `start-printer.vbs` وضع بداخله:
+```vbs
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run "cmd /c cd /d C:\path\to\Perfumes_v2\thermal-printer-engine && node server.js", 0, False
+```
+
+**أو عبر PM2 Process Manager:**
+```cmd
+cd thermal-printer-engine
+npx pm2 start server.js --name "thermal-printer"
+npx pm2 save
+```
+
 
 php artisan migrate

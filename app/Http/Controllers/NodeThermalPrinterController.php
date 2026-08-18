@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use App\Models\Invoice;
 use App\Repositories\Contracts\SettingRepositoryInterface;
 use App\Repositories\Contracts\InvoiceRepositoryInterface;
 
@@ -143,19 +144,88 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Formats Eloquent Invoice model into expected Node printer JSON structure
+     */
+    protected function formatInvoiceForEngine($invoiceId = null)
+    {
+        if (!$invoiceId) {
+            return null;
+        }
+
+        $invoice = Invoice::with([
+            'customer',
+            'user',
+            'items.product',
+            'items.size',
+            'payments.paymentMethod',
+            'settlements'
+        ])->find($invoiceId);
+
+        if (!$invoice) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($invoice->items as $item) {
+            $productName = $item->product ? $item->product->name : 'منتج';
+            if ($item->size && !empty($item->size->label)) {
+                $productName .= ' (' . $item->size->label . ')';
+            }
+            $items[] = [
+                'name' => $productName,
+                'quantity' => (float)$item->quantity,
+                'price' => (float)$item->unit_price,
+                'total' => (float)$item->line_total,
+            ];
+        }
+
+        $payments = [];
+        if ($invoice->payments && $invoice->payments->count() > 0) {
+            foreach ($invoice->payments as $p) {
+                $payments[] = [
+                    'method' => $p->paymentMethod ? $p->paymentMethod->name : 'نقداً',
+                    'amount' => (float)$p->amount,
+                ];
+            }
+        } else {
+            $payments[] = [
+                'method' => 'نقداً',
+                'amount' => (float)$invoice->paid_amount,
+            ];
+        }
+
+        return [
+            'invoiceNumber' => (string)$invoice->id,
+            'date' => $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A'),
+            'cashier' => $invoice->user ? $invoice->user->name : 'كاشير',
+            'customerName' => $invoice->customer ? $invoice->customer->name : 'زبون نقدي',
+            'items' => $items,
+            'total' => (float)$invoice->total,
+            'paid' => (float)$invoice->paid_amount,
+            'due' => (float)$invoice->due_amount,
+            'payments' => $payments,
+        ];
+    }
+
+    /**
      * Generate Preview image via embedded printer engine
      */
     public function generatePreview(Request $request)
     {
         try {
             $this->syncEngineConfig();
+            $invoiceId = $request->input('invoice_id');
             $useMulti = $request->boolean('multi', true);
+            $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
 
             // 1. Try fast HTTP preview first
             try {
-                $response = Http::timeout(2)->post('http://127.0.0.1:9123/preview', [
-                    'multi' => $useMulti
-                ]);
+                $payload = ['multi' => $useMulti];
+                if ($realInvoiceData) {
+                    $payload['invoice'] = $realInvoiceData;
+                }
+
+                $response = Http::timeout(2)->post('http://127.0.0.1:9123/preview', $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
@@ -210,14 +280,21 @@ class NodeThermalPrinterController extends Controller
     {
         try {
             $this->syncEngineConfig();
+            $invoiceId = $request->input('invoice_id');
             $useMulti = $request->boolean('multi', true);
+            $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
 
             // 1. Try ultra-fast HTTP direct print first (Sub-100ms)
             try {
-                $response = Http::timeout(2)->post('http://127.0.0.1:9123/print', [
+                $payload = [
                     'multi' => $useMulti,
                     'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80')
-                ]);
+                ];
+                if ($realInvoiceData) {
+                    $payload['invoice'] = $realInvoiceData;
+                }
+
+                $response = Http::timeout(2)->post('http://127.0.0.1:9123/print', $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
