@@ -63,10 +63,15 @@ class InvoiceController extends Controller
 
     public function store(StoreInvoiceRequest $request, CreateInvoiceAction $action): RedirectResponse
     {
-        $action->execute($request->validated(), $request->getCustomerId());
+        $invoice = $action->execute($request->validated(), $request->getCustomerId());
+
+        if ($request->boolean('auto_print_node', true)) {
+            app(NodeThermalPrinterController::class)->dispatchDirectPrint($invoice->id);
+        }
 
         return redirect()->route('invoices.create')
-            ->with('success', 'تم إنشاء فاتورة البيع بنجاح');
+            ->with('success', 'تم إنشاء فاتورة البيع بنجاح')
+            ->with('created_invoice_id', $invoice->id);
     }
 
     public function show(int $id): Response

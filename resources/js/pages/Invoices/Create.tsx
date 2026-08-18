@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -59,7 +59,7 @@ interface Props {
     products: Product[];
     sizes: Size[];
     paymentMethods: PaymentMethod[];
-    flash?: { success?: string; error?: string };
+    flash?: { success?: string; error?: string; created_invoice_id?: number };
     editInvoice?: EditInvoice;
 }
 
@@ -199,6 +199,40 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     const [showCreditConfirm, setShowCreditConfirm] = useState(false);
     const [paymentManuallySet, setPaymentManuallySet] = useState(isEditMode);
     const [showPaymentDrawer, setShowPaymentDrawer] = useState(false);
+
+    const [autoPrintNode, setAutoPrintNodeState] = useState<boolean>(() => {
+        try {
+            const saved = localStorage.getItem('pos_auto_print_node');
+            return saved !== 'false';
+        } catch (e) {
+            return true;
+        }
+    });
+
+    const setAutoPrintNode = (val: boolean) => {
+        setAutoPrintNodeState(val);
+        try {
+            localStorage.setItem('pos_auto_print_node', val ? 'true' : 'false');
+        } catch (e) {}
+    };
+
+    const printedInvoicesRef = useRef<Set<string | number>>(new Set());
+
+    const triggerNodePrint = (invId: number | string) => {
+        if (!invId || printedInvoicesRef.current.has(invId)) return;
+        printedInvoicesRef.current.add(invId);
+
+        fetch('/settings/node-printer/print', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+            },
+            body: JSON.stringify({ invoice_id: invId, multi: true }),
+        }).catch(err => console.error('Auto print error:', err));
+    };
+
+
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -705,6 +739,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     amount: debtPayment.amount,
                 } : null,
             }),
+            auto_print_node: autoPrintNode,
         };
 
         if (isEditMode) {
@@ -1350,6 +1385,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 processing={processing}
                 selMethod={selMethod}
                 selAmount={selAmount}
+                autoPrintNode={autoPrintNode}
+                setAutoPrintNode={setAutoPrintNode}
                 setSelMethod={setSelMethod}
                 setSelAmount={setSelAmount}
                 setPayments={setPayments}

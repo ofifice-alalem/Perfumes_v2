@@ -274,6 +274,32 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Dispatch direct print job internally from PHP to Node daemon (Sub-10ms)
+     */
+    public function dispatchDirectPrint($invoiceId): bool
+    {
+        try {
+            $this->syncEngineConfig();
+            $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
+            if (!$realInvoiceData) {
+                return false;
+            }
+
+            $payload = [
+                'multi' => true,
+                'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80'),
+                'invoice' => $realInvoiceData
+            ];
+
+            $response = Http::timeout(1)->post('http://127.0.0.1:9123/print', $payload);
+            return $response->successful();
+        } catch (\Throwable $e) {
+            Log::error("dispatchDirectPrint error: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Send direct print RAW job via embedded printer engine
      */
     public function printDirect(Request $request)
@@ -282,7 +308,24 @@ class NodeThermalPrinterController extends Controller
             $this->syncEngineConfig();
             $invoiceId = $request->input('invoice_id');
             $useMulti = $request->boolean('multi', true);
-            $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
+            $isDemo = $request->boolean('demo', false);
+
+            $realInvoiceData = null;
+
+            if ($invoiceId) {
+                $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
+                if (!$realInvoiceData) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "تعذر العثور على الفاتورة رقم ($invoiceId) في قاعدة البيانات"
+                    ], 404);
+                }
+            } else if (!$isDemo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'يرجى تحديد رقم الفاتورة للطباعة'
+                ], 400);
+            }
 
             // 1. Try ultra-fast HTTP direct print first (Sub-100ms)
             try {

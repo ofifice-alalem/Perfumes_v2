@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, X, Plus, Edit, Trash2, Check } from 'lucide-react';
+import { Wallet, X, Plus, Edit, Trash2, Check, Printer } from 'lucide-react';
 import { CartItem } from './Cart';
 
 export interface PaymentEntry {
@@ -35,6 +35,8 @@ interface PaymentDrawerProps {
     processing: boolean;
     selMethod: string;
     selAmount: string;
+    autoPrintNode?: boolean;
+    setAutoPrintNode?: (v: boolean) => void;
     setSelMethod: (v: string) => void;
     setSelAmount: (v: string) => void;
     setPayments: React.Dispatch<React.SetStateAction<PaymentEntry[]>>;
@@ -67,6 +69,8 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     processing,
     selMethod,
     selAmount,
+    autoPrintNode = true,
+    setAutoPrintNode,
     setSelMethod,
     setSelAmount,
     setPayments,
@@ -241,6 +245,28 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
 
                 {/* Drawer Footer / Submit */}
                 <div className="px-6 sm:px-8 pt-5 pb-16 sm:pb-24 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col gap-3 shrink-0">
+                    {/* Auto-print Toggle Switch */}
+                    {setAutoPrintNode && (
+                        <div className="flex items-center justify-between px-5 py-3.5 rounded-[22px] bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
+                            <div className="flex items-center gap-3.5 min-w-0">
+                                <div className={`w-11 h-11 rounded-[16px] flex items-center justify-center font-black transition-all shrink-0 ${autoPrintNode ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                                    <Printer className="w-6 h-6" />
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">طباعة الفاتورة تلقائياً (Node ⚡)</span>
+                                    <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">طباعة الورقة في الطابعة الحرارية مباشرة عند إتمام البيع</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAutoPrintNode(!autoPrintNode)}
+                                className={`relative w-16 h-9 rounded-full transition-colors cursor-pointer p-1 border-2 shrink-0 ${autoPrintNode ? 'bg-emerald-600 border-emerald-500' : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600'}`}
+                            >
+                                <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform ${autoPrintNode ? 'translate-x-0' : '-translate-x-7'}`} />
+                            </button>
+                        </div>
+                    )}
+
                     {isCashCustomer && remaining > 0.01 && (
                         <div className="px-4 py-3 rounded-[16px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 font-black text-sm text-center">
                             ⚠️ زبون نقدي — يجب الدفع الكامل واستيفاء المبلغ المتبقي ({remaining.toFixed(2)} د.ل) قبل التأكيد
