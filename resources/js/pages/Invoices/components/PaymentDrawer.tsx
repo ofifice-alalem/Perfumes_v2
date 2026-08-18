@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, X, Plus, Edit, Trash2, Check, Printer } from 'lucide-react';
+import { Wallet, X, Plus, Edit, Trash2, Check, Printer, ChevronDown } from 'lucide-react';
 import { CartItem } from './Cart';
 
 export interface PaymentEntry {
@@ -84,6 +84,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     if (!showPaymentDrawer) return null;
 
     const selectedCustomerName = selectedCustomer?.name ?? 'زبون نقدي';
+    const [showDebtMethodModal, setShowDebtMethodModal] = useState<boolean>(false);
 
     return createPortal(
         <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
@@ -207,33 +208,51 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                     {/* Right Col — Payments Cards List */}
                     <div className="flex flex-col gap-3 w-full lg:w-1/2">
                         <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">الدفعات المسجلة في الفاتورة</label>
+
+                        {/* Debt Settlement Card in Right Column */}
                         {debtPayment && (
-                            <div className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-red-500/15 dark:bg-red-500/20 border-2 border-red-500/40 shadow-sm">
-                                <button
-                                    type="button"
-                                    onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                        setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                    }, originalDebt)}
-                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-amber-500/20 text-amber-600 dark:text-amber-300 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
-                                    title="تعديل القيمة"
-                                >
-                                    <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
-                                </button>
-                                <div className="flex flex-col min-w-0 flex-1">
-                                    <span className="font-black text-red-600 dark:text-red-300 text-xs sm:text-sm truncate">سداد الدين — {debtPayment.method_name}</span>
-                                    <span className="font-black text-slate-900 dark:text-white text-xl sm:text-[24px] truncate">{debtPayment.amount}</span>
+                            <div className="flex flex-col gap-2.5 p-4 sm:p-5 rounded-[22px] sm:rounded-[24px] bg-red-500/15 dark:bg-red-500/20 border-2 border-red-500/40 shadow-sm">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                                setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                            }, originalDebt)}
+                                            className="w-12 h-12 rounded-[16px] bg-amber-500/20 text-amber-600 dark:text-amber-300 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
+                                            title="تعديل القيمة"
+                                        >
+                                            <Edit className="w-5 h-5" />
+                                        </button>
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="font-black text-red-600 dark:text-red-300 text-xs sm:text-sm">سداد الدين السابق</span>
+                                            <span className="font-black text-slate-900 dark:text-white text-xl sm:text-[22px]">{debtPayment.amount} د.ل</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDebtPayment(null)}
+                                        className="w-11 h-11 rounded-[16px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-sm cursor-pointer"
+                                        title="إلغاء سداد الدين"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setDebtPayment(null)}
-                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-sm cursor-pointer"
-                                    title="حذف"
-                                >
-                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
-                                </button>
+
+                                {/* Active Debt Payment Method Display & Modal Trigger Button (Longer/Wider) */}
+                                <div className="flex items-center justify-between pt-2.5 border-t border-red-500/20">
+                                    <span className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">طريقة سداد الدين:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowDebtMethodModal(true)}
+                                        className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-sm flex items-center justify-between gap-3 shadow-md transition-all cursor-pointer min-w-[140px] sm:min-w-[170px]"
+                                    >
+                                        <span>{debtPayment.method_name}</span>
+                                        <ChevronDown className="w-4 h-4 text-white/80" />
+                                    </button>
+                                </div>
                             </div>
                         )}
-
                         {payments.length === 0 && !debtPayment ? (
                             <div className="flex-1 flex items-center justify-center min-h-[120px] text-slate-500 dark:text-slate-400 font-black text-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-[24px]">
                                 لم يتم إضافة أي دفعات بعد
@@ -258,7 +277,10 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
+                                        onClick={() => {
+                                            setPayments(prev => prev.filter((_, i) => i !== idx));
+                                            setPaymentManuallySet(true);
+                                        }}
                                         className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-sm cursor-pointer"
                                         title="حذف"
                                     >
@@ -290,6 +312,47 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                     </button>
                 </div>
             </div>
+
+            {/* Modal Choice for Debt Payment Method (Supports Light & Dark Modes) */}
+            {showDebtMethodModal && debtPayment && (
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 dir-rtl touch-manipulation">
+                    <div
+                        className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+                        onClick={() => setShowDebtMethodModal(false)}
+                    />
+                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[32px] p-6 shadow-2xl space-y-5 z-10 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
+                            <h4 className="text-xl font-black text-slate-900 dark:text-white">اختر طريقة سداد الدين</h4>
+                            <button
+                                type="button"
+                                onClick={() => setShowDebtMethodModal(false)}
+                                className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-600 dark:text-white transition-all active:scale-90 cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            {paymentMethods.map(m => (
+                                <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setDebtPayment(prev => prev ? { ...prev, payment_method_id: String(m.id), method_name: m.name } : null);
+                                        setShowDebtMethodModal(false);
+                                    }}
+                                    className={`h-20 rounded-2xl font-black text-lg transition-all border-2 flex items-center justify-center cursor-pointer active:scale-95 ${
+                                        String(debtPayment.payment_method_id) === String(m.id)
+                                            ? 'bg-red-600 border-red-500 text-white shadow-xl shadow-red-600/30'
+                                            : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-red-500/60'
+                                    }`}
+                                >
+                                    {m.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>,
         document.body
     );
