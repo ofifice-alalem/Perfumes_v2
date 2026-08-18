@@ -154,7 +154,11 @@ steps_v2/deployment_and_maintenance/
 3. **اختصار الطوارئ على سطح المكتب**:
    أنشئ اختصاراً على سطح المكتب لملف `steps_v2/deployment_and_maintenance/repair_and_recovery/repair_and_start.vbs` باسم `إصلاح وتشغيل النظام.vbs`.
 
----
+4. **اختصار تشغيل الكاشير والمبيعات (Kiosk / POS Mode Shortcut)**:
+   أنشئ اختصاراً على سطح المكتب بالهدف التالي لفتح المنظومة كتطبيق مستقل وبطباعة فورية صامتة:
+   ```cmd
+   "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk-printing --app=https://tajori.store --start-fullscreen --user-data-dir="C:\EdgeAppData"
+   ```
 
 ### 4️⃣ الخطوة الرابعة: تحسينات الذاكرة وتفادي خطأ 500 في التقارير
 

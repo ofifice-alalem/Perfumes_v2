@@ -291,5 +291,23 @@ npx pm2 start server.js --name "thermal-printer"
 npx pm2 save
 ```
 
+---
 
-php artisan migrate
+### 4. 🖥️ إنشاء اختصار تشغيل المنظومة المباشر على سطح المكتب (Edge Kiosk / POS Mode)
+
+لتشغيل المنظومة كعقار أو تطبيق محلي مستقل على الكاشير بدون شريط عناوين المتصفح وبدون ظهور نافذة إعدادات الطباعة عند استخدام الاسترداد المباشر:
+
+1. انقر بزر الماوس الأيمن على سطح المكتب ➔ `New` ➔ `Shortcut`.
+2. ضع المسار التالي في خانة **Target**:
+```cmd
+"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk-printing --app=https://tajori.store --start-fullscreen --user-data-dir="C:\EdgeAppData"
+```
+*(ملاحظة: إذا كان متصفح Edge في مجلد 64-bit، استخدم `"C:\Program Files\Microsoft\Edge\Application\msedge.exe"`)*
+
+3. سمّ الاختصار: **نظام تاجوري للعطور**.
+
+#### 💡 فوائد هذا الاختصار:
+* `--app=https://tajori.store`: تحويل الموقع إلى تطبيق مستقل بدون شريط عناوين أو تبويبات متصفح.
+* `--kiosk-printing`: الطباعة الفورية المباشرة بدون ظهور نافذة معاينة الطباعة الخاصة بالمتصفح.
+* `--start-fullscreen`: فتح المنظومة مباشرة ملء الشاشة لشاشات اللمس والـ POS.
+* `--user-data-dir="C:\EdgeAppData"`: إنشاء جلسة تصفح معزولة تماماً لمنع التعارض مع تصفح الإنترنت العادي على الجهاز.
