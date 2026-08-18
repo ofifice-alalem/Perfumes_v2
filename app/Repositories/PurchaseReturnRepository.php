@@ -48,7 +48,7 @@ class PurchaseReturnRepository extends Repository implements PurchaseReturnRepos
     {
         return $this->model
             ->withTrashed()
-            ->with(['supplier', 'purchase', 'items.product', 'settlements.paymentMethod'])
+            ->with(['supplier', 'user', 'purchase', 'items.product', 'settlements.paymentMethod'])
             ->findOrFail($id);
     }
 }

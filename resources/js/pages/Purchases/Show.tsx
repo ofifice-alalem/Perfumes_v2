@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, User, UserCheck, Clock, FileText } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
@@ -29,7 +29,7 @@ interface PurchaseReturn {
     settlement: SupplierSettlement | null;
 }
 interface Purchase {
-    id: number; supplier: Supplier;
+    id: number; supplier: Supplier; user: { name: string } | null;
     total: string; paid_amount: string; due_amount: string;
     payment_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null; created_at: string;
@@ -57,6 +57,25 @@ const statusClass  = {
 function fmt(v: string | number) {
     const n = typeof v === 'string' ? parseFloat(v) : v;
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(dStr: string) {
+    if (!dStr) return '—';
+    try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return dStr;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${yyyy}-${mm}-${dd} | ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    } catch {
+        return dStr;
+    }
 }
 
 export default function PurchasesShow({ purchase, paymentMethods, flash }: Props) {
@@ -132,38 +151,36 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
     return (
         <>
         <AppShell pageTitle={`فاتورة شراء #${purchase.id}`}>
-            <div className="flex flex-col gap-8 pb-32 lg:pb-0">
+            <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
-                {/* Header Section */}
+                {/* Header Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                        <Link href="/purchases" className="w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] bg-black/5 dark:bg-white/8 border-2 border-black/5 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-white hover:bg-black/10 transition-all shrink-0 active:scale-95 shadow-sm">
-                            <ArrowRight className="w-6 h-6 sm:w-7 sm:h-7" />
+                    <div className="flex items-center gap-3">
+                        <Link href="/purchases" className="flex items-center justify-center p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white transition-all active:scale-95 border border-slate-200 dark:border-white/10 shadow-sm shrink-0" title="رجوع للمشتريات">
+                            <ArrowRight className="w-6 h-6" />
                         </Link>
-                        <div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">فاتورة شراء #{purchase.id}</h1>
-                                <span className={`text-base font-black px-4 py-2 rounded-[14px] ${statusClass[purchase.payment_status]}`}>
-                                    {statusLabel[purchase.payment_status]}
-                                </span>
-                                {isCancelled && (
-                                    <span className="text-base font-black px-4 py-2 rounded-[14px] bg-red-500/10 text-red-500 border border-red-500/20">ملغية</span>
-                                )}
-                            </div>
-                            <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">المورد: {purchase.supplier.name}</p>
+
+                        <div className="flex items-center gap-2.5">
+                            <span className="px-4 py-2 rounded-2xl bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 font-black text-xl shadow-md">
+                                #{purchase.id}
+                            </span>
+                            <span className={`text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl border ${statusClass[purchase.payment_status]}`}>
+                                {statusLabel[purchase.payment_status]}
+                            </span>
+                            {isCancelled && <span className="text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500">ملغية</span>}
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                         {isCancelled ? (
                             <button onClick={() => router.post(`/purchases/${purchase.id}/restore`)}
-                                className="px-7 sm:px-9 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3">
-                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة الفاتورة
+                                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-sm sm:text-base shadow-sm active:scale-95">
+                                <RotateCcw className="w-5 h-5" /> استعادة الفاتورة
                             </button>
                         ) : (
                             <Link href={`/purchase-returns/create?purchase_id=${purchase.id}&supplier_id=${purchase.supplier.id}`}
-                                className="px-7 sm:px-9 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl border-2 border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all active:scale-95 shadow-xl flex items-center justify-center gap-3">
-                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> إنشاء مرتجع
+                                className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500 hover:text-white transition-all font-black text-sm sm:text-base shadow-sm active:scale-95">
+                                <RotateCcw className="w-5 h-5" /> إنشاء مرتجع
                             </Link>
                         )}
                     </div>
@@ -171,36 +188,83 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
 
                 {/* Flash Messages */}
                 {flash?.success && (
-                    <div className="px-6 py-4 rounded-[22px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg sm:text-xl shadow-sm">
+                    <div className="px-6 py-4 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-xl">
                         {flash.success}
                     </div>
                 )}
                 {flash?.error && (
-                    <div className="px-6 py-4 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg sm:text-xl shadow-sm">
+                    <div className="px-6 py-4 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-base sm:text-xl">
                         {flash.error}
                     </div>
                 )}
 
-                {/* KPI Summary Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                    {[
-                        { label: 'إجمالي الفاتورة', value: `${fmt(purchase.total)} د.ل`, color: 'text-slate-800 dark:text-white' },
-                        { label: 'إجمالي المدفوع',  value: `${fmt(purchase.paid_amount)} د.ل`, color: 'text-emerald-600 dark:text-emerald-400' },
-                        { label: 'المبلغ المتبقي',  value: `${fmt(purchase.due_amount)} د.ل`, color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
-                        { label: 'دين المورد الكلي', value: `${fmt(purchase.supplier.total_debt)} د.ل`, color: supplierDebt > 0 ? 'text-purple-500' : 'text-slate-400 dark:text-white/40' },
-                    ].map((s, idx) => (
-                        <div key={idx} className="p-6 sm:p-7 rounded-[28px] bg-white dark:bg-slate-900 border-2 border-black/5 dark:border-white/10 shadow-lg flex flex-col gap-2">
-                            <span className="text-xs sm:text-sm font-black text-slate-400 dark:text-white/50 uppercase tracking-widest">{s.label}</span>
-                            <span className={`text-2xl sm:text-4xl font-black ${s.color}`}>{s.value}</span>
-                        </div>
-                    ))}
+                {/* Native Spatial Metadata Bar: Supplier, Cashier, Date */}
+                <div className="spatial-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-5">
+                    <div className="flex items-center gap-3">
+                        <User className="w-6 h-6 text-primary shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">المورد:</span>
+                        <Link href={`/suppliers/${purchase.supplier.id}`} className="text-lg sm:text-xl font-black text-slate-900 dark:text-white hover:text-primary transition-colors">
+                            {purchase.supplier.name}
+                        </Link>
+                    </div>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <UserCheck className="w-6 h-6 text-primary shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">الموظف / الكاشير:</span>
+                        <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                            {purchase.user?.name ?? '—'}
+                        </span>
+                    </div>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <Clock className="w-6 h-6 text-slate-400 shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">تاريخ الإنشاء:</span>
+                        <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white dir-ltr">
+                            {formatDate(purchase.created_at)}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Native Spatial Totals Summary Strip */}
+                <div className="spatial-card p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-right">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">إجمالي الفاتورة</span>
+                        <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                            {fmt(purchase.total)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">إجمالي المدفوع</span>
+                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                            {fmt(purchase.paid_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">المبلغ المتبقي</span>
+                        <span className={`text-xl sm:text-2xl font-black ${due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40'}`}>
+                            {fmt(purchase.due_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">دين المورد الكلي</span>
+                        <span className={`text-xl sm:text-2xl font-black ${supplierDebt > 0 ? 'text-purple-500' : 'text-slate-400 dark:text-white/40'}`}>
+                            {fmt(supplierDebt)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
                 </div>
 
                 {/* Tabs Bar */}
-                <div className="flex gap-2.5 p-2 rounded-[24px] bg-black/5 dark:bg-white/5 border-2 border-black/8 dark:border-white/10 overflow-x-auto">
+                <div className="flex gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 overflow-x-auto">
                     {tabs.map(t => (
                         <button key={t.key} onClick={() => setActiveTab(t.key)}
-                            className={`flex-1 min-w-max px-8 h-16 sm:h-20 rounded-[20px] font-black text-lg sm:text-2xl transition-all whitespace-nowrap border-2 ${activeTab === t.key ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white border-primary shadow-lg scale-[1.01]' : 'border-transparent text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white'}`}>
+                            className={`flex-1 min-w-max px-6 py-2.5 rounded-xl font-black text-sm sm:text-base transition-all whitespace-nowrap border ${activeTab === t.key ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 shadow-md scale-[1.01]' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
                             {t.label}
                         </button>
                     ))}
@@ -208,27 +272,45 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
 
                 {/* Tab 1: Products */}
                 {activeTab === 'items' && (
-                    <SpatialCard title={`المنتجات المسجلة (${purchase.items.length})`} icon={<Package className="w-6 h-6 text-primary" />}>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-right">
-                                <thead>
-                                    <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
-                                        {['المنتج', 'الكمية', 'سعر الوحدة', 'الإجمالي'].map(h => (
-                                            <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                    {purchase.items.map(item => (
-                                        <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
-                                            <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{item.product.name}</td>
-                                            <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/80 text-xl">{parseFloat(item.quantity).toLocaleString('en-US')}</td>
-                                            <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/80 text-xl">{fmt(item.unit_cost)} د.ل</td>
-                                            <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{fmt(item.line_total)} د.ل</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                    <SpatialCard title={`المنتجات المسجلة (${purchase.items.length})`} icon={<Package className="w-5 h-5 text-primary" />}>
+                        <div className="flex flex-col gap-3">
+                            {/* Table Header Row */}
+                            <div className="hidden sm:grid grid-cols-[2fr_130px_140px_140px] gap-3 px-6 py-4 text-sm sm:text-base font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                <span>المنتج</span>
+                                <span className="text-center">الكمية</span>
+                                <span className="text-center">سعر الوحدة</span>
+                                <span className="text-center">الإجمالي</span>
+                            </div>
+                            {purchase.items.map(item => (
+                                <div key={item.id}>
+                                    {/* Desktop Row */}
+                                    <div className="hidden sm:grid grid-cols-[2fr_130px_140px_140px] gap-3 px-6 py-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 transition-all shadow-sm items-center">
+                                        <div className="min-w-0 flex items-center">
+                                            <span className="font-black text-slate-900 dark:text-white text-lg sm:text-xl truncate">{item.product.name}</span>
+                                        </div>
+                                        <div className="flex items-center justify-center">
+                                            <span className="px-3.5 py-1.5 rounded-xl flex items-center justify-center font-black text-base sm:text-lg bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 shadow-sm">{parseFloat(item.quantity).toLocaleString('en-US')}</span>
+                                        </div>
+                                        <div className="flex items-center justify-center">
+                                            <span className="font-black text-slate-800 dark:text-slate-200 text-base sm:text-lg">{fmt(item.unit_cost)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                        </div>
+                                        <div className="flex items-center justify-center">
+                                            <span className="font-black text-slate-950 dark:text-white text-xl sm:text-2xl">{fmt(item.line_total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                        </div>
+                                    </div>
+                                    {/* Mobile Card */}
+                                    <div className="sm:hidden flex flex-col gap-3 p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="font-black text-slate-900 dark:text-white text-lg truncate">{item.product.name}</span>
+                                            <span className="font-black text-slate-900 dark:text-white text-xl">{fmt(item.line_total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                        </div>
+                                        <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                                            <span className="px-3 py-1 rounded-lg font-black text-xs bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200">الكمية: {parseFloat(item.quantity).toLocaleString('en-US')}</span>
+                                            <span className="font-bold">سعر الوحدة: {fmt(item.unit_cost)} د.ل</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </SpatialCard>
                 )}
@@ -316,40 +398,57 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
                         )}
 
                         {purchase.payments.length === 0 ? (
-                            <p className="text-lg font-black text-slate-400 dark:text-white/30 py-8 text-center">لا توجد دفعات مسجلة لهذه الفاتورة</p>
+                            <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-slate-500 py-8 text-center">لا توجد دفعات مسجلة لهذه الفاتورة</p>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-right">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
-                                            {['وسيلة الدفع', 'المبلغ', 'ملاحظة', 'التاريخ', 'الإجراءات'].map(h => (
-                                                <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {purchase.payments.map(pay => (
-                                            <tr key={pay.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
-                                                <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{pay.payment_method.name}</td>
-                                                <td className="px-5 py-6 font-black text-emerald-600 dark:text-emerald-400 text-2xl whitespace-nowrap">{fmt(pay.amount)} د.ل</td>
-                                                <td className="px-5 py-6 text-slate-600 dark:text-white/70 font-bold text-xl">{pay.notes ?? '—'}</td>
-                                                <td className="px-5 py-6 text-slate-500 dark:text-white/60 font-bold text-lg whitespace-nowrap">
-                                                    {new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
-                                                </td>
-                                                <td className="px-5 py-6 text-center whitespace-nowrap">
-                                                    <DeleteModal
-                                                        onConfirm={() => router.delete(`/supplier-payments/${pay.id}`, { preserveScroll: true })}
-                                                        trigger={
-                                                            <button className="flex items-center justify-center gap-2 h-14 sm:h-16 px-5 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-lg active:scale-95 shadow-md">
-                                                                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                                                            </button>
-                                                        }
-                                                    />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="flex flex-col gap-3">
+                                {/* Desktop Table Header */}
+                                <div className="hidden sm:grid grid-cols-[1.5fr_130px_2fr_180px_100px] gap-3 px-6 py-4 text-sm sm:text-base font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                    <span>وسيلة الدفع</span>
+                                    <span className="text-center">المبلغ</span>
+                                    <span>ملاحظة</span>
+                                    <span className="text-center">التاريخ والوقت</span>
+                                    <span className="text-center">إجراء</span>
+                                </div>
+                                {purchase.payments.map(pay => (
+                                    <div key={pay.id}>
+                                        {/* Desktop Row */}
+                                        <div className="hidden sm:grid grid-cols-[1.5fr_130px_2fr_180px_100px] gap-3 px-6 py-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500/40 transition-all shadow-sm items-center">
+                                            <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">{pay.payment_method.name}</span>
+                                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg sm:text-xl text-center">{fmt(pay.amount)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                            <span className="text-slate-600 dark:text-slate-300 font-bold text-sm sm:text-base truncate">{pay.notes ?? '—'}</span>
+                                            <span className="font-black text-slate-700 dark:text-slate-300 text-sm text-center dir-ltr">{formatDate(pay.created_at)}</span>
+                                            <div className="flex items-center justify-center">
+                                                <DeleteModal onConfirm={() => router.delete(`/supplier-payments/${pay.id}`, { preserveScroll: true })}
+                                                    trigger={
+                                                        <button className="px-3.5 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs sm:text-sm active:scale-95 flex items-center gap-1.5">
+                                                            <Trash2 className="w-4 h-4" />
+                                                            <span>حذف</span>
+                                                        </button>
+                                                    } />
+                                            </div>
+                                        </div>
+                                        {/* Mobile Card */}
+                                        <div className="sm:hidden flex flex-col gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="font-black text-slate-900 dark:text-white text-base">{pay.payment_method.name}</span>
+                                                <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">{fmt(pay.amount)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                <span>{pay.notes ?? 'لا يوجد ملاحظات'}</span>
+                                                <span className="dir-ltr">{formatDate(pay.created_at)}</span>
+                                            </div>
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                                                <DeleteModal onConfirm={() => router.delete(`/supplier-payments/${pay.id}`, { preserveScroll: true })}
+                                                    trigger={
+                                                        <button className="px-3.5 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs active:scale-95 flex items-center gap-1.5">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <span>حذف الدفعة</span>
+                                                        </button>
+                                                    } />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </SpatialCard>
@@ -357,29 +456,29 @@ export default function PurchasesShow({ purchase, paymentMethods, flash }: Props
 
                 {/* Tab 3: Returns */}
                 {activeTab === 'returns' && (
-                    <SpatialCard title={`المرتجعات المرتبطة (${purchase.returns.length})`} icon={<RotateCcw className="w-6 h-6 text-orange-500" />}>
+                    <SpatialCard title={`المرتجعات المرتبطة (${purchase.returns.length})`} icon={<RotateCcw className="w-5 h-5 text-orange-500" />}>
                         {purchase.returns.length === 0 ? (
-                            <p className="text-lg font-black text-slate-400 dark:text-white/30 py-8 text-center">لا توجد مرتجعات مرتبطة بهذه الفاتورة</p>
+                            <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-slate-500 py-8 text-center">لا توجد مرتجعات مرتبطة بهذه الفاتورة</p>
                         ) : (
-                            <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3">
                                 {purchase.returns.map(ret => (
-                                    <div key={ret.id} className="p-6 rounded-[24px] bg-orange-500/5 border-2 border-orange-500/20 flex flex-col gap-3">
+                                    <div key={ret.id} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 flex flex-col gap-3 shadow-sm">
                                         <div className="flex items-center justify-between">
                                             <Link href={`/purchase-returns/${ret.id}`}
-                                                className="font-black text-2xl text-slate-800 dark:text-white hover:text-primary transition-colors">
+                                                className="font-black text-lg text-slate-900 dark:text-white hover:text-primary transition-colors">
                                                 مرتجع شراء #{ret.id}
                                             </Link>
-                                            <span className="font-black text-2xl text-orange-500">{fmt(ret.total)} د.ل</span>
+                                            <span className="font-black text-xl text-orange-500">{fmt(ret.total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
                                         </div>
                                         <div className="flex flex-wrap gap-2">
                                             {ret.items.map(i => (
-                                                <span key={i.id} className="text-base font-bold px-3 py-1.5 rounded-[12px] bg-black/5 dark:bg-white/8 text-slate-700 dark:text-white/80">
+                                                <span key={i.id} className="text-xs sm:text-sm font-bold px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                                                     {i.product.name} × {parseFloat(i.quantity).toLocaleString('en-US')}
                                                 </span>
                                             ))}
                                         </div>
                                         {ret.settlement && (
-                                            <p className="text-base font-black text-purple-500 mt-1">✓ تسوية مرتبطة: {fmt(ret.settlement.amount)} د.ل</p>
+                                            <p className="text-xs sm:text-sm font-black text-purple-600 dark:text-purple-400 mt-1">✓ تسوية مرتبطة: {fmt(ret.settlement.amount)} د.ل</p>
                                         )}
                                     </div>
                                 ))}

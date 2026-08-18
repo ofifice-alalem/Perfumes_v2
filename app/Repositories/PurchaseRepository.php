@@ -50,6 +50,7 @@ class PurchaseRepository extends Repository implements PurchaseRepositoryInterfa
             ->withTrashed()
             ->with([
                 'supplier',
+                'user',
                 'items.product',
                 'payments.paymentMethod',
                 'returns.items.product',
