@@ -40,6 +40,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
   const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
   const [printingNode, setPrintingNode] = useState<boolean>(false);
   const [nodePrintStatus, setNodePrintStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [previewInvoiceId, setPreviewInvoiceId] = useState<string>('');
 
   const fetchNodePrinters = async () => {
     setLoadingPrinters(true);
@@ -56,16 +57,17 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     }
   };
 
-  const fetchNodePreview = async () => {
+  const fetchNodePreview = async (invId?: string) => {
     setLoadingPreview(true);
     try {
+      const idToUse = invId !== undefined ? invId : previewInvoiceId;
       const res = await fetch('/settings/node-printer/preview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
-        body: JSON.stringify({ multi: true }),
+        body: JSON.stringify({ multi: true, invoice_id: idToUse || null }),
       });
       const resData = await res.json();
       if (resData.success && resData.preview_src) {
@@ -88,7 +90,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
-        body: JSON.stringify({ multi: true, printer_name: selectedNodePrinter }),
+        body: JSON.stringify({
+          multi: true,
+          printer_name: selectedNodePrinter,
+          invoice_id: previewInvoiceId || null,
+          demo: !previewInvoiceId
+        }),
       });
       const resData = await res.json();
       if (resData.success) {
@@ -97,7 +104,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
         setNodePrintStatus({ success: false, message: resData.message || 'فشلت الطباعة المباشرة' });
       }
     } catch (e: any) {
-      setNodePrintStatus({ success: false, message: e.message || 'تعذر الاتصال بـ Node.js Printer Engine' });
+      setNodePrintStatus({ success: false, message: e?.message || 'تعذر الاتصال بـ Node.js Printer Engine' });
     } finally {
       setPrintingNode(false);
     }
@@ -1032,6 +1039,27 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   <span className="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600">
                     High-Res Monochrome PNG
                   </span>
+                </div>
+
+                {/* Live Invoice ID Input */}
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
+                  <input
+                    type="text"
+                    value={previewInvoiceId}
+                    onChange={(e) => setPreviewInvoiceId(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); fetchNodePreview(); } }}
+                    placeholder="أدخل رقم الفاتورة للمعاينة (مثال: 50621)"
+                    className="flex-1 px-3 py-1.5 text-sm font-black bg-transparent border-0 outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fetchNodePreview()}
+                    disabled={loadingPreview}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all flex items-center gap-1.5 shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>معاينة حية</span>
+                  </button>
                 </div>
 
                 {/* Preview Image Container */}

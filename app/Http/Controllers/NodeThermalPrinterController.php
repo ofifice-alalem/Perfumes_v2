@@ -167,13 +167,27 @@ class NodeThermalPrinterController extends Controller
 
         $items = [];
         foreach ($invoice->items as $item) {
+            $saleType = (string)($item->sale_type ?? '');
             $productName = $item->product ? $item->product->name : 'منتج';
             if ($item->size && !empty($item->size->label)) {
                 $productName .= ' (' . $item->size->label . ')';
             }
+            if ($saleType === 'full_bottle') {
+                $productName .= ' (عبوة)';
+            }
+
+            $rawQty = (float)$item->quantity;
+            if ($saleType === 'full_bottle') {
+                $calcQty = 1;
+            } elseif ($saleType === 'tier_decant' && $item->size && (float)$item->size->value > 0) {
+                $calcQty = $rawQty / (float)$item->size->value;
+            } else {
+                $calcQty = $rawQty;
+            }
+
             $items[] = [
                 'name' => $productName,
-                'quantity' => (float)$item->quantity,
+                'quantity' => (floor($calcQty) == $calcQty) ? (int)$calcQty : (float)number_format($calcQty, 2),
                 'price' => (float)$item->unit_price,
                 'total' => (float)$item->line_total,
             ];
