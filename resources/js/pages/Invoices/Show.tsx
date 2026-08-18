@@ -5,7 +5,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { RestoreModal } from '@/components/ui/RestoreModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit, Printer, Zap } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit, Printer, Zap, User, UserCheck, Clock } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
 interface Product { id: number; name: string; }
@@ -67,6 +67,25 @@ const saleTypeLabel: Record<string, string> = {
 function fmt(v: string | number) {
     const n = typeof v === 'string' ? parseFloat(v) : v;
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(dStr: string) {
+    if (!dStr) return '—';
+    try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return dStr;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${yyyy}-${mm}-${dd} | ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    } catch {
+        return dStr;
+    }
 }
 
 export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) {
@@ -214,43 +233,44 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
             <AppShell pageTitle={`فاتورة #${invoice.id}`}>
                 <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                        <Link href="/invoices" className="flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] bg-black/6 dark:bg-white/8 text-slate-700 dark:text-white/80 hover:bg-black/12 dark:hover:bg-white/15 transition-all shrink-0 border-2 border-black/5 dark:border-white/10 font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                            <ArrowRight className="w-6 h-6 sm:w-8 sm:h-8" />
-                            <span>رجوع للفواتير</span>
-                        </Link>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-2xl sm:text-4xl font-black text-slate-800 dark:text-white">فاتورة #{invoice.id}</h1>
-                                <span className={`text-base sm:text-xl font-black px-4 py-1.5 rounded-[14px] ${statusClass[invoice.payment_status]}`}>
+                    {/* Header Top Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <Link href="/invoices" className="flex items-center justify-center p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white transition-all active:scale-95 border border-slate-200 dark:border-white/10 shadow-sm shrink-0" title="رجوع للفواتير">
+                                <ArrowRight className="w-6 h-6" />
+                            </Link>
+
+                            <div className="flex items-center gap-2.5">
+                                <span className="px-4 py-2 rounded-2xl bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 font-black text-xl shadow-md">
+                                    #{invoice.id}
+                                </span>
+                                <span className={`text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl border ${statusClass[invoice.payment_status]}`}>
                                     {statusLabel[invoice.payment_status]}
                                 </span>
-                                {isCancelled && <span className="text-base sm:text-xl font-black px-4 py-1.5 rounded-[14px] bg-red-500/10 text-red-500">ملغية</span>}
+                                {isCancelled && <span className="text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500">ملغية</span>}
                             </div>
-                            <p className="text-base sm:text-xl font-bold text-slate-500 dark:text-white/60 mt-1 truncate">
-                                {invoice.customer?.name ?? 'زبون نقدي'} — {invoice.user?.name ?? '—'}
-                            </p>
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+
+                        {/* Top Action Buttons */}
+                        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
                             <button
                                 type="button"
                                 onClick={handleNodeDirectPrint}
                                 disabled={printingNode}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-600 text-white hover:bg-emerald-500 transition-all font-black text-lg sm:text-2xl shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer disabled:opacity-50"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-emerald-500/40 bg-emerald-600 text-white hover:bg-emerald-500 transition-all font-black text-sm sm:text-base shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer disabled:opacity-50"
                             >
-                                <Zap className="w-6 h-6 sm:w-7 sm:h-7" /> {printingNode ? 'جاري الطباعة...' : '⚡ طباعة فورية (Node)'}
+                                <Zap className="w-5 h-5" /> {printingNode ? 'جاري الطباعة...' : 'طباعة فورية (Node)'}
                             </button>
                             <button
                                 type="button"
                                 onClick={handleDirectPrint}
-                                className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all font-black text-lg sm:text-2xl shadow-md active:scale-95 cursor-pointer"
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all font-black text-sm sm:text-base shadow-sm active:scale-95 cursor-pointer"
                             >
-                                <Printer className="w-6 h-6 sm:w-7 sm:h-7" /> طباعة المتصفح
+                                <Printer className="w-5 h-5" /> طباعة المتصفح
                             </button>
                             {!isCancelled && (
-                                <Link href={`/invoices/${invoice.id}/edit`} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-slate-300 dark:border-white/20 bg-black/5 dark:bg-white/8 text-slate-800 dark:text-white hover:bg-black/10 transition-all font-black text-lg sm:text-2xl shadow-md active:scale-95">
-                                    <Edit className="w-6 h-6 sm:w-7 sm:h-7" /> تعديل
+                                <Link href={`/invoices/${invoice.id}/edit`} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-slate-300 dark:border-white/20 bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white hover:bg-slate-200 transition-all font-black text-sm sm:text-base shadow-sm active:scale-95">
+                                    <Edit className="w-5 h-5" /> تعديل
                                 </Link>
                             )}
                             {isCancelled && (
@@ -259,8 +279,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
                                     onConfirm={() => router.post(`/invoices/${invoice.id}/restore`)}
                                     trigger={
-                                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl shadow-md active:scale-95">
-                                            <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                        <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-sm sm:text-base shadow-sm active:scale-95">
+                                            <RotateCcw className="w-5 h-5" /> استعادة
                                         </button>
                                     }
                                 />
@@ -268,29 +288,76 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                         </div>
                     </div>
 
+                    {/* Native Spatial Metadata Bar: Customer, Cashier, Date */}
+                    <div className="spatial-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-5">
+                        <div className="flex items-center gap-3">
+                            <User className="w-6 h-6 text-primary shrink-0" />
+                            <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">العميل:</span>
+                            <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                                {invoice.customer?.name ?? 'زبون نقدي'}
+                            </span>
+                        </div>
+
+                        <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                        <div className="flex items-center gap-3">
+                            <UserCheck className="w-6 h-6 text-primary shrink-0" />
+                            <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">الموظف / الكاشير:</span>
+                            <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                                {invoice.user?.name ?? '—'}
+                            </span>
+                        </div>
+
+                        <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                        <div className="flex items-center gap-3">
+                            <Clock className="w-6 h-6 text-slate-400 shrink-0" />
+                            <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">تاريخ الإنشاء:</span>
+                            <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white dir-ltr">
+                                {formatDate(invoice.created_at)}
+                            </span>
+                        </div>
+                    </div>
+
                     {flash?.success && <div className="px-6 py-4 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-xl">{flash.success}</div>}
                     {flash?.error && <div className="px-6 py-4 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-base sm:text-xl">{flash.error}</div>}
 
-                    {/* Summary */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                        {[
-                            { label: 'الإجمالي', value: fmt(invoice.total), color: 'text-slate-800 dark:text-white' },
-                            { label: 'المدفوع', value: fmt(invoice.paid_amount), color: 'text-emerald-600 dark:text-emerald-400' },
-                            { label: 'المتبقي', value: fmt(invoice.due_amount), color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
-                            { label: 'دين العميل', value: fmt(invoice.customer?.total_debt ?? '0'), color: customerDebt > 0 ? 'text-amber-500' : customerDebt < 0 ? 'text-purple-500' : 'text-slate-400 dark:text-white/40' },
-                        ].map(s => (
-                            <div key={s.label} className="spatial-card p-5 sm:p-6 flex flex-col gap-2 border-2">
-                                <span className="text-sm sm:text-base font-black text-slate-500 dark:text-white/50 uppercase tracking-wider">{s.label}</span>
-                                <span className={`text-2xl sm:text-4xl font-black ${s.color}`}>{s.value} <span className="text-sm font-bold">د.ل</span></span>
-                            </div>
-                        ))}
+                    {/* Native Spatial Totals Summary Strip */}
+                    <div className="spatial-card p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-right">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-500 dark:text-white/60">الإجمالي</span>
+                            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+                                {fmt(invoice.total)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-500 dark:text-white/60">المدفوع</span>
+                            <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                {fmt(invoice.paid_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-500 dark:text-white/60">المتبقي</span>
+                            <span className={`text-xl sm:text-2xl font-black ${due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40'}`}>
+                                {fmt(invoice.due_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-500 dark:text-white/60">دين العميل الحالي</span>
+                            <span className={`text-xl sm:text-2xl font-black ${customerDebt > 0 ? 'text-amber-500' : customerDebt < 0 ? 'text-purple-400' : 'text-slate-400 dark:text-white/40'}`}>
+                                {fmt(invoice.customer?.total_debt ?? '0')} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                            </span>
+                        </div>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex gap-2.5 p-2 rounded-[24px] bg-black/5 dark:bg-white/5 border-2 border-black/8 dark:border-white/10 overflow-x-auto">
+                    <div className="flex gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 overflow-x-auto">
                         {tabs.map(t => (
                             <button key={t.key} onClick={() => setActiveTab(t.key)}
-                                className={`flex-1 min-w-max px-8 h-16 sm:h-20 rounded-[20px] font-black text-lg sm:text-2xl transition-all whitespace-nowrap border-2 ${activeTab === t.key ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white border-primary shadow-lg scale-[1.01]' : 'border-transparent text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white'}`}>
+                                className={`flex-1 min-w-max px-6 py-2.5 rounded-xl font-black text-sm sm:text-base transition-all whitespace-nowrap border ${activeTab === t.key ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 shadow-md scale-[1.01]' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
                                 {t.label}
                             </button>
                         ))}
@@ -318,11 +385,12 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
                                 return (
                                     <div className="flex flex-col gap-3">
-                                        <div className="hidden sm:grid grid-cols-[80px_2fr_120px_100px_120px_130px] gap-3 px-5 py-4 text-base sm:text-lg font-black text-slate-600 dark:text-white/60 bg-black/4 dark:bg-white/5 rounded-[16px] border border-black/5 dark:border-white/8">
-                                            <span className="text-center">عدد</span>
+                                        {/* Table Header Row (المنتج -> النوع -> حجم -> عدد -> سعر -> الإجمالي) */}
+                                        <div className="hidden sm:grid grid-cols-[2fr_140px_120px_90px_130px_140px] gap-3 px-6 py-4 text-sm sm:text-base font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
                                             <span>المنتج</span>
                                             <span className="text-center">النوع</span>
                                             <span className="text-center">حجم</span>
+                                            <span className="text-center">عدد</span>
                                             <span className="text-center">سعر</span>
                                             <span className="text-center">الإجمالي</span>
                                         </div>
@@ -333,40 +401,46 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 : (g.size_value && g.size_value > 0 ? Math.round(g.quantity / g.size_value) : g.count);
                                             return (
                                                 <div key={idx}>
-                                                    {/* Desktop */}
-                                                    <div className="hidden sm:grid grid-cols-[80px_2fr_120px_100px_120px_130px] gap-3 px-5 py-5 rounded-[22px] bg-white dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 hover:border-primary/50 transition-all shadow-md items-center">
-                                                        <div className="flex items-center justify-center">
-                                                            <span className="w-14 h-12 rounded-[14px] flex items-center justify-center font-black text-lg sm:text-xl bg-primary/15 text-primary border border-primary/20">{displayCount}</span>
-                                                        </div>
+                                                    {/* Desktop Table Row (كبير وواضح جداً) */}
+                                                    <div className="hidden sm:grid grid-cols-[2fr_140px_120px_90px_130px_140px] gap-3 px-6 py-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 transition-all shadow-sm items-center">
+                                                        {/* 1. المنتج */}
                                                         <div className="min-w-0 flex items-center">
-                                                            <span className="font-black text-slate-800 dark:text-white text-lg sm:text-2xl truncate">{g.name}</span>
+                                                            <span className="font-black text-slate-900 dark:text-white text-lg sm:text-xl truncate">{g.name}</span>
                                                         </div>
+                                                        {/* 2. النوع */}
                                                         <div className="flex items-center justify-center">
-                                                            <span className="text-base font-bold text-slate-600 dark:text-white/60">{saleTypeLabel[g.sale_type] ?? g.sale_type}</span>
+                                                            <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">{saleTypeLabel[g.sale_type] ?? g.sale_type}</span>
                                                         </div>
+                                                        {/* 3. حجم */}
                                                         <div className="flex items-center justify-center">
                                                             {g.size_label
-                                                                ? <span className="text-sm sm:text-base font-black text-white bg-primary px-3 py-1.5 rounded-full">{g.size_label}</span>
-                                                                : <span className="text-slate-400 text-lg font-bold">—</span>}
+                                                                ? <span className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-300 bg-blue-500/10 px-3.5 py-1.5 rounded-xl border border-blue-500/20">{g.size_label}</span>
+                                                                : <span className="text-slate-400 text-base font-bold">—</span>}
                                                         </div>
+                                                        {/* 4. عدد */}
                                                         <div className="flex items-center justify-center">
-                                                            <span className="font-black text-slate-700 dark:text-slate-200 text-lg sm:text-xl">{fmt(g.unit_price)}</span>
+                                                            <span className="px-3.5 py-1.5 rounded-xl flex items-center justify-center font-black text-base sm:text-lg bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 shadow-sm">{displayCount}</span>
                                                         </div>
+                                                        {/* 5. سعر */}
                                                         <div className="flex items-center justify-center">
-                                                            <span className="font-black text-slate-800 dark:text-white text-2xl sm:text-3xl">{fmt(g.total)}</span>
+                                                            <span className="font-black text-slate-800 dark:text-slate-200 text-base sm:text-lg">{fmt(g.unit_price)}</span>
+                                                        </div>
+                                                        {/* 6. الإجمالي */}
+                                                        <div className="flex items-center justify-center">
+                                                            <span className="font-black text-slate-950 dark:text-white text-xl sm:text-2xl">{fmt(g.total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
                                                         </div>
                                                     </div>
-                                                    {/* Mobile */}
-                                                    <div className="sm:hidden flex flex-col gap-3 p-5 rounded-[20px] bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 shadow-md">
+                                                    {/* Mobile Card */}
+                                                    <div className="sm:hidden flex flex-col gap-3 p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
                                                         <div className="flex items-center justify-between gap-3">
-                                                            <span className="font-black text-slate-800 dark:text-white text-xl truncate">{g.name}</span>
-                                                            <span className="font-black text-slate-800 dark:text-white text-2xl">{fmt(g.total)} <span className="text-xs font-normal">د.ل</span></span>
+                                                            <span className="font-black text-slate-900 dark:text-white text-lg truncate">{g.name}</span>
+                                                            <span className="font-black text-slate-900 dark:text-white text-xl">{fmt(g.total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
                                                         </div>
-                                                        <div className="flex items-center gap-3 flex-wrap">
-                                                            <span className="flex items-center gap-1.5 px-3.5 h-9 rounded-[12px] bg-primary/15 text-primary text-base font-black border border-primary/20">× {displayCount}</span>
-                                                            <span className="text-sm font-bold text-slate-500 dark:text-white/60">{saleTypeLabel[g.sale_type] ?? g.sale_type}</span>
-                                                            {g.size_label && <span className="text-sm font-black text-white bg-primary px-3 py-1 rounded-full">{g.size_label}</span>}
-                                                            <span className="text-sm font-bold text-slate-500 dark:text-white/60">سعر: {fmt(g.unit_price)}</span>
+                                                        <div className="flex items-center gap-2 flex-wrap text-sm">
+                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">{saleTypeLabel[g.sale_type] ?? g.sale_type}</span>
+                                                            {g.size_label && <span className="text-xs font-black text-blue-600 dark:text-blue-300 bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">{g.size_label}</span>}
+                                                            <span className="px-3 py-1 rounded-lg font-black text-xs bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200">العدد: {displayCount}</span>
+                                                            <span className="font-bold text-slate-600 dark:text-slate-300">سعر: {fmt(g.unit_price)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
