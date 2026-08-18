@@ -308,7 +308,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.fillStyle = '#000000';
     ctx.textBaseline = 'top';
 
-    let y = 20;
+    let y = 6;
 
     // -------------------------------------------------------------
     // 1. TOP GRAPHICS (رسم الشعار المرفوع أو الشعار الافتراضي)
@@ -317,7 +317,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     await drawCenterLogoOrOval(ctx, width / 2, y + 64, 170, 80, config.store?.name, config.store?.subname, config.store?.logoPath);
     drawPerfumeWithIncenseIcon(ctx, width - margin - 92, y, 88, 110, true);
 
-    y += 156;
+    y += 140;
 
     // -------------------------------------------------------------
     // 2. STORE NAME & ADDRESS
@@ -325,12 +325,12 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.font = 'bold 30px Cairo, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(fixArabic(config.store?.name || 'تاجوري للعطور الفاخرة'), width / 2, y);
-    y += 44;
+    y += 38;
 
     if (config.store?.subname) {
         ctx.font = 'bold 18px Cairo, "Segoe UI", Arial, sans-serif';
         ctx.fillText(fixArabic(config.store.subname), width / 2, y);
-        y += 28;
+        y += 24;
     }
 
     if (config.store?.address) {
@@ -339,7 +339,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
         for (const line of addressLines) {
             if (line.trim()) {
                 ctx.fillText(fixArabic(line.trim()), width / 2, y);
-                y += 26;
+                y += 24;
             }
         }
     }
@@ -376,7 +376,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.fillText(fixArabic('فاتورة مبيعات'), pillX + pillWidth - 92, y + 11);
 
     ctx.fillStyle = '#000000';
-    y += pillHeight + 22;
+    y += pillHeight + 14;
 
     // Solid Divider Line
     ctx.beginPath();
@@ -635,7 +635,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
         ctx.font = 'bold 15px Cairo, "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(fixArabic(config.returnPolicy), width / 2, y + 16);
-        y += policyBoxHeight + 24;
+        y += policyBoxHeight + 12;
     }
 
     // -------------------------------------------------------------
@@ -645,7 +645,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.textAlign = 'center';
     const tearDots = '●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●';
     ctx.fillText(tearDots, width / 2, y);
-    y += 28;
+    y += 6;
 
     // Crop to final height
     const finalCanvas = createCanvas(width, y);

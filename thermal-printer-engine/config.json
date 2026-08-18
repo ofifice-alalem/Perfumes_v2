@@ -3,7 +3,7 @@
         "name": "XP-80",
         "paperWidthMm": 80,
         "printableWidthDots": 576,
-        "feedLinesAfterPrint": 4,
+        "feedLinesAfterPrint": 1,
         "cutPaper": true
     },
     "store": {

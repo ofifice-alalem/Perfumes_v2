@@ -78,7 +78,7 @@ class NodeThermalPrinterController extends Controller
                     'name' => $printerName,
                     'paperWidthMm' => 80,
                     'printableWidthDots' => 576,
-                    'feedLinesAfterPrint' => 4,
+                    'feedLinesAfterPrint' => 1,
                     'cutPaper' => true
                 ],
                 'store' => [

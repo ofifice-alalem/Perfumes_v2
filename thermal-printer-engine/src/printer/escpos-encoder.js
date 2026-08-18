@@ -34,10 +34,7 @@ async function encodePngToEscPosRaster(input, options = {}) {
     // Prepare ESC/POS command buffers
     const commands = [];
 
-    // 1. Initialize printer (ESC @)
-    commands.push(Buffer.from([0x1B, 0x40]));
-
-    // 2. Set line spacing to 0 for continuous raster print (ESC 3 0)
+    // 1. Set line spacing to 0 for continuous raster print (ESC 3 0) - (Do not send ESC @ as it causes firmware top-feed offset)
     commands.push(Buffer.from([0x1B, 0x33, 0x00]));
 
     // We print raster image in blocks (e.g. max 240-256 lines per GS v 0 slice to prevent printer buffer overflow)
