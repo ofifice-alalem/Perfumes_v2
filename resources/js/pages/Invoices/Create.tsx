@@ -10,12 +10,13 @@ import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
     CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause, Edit,
-    ChevronUp, Wallet, CheckCircle2,
+    ChevronUp, Wallet, CheckCircle2, History,
 } from 'lucide-react';
 import { ProductSelector } from './components/ProductSelector';
 import { Cart } from './components/Cart';
 import { PaymentDrawer } from './components/PaymentDrawer';
 import { HoldInvoices } from './components/HoldInvoices';
+import { RecentInvoicesDrawer, RecentInvoiceItem } from './components/RecentInvoicesDrawer';
 
 interface Customer { id: number; name: string; total_debt?: string; }
 interface Size { id: number; label: string; value: string; }
@@ -61,6 +62,7 @@ interface Props {
     paymentMethods: PaymentMethod[];
     flash?: { success?: string; error?: string; created_invoice_id?: number };
     editInvoice?: EditInvoice;
+    recentInvoices?: RecentInvoiceItem[];
 }
 
 interface CartItem {
@@ -160,7 +162,7 @@ function getProductDisplayPrice(p: Product, isVip: boolean): string {
     return '';
 }
 
-export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, editInvoice }: Props) {
+export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, editInvoice, recentInvoices = [] }: Props) {
     const isEditMode = !!editInvoice;
 
     // Build initial cart from invoice items when editing
@@ -248,6 +250,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }, [showPaymentDrawer, cart]);
 
     // Hold invoices state
+    const [showRecentDrawer, setShowRecentDrawer] = useState<boolean>(false);
     const [holdInvoices, setHoldInvoices] = useState<HoldInvoice[]>([]);
     const [showHoldList, setShowHoldList] = useState(false);
 
@@ -917,22 +920,33 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             />
                         </div>
 
-                        {/* Notes section */}
+                        {/* Action Bar: Hold Invoice + Recent Invoices Quick Print */}
                         <div className="px-3 sm:px-4 pb-1.5 sm:pb-2 border-t border-black/5 dark:border-white/5 shrink-0 pt-2 sm:pt-2.5">
                             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                 {!isEditMode && cart.length > 0 && (
                                     <button onClick={holdCurrentInvoice}
-                                        className="flex-1 sm:flex-none sm:w-60 flex flex-col items-center justify-center gap-2 rounded-[18px] sm:rounded-[22px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border-2 border-amber-500/50 hover:border-amber-500/80 text-amber-800 dark:text-amber-200 font-black text-base sm:text-xl transition-all duration-200 shrink-0 shadow-xl hover:shadow-2xl transform hover:scale-[1.03] active:scale-[0.97] hover:-translate-y-0.5 min-h-[120px] sm:min-h-[144px] px-5">
-                                        <div className="flex items-center gap-2.5">
-                                            <Pause className="w-7 h-7 sm:w-8 sm:h-8 text-amber-600 dark:text-amber-300" />
-                                            <span className="text-lg sm:text-xl font-black">تعليق الفاتورة</span>
+                                        className="flex-1 sm:flex-none sm:w-56 flex flex-col items-center justify-center gap-1.5 rounded-[18px] sm:rounded-[22px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border-2 border-amber-500/50 hover:border-amber-500/80 text-amber-800 dark:text-amber-200 font-black transition-all duration-200 shrink-0 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] min-h-[90px] sm:min-h-[110px] px-4 cursor-pointer">
+                                        <div className="flex items-center gap-2">
+                                            <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-300" />
+                                            <span className="text-base sm:text-lg font-black">تعليق الفاتورة</span>
                                         </div>
-                                        <span className="text-xs sm:text-sm opacity-85 font-bold">حفظ مؤقت واسترجاع لاحقاً</span>
+                                        <span className="text-xs opacity-85 font-bold">حفظ مؤقت واسترجاع لاحقاً</span>
                                     </button>
                                 )}
-                                <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                                    rows={2} placeholder="ملاحظات على فاتورة البيع... (اختياري)"
-                                    className="flex-1 spatial-input rounded-[16px] sm:rounded-[20px] px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold resize-none min-h-[100px] sm:min-h-[144px]" />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRecentDrawer(true)}
+                                    className="flex-1 flex flex-col items-center justify-center gap-1.5 rounded-[18px] sm:rounded-[22px] bg-gradient-to-br from-blue-600/20 via-indigo-600/15 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border-2 border-blue-500/40 hover:border-blue-500/70 text-slate-900 dark:text-white font-black transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-[1.01] active:scale-[0.98] min-h-[90px] sm:min-h-[110px] px-5 group cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <History className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 group-hover:rotate-[-12deg] transition-transform" />
+                                        <span className="text-base sm:text-lg font-black">آخر 4 فواتير</span>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-xs font-black shadow-sm">
+                                            {recentInvoices?.length || 0}
+                                        </span>
+                                    </div>
+                                    <span className="text-xs text-slate-500 dark:text-slate-300 font-bold">عرض الفواتير السابقة وإعادة طباعتها فورياً ⚡</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1396,6 +1410,13 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 addPayment={addPayment}
                 submit={submit}
                 openPad={openPad}
+            />
+
+            <RecentInvoicesDrawer
+                isOpen={showRecentDrawer}
+                onClose={() => setShowRecentDrawer(false)}
+                recentInvoices={recentInvoices || []}
+                onPrintNode={triggerNodePrint}
             />
         </>
     );

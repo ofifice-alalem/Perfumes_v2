@@ -103,13 +103,40 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setShowPaymentDrawer(false)}
-                        className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 dark:text-white/70 transition-all active:scale-95 border border-black/5 dark:border-white/10 cursor-pointer"
-                    >
-                        <X className="w-6 h-6" />
-                    </button>
+
+                    <div className="flex items-center gap-3">
+                        {/* Auto Print Toggle inside Title Bar Header */}
+                        {setAutoPrintNode && (
+                            <button
+                                type="button"
+                                onClick={() => setAutoPrintNode(!autoPrintNode)}
+                                className={`px-6 py-3 min-w-[180px] sm:min-w-[200px] rounded-2xl border-2 transition-all flex items-center justify-between gap-3.5 cursor-pointer shadow-md active:scale-95 touch-manipulation ${
+                                    autoPrintNode
+                                        ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/10'
+                                        : 'bg-slate-200/90 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                                }`}
+                                title="تفعيل أو إلغاء الطباعة التلقائية للفاتورة"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <Printer className={`w-6 h-6 ${autoPrintNode ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
+                                    <span className="text-sm sm:text-base font-black whitespace-nowrap">طباعة فاتورة</span>
+                                </div>
+                                <div className={`w-13 h-7 rounded-full p-0.5 border-2 transition-all flex items-center shadow-inner shrink-0 ${
+                                    autoPrintNode ? 'bg-emerald-600 border-emerald-500 justify-start' : 'bg-slate-400 dark:bg-slate-600 border-slate-400 justify-end'
+                                }`}>
+                                    <div className="w-5 h-5 rounded-full bg-white shadow-md transform transition-all duration-200" />
+                                </div>
+                            </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => setShowPaymentDrawer(false)}
+                            className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 dark:text-white/70 transition-all active:scale-95 border border-black/5 dark:border-white/10 cursor-pointer"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Totals Summary Strip */}
@@ -245,27 +272,6 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
 
                 {/* Drawer Footer / Submit */}
                 <div className="px-6 sm:px-8 pt-5 pb-16 sm:pb-24 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col gap-3 shrink-0">
-                    {/* Auto-print Toggle Switch */}
-                    {setAutoPrintNode && (
-                        <div className="flex items-center justify-between px-5 py-3.5 rounded-[22px] bg-slate-100 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700 shadow-sm">
-                            <div className="flex items-center gap-3.5 min-w-0">
-                                <div className={`w-11 h-11 rounded-[16px] flex items-center justify-center font-black transition-all shrink-0 ${autoPrintNode ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
-                                    <Printer className="w-6 h-6" />
-                                </div>
-                                <div className="flex flex-col min-w-0">
-                                    <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">طباعة الفاتورة تلقائياً (Node ⚡)</span>
-                                    <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">طباعة الورقة في الطابعة الحرارية مباشرة عند إتمام البيع</span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setAutoPrintNode(!autoPrintNode)}
-                                className={`relative w-16 h-9 rounded-full transition-colors cursor-pointer p-1 border-2 shrink-0 ${autoPrintNode ? 'bg-emerald-600 border-emerald-500' : 'bg-slate-300 dark:bg-slate-700 border-slate-400 dark:border-slate-600'}`}
-                            >
-                                <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform ${autoPrintNode ? 'translate-x-0' : '-translate-x-7'}`} />
-                            </button>
-                        </div>
-                    )}
 
                     {isCashCustomer && remaining > 0.01 && (
                         <div className="px-4 py-3 rounded-[16px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 font-black text-sm text-center">

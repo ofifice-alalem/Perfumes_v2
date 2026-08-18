@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
@@ -58,6 +59,24 @@ class InvoiceController extends Controller
                 ->get(['id', 'name', 'category_id', 'price_tier_id', 'selling_type', 'stock', 'qrcode']),
             'sizes'          => Size::orderBy('label')->get(['id', 'label', 'value', 'unit']),
             'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'recentInvoices' => Invoice::with(['customer', 'user', 'items.product', 'items.size'])
+                ->latest('id')
+                ->take(4)
+                ->get()
+                ->map(fn($inv) => [
+                    'id'            => $inv->id,
+                    'customer_name' => $inv->customer ? $inv->customer->name : 'زبون نقدي',
+                    'user_name'     => $inv->user ? $inv->user->name : 'الكاشير',
+                    'total'         => (float)$inv->total,
+                    'paid_amount'   => (float)$inv->paid_amount,
+                    'created_at'    => $inv->created_at ? $inv->created_at->format('Y-m-d h:i A') : '',
+                    'items_count'   => $inv->items->count(),
+                    'items_summary' => $inv->items->take(2)->map(function($i) {
+                        $name = $i->product ? $i->product->name : 'منتج';
+                        $size = $i->size ? ' (' . $i->size->label . ')' : '';
+                        return $name . $size;
+                    })->join('، '),
+                ]),
         ]);
     }
 
