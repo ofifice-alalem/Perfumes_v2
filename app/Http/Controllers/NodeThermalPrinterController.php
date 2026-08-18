@@ -211,6 +211,7 @@ class NodeThermalPrinterController extends Controller
         return [
             'invoiceNumber' => (string)$invoice->id,
             'date' => $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A'),
+            'dateTime' => $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A'),
             'cashier' => $invoice->user ? $invoice->user->name : 'كاشير',
             'customerName' => $invoice->customer ? $invoice->customer->name : 'زبون نقدي',
             'items' => $items,

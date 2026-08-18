@@ -402,7 +402,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
 
     // Left Side: Date/Time (ends line in RTL)
     ctx.textAlign = 'left';
-    const dateValue = invoiceData.dateTime || '2026-08-18 | 07:38 AM';
+    const dateValue = invoiceData.date || invoiceData.dateTime || '2026-08-18 | 07:38 AM';
     ctx.fillText(fixArabic(dateValue), margin + 16, y + 14);
 
     y += dateBoxHeight + 16;
