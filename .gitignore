@@ -13,7 +13,12 @@
 /.vscode
 /.zed
 /auth.json
-/node_modules
+node_modules/
+**/node_modules/
+thermal-printer-engine/node_modules/
+thermal-printer-engine/output/
+thermal-printer-engine/temp/
+thermal-printer-engine/assets/current_logo.*
 /public/build
 /public/hot
 /public/storage

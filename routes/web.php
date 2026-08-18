@@ -28,6 +28,7 @@ use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\LicenseController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ThermalReceiptController;
+use App\Http\Controllers\NodeThermalPrinterController;
 
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
@@ -81,6 +82,11 @@ Route::middleware('auth')->group(function () {
         // الإعدادات العامة للمحل والفاتورة
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
+
+        // محرك الفواتير الحرارية M المباشر باستعمال Node.js
+        Route::get('settings/node-printer/printers', [NodeThermalPrinterController::class, 'getPrinters'])->name('settings.node-printer.printers');
+        Route::post('settings/node-printer/preview', [NodeThermalPrinterController::class, 'generatePreview'])->name('settings.node-printer.preview');
+        Route::post('settings/node-printer/print', [NodeThermalPrinterController::class, 'printDirect'])->name('settings.node-printer.print');
 
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
         Route::resource('sizes', SizeController::class)->except(['create', 'edit', 'show']);

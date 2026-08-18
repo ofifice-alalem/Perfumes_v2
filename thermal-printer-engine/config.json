@@ -1,0 +1,19 @@
+{
+    "printer": {
+        "name": "XP-80",
+        "paperWidthMm": 80,
+        "printableWidthDots": 576,
+        "feedLinesAfterPrint": 4,
+        "cutPaper": true
+    },
+    "store": {
+        "name": "طيب التاجوري",
+        "subname": null,
+        "address": "تاجوراء - مقابل صالة العزوزي للملابس\r\nهاتف: 091-2345678 \/ 092-8765432",
+        "phones": "",
+        "logoPath": "C:\\Users\\alale\\OneDrive\\Desktop\\work\\Perfumes_v2\\thermal-printer-engine\\assets\\current_logo.png"
+    },
+    "returnPolicy": "يتم استقبال الارجاع خلال 24 ساعة من تاريخ الفاتورة",
+    "footerText": null,
+    "showQrCode": false
+}

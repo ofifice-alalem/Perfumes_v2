@@ -63,6 +63,9 @@ class SettingController extends Controller
         if ($request->has('show_qr_code')) {
             $this->settingRepo->set('show_qr_code', $request->input('show_qr_code'));
         }
+        if ($request->has('node_printer_name')) {
+            $this->settingRepo->set('node_printer_name', $request->input('node_printer_name'));
+        }
 
         return redirect()->back()->with('success', 'تم حفظ إعدادات المحل والفاتورة بنجاح!');
     }

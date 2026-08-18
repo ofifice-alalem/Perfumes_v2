@@ -654,28 +654,24 @@
                 </div>
             </div>
 
-            <!-- 2. Invoice Meta Box -->
+            <!-- 2. Invoice Meta Box (Single line: Cashier right, Date left) -->
             @php
                 $custName = $invoice->customer->name ?? 'زبون نقدي';
                 $isCashCustomer = empty($custName) || $custName === 'زبون نقدي' || mb_strtolower(trim($custName)) === 'زبون نقدي';
+                $cashierName = $invoice->user->name ?? ($invoice->user->username ?? 'سليم');
+                $dateTimeStr = $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A');
             @endphp
-            <div class="meta-box">
-                <table class="meta-table">
-                    <tr>
-                        <td class="meta-label-cell">التاريخ والوقت:</td>
-                        <td class="meta-value-cell"><span class="ltr-text">{{ $invoice->created_at ? $invoice->created_at->format('Y-m-d | h:i A') : date('Y-m-d | h:i A') }}</span></td>
-                    </tr>
-                    <tr>
-                        <td class="meta-label-cell">الكاشير:</td>
-                        <td class="meta-value-cell">{{ $invoice->user->name ?? ($invoice->user->username ?? 'سليم') }}</td>
-                    </tr>
-                    @if(!$isCashCustomer)
-                        <tr>
-                            <td class="meta-label-cell">العميل:</td>
-                            <td class="meta-value-cell">{{ $custName }}</td>
-                        </tr>
-                    @endif
-                </table>
+            <div class="meta-box" style="padding: 6px 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9em;">
+                    <div>الكاشير: <strong>{{ $cashierName }}</strong></div>
+                    <div dir="ltr"><strong>{{ $dateTimeStr }}</strong></div>
+                </div>
+                @if(!$isCashCustomer)
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 0.9em; margin-top: 4px; border-top: 1px dotted #000; padding-top: 4px;">
+                        <span>العميل:</span>
+                        <span>{{ $custName }}</span>
+                    </div>
+                @endif
             </div>
 
             <!-- 3. Items Table (جدول إلكتروني مؤطر بحدود أسود صلبة) -->

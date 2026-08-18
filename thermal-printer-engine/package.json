@@ -1,0 +1,34 @@
+{
+  "name": "pos-80-thermal-printer",
+  "version": "1.0.0",
+  "description": "Standalone Node.js POS-80 Thermal Receipt Printer CLI Engine for Windows",
+  "main": "print.js",
+  "scripts": {
+    "preview": "node preview.js",
+    "preview:multi": "node preview.js --multi",
+    "print": "node print.js",
+    "print:multi": "node print.js --multi",
+    "test-printer": "node test-printer.js",
+    "list-printers": "node list-printers.js"
+  },
+  "keywords": [
+    "pos-80",
+    "thermal-printer",
+    "receipt-printer",
+    "escpos",
+    "arabic-shaping",
+    "windows-raw-printing"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@fontsource/cairo": "^5.3.0",
+    "@napi-rs/canvas": "^0.1.66",
+    "arabic-persian-reshaper": "^1.0.1",
+    "bidi-js": "^1.0.3",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.8.0"
+  }
+}
