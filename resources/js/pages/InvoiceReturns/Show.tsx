@@ -4,7 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { ArrowRight, Plus, Trash2, Package, RefreshCw, RotateCcw, User } from 'lucide-react';
+import { ArrowRight, Plus, Trash2, Package, RefreshCw, RotateCcw, User, UserCheck, Clock, FileText } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
 interface Product       { id: number; name: string; }
@@ -12,7 +12,7 @@ interface Customer      { id: number; name: string; total_debt: string; }
 interface ReturnItem    { id: number; product: Product; size: { label: string } | null; quantity: string; unit_price: string; line_total: string; }
 interface Settlement    { id: number; payment_method: { name: string }; amount: string; notes: string | null; created_at: string; }
 interface InvoiceReturn {
-    id: number; customer: Customer; invoice: { id: number } | null;
+    id: number; customer: Customer; user: { name: string } | null; invoice: { id: number } | null;
     total: string; recovered_amount: string; due_recovery: string;
     recovery_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null; created_at: string; deleted_at: string | null;
@@ -38,10 +38,23 @@ function fmt(v: string | number) {
     const n = typeof v === 'string' ? parseFloat(v) : v;
     return isNaN(n) ? '0' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-function fmtDate(v: string | null) {
-    if (!v) return '—';
-    const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+function formatDate(dStr: string) {
+    if (!dStr) return '—';
+    try {
+        const d = new Date(dStr);
+        if (isNaN(d.getTime())) return dStr;
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        let hours = d.getHours();
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        return `${yyyy}-${mm}-${dd} | ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+    } catch {
+        return dStr;
+    }
 }
 
 export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash }: Props) {
@@ -114,81 +127,118 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
         <AppShell pageTitle={`مرتجع #${ret.id}`}>
             <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
-                {/* Header */}
+                {/* Header Top Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <Link href="/invoice-returns" className="flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] bg-black/6 dark:bg-white/8 text-slate-700 dark:text-white/80 hover:bg-black/12 dark:hover:bg-white/15 transition-all shrink-0 border-2 border-black/5 dark:border-white/10 font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                            <ArrowRight className="w-6 h-6 sm:w-8 sm:h-8" />
-                            <span>رجوع للمرتجعات</span>
+                    <div className="flex items-center gap-3">
+                        <Link href="/invoice-returns" className="flex items-center justify-center p-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white transition-all active:scale-95 border border-slate-200 dark:border-white/10 shadow-sm shrink-0" title="رجوع للمرتجعات">
+                            <ArrowRight className="w-6 h-6" />
                         </Link>
-                        <div>
-                            <div className="flex items-center gap-3 flex-wrap">
-                                <h1 className="text-3xl sm:text-5xl font-black text-slate-800 dark:text-white">مرتجع #{ret.id}</h1>
-                                {!isCancelled && (
-                                    <span className={`text-lg sm:text-xl font-black px-5 py-2 rounded-[14px] ${recoveryClass[ret.recovery_status]}`}>
-                                        {recoveryLabel[ret.recovery_status]}
-                                    </span>
-                                )}
-                                {isCancelled && <span className="text-lg sm:text-xl font-black px-5 py-2 rounded-[14px] bg-red-500/10 text-red-500">ملغي</span>}
-                            </div>
-                            <p className="text-base sm:text-xl font-bold text-slate-400 dark:text-white/40 mt-1">{ret.customer.name}</p>
+
+                        <div className="flex items-center gap-2.5">
+                            <span className="px-4 py-2 rounded-2xl bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 font-black text-xl shadow-md">
+                                #{ret.id}
+                            </span>
+                            {!isCancelled && (
+                                <span className={`text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl border ${recoveryClass[ret.recovery_status]}`}>
+                                    {recoveryLabel[ret.recovery_status]}
+                                </span>
+                            )}
+                            {isCancelled && <span className="text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500">ملغي</span>}
                         </div>
                     </div>
+
                     {isCancelled && (
                         <button onClick={() => router.post(`/invoice-returns/${ret.id}/restore`)}
-                            className="flex items-center gap-3 px-7 sm:px-9 h-16 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-xl active:scale-95 shadow-md">
-                            <RotateCcw className="w-6 h-6" /> استعادة
+                            className="flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-sm sm:text-base shadow-sm active:scale-95">
+                            <RotateCcw className="w-5 h-5" /> استعادة
                         </button>
                     )}
                 </div>
 
-                {flash?.success && <div className="px-6 py-4 rounded-[22px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg sm:text-xl">{flash.success}</div>}
-                {flash?.error   && <div className="px-6 py-4 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg sm:text-xl">{flash.error}</div>}
+                {flash?.success && <div className="px-6 py-4 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-xl">{flash.success}</div>}
+                {flash?.error   && <div className="px-6 py-4 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-base sm:text-xl">{flash.error}</div>}
 
-                {/* Summary cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                    {[
-                        { label: 'إجمالي المرتجع',   value: `${fmt(ret.total)} د.ل`,            color: 'text-orange-500' },
-                        { label: 'المسترد',           value: `${fmt(ret.recovered_amount)} د.ل`, color: 'text-purple-500' },
-                        { label: 'المتبقي',           value: `${fmt(ret.due_recovery)} د.ل`,     color: due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40' },
-                        { label: 'الفاتورة المرجعية', value: ret.invoice ? `#${ret.invoice.id}` : 'مستقل', color: 'text-slate-800 dark:text-white' },
-                    ].map(s => (
-                        <div key={s.label} className="spatial-card p-6 flex flex-col gap-2 rounded-[28px] border-2">
-                            <span className="text-sm font-black text-slate-500 dark:text-white/50 uppercase tracking-wider">{s.label}</span>
-                            {s.label === 'الفاتورة المرجعية' && ret.invoice ? (
-                                <Link href={`/invoices/${ret.invoice.id}`} className={`text-2xl sm:text-4xl font-black ${s.color} hover:underline`}>{s.value}</Link>
-                            ) : (
-                                <span className={`text-2xl sm:text-4xl font-black ${s.color}`}>{s.value}</span>
-                            )}
-                        </div>
-                    ))}
+                {/* Native Spatial Metadata Bar: Customer, Cashier, Date, Reference Invoice */}
+                <div className="spatial-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-5">
+                    <div className="flex items-center gap-3">
+                        <User className="w-6 h-6 text-primary shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">العميل:</span>
+                        <Link href={`/customers/${ret.customer.id}`} className="text-lg sm:text-xl font-black text-slate-900 dark:text-white hover:text-primary transition-colors">
+                            {ret.customer.name}
+                        </Link>
+                    </div>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <UserCheck className="w-6 h-6 text-primary shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">الموظف / الكاشير:</span>
+                        <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                            {ret.user?.name ?? '—'}
+                        </span>
+                    </div>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <Clock className="w-6 h-6 text-slate-400 shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">تاريخ الإنشاء:</span>
+                        <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white dir-ltr">
+                            {formatDate(ret.created_at)}
+                        </span>
+                    </div>
+
+                    <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-700/80 hidden sm:block" />
+
+                    <div className="flex items-center gap-3">
+                        <FileText className="w-6 h-6 text-primary shrink-0" />
+                        <span className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400">الفاتورة المرجعية:</span>
+                        {ret.invoice ? (
+                            <Link href={`/invoices/${ret.invoice.id}`} className="text-lg sm:text-xl font-black text-blue-600 dark:text-blue-400 hover:underline">
+                                #{ret.invoice.id}
+                            </Link>
+                        ) : (
+                            <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">مستقل</span>
+                        )}
+                    </div>
                 </div>
 
-                {/* Customer Info Card */}
-                {ret.customer && (
-                    <SpatialCard title="بيانات العميل" icon={<User className="w-6 h-6 text-primary" />}>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-2">
-                            <div>
-                                <p className="text-sm font-black text-slate-500 dark:text-white/50 uppercase tracking-wider mb-2">اسم العميل</p>
-                                <Link href={`/customers/${ret.customer.id}`} className="font-black text-2xl sm:text-3xl text-slate-800 dark:text-white hover:text-primary transition-colors">
-                                    {ret.customer.name}
-                                </Link>
-                            </div>
-                            <div>
-                                <p className="text-sm font-black text-slate-500 dark:text-white/50 uppercase tracking-wider mb-2">إجمالي الدين الحالي</p>
-                                <p className={`font-black text-2xl sm:text-3xl ${customerDebt > 0 ? 'text-amber-500' : customerDebt < 0 ? 'text-purple-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                                    {fmt(customerDebt)} د.ل
-                                </p>
-                            </div>
-                        </div>
-                    </SpatialCard>
-                )}
+                {/* Native Spatial Totals Summary Strip */}
+                <div className="spatial-card p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-right">
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">إجمالي المرتجع</span>
+                        <span className="text-xl sm:text-2xl font-black text-orange-500">
+                            {fmt(ret.total)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60 font-black">المسترد</span>
+                        <span className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">
+                            {fmt(ret.recovered_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">المتبقي للاسترداد</span>
+                        <span className={`text-xl sm:text-2xl font-black ${due > 0 ? 'text-amber-500' : 'text-slate-400 dark:text-white/40'}`}>
+                            {fmt(ret.due_recovery)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+
+                    <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-bold text-slate-500 dark:text-white/60">دين العميل الحالي</span>
+                        <span className={`text-xl sm:text-2xl font-black ${customerDebt > 0 ? 'text-amber-500' : customerDebt < 0 ? 'text-purple-400' : 'text-slate-400 dark:text-white/40'}`}>
+                            {fmt(customerDebt)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                        </span>
+                    </div>
+                </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2.5 p-2 rounded-[24px] bg-black/5 dark:bg-white/5 border-2 border-black/8 dark:border-white/10 overflow-x-auto">
+                <div className="flex gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 overflow-x-auto">
                     {tabs.map(t => (
                         <button key={t.key} onClick={() => setActiveTab(t.key)}
-                            className={`flex-1 min-w-max px-8 h-16 sm:h-20 rounded-[20px] font-black text-lg sm:text-2xl transition-all whitespace-nowrap border-2 ${activeTab === t.key ? 'bg-white dark:bg-white/15 text-slate-900 dark:text-white border-primary shadow-lg scale-[1.01]' : 'border-transparent text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white'}`}>
+                            className={`flex-1 min-w-max px-6 py-2.5 rounded-xl font-black text-sm sm:text-base transition-all whitespace-nowrap border ${activeTab === t.key ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-300 dark:border-slate-700 shadow-md scale-[1.01]' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'}`}>
                             {t.label}
                         </button>
                     ))}
@@ -196,7 +246,7 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
 
                 {/* Tab: Items */}
                 {activeTab === 'items' && (
-                    <SpatialCard title={`المنتجات المرتجعة (${ret.items.length})`} icon={<Package className="w-6 h-6 text-primary" />}>
+                    <SpatialCard title={`المنتجات المرتجعة (${ret.items.length})`} icon={<Package className="w-5 h-5 text-primary" />}>
                         {(() => {
                             const groups = ret.items.reduce((acc, item) => {
                                 const key = `${item.product.id}-${item.size?.label ?? 'null'}-${item.unit_price}`;
@@ -211,36 +261,59 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                             }, {} as Record<string, any>);
 
                             return (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-right">
-                                        <thead>
-                                            <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
-                                                {['عدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'].map(h => (
-                                                    <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {Object.values(groups).map((g: any, idx: number) => {
-                                                const displayCount = g.count === 1 ? g.quantity : g.count;
-                                                return (
-                                                    <tr key={idx} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
-                                                        <td className="px-5 py-6">
-                                                            <span className="px-5 py-2.5 rounded-[16px] bg-primary/10 text-primary font-black text-2xl">{displayCount}</span>
-                                                        </td>
-                                                        <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{g.name}</td>
-                                                        <td className="px-5 py-6 font-black text-slate-700 dark:text-white/80 text-xl">
-                                                            {g.size_label
-                                                                ? <span className="px-4 py-1.5 rounded-full bg-primary text-white text-lg font-black">{g.size_label}</span>
-                                                                : <span className="text-slate-400 text-xl">—</span>}
-                                                        </td>
-                                                        <td className="px-5 py-6 font-black text-slate-700 dark:text-white/80 text-2xl sm:text-3xl">{fmt(g.unit_price)} <span className="text-sm font-bold">د.ل</span></td>
-                                                        <td className="px-5 py-6 font-black text-orange-500 text-2xl sm:text-3xl">{fmt(g.total)} <span className="text-sm font-bold">د.ل</span></td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                <div className="flex flex-col gap-3">
+                                    {/* Table Header Row (المنتج -> حجم -> عدد -> سعر -> الإجمالي) */}
+                                    <div className="hidden sm:grid grid-cols-[2fr_130px_90px_130px_140px] gap-3 px-6 py-4 text-sm sm:text-base font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <span>المنتج</span>
+                                        <span className="text-center">حجم</span>
+                                        <span className="text-center">عدد</span>
+                                        <span className="text-center">سعر</span>
+                                        <span className="text-center">الإجمالي</span>
+                                    </div>
+                                    {Object.values(groups).map((g: any, idx: number) => {
+                                        const displayCount = g.count === 1 ? g.quantity : g.count;
+                                        return (
+                                            <div key={idx}>
+                                                {/* Desktop Table Row */}
+                                                <div className="hidden sm:grid grid-cols-[2fr_130px_90px_130px_140px] gap-3 px-6 py-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-blue-500/40 transition-all shadow-sm items-center">
+                                                    {/* 1. المنتج */}
+                                                    <div className="min-w-0 flex items-center">
+                                                        <span className="font-black text-slate-900 dark:text-white text-lg sm:text-xl truncate">{g.name}</span>
+                                                    </div>
+                                                    {/* 2. حجم */}
+                                                    <div className="flex items-center justify-center">
+                                                        {g.size_label
+                                                            ? <span className="text-xs sm:text-sm font-black text-blue-600 dark:text-blue-300 bg-blue-500/10 px-3.5 py-1.5 rounded-xl border border-blue-500/20">{g.size_label}</span>
+                                                            : <span className="text-slate-400 text-base font-bold">—</span>}
+                                                    </div>
+                                                    {/* 3. عدد */}
+                                                    <div className="flex items-center justify-center">
+                                                        <span className="px-3.5 py-1.5 rounded-xl flex items-center justify-center font-black text-base sm:text-lg bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 shadow-sm">{displayCount}</span>
+                                                    </div>
+                                                    {/* 4. سعر */}
+                                                    <div className="flex items-center justify-center">
+                                                        <span className="font-black text-slate-800 dark:text-slate-200 text-base sm:text-lg">{fmt(g.unit_price)}</span>
+                                                    </div>
+                                                    {/* 5. الإجمالي */}
+                                                    <div className="flex items-center justify-center">
+                                                        <span className="font-black text-slate-950 dark:text-white text-xl sm:text-2xl">{fmt(g.total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                                    </div>
+                                                </div>
+                                                {/* Mobile Card */}
+                                                <div className="sm:hidden flex flex-col gap-3 p-5 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="font-black text-slate-900 dark:text-white text-lg truncate">{g.name}</span>
+                                                        <span className="font-black text-slate-900 dark:text-white text-xl">{fmt(g.total)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-wrap text-sm">
+                                                        {g.size_label && <span className="text-xs font-black text-blue-600 dark:text-blue-300 bg-blue-500/10 px-3 py-1 rounded-lg border border-blue-500/20">{g.size_label}</span>}
+                                                        <span className="px-3 py-1 rounded-lg font-black text-xs bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200">العدد: {displayCount}</span>
+                                                        <span className="font-bold text-slate-600 dark:text-slate-300">سعر: {fmt(g.unit_price)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             );
                         })()}
@@ -326,39 +399,57 @@ export default function InvoiceReturnsShow({ return: ret, paymentMethods, flash 
                         )}
 
                         {ret.settlements.length === 0 ? (
-                            <p className="text-xl font-bold text-slate-400 dark:text-white/30 py-8 text-center">لا توجد تسويات مسجلة لهذا المرتجع</p>
+                            <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-slate-500 py-8 text-center">لا توجد تسويات مسجلة لهذا المرتجع</p>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-right">
-                                    <thead>
-                                        <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
-                                            {['وسيلة التسوية', 'المبلغ', 'ملاحظة', 'التاريخ', ''].map(h => (
-                                                <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                        {ret.settlements.map(s => (
-                                            <tr key={s.id} className="hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors">
-                                                <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{s.payment_method.name}</td>
-                                                <td className="px-5 py-6 font-black text-purple-500 text-2xl sm:text-3xl">{fmt(s.amount)} <span className="text-sm font-bold">د.ل</span></td>
-                                                <td className="px-5 py-6 text-slate-600 dark:text-white/60 font-bold text-lg">{s.notes ?? '—'}</td>
-                                                <td className="px-5 py-6 text-slate-700 dark:text-white/80 whitespace-nowrap font-black text-xl">
-                                                    <span className="px-4 sm:px-6 py-2.5 rounded-[16px] bg-black/5 dark:bg-white/10 border-2 border-black/5 dark:border-white/10 text-xl sm:text-2xl font-black text-slate-800 dark:text-white">{fmtDate(s.created_at)}</span>
-                                                </td>
-                                                <td className="px-5 py-6 text-center">
-                                                    <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
-                                                        trigger={
-                                                            <button className="inline-flex items-center justify-center gap-2 px-5 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl shadow-md active:scale-95 whitespace-nowrap">
-                                                                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                                                                <span>حذف التسوية</span>
-                                                            </button>
-                                                        } />
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="flex flex-col gap-3">
+                                {/* Desktop Table Header */}
+                                <div className="hidden sm:grid grid-cols-[1.5fr_130px_2fr_180px_130px] gap-3 px-6 py-4 text-sm sm:text-base font-black text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/70 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                    <span>وسيلة التسوية</span>
+                                    <span className="text-center">المبلغ</span>
+                                    <span>ملاحظة</span>
+                                    <span className="text-center">التاريخ والوقت</span>
+                                    <span className="text-center">إجراء</span>
+                                </div>
+                                {ret.settlements.map(s => (
+                                    <div key={s.id}>
+                                        {/* Desktop Row */}
+                                        <div className="hidden sm:grid grid-cols-[1.5fr_130px_2fr_180px_130px] gap-3 px-6 py-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200/80 dark:border-slate-800 hover:border-purple-500/40 transition-all shadow-sm items-center">
+                                            <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">{s.payment_method.name}</span>
+                                            <span className="font-black text-purple-600 dark:text-purple-400 text-lg sm:text-xl text-center">{fmt(s.amount)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                            <span className="text-slate-600 dark:text-slate-300 font-bold text-sm sm:text-base truncate">{s.notes ?? '—'}</span>
+                                            <span className="font-black text-slate-700 dark:text-slate-300 text-sm text-center dir-ltr">{formatDate(s.created_at)}</span>
+                                            <div className="flex items-center justify-center">
+                                                <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                    trigger={
+                                                        <button className="px-3.5 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs sm:text-sm active:scale-95 flex items-center gap-1.5">
+                                                            <Trash2 className="w-4 h-4" />
+                                                            <span>حذف</span>
+                                                        </button>
+                                                    } />
+                                            </div>
+                                        </div>
+                                        {/* Mobile Card */}
+                                        <div className="sm:hidden flex flex-col gap-3 p-4 rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 shadow-sm">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="font-black text-slate-900 dark:text-white text-base">{s.payment_method.name}</span>
+                                                <span className="font-black text-purple-600 dark:text-purple-400 text-lg">{fmt(s.amount)} <span className="text-xs font-bold text-slate-400">د.ل</span></span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                                                <span>{s.notes ?? 'لا يوجد ملاحظات'}</span>
+                                                <span className="dir-ltr">{formatDate(s.created_at)}</span>
+                                            </div>
+                                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+                                                <DeleteModal onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
+                                                    trigger={
+                                                        <button className="px-3.5 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-bold text-xs active:scale-95 flex items-center gap-1.5">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <span>حذف التسوية</span>
+                                                        </button>
+                                                    } />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </SpatialCard>
