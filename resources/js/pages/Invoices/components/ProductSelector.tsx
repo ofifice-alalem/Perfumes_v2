@@ -113,7 +113,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     const isVip = customerType === 'vip';
 
     // State
-    const [productsList, setProductsList] = useState<Product[]>(products);
     const [resetKey, setResetKey] = useState(0);
 
     // Form Selections State
@@ -124,13 +123,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     const [selUnitPrice, setSelUnitPrice] = useState('');
     const [selMinPrice, setSelMinPrice] = useState(0);
     const [showSaleTypeModal, setShowSaleTypeModal] = useState(false);
-
-    // Sync with initial products prop if provided
-    useEffect(() => {
-        if (products && products.length > 0) {
-            setProductsList(products);
-        }
-    }, [products]);
 
     // Barcode Scanner Listener
     useEffect(() => {
@@ -145,7 +137,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
             if (e.key === 'Enter') {
                 if (buffer.length > 3) {
-                    const scanned = productsList.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
                     if (scanned) {
                         e.preventDefault();
                         setSelProduct(String(scanned.id));
@@ -162,10 +154,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [productsList]);
+    }, [products]);
 
     // Selected product derived info
-    const selectedProduct = productsList.find(p => p.id === +selProduct);
+    const selectedProduct = products.find(p => p.id === +selProduct);
     const isTier = selectedProduct?.selling_type === 'tier_based';
     const isOriginal = selectedProduct?.category?.unit === 'ml' && !isTier;
     const needsSize = isTier || selSaleType === 'unit_decant';
@@ -326,7 +318,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                             key={`p-${resetKey}`}
                             label=""
                             placeholder="اختر المنتج..."
-                            options={productsList.map(p => ({
+                            options={products.map(p => ({
                                 label: p.name,
                                 badge: p.category.name,
                                 price: getProductDisplayPrice(p, isVip),
@@ -335,7 +327,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                             }))}
                             defaultValue={selectedProduct?.name ?? ""}
                             onSelect={val => {
-                                const p = productsList.find(pr => pr.name === val);
+                                const p = products.find(pr => pr.name === val);
                                 setSelProduct(p ? String(p.id) : '');
                                 setSelSaleType(''); setSelSize(''); setSelQty('1');
                             }}

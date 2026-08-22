@@ -294,7 +294,11 @@ class NodeThermalPrinterController extends Controller
     public function dispatchDirectPrint($invoiceId): bool
     {
         try {
-            $this->syncEngineConfig();
+            $configFile = $this->getEnginePath() . DIRECTORY_SEPARATOR . 'config.json';
+            if (!File::exists($configFile)) {
+                $this->syncEngineConfig();
+            }
+
             $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
             if (!$realInvoiceData) {
                 return false;
@@ -306,7 +310,7 @@ class NodeThermalPrinterController extends Controller
                 'invoice' => $realInvoiceData
             ];
 
-            $response = Http::timeout(1)->post('http://127.0.0.1:9123/print', $payload);
+            $response = Http::connectTimeout(0.2)->timeout(0.3)->post('http://127.0.0.1:9123/print', $payload);
             return $response->successful();
         } catch (\Throwable $e) {
             Log::error("dispatchDirectPrint error: " . $e->getMessage());

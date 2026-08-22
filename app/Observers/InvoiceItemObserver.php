@@ -86,6 +86,9 @@ class InvoiceItemObserver
 
     public static function recalculateCustomer(int $customerId): void
     {
+        // Skip generic cash customer (ID 1) - cash customer has no debt
+        if ($customerId === 1) return;
+
         $customer = \App\Models\Customer::find($customerId);
         if (!$customer) return;
 

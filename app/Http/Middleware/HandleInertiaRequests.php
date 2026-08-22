@@ -22,6 +22,7 @@ class HandleInertiaRequests extends Middleware
                 'success'            => session('success'),
                 'error'              => session('error'),
                 'created_invoice_id' => session('created_invoice_id'),
+                'updated_stocks'     => session('updated_stocks'),
             ],
             'auth' => [
                 'user' => $request->user() ? [

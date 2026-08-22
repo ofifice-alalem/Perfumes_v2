@@ -13,7 +13,7 @@
         "phones": "",
         "logoPath": "C:\\Users\\alale\\OneDrive\\Desktop\\work\\Perfumes_v2\\thermal-printer-engine\\assets\\current_logo.png"
     },
-    "returnPolicy": "يتم استقبال الارجاع خلال 24 ساعة من تاريخ الفاتورة",
+    "returnPolicy": null,
     "footerText": null,
     "showQrCode": false
 }

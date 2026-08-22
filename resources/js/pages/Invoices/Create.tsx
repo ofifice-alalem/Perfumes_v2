@@ -60,7 +60,12 @@ interface Props {
     products: Product[];
     sizes: Size[];
     paymentMethods: PaymentMethod[];
-    flash?: { success?: string; error?: string; created_invoice_id?: number };
+    flash?: {
+        success?: string;
+        error?: string;
+        created_invoice_id?: number;
+        updated_stocks?: Record<string | number, string | number>;
+    };
     editInvoice?: EditInvoice;
     recentInvoices?: RecentInvoiceItem[];
 }
@@ -148,7 +153,7 @@ function getProductDisplayPrice(p: Product, isVip: boolean): string {
     if (!pp) return '';
     const unitPrice = parseFloat(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular);
     const fullPrice = pp.full_bottle_regular ? parseFloat(isVip ? (pp.full_bottle_vip ?? '0') : pp.full_bottle_regular) : 0;
-    
+
     if (unitPrice > 0) return `${fmt(unitPrice)} د.ل`;
     if (fullPrice > 0) return `${fmt(fullPrice)} د.ل`;
     if (p.price_tier?.tier_prices?.length) {
@@ -191,6 +196,47 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }
 
     const [resetKey, setResetKey] = useState(0);
+    const [productsList, setProductsList] = useState<Product[]>(products);
+    const [productSelectorKey, setProductSelectorKey] = useState(0);
+
+    // Sync products when initial props change
+    useEffect(() => {
+        setProductsList(products);
+    }, [products]);
+
+    // Server-Authoritative Delta Stock Sync: Update only sold items when server responds with updated_stocks
+    useEffect(() => {
+        if (flash?.updated_stocks && typeof flash.updated_stocks === 'object') {
+            const delta = flash.updated_stocks as Record<string, string | number>;
+            const deltaKeys = Object.keys(delta);
+            if (deltaKeys.length > 0) {
+                setProductsList(prev => prev.map(p => {
+                    const updatedVal = delta[p.id] ?? delta[String(p.id)];
+                    if (updatedVal !== undefined) {
+                        return { ...p, stock: String(updatedVal) };
+                    }
+                    return p;
+                }));
+                setProductSelectorKey(k => k + 1);
+            }
+        }
+    }, [flash?.updated_stocks]);
+
+    // Flash Toast Notifications
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [createdInvId, setCreatedInvId] = useState<number | null>(null);
+
+    useEffect(() => {
+        if (flash?.success) {
+            setToastMessage(flash.success);
+            setCreatedInvId(flash.created_invoice_id ?? null);
+            const timer = setTimeout(() => {
+                setToastMessage(null);
+            }, 6000);
+            return () => clearTimeout(timer);
+        }
+    }, [flash?.success, flash?.created_invoice_id]);
+
     const [customerId, setCustomerId] = useState(editInvoice && editInvoice.customer_id !== 1 ? String(editInvoice.customer_id) : '');
     const [customerType, setCustomerType] = useState<'regular' | 'vip'>(editInvoice?.customer_type === 'vip' ? 'vip' : 'regular');
     const [notes, setNotes] = useState(editInvoice?.notes ?? '');
@@ -215,7 +261,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setAutoPrintNodeState(val);
         try {
             localStorage.setItem('pos_auto_print_node', val ? 'true' : 'false');
-        } catch (e) {}
+        } catch (e) { }
     };
 
     const printedInvoicesRef = useRef<Set<string | number>>(new Set());
@@ -747,13 +793,20 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
         if (isEditMode) {
             router.put(`/invoices/${editInvoice!.id}`, payload, {
+                preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    clearForm();
+                },
                 onFinish: () => setProcessing(false),
             });
         } else {
-            // Optimistic POS UI reset — clear form state immediately (0ms latency!)
-            clearForm();
             router.post('/invoices', payload, {
                 preserveScroll: true,
+                preserveState: true,
+                onSuccess: () => {
+                    clearForm();
+                },
                 onFinish: () => setProcessing(false),
             });
         }
@@ -769,6 +822,48 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     return (
         <>
             <AppShell pageTitle={isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة بيع جديدة'}>
+                {/* 🌟 Floating Success Toast */}
+                {toastMessage && (
+                    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-top-4 duration-300">
+                        <div className="bg-emerald-600/95 dark:bg-emerald-500/95 backdrop-blur-md text-white px-5 py-3.5 rounded-[22px] shadow-2xl border border-emerald-400/40 flex items-center gap-3.5 min-w-[320px] max-w-lg">
+                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-5 h-5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="font-black text-sm text-white leading-snug">{toastMessage}</p>
+                                {createdInvId && (
+                                    <p className="text-xs text-white/80 font-medium">رقم الفاتورة: #{createdInvId}</p>
+                                )}
+                            </div>
+                            {createdInvId && (
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => triggerNodePrint(createdInvId)}
+                                        className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer"
+                                        title="إعادة طباعة الإيصال الحراري"
+                                    >
+                                        طباعة 🖨️
+                                    </button>
+                                    <Link
+                                        href={`/invoices/${createdInvId}`}
+                                        className="px-2.5 py-1 rounded-lg bg-white text-emerald-800 font-bold text-xs hover:bg-emerald-50 transition-all active:scale-95"
+                                    >
+                                        عرض 👁️
+                                    </Link>
+                                </div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setToastMessage(null)}
+                                className="w-7 h-7 rounded-lg hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Desktop Layout - كما هو */}
                 <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
 
@@ -811,7 +906,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         {/* Add product form */}
                         <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5">
                             <ProductSelector
-                                products={products}
+                                key={`desktop-ps-${productSelectorKey}`}
+                                products={productsList}
                                 sizes={sizes}
                                 customerType={customerType}
                                 isEditMode={isEditMode}
@@ -1063,7 +1159,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 {/* Add Product Form */}
                                 <div className="px-3 py-3 border-b border-black/5 dark:border-white/5">
                                     <ProductSelector
-                                        products={products}
+                                        key={`mobile-ps-${productSelectorKey}`}
+                                        products={productsList}
                                         sizes={sizes}
                                         customerType={customerType}
                                         isEditMode={isEditMode}

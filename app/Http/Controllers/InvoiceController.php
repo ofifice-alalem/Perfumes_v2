@@ -88,9 +88,13 @@ class InvoiceController extends Controller
             app(NodeThermalPrinterController::class)->dispatchDirectPrint($invoice->id);
         }
 
+        $productIds = $invoice->items->pluck('product_id')->unique()->values()->all();
+        $updatedStocks = Product::whereIn('id', $productIds)->pluck('stock', 'id')->map(fn($st) => (string)$st)->all();
+
         return redirect()->route('invoices.create')
-            ->with('success', 'تم إنشاء فاتورة البيع بنجاح')
-            ->with('created_invoice_id', $invoice->id);
+            ->with('success', 'تم إنشاء فاتورة البيع بنجاح #' . $invoice->id)
+            ->with('created_invoice_id', $invoice->id)
+            ->with('updated_stocks', $updatedStocks);
     }
 
     public function show(int $id): Response

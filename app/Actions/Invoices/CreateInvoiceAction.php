@@ -157,21 +157,28 @@ class CreateInvoiceAction
                 'notes'   => "فاتورة مبيعات رقم #{$invoice->id}",
             ]);
 
+            $logItems = [];
+            $now = now();
             foreach ($itemsData as $itemData) {
                 $pid = $itemData['product_id'];
                 $qty = (float) $itemData['quantity'];
-                // Stock was decremented by InvoiceItemObserver upon InvoiceItem::create
-                $stockAfter = (float) Product::where('id', $pid)->value('stock');
-                $stockBefore = $stockAfter + $qty;
+                $prod = $products->get($pid);
+                $stockBefore = $prod ? (float)$prod->stock : 0;
+                $stockAfter = $stockBefore - $qty;
 
-                \App\Models\InventoryLogItem::create([
+                $logItems[] = [
                     'inventory_log_id' => $inventoryLog->id,
                     'product_id'       => $pid,
                     'system_stock'     => $stockBefore,
                     'actual_stock'     => $stockAfter,
                     'difference'       => -$qty,
                     'reason'           => "بيع فاتورة #{$invoice->id}",
-                ]);
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ];
+            }
+            if (!empty($logItems)) {
+                \App\Models\InventoryLogItem::insert($logItems);
             }
 
             // 9. Update final invoice totals & status using exact cent math
