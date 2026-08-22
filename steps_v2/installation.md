@@ -53,8 +53,12 @@ composer install
 cp .env.example .env
 ```
 
-### 3. تعديل إعدادات قاعدة البيانات في `.env`
+### 3. تعديل إعدادات البيئة في `.env`
 ```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://tajori.store:8443
+
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306

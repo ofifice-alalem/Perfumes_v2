@@ -1,6 +1,6 @@
 # 🚀 دليل إعداد وتجهيز السيرفر المحلي (Apache + SSL + PHP 8.4)
 
-هذا المستند يمثل التوثيق الشامل والشديد الدقة لإعداد وتشغيل مشروع **Perfumes_v2** على خادم **Apache 2.4** محلياً مع شهادات الأمان **HTTPS (mkcert)** والدومين المحلي `https://tajori.store`.
+هذا المستند يمثل التوثيق الشامل والشديد الدقة لإعداد وتشغيل مشروع **Perfumes_v2** على خادم **Apache 2.4** محلياً مع شهادات الأمان **HTTPS (mkcert)** والدومين المحلي `https://tajori.store:8443` (على المنفذ المخصص `8443` و `8085` لمنع أي تعارض مع خدمات الويندوز).
 
 ---
 
@@ -83,20 +83,41 @@ C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -k
 
 ---
 
-### 4️⃣ الخطوة الرابعة: ضبط الـ VirtualHost (HTTP -> HTTPS)
+### 4️⃣ الخطوة الرابعة: ضبط الـ VirtualHost (HTTP: 8085 -> HTTPS: 8443)
 
-في الملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
+1. في ملف `C:\Apache24\conf\httpd.conf` تأكد من ضبط منفذ الاستماع العادي:
+   ```apache
+   Listen 8085
+   ServerName localhost:8085
+   ```
+
+2. في الملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
 
 ```apache
-Listen 443
+Listen 8443
 
-<VirtualHost *:80>
+# Grant access to parent OneDrive directory tree for Apache
+<Directory "C:/Users/alale/OneDrive">
+    Options Indexes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+</Directory>
+
+<Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2">
+    Options Indexes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+</Directory>
+
+# 1. HTTP (Port 8085) - Redirects to HTTPS (Port 8443)
+<VirtualHost *:8085>
     ServerName tajori.store
     ServerAlias www.tajori.store
-    Redirect permanent / https://tajori.store/
+    Redirect permanent / https://tajori.store:8443/
 </VirtualHost>
 
-<VirtualHost *:443>
+# 2. HTTPS (Port 8443) - Secure Laravel Application
+<VirtualHost *:8443>
     ServerName tajori.store
     ServerAlias www.tajori.store
     DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
@@ -124,7 +145,7 @@ Listen 443
 # 1. ضبط ملف البيئة .env
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://tajori.store
+APP_URL=https://tajori.store:8443
 
 # 2. بناء الأصول وتثبيت الروابط والتخزين المؤقت
 php artisan storage:link

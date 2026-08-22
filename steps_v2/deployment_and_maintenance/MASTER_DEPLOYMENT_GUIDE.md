@@ -51,7 +51,7 @@ steps_v2/deployment_and_maintenance/
    APP_NAME=perfumes_v2
    APP_ENV=production
    APP_DEBUG=false
-   APP_URL=https://tajori.store
+   APP_URL=https://tajori.store:8443
 
    # قاعدة البيانات
    DB_CONNECTION=mysql
@@ -99,8 +99,11 @@ steps_v2/deployment_and_maintenance/
    ```
 
 3. **إعداد Apache (`httpd.conf` & `httpd-vhosts.conf`)**:
-   - تفعيل الموديولات في `httpd.conf`:
+   - تفعيل الموديولات وضبط المنفذ في `httpd.conf`:
      ```apache
+     Listen 8085
+     ServerName localhost:8085
+
      LoadModule rewrite_module modules/mod_rewrite.so
      LoadModule ssl_module modules/mod_ssl.so
      LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
@@ -113,15 +116,17 @@ steps_v2/deployment_and_maintenance/
 
    - إعداد VirtualHost في `httpd-vhosts.conf`:
      ```apache
-     Listen 443
+     Listen 8443
 
-     <VirtualHost *:80>
+     # 1. HTTP (Port 8085) - تحويل تلقائي إلى HTTPS (Port 8443)
+     <VirtualHost *:8085>
          ServerName tajori.store
          ServerAlias www.tajori.store
-         Redirect permanent / https://tajori.store/
+         Redirect permanent / https://tajori.store:8443/
      </VirtualHost>
 
-     <VirtualHost *:443>
+     # 2. HTTPS (Port 8443) - الموقع الآمن
+     <VirtualHost *:8443>
          ServerName tajori.store
          ServerAlias www.tajori.store
          DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
