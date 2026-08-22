@@ -196,7 +196,7 @@ steps_v2/deployment_and_maintenance/
 4. **اختصار تشغيل الكاشير والمبيعات (Kiosk / POS Mode Shortcut)**:
    أنشئ اختصاراً على سطح المكتب بالهدف التالي لفتح المنظومة كتطبيق مستقل وبطباعة فورية صامتة:
    ```cmd
-   "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk-printing --app=https://tajori.store --start-fullscreen --user-data-dir="C:\EdgeAppData"
+   "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk-printing --app=https://tajori.store:8443 --start-fullscreen --user-data-dir="C:\EdgeAppData"
    ```
 
 ### 4️⃣ الخطوة الرابعة: تحسينات الذاكرة وتفادي خطأ 500 في التقارير
