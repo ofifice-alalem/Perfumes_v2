@@ -45,18 +45,20 @@ C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -k
 
 ---
 
-### 2️⃣ الخطوة الثانية: ربط الدومين المحلي بملف النظام Hosts
+### 2️⃣ الخطوة الثانية: ربط الدومين المحلي بملف النظام Hosts (IPv4 + IPv6)
 
-أضف السطور التالية إلى ملف النظام `C:\Windows\System32\drivers\etc\hosts`:
+أضف السطور التالية إلى ملف النظام `C:\Windows\System32\drivers\etc\hosts` (ضروري جداً إضافة `::1` لمنع تأخر الـ DNS لعدة ثوانٍ):
 
 ```text
 127.0.0.1    tajori.store
 127.0.0.1    www.tajori.store
+::1          tajori.store
+::1          www.tajori.store
 ```
 
 ---
 
-### 3️⃣ الخطوة الثالثة: إعداد موديولات وبنية Apache
+### 3️⃣ الخطوة الثالثة: إعداد موديولات وتحسينات أداء Apache
 
 في ملف الإعدادات الرئيسي `C:\Apache24\conf\httpd.conf`:
 
@@ -66,6 +68,7 @@ C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -k
    - `mod_socache_shmcb`
    - `mod_vhost_alias`
    - `Include conf/extra/httpd-vhosts.conf`
+   - `Include conf/extra/httpd-mpm.conf`
 
 2. **ضبط `DirectoryIndex` لتشغيل Laravel:**
    ```apache
@@ -81,17 +84,26 @@ C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -k
    AddType application/x-httpd-php .php
    ```
 
+4. **إعدادات تسريع استجابة السوكيت لويندوز (Windows Socket Tuning):**
+   ```apache
+   Listen 8085
+   ServerName localhost:8085
+
+   AcceptFilter http none
+   AcceptFilter https none
+   EnableMMAP off
+   EnableSendfile off
+   KeepAlive On
+   MaxKeepAliveRequests 100
+   KeepAliveTimeout 5
+   HostnameLookups off
+   ```
+
 ---
 
 ### 4️⃣ الخطوة الرابعة: ضبط الـ VirtualHost (HTTP: 8085 -> HTTPS: 8443)
 
-1. في ملف `C:\Apache24\conf\httpd.conf` تأكد من ضبط منفذ الاستماع العادي:
-   ```apache
-   Listen 8085
-   ServerName localhost:8085
-   ```
-
-2. في الملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
+في الملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
 
 ```apache
 Listen 8443
@@ -132,6 +144,9 @@ Listen 8443
         Require all granted
     </Directory>
 
+    # التحويل التلقائي عند كتابة http:// بدلاً من https://
+    ErrorDocument 400 "<html><head><meta http-equiv='refresh' content='0;url=https://tajori.store:8443/'></head><body><script>window.location.href='https://tajori.store:8443/';</script><p>Redirecting to https://tajori.store:8443/...</p></body></html>"
+
     ErrorLog "logs/tajori.store-error.log"
     CustomLog "logs/tajori.store-access.log" combined
 </VirtualHost>
@@ -139,7 +154,31 @@ Listen 8443
 
 ---
 
-### 5️⃣ الخطوة الخامسة: تهيئة تحسينات Laravel للإنتاج
+### 5️⃣ الخطوة الخامسة: تفعيل محرك التسريع الفائق OPcache & JIT في PHP 8.4
+
+في ملف `C:\php-8.4.24\php.ini`:
+```ini
+zend_extension=opcache
+
+[opcache]
+opcache.enable=1
+opcache.enable_cli=1
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=32
+opcache.max_accelerated_files=30000
+opcache.validate_timestamps=1
+opcache.revalidate_freq=60
+opcache.save_comments=1
+opcache.fast_shutdown=1
+
+[opcache_jit]
+opcache.jit_buffer_size=128M
+opcache.jit=tracing
+```
+
+---
+
+### 6️⃣ الخطوة السادسة: تهيئة تحسينات Laravel للإنتاج
 
 ```powershell
 # 1. ضبط ملف البيئة .env
@@ -149,15 +188,13 @@ APP_URL=https://tajori.store:8443
 
 # 2. بناء الأصول وتثبيت الروابط والتخزين المؤقت
 php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan optimize
 npm run build
 ```
 
 ---
 
-### 6️⃣ الخطوة السادسة: تثبيت وتفعيل خدمة Apache في الويندوز
+### 7️⃣ الخطوة السابعة: تثبيت وتفعيل خدمة Apache في الويندوز
 
 ```cmd
 C:\Apache24\bin\httpd.exe -k install -n "Apache2.4"

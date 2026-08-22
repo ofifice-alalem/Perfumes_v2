@@ -83,11 +83,13 @@ steps_v2/deployment_and_maintenance/
 
 ### 2️⃣ الخطوة الثانية: إعداد Apache و SSL والدومين المحلي `tajori.store`
 
-1. **إضافة الدومين لملف Hosts**:
-   أضف السطر التالي في `C:\Windows\System32\drivers\etc\hosts`:
+1. **إضافة الدومين لملف Hosts (IPv4 + IPv6)**:
+   أضف السطور التالية في `C:\Windows\System32\drivers\etc\hosts`:
    ```text
    127.0.0.1    tajori.store
    127.0.0.1    www.tajori.store
+   ::1          tajori.store
+   ::1          www.tajori.store
    ```
 
 2. **توليد شهادات HTTPS بـ mkcert**:
@@ -98,16 +100,27 @@ steps_v2/deployment_and_maintenance/
    C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -key-file "C:\Apache24\conf\ssl\tajori.store-key.pem" tajori.store *.tajori.store
    ```
 
-3. **إعداد Apache (`httpd.conf` & `httpd-vhosts.conf`)**:
-   - تفعيل الموديولات وضبط المنفذ في `httpd.conf`:
+3. **إعداد وتحسين أداء Apache (`httpd.conf` & `httpd-vhosts.conf`)**:
+   - تفعيل الموديولات وإعدادات تسريع السوكيت في `httpd.conf`:
      ```apache
      Listen 8085
      ServerName localhost:8085
+
+     # تسريع استجابة السوكيت لويندوز
+     AcceptFilter http none
+     AcceptFilter https none
+     EnableMMAP off
+     EnableSendfile off
+     KeepAlive On
+     MaxKeepAliveRequests 100
+     KeepAliveTimeout 5
+     HostnameLookups off
 
      LoadModule rewrite_module modules/mod_rewrite.so
      LoadModule ssl_module modules/mod_ssl.so
      LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
      Include conf/extra/httpd-vhosts.conf
+     Include conf/extra/httpd-mpm.conf
 
      PHPIniDir "C:/php-8.4.24"
      LoadModule php_module "C:/php-8.4.24/php8apache2_4.dll"
@@ -140,8 +153,29 @@ steps_v2/deployment_and_maintenance/
              AllowOverride All
              Require all granted
          </Directory>
+
+         ErrorDocument 400 "<html><head><meta http-equiv='refresh' content='0;url=https://tajori.store:8443/'></head><body><script>window.location.href='https://tajori.store:8443/';</script><p>Redirecting...</p></body></html>"
      </VirtualHost>
      ```
+
+4. **تفعيل محرك التسريع OPcache & JIT في `C:\php-8.4.24\php.ini`**:
+   ```ini
+   zend_extension=opcache
+   [opcache]
+   opcache.enable=1
+   opcache.enable_cli=1
+   opcache.memory_consumption=256
+   opcache.interned_strings_buffer=32
+   opcache.max_accelerated_files=30000
+   opcache.validate_timestamps=1
+   opcache.revalidate_freq=60
+   opcache.save_comments=1
+   opcache.fast_shutdown=1
+
+   [opcache_jit]
+   opcache.jit_buffer_size=128M
+   opcache.jit=tracing
+   ```
 
 ---
 
