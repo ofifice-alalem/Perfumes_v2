@@ -1,7 +1,7 @@
 Set WshShell = CreateObject("WScript.Shell")
 
-' 1. إعادة تشغيل خدمة Apache في الخلفية بصمت تام ودون أي نافذة سوداء
-WshShell.Run "cmd /c ""net stop Apache2.4 & net start Apache2.4""", 0, True
+' 1. إنهاء أي عملية أباتشي معلقة وإعادة تشغيلها في الخلفية بصمت تام
+WshShell.Run "cmd /c ""taskkill /F /IM httpd.exe > NUL 2>&1 & timeout /t 1 /nobreak > NUL & start /B """" ""C:\Apache24\bin\httpd.exe""""""", 0, True
 
 ' 2. الفحص الذكي حتى التأكد من رجوع كود 200 OK من الموقع
 Dim ready, i
@@ -18,4 +18,4 @@ For i = 1 To 30
 Next
 
 ' 3. فتح المتصفح بملء الشاشة وحفظ البيانات
-WshShell.Run """C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"" --app=https://tajori.store:8443 --start-fullscreen --user-data-dir=""C:\EdgeAppData""", 1, False
+WshShell.Run """C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"" --kiosk-printing --app=https://tajori.store:8443 --start-fullscreen --user-data-dir=""C:\EdgeAppData""", 1, False

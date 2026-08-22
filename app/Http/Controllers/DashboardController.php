@@ -23,11 +23,13 @@ class DashboardController extends Controller
         $monthEnd   = now()->endOfMonth()->toDateString();
 
         // ── اليوم ────────────────────────────────────────────────────────────
-        $todayInvoices = Invoice::whereDate('created_at', $today)->get();
-        $todaySales    = $todayInvoices->sum('total');
-        $todayReceived = $todayInvoices->sum('paid_amount');
-        $todayDue      = $todayInvoices->sum('due_amount');
-        $todayCount    = $todayInvoices->count();
+        $todayStats = Invoice::whereDate('created_at', $today)
+            ->selectRaw('COALESCE(SUM(total), 0) as sales, COALESCE(SUM(paid_amount), 0) as received, COALESCE(SUM(due_amount), 0) as due, COUNT(*) as count')
+            ->first();
+        $todaySales    = (float) $todayStats->sales;
+        $todayReceived = (float) $todayStats->received;
+        $todayDue      = (float) $todayStats->due;
+        $todayCount    = (int) $todayStats->count;
 
         // آخر 5 فواتير اليوم مع اسم العميل
         $recentInvoices = Invoice::with('customer:id,name')
@@ -45,16 +47,20 @@ class DashboardController extends Controller
             ]);
 
         // ── هذا الشهر ────────────────────────────────────────────────────────
-        $monthInvoices  = Invoice::whereBetween('created_at', [$monthStart, $monthEnd])->get();
-        $monthSales     = $monthInvoices->sum('total');
-        $monthReceived  = $monthInvoices->sum('paid_amount');
-        $monthDue       = $monthInvoices->sum('due_amount');
+        $monthStats = Invoice::whereBetween('created_at', [$monthStart . ' 00:00:00', $monthEnd . ' 23:59:59'])
+            ->selectRaw('COALESCE(SUM(total), 0) as sales, COALESCE(SUM(paid_amount), 0) as received, COALESCE(SUM(due_amount), 0) as due')
+            ->first();
+        $monthSales     = (float) $monthStats->sales;
+        $monthReceived  = (float) $monthStats->received;
+        $monthDue       = (float) $monthStats->due;
 
         // المشتريات هذا الشهر
-        $monthPurchases    = Purchase::whereBetween('created_at', [$monthStart, $monthEnd])->get();
-        $monthPurchTotal   = $monthPurchases->sum('total');
-        $monthPurchPaid    = $monthPurchases->sum('paid_amount');
-        $monthPurchDue     = $monthPurchases->sum('due_amount');
+        $monthPurchStats = Purchase::whereBetween('created_at', [$monthStart . ' 00:00:00', $monthEnd . ' 23:59:59'])
+            ->selectRaw('COALESCE(SUM(total), 0) as total, COALESCE(SUM(paid_amount), 0) as paid, COALESCE(SUM(due_amount), 0) as due')
+            ->first();
+        $monthPurchTotal   = (float) $monthPurchStats->total;
+        $monthPurchPaid    = (float) $monthPurchStats->paid;
+        $monthPurchDue     = (float) $monthPurchStats->due;
 
         // خسائر (تالف) هذا الشهر — عدد العناصر التالفة
         $monthLossCount = DB::table('waste_items')
