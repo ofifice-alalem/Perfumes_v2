@@ -30,5 +30,8 @@ class CoreSystemSeeder extends Seeder
         foreach ($methods as $method) {
             PaymentMethod::firstOrCreate(['name' => $method], ['is_active' => true]);
         }
+
+        // 5. إنشاء الفترة المالية الأولى المفتوحة (Accounting Period)
+        $this->call(AccountingPeriodSeeder::class);
     }
 }

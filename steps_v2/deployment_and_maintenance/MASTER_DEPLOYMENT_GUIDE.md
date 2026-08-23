@@ -1,6 +1,6 @@
 # 🌐 الدليل الشامل والمعياري لنشر وإدارة وتثبيت المشروع على جهاز جديد (Master Deployment & Recovery Guide)
 
-هذا المستند يعتبر المرجع الرئيسي والكامل لنقل وتثبيت مشروع **Perfumes_v2** على أي جهاز أو سيرفر جديد، وضبط خادم **Apache 2.4** مع تشفير **SSL (HTTPS)** وذاكرة **Redis** والتشغيل الآلي بالكامل.
+هذا المستند يعتبر المرجع الرئيسي والكامل لنقل وتثبيت مشروع **Perfumes_v2** على أي جهاز أو سيرفر جديد، وضبط خادم **Apache 2.4** بأعلى كفاءة وسرعة على المنفذ **80 و 443** مع تشفير **SSL (HTTPS)** ومترجم **PHP 8.4 JIT** وذاكرة **Redis** والتشغيل الآلي بالكامل.
 
 ---
 
@@ -10,11 +10,12 @@
 steps_v2/deployment_and_maintenance/
 ├── MASTER_DEPLOYMENT_GUIDE.md              <-- هذا الدليل الشامل
 ├── server_setup/
-│   ├── APACHE_SSL_SETUP_GUIDE.md          <-- دليل إعداد Apache و SSL و Hosts
-│   ├── restart_apache.vbs                  <-- سكريبت صامت لتفريغ الكاش وإعادة تشغيل Apache
-│   └── setup_server.bat                    <-- سكريبت اختبار فحص سلامة أكواد Apache
+│   ├── APACHE_SSL_SETUP_GUIDE.md          <-- دليل إعداد Apache و SSL و Hosts و JIT
+│   ├── restart_apache.vbs                  <-- سكريبت صامت لإعادة تشغيل Apache
+│   └── setup_server.bat                    <-- سكريبت فحص سلامة أكواد Apache وتحديث الكاش
 └── repair_and_recovery/
     ├── EMERGENCY_RECOVERY_GUIDE.md         <-- دليل خطة الطوارئ والتعافي
+    ├── free_port_80.bat                    <-- سكريبت تعطيل IIS وتحرير المنفذ 80 بضغطة زر
     ├── start.vbs                           <-- سكريبت التشغيل التلقائي عند بدء الويندوز
     └── repair_and_start.vbs                <-- سكريبت زر الإصلاح السريع والطوارئ على سطح المكتب
 ```
@@ -23,12 +24,12 @@ steps_v2/deployment_and_maintenance/
 
 ## 🛠️ المتطلبات الأساسية للنظام (Prerequisites)
 
-1. **PHP**: الإصدار **8.4** (أو >= 8.2) مجهز بـ Extensions: `pdo_mysql`, `curl`, `mbstring`, `openssl`, `gd`, `zip`, `fileinfo`.
+1. **PHP**: الإصدار **8.4** (أو >= 8.2) مجهز بـ Extensions: `pdo_mysql`, `curl`, `mbstring`, `openssl`, `gd`, `zip`, `fileinfo`, `opcache`, `redis` (أو predis).
 2. **Node.js**: الإصدار 18 أو أعلى مع `npm`.
 3. **Composer**: أحدث إصدار إدارة حزم PHP.
 4. **MySQL / MariaDB**: منفذ `3306`.
 5. **Redis Server**: منفذ `6379` (لتحسين أداء الكاش والجلسات والصفوف).
-6. **C++ Exporter Engine (`/bin`)**: محرك تصدير الإكسيل الفائق (`bin/export_xlsx.exe` أو `bin/export_xlsx`) لتوليد التقارير في 7-11 ثانية.
+6. **C++ Exporter Engine (`/bin`)**: محرك تصدير الإكسيل الفائق (`bin/export_xlsx.exe`).
 7. **Apache HTTP Server 2.4**: مثبت على `C:\Apache24`.
 8. **mkcert**: مثبت وموجود في `C:\Apache24\bin\mkcert.exe` لتوليد الشهادات المحلية.
 
@@ -36,9 +37,57 @@ steps_v2/deployment_and_maintenance/
 
 ## 🚀 خطوات التثبيت على جهاز جديد من الصفر
 
-### 1️⃣ الخطوة الأولى: تثبيت الاعتماديات وإعداد البيئة
+### 1️⃣ الخطوة الأولى: إعداد PHP 8.4 JIT Compiler (`php.ini`)
 
-1. **تنزيل حزم PHP & JS**:
+افتح `C:\php-8.4.24\php.ini` وأضف/عدل الإعدادات التالية لتحقيق أعلى أداء وسرعة معالجة:
+```ini
+; ── OPcache & JIT Compiler ───────────────────────────────────
+opcache.enable=1
+opcache.enable_cli=1
+opcache.jit=tracing
+opcache.jit_buffer_size=64M
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
+
+; ── Realpath Cache (تسريع مسارات الملفات) ─────────────────────
+realpath_cache_size=4096k
+realpath_cache_ttl=600
+
+; ── الذاكرة ──────────────────────────────────────────────────
+memory_limit=512M
+upload_max_filesize=64M
+post_max_size=64M
+```
+
+---
+
+### 2️⃣ الخطوة الثانية: تثبيت وتشغيل خادم Redis
+
+1. **التثبيت عبر PowerShell كمسؤول (Windows):**
+   ```powershell
+   winget install Redis.Redis
+   ```
+   *(أو تحميل `Redis-x64-*.msi` من [مستودع Redis for Windows الرسمي](https://github.com/tporadowski/redis/releases))*.
+
+2. **تشغيل Redis كخدمة ويندوز تلقائية دائمة:**
+   ```powershell
+   Start-Service redis
+   Set-Service -Name redis -StartupType Automatic
+   ```
+
+3. **التحقق من عمل Redis:**
+   ```powershell
+   redis-cli ping
+   # الاستجابة المطلوبة: PONG
+   ```
+
+---
+
+### 3️⃣ الخطوة الثالثة: تثبيت الاعتماديات وإعداد البيئة
+
+1. **تنزيل حزم PHP & JS وبناء الواجهة**:
    ```bash
    composer install --no-dev --optimize-autoloader
    npm install
@@ -51,7 +100,7 @@ steps_v2/deployment_and_maintenance/
    APP_NAME=perfumes_v2
    APP_ENV=production
    APP_DEBUG=false
-   APP_URL=https://tajori.store:8443
+   APP_URL=http://tajori.store
 
    # قاعدة البيانات
    DB_CONNECTION=mysql
@@ -73,145 +122,140 @@ steps_v2/deployment_and_maintenance/
    REDIS_PORT=6379
    ```
 
-3. **توليد المفتاح وإنشاء الهيكل**:
+3. **توليد المفتاح وإنشاء الهيكل والبيانات الأساسية**:
    ```bash
    php artisan key:generate
-   php artisan migrate --seed
+   php artisan migrate --force
+   php artisan db:seed --class=CoreSystemSeeder --force
+   php artisan optimize
    ```
 
 ---
 
-### 2️⃣ الخطوة الثانية: إعداد Apache و SSL والدومين المحلي `tajori.store`
+### 3️⃣ الخطوة الثالثة: تحرير المنفذ 80 وربط الدومين `tajori.store`
 
-1. **إضافة الدومين لملف Hosts (IPv4 + IPv6)**:
+1. **تحرير المنفذ 80 من خدمة IIS**:
+   شغل `steps_v2/deployment_and_maintenance/repair_and_recovery/free_port_80.bat` كمسؤول (أو نفذ في PowerShell كمسؤول):
+   ```powershell
+   Stop-Service -Name W3SVC, WAS -Force -ErrorAction SilentlyContinue
+   Set-Service -Name W3SVC -StartupType Disabled
+   Set-Service -Name WAS -StartupType Disabled
+   ```
+
+2. **إضافة الدومين لملف Hosts**:
    أضف السطور التالية في `C:\Windows\System32\drivers\etc\hosts`:
    ```text
    127.0.0.1    tajori.store
    127.0.0.1    www.tajori.store
-   ::1          tajori.store
-   ::1          www.tajori.store
    ```
 
-2. **توليد شهادات HTTPS بـ mkcert**:
-   نفذ في PowerShell كأدمن:
+3. **توليد شهادات HTTPS بـ mkcert**:
+   نفذ في PowerShell كمسؤول:
    ```powershell
    C:\Apache24\bin\mkcert.exe -install
    New-Item -ItemType Directory -Path "C:\Apache24\conf\ssl" -Force
    C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -key-file "C:\Apache24\conf\ssl\tajori.store-key.pem" tajori.store *.tajori.store
    ```
 
-3. **إعداد وتحسين أداء Apache (`httpd.conf` & `httpd-vhosts.conf`)**:
-   - تفعيل الموديولات وإعدادات تسريع السوكيت في `httpd.conf`:
-     ```apache
-     Listen 8085
-     ServerName localhost:8085
+---
 
-     # تسريع استجابة السوكيت لويندوز
-     AcceptFilter http none
-     AcceptFilter https none
-     EnableMMAP off
-     EnableSendfile off
-     KeepAlive On
-     MaxKeepAliveRequests 100
-     KeepAliveTimeout 5
-     HostnameLookups off
+### 4️⃣ الخطوة الرابعة: إعداد وضبط أداء Apache (`httpd.conf` & `httpd-vhosts.conf`)
 
-     LoadModule rewrite_module modules/mod_rewrite.so
-     LoadModule ssl_module modules/mod_ssl.so
-     LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
-     Include conf/extra/httpd-vhosts.conf
-     Include conf/extra/httpd-mpm.conf
+1. **في نهاية `C:\Apache24\conf\httpd.conf`**:
+   ```apache
+   Listen 0.0.0.0:80
+   Listen [::]:80
 
-     PHPIniDir "C:/php-8.4.24"
-     LoadModule php_module "C:/php-8.4.24/php8apache2_4.dll"
-     AddType application/x-httpd-php .php
-     ```
+   # تفعيل الموديولات
+   LoadModule rewrite_module modules/mod_rewrite.so
+   LoadModule ssl_module modules/mod_ssl.so
+   LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+   LoadModule deflate_module modules/mod_deflate.so
+   Include conf/extra/httpd-vhosts.conf
 
-   - إعداد VirtualHost في `httpd-vhosts.conf`:
-     ```apache
-     Listen 8443
+   # ربط PHP 8.4
+   PHPIniDir "C:/php-8.4.24"
+   LoadModule php_module "C:/php-8.4.24/php8apache2_4.dll"
+   AddType application/x-httpd-php .php
 
-     # 1. HTTP (Port 8085) - تحويل تلقائي إلى HTTPS (Port 8443)
-     <VirtualHost *:8085>
-         ServerName tajori.store
-         ServerAlias www.tajori.store
-         Redirect permanent / https://tajori.store:8443/
-     </VirtualHost>
+   # تسريع استجابة السوكيت وقفل الملفات لويندوز (Windows Socket & File Tuning)
+   AcceptFilter http none
+   AcceptFilter https none
+   EnableMMAP off
+   EnableSendfile off
+   HostnameLookups Off
 
-     # 2. HTTPS (Port 8443) - الموقع الآمن
-     <VirtualHost *:8443>
-         ServerName tajori.store
-         ServerAlias www.tajori.store
-         DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
+   # إبقاء الاتصال مفتوحاً (KeepAlive) لتسريع التنقل اللحظي
+   KeepAlive On
+   MaxKeepAliveRequests 500
+   KeepAliveTimeout 15
+   Timeout 30
 
-         SSLEngine on
-         SSLCertificateFile "C:/Apache24/conf/ssl/tajori.store.pem"
-         SSLCertificateKeyFile "C:/Apache24/conf/ssl/tajori.store-key.pem"
+   # ضغط استجابات JSON و HTML
+   <IfModule mod_deflate.c>
+       AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json
+   </IfModule>
+   ```
 
-         <Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public">
-             Options Indexes FollowSymLinks MultiViews
-             AllowOverride All
-             Require all granted
-         </Directory>
+2. **في `C:\Apache24\conf\extra\httpd-vhosts.conf`**:
+   ```apache
+   Listen 0.0.0.0:443
+   Listen [::]:443
 
-         ErrorDocument 400 "<html><head><meta http-equiv='refresh' content='0;url=https://tajori.store:8443/'></head><body><script>window.location.href='https://tajori.store:8443/';</script><p>Redirecting...</p></body></html>"
-     </VirtualHost>
-     ```
+   <IfModule ssl_module>
+       SSLSessionCache "shmcb:logs/ssl_scache(512000)"
+       SSLSessionCacheTimeout 300
+   </IfModule>
 
-4. **تفعيل محرك التسريع OPcache & JIT في `C:\php-8.4.24\php.ini`**:
-   ```ini
-   zend_extension=opcache
-   [opcache]
-   opcache.enable=1
-   opcache.enable_cli=1
-   opcache.memory_consumption=256
-   opcache.interned_strings_buffer=32
-   opcache.max_accelerated_files=30000
-   opcache.validate_timestamps=1
-   opcache.revalidate_freq=60
-   opcache.save_comments=1
-   opcache.fast_shutdown=1
+   # 1. HTTP (Port 80) - الموقع المباشر الفائق السرعة
+   <VirtualHost *:80>
+       ServerName tajori.store
+       ServerAlias www.tajori.store localhost 127.0.0.1
+       DocumentRoot "C:/path/to/Perfumes_v2/public"
 
-   [opcache_jit]
-   opcache.jit_buffer_size=128M
-   opcache.jit=tracing
+       <Directory "C:/path/to/Perfumes_v2/public">
+           Options Indexes FollowSymLinks MultiViews
+           AllowOverride All
+           Require all granted
+       </Directory>
+
+       ErrorLog "logs/tajori.store-http-error.log"
+       CustomLog "logs/tajori.store-http-access.log" combined
+   </VirtualHost>
+
+   # 2. HTTPS (Port 443) - الموقع الآمن
+   <VirtualHost *:443>
+       ServerName tajori.store
+       ServerAlias www.tajori.store localhost 127.0.0.1
+       DocumentRoot "C:/path/to/Perfumes_v2/public"
+
+       SSLEngine on
+       SSLCertificateFile "C:/Apache24/conf/ssl/tajori.store.pem"
+       SSLCertificateKeyFile "C:/Apache24/conf/ssl/tajori.store-key.pem"
+
+       <Directory "C:/path/to/Perfumes_v2/public">
+           Options Indexes FollowSymLinks MultiViews
+           AllowOverride All
+           Require all granted
+       </Directory>
+
+       ErrorLog "logs/tajori.store-error.log"
+       CustomLog "logs/tajori.store-access.log" combined
+   </VirtualHost>
    ```
 
 ---
 
-### 3️⃣ الخطوة الثالثة: التعافي الذاتي التلقائي وتفعيل سكريبتات VBS
+### 5️⃣ الخطوة الخامسة: التشغيل التلقائي واختصارات سطح المكتب
 
-1. **تفعيل التعافي التلقائي عند أي انهيار (Auto-Recovery)**:
-   نفّذ هذا الأمر كأدمن لتوجيه الويندوز بإعادة تشغيل Apache فوراً:
-   ```cmd
-   sc.exe failure Apache2.4 reset= 86400 actions= restart/1000/restart/1000/restart/1000
+1. **التشغيل عند إقلاع ويندوز (Startup)**:
+   انسخ `steps_v2/deployment_and_maintenance/repair_and_recovery/start.vbs` إلى مجلد بدء التشغيل:
+   ```text
+   C:\Users\%USERNAME%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\start.vbs
    ```
 
-2. **التشغيل عند بدء الويندوز**:
-   ضع اختصاراً لـ `steps_v2/deployment_and_maintenance/repair_and_recovery/start.vbs` في مجلد البدء `shell:startup`.
+2. **اختصار التشغيل الرئيسي**:
+   أنشئ اختصاراً لـ `start.vbs` على سطح المكتب باسم **Tajori POS**.
 
-3. **اختصار الطوارئ على سطح المكتب**:
-   أنشئ اختصاراً على سطح المكتب لملف `steps_v2/deployment_and_maintenance/repair_and_recovery/repair_and_start.vbs` باسم `إصلاح وتشغيل النظام.vbs`.
-
-4. **اختصار تشغيل الكاشير والمبيعات (Kiosk / POS Mode Shortcut)**:
-   أنشئ اختصاراً على سطح المكتب بالهدف التالي لفتح المنظومة كتطبيق مستقل وبطباعة فورية صامتة:
-   ```cmd
-   "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk-printing --app=https://tajori.store:8443 --start-fullscreen --user-data-dir="C:\EdgeAppData"
-   ```
-
-### 4️⃣ الخطوة الرابعة: تحسينات الذاكرة وتفادي خطأ 500 في التقارير
-
-تضمن الكود في `ReportRepository.php` الإعدادات التالية لمنع أخطاء الذاكرة والوقت في التقارير والتصدير:
-- **حد الذاكرة**: `@ini_set('memory_limit', '512M');`
-- **وقت التنفيذ**: `@set_time_limit(180);`
-- **التقسيم التفاعلي**: 30 عنصر أولي لتقارير المبيعات والمشتريات والديون وحركة المنتجات مع إمكانية التحميل الإضافي عبر AJAX.
-
----
-
-### ⚡ أوامر الصيانة الدورية وتحديث الكاش
-
-عند إجراء أي تعديل على الكود أو `.env`:
-```bash
-php artisan optimize:clear
-cmd /c "npm run build"
-```
+3. **اختصار الطوارئ والإصلاح**:
+   أنشئ اختصاراً لـ `repair_and_start.vbs` على سطح المكتب باسم **إصلاح وتشغيل المنظومة**.

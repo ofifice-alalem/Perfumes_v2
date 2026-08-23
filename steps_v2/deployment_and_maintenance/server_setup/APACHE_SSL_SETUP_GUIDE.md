@@ -1,6 +1,6 @@
-# 🚀 دليل إعداد وتجهيز السيرفر المحلي (Apache + SSL + PHP 8.4)
+# 🚀 دليل إعداد وتجهيز السيرفر المحلي (Apache 2.4 + PHP 8.4 JIT + SSL)
 
-هذا المستند يمثل التوثيق الشامل والشديد الدقة لإعداد وتشغيل مشروع **Perfumes_v2** على خادم **Apache 2.4** محلياً مع شهادات الأمان **HTTPS (mkcert)** والدومين المحلي `https://tajori.store:8443` (على المنفذ المخصص `8443` و `8085` لمنع أي تعارض مع خدمات الويندوز).
+هذا المستند يمثل التوثيق الشامل والشديد الدقة لإعداد وتشغيل مشروع **Perfumes_v2** على خادم **Apache 2.4** محلياً بأعلى كفاءة وسرعة على المنفذ **80 المباشر** والمنفذ **443 (HTTPS)** مع ضبط كامل لإعدادات المترجم الفوري (JIT) وتسريع مقابس شبكة ويندوز.
 
 ---
 
@@ -8,8 +8,9 @@
 
 | اسم الملف | المسار المباشر | الوظيفة |
 | :--- | :--- | :--- |
-| **`restart_apache.vbs`** | `steps_v2/deployment_and_maintenance/server_setup/restart_apache.vbs` | سكريبت صمت تام لإعادة تشغيل Apache ومسح ذاكرة كاش Laravel بدون أي شاشات سوداء |
-| **`setup_server.bat`** | `steps_v2/deployment_and_maintenance/server_setup/setup_server.bat` | ملف تجريبي لفحص سلامة أكواد Apache (`httpd -t`) وتحديث كاش الإنتاج |
+| **`restart_apache.vbs`** | `steps_v2/deployment_and_maintenance/server_setup/restart_apache.vbs` | سكريبت صامت لإعادة تشغيل Apache بدون أي شاشات سوداء |
+| **`setup_server.bat`** | `steps_v2/deployment_and_maintenance/server_setup/setup_server.bat` | فحص سلامة أكواد Apache (`httpd -t`) وتحديث كاش الإنتاج |
+| **`free_port_80.bat`** | `steps_v2/deployment_and_maintenance/repair_and_recovery/free_port_80.bat` | تعطيل خدمة IIS وتحرير المنفذ 80 لأباتشي |
 
 ---
 
@@ -22,116 +23,122 @@
 | **DOMAIN_NAME** | `tajori.store` | اسم الدومين المحلي |
 | **APACHE_PATH** | `C:\Apache24` | مسار تثبيت خادم Apache |
 | **PHP_PATH** | `C:\php-8.4.24` | مسار بيئة PHP |
-| **SERVICE_NAME** | `Apache2.4` | اسم خدمة الويندوز |
 
 ---
 
 ## 🛠️ الخطوات التفصيلية للتثبيت والإعداد
 
-### 1️⃣ الخطوة الأولى: توليد وتثبيت شهادات الأمان SSL (HTTPS)
+### 1️⃣ الخطوة الأولى: إعدادات PHP 8.4 JIT (`php.ini`)
+في ملف `C:\php-8.4.24\php.ini`:
+```ini
+opcache.enable=1
+opcache.enable_cli=1
+opcache.jit=tracing
+opcache.jit_buffer_size=64M
+opcache.memory_consumption=256
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=20000
+opcache.validate_timestamps=0
 
-نفذ الأوامر التالية في **PowerShell كمسؤول**:
-
-```powershell
-# 1. تثبيت Root CA الخاص بـ mkcert في النظام
-C:\Apache24\bin\mkcert.exe -install
-
-# 2. إنشاء مجلد حفظ الشهادات داخل Apache
-New-Item -ItemType Directory -Path "C:\Apache24\conf\ssl" -Force
-
-# 3. توليد الشهادة والمفتاح الخاص بالدومين المحلي
-C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -key-file "C:\Apache24\conf\ssl\tajori.store-key.pem" tajori.store *.tajori.store
+realpath_cache_size=4096k
+realpath_cache_ttl=600
 ```
 
 ---
 
-### 2️⃣ الخطوة الثانية: ربط الدومين المحلي بملف النظام Hosts (IPv4 + IPv6)
-
-أضف السطور التالية إلى ملف النظام `C:\Windows\System32\drivers\etc\hosts` (ضروري جداً إضافة `::1` لمنع تأخر الـ DNS لعدة ثوانٍ):
-
-```text
-127.0.0.1    tajori.store
-127.0.0.1    www.tajori.store
-::1          tajori.store
-::1          www.tajori.store
-```
-
----
-
-### 3️⃣ الخطوة الثالثة: إعداد موديولات وتحسينات أداء Apache
-
-في ملف الإعدادات الرئيسي `C:\Apache24\conf\httpd.conf`:
-
-1. **تفعيل الموديولات المطلوبة (حذف `#`):**
-   - `mod_rewrite`
-   - `mod_ssl`
-   - `mod_socache_shmcb`
-   - `mod_vhost_alias`
-   - `Include conf/extra/httpd-vhosts.conf`
-   - `Include conf/extra/httpd-mpm.conf`
-
-2. **ضبط `DirectoryIndex` لتشغيل Laravel:**
-   ```apache
-   <IfModule dir_module>
-       DirectoryIndex index.php index.html
-   </IfModule>
+### 2️⃣ الخطوة الثانية: تحرير المنفذ 80 وربط الدومين بـ Hosts
+1. **تحرير المنفذ 80 من خدمة IIS**:
+   ```powershell
+   Stop-Service -Name W3SVC, WAS -Force -ErrorAction SilentlyContinue
+   Set-Service -Name W3SVC -StartupType Disabled
+   Set-Service -Name WAS -StartupType Disabled
    ```
 
-3. **ربط محرك PHP 8.4:**
-   ```apache
-   PHPIniDir "C:/php-8.4.24"
-   LoadModule php_module "C:/php-8.4.24/php8apache2_4.dll"
-   AddType application/x-httpd-php .php
+2. **ملف `C:\Windows\System32\drivers\etc\hosts`**:
+   ```text
+   127.0.0.1    tajori.store
+   127.0.0.1    www.tajori.store
    ```
 
-4. **إعدادات تسريع استجابة السوكيت لويندوز (Windows Socket Tuning):**
-   ```apache
-   Listen 8085
-   ServerName localhost:8085
-
-   AcceptFilter http none
-   AcceptFilter https none
-   EnableMMAP off
-   EnableSendfile off
-   KeepAlive On
-   MaxKeepAliveRequests 100
-   KeepAliveTimeout 5
-   HostnameLookups off
+3. **توليد شهادات mkcert**:
+   ```powershell
+   C:\Apache24\bin\mkcert.exe -install
+   New-Item -ItemType Directory -Path "C:\Apache24\conf\ssl" -Force
+   C:\Apache24\bin\mkcert.exe -cert-file "C:\Apache24\conf\ssl\tajori.store.pem" -key-file "C:\Apache24\conf\ssl\tajori.store-key.pem" tajori.store *.tajori.store
    ```
 
 ---
 
-### 4️⃣ الخطوة الرابعة: ضبط الـ VirtualHost (HTTP: 8085 -> HTTPS: 8443)
-
-في الملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
-
+### 3️⃣ الخطوة الثالثة: إعداد وتحسين أداء Apache (`httpd.conf`)
+في نهاية ملف `C:\Apache24\conf\httpd.conf`:
 ```apache
-Listen 8443
+Listen 0.0.0.0:80
+Listen [::]:80
 
-# Grant access to parent OneDrive directory tree for Apache
-<Directory "C:/Users/alale/OneDrive">
-    Options Indexes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-</Directory>
+# تفعيل الموديولات المطلوبة
+LoadModule rewrite_module modules/mod_rewrite.so
+LoadModule ssl_module modules/mod_ssl.so
+LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
+LoadModule deflate_module modules/mod_deflate.so
+Include conf/extra/httpd-vhosts.conf
 
-<Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2">
-    Options Indexes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-</Directory>
+# ربط PHP 8.4
+PHPIniDir "C:/php-8.4.24"
+LoadModule php_module "C:/php-8.4.24/php8apache2_4.dll"
+AddType application/x-httpd-php .php
 
-# 1. HTTP (Port 8085) - Redirects to HTTPS (Port 8443)
-<VirtualHost *:8085>
+# تسريع السوكيت وقفل الملفات
+AcceptFilter http none
+AcceptFilter https none
+EnableMMAP off
+EnableSendfile off
+HostnameLookups Off
+
+# KeepAlive لتسريع التصفح اللحظي
+KeepAlive On
+MaxKeepAliveRequests 500
+KeepAliveTimeout 15
+Timeout 30
+
+# ضغط البيانات (Gzip)
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json
+</IfModule>
+```
+
+---
+
+### 4️⃣ الخطوة الرابعة: إعداد VirtualHosts (`httpd-vhosts.conf`)
+في ملف `C:\Apache24\conf\extra\httpd-vhosts.conf`:
+```apache
+Listen 0.0.0.0:443
+Listen [::]:443
+
+<IfModule ssl_module>
+    SSLSessionCache "shmcb:logs/ssl_scache(512000)"
+    SSLSessionCacheTimeout 300
+</IfModule>
+
+# 1. HTTP (Port 80) - الموقع المباشر الفائق السرعة
+<VirtualHost *:80>
     ServerName tajori.store
-    ServerAlias www.tajori.store
-    Redirect permanent / https://tajori.store:8443/
+    ServerAlias www.tajori.store localhost 127.0.0.1
+    DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
+
+    <Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public">
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog "logs/tajori.store-http-error.log"
+    CustomLog "logs/tajori.store-http-access.log" combined
 </VirtualHost>
 
-# 2. HTTPS (Port 8443) - Secure Laravel Application
-<VirtualHost *:8443>
+# 2. HTTPS (Port 443) - الموقع الآمن
+<VirtualHost *:443>
     ServerName tajori.store
-    ServerAlias www.tajori.store
+    ServerAlias www.tajori.store localhost 127.0.0.1
     DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
 
     SSLEngine on
@@ -144,60 +151,7 @@ Listen 8443
         Require all granted
     </Directory>
 
-    # التحويل التلقائي عند كتابة http:// بدلاً من https://
-    ErrorDocument 400 "<html><head><meta http-equiv='refresh' content='0;url=https://tajori.store:8443/'></head><body><script>window.location.href='https://tajori.store:8443/';</script><p>Redirecting to https://tajori.store:8443/...</p></body></html>"
-
     ErrorLog "logs/tajori.store-error.log"
     CustomLog "logs/tajori.store-access.log" combined
 </VirtualHost>
-```
-
----
-
-### 5️⃣ الخطوة الخامسة: تفعيل محرك التسريع الفائق OPcache & JIT في PHP 8.4
-
-في ملف `C:\php-8.4.24\php.ini`:
-```ini
-zend_extension=opcache
-
-[opcache]
-opcache.enable=1
-opcache.enable_cli=1
-opcache.memory_consumption=256
-opcache.interned_strings_buffer=32
-opcache.max_accelerated_files=30000
-opcache.validate_timestamps=1
-opcache.revalidate_freq=60
-opcache.save_comments=1
-opcache.fast_shutdown=1
-
-[opcache_jit]
-opcache.jit_buffer_size=128M
-opcache.jit=tracing
-```
-
----
-
-### 6️⃣ الخطوة السادسة: تهيئة تحسينات Laravel للإنتاج
-
-```powershell
-# 1. ضبط ملف البيئة .env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://tajori.store:8443
-
-# 2. بناء الأصول وتثبيت الروابط والتخزين المؤقت
-php artisan storage:link
-php artisan optimize
-npm run build
-```
-
----
-
-### 7️⃣ الخطوة السابعة: تثبيت وتفعيل خدمة Apache في الويندوز
-
-```cmd
-C:\Apache24\bin\httpd.exe -k install -n "Apache2.4"
-powershell Set-Service -Name "Apache2.4" -StartupType Automatic
-net start Apache2.4
 ```
