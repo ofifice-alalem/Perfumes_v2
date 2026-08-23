@@ -11,14 +11,24 @@ class LicenseService
 
     public function getHardwareId(): string
     {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $cacheFile = storage_path('framework/hwid.key');
+        if (File::exists($cacheFile)) {
+            $cached = trim(File::get($cacheFile));
+            if (!empty($cached)) {
+                return $cached;
+            }
+        }
+
         $hwid = '';
 
         if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-            // Windows: الحصول على الرقم التسلسلي للوحة الأم
-            exec('wmic baseboard get serialnumber 2>&1', $output);
-            if (isset($output[1]) && !empty(trim($output[1]))) {
-                $hwid = trim($output[1]);
-            }
+            // Windows: فحص سريع لمعرف الجهاز
+            $hwid = php_uname('n');
         } else {
             // Linux: الحصول على معرف الآلة
             if (File::exists('/etc/machine-id')) {
@@ -28,13 +38,14 @@ class LicenseService
             }
         }
 
-        // في حال فشل الحصول على أي معلومات، نستخدم اسم الجهاز كبديل
         if (empty($hwid)) {
             $hwid = php_uname('n'); 
         }
 
-        // إرجاع رمز جهاز مكون من 16 حرفاً ليتم عرضه للمستخدم
-        return substr(strtoupper(hash('sha256', $hwid . 'DEVICE_ID_GENERATOR')), 0, 16);
+        $cached = substr(strtoupper(hash('sha256', $hwid . 'DEVICE_ID_GENERATOR')), 0, 16);
+        @File::put($cacheFile, $cached);
+
+        return $cached;
     }
 
     public function generateLicenseKey(string $deviceId): string

@@ -159,6 +159,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         {/* الرئيسية — super-admin فقط */}
         {isSuperAdmin && (
           <Link href="/"
+            prefetch
             className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
           >
             <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
@@ -195,6 +196,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                   const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                   return (
                     <Link key={item.href} href={item.href}
+                      prefetch
                       id={isActive ? 'active-nav-link' : undefined}
                       className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >

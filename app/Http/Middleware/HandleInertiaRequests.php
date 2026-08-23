@@ -16,6 +16,8 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'flash' => [
@@ -25,13 +27,17 @@ class HandleInertiaRequests extends Middleware
                 'updated_stocks'     => session('updated_stocks'),
             ],
             'auth' => [
-                'user' => $request->user() ? [
-                    'id'    => $request->user()->id,
-                    'name'  => $request->user()->name,
-                    'roles' => $request->user()->getRoleNames(),
+                'user' => $user ? [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
+                    'roles' => $user->roles->pluck('name'),
                 ] : null,
             ],
-            'globalPaymentMethods' => \App\Models\PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'globalPaymentMethods' => \Illuminate\Support\Facades\Cache::remember(
+                'global_payment_methods_list',
+                3600,
+                fn() => \App\Models\PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()
+            ),
         ];
     }
 }

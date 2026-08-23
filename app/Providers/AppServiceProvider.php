@@ -61,5 +61,27 @@ class AppServiceProvider extends ServiceProvider
         SupplierSettlement::observe(SupplierSettlementObserver::class);
 
         WasteItem::observe(WasteItemObserver::class);
+
+        // ─── POS Caching Invalidation ─────────────────────────────────────────
+        $clearPosCatalog = fn() => \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
+        \App\Models\Product::saved($clearPosCatalog);
+        \App\Models\Product::deleted($clearPosCatalog);
+        \App\Models\Category::saved($clearPosCatalog);
+        \App\Models\Category::deleted($clearPosCatalog);
+        \App\Models\PriceTier::saved($clearPosCatalog);
+        \App\Models\PriceTier::deleted($clearPosCatalog);
+        \App\Models\TierPrice::saved($clearPosCatalog);
+        \App\Models\TierPrice::deleted($clearPosCatalog);
+
+        $clearSizes = fn() => \Illuminate\Support\Facades\Cache::forget('pos_sizes_list');
+        \App\Models\Size::saved($clearSizes);
+        \App\Models\Size::deleted($clearSizes);
+
+        $clearPaymentMethods = function() {
+            \Illuminate\Support\Facades\Cache::forget('global_payment_methods_list');
+            \Illuminate\Support\Facades\Cache::forget('pos_payment_methods_list');
+        };
+        \App\Models\PaymentMethod::saved($clearPaymentMethods);
+        \App\Models\PaymentMethod::deleted($clearPaymentMethods);
     }
 }
