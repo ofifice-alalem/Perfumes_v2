@@ -1,8 +1,7 @@
 Set WshShell = CreateObject("WScript.Shell")
 
-' 1. تشغيل أباتشي مباشرة في الخلفية بصمت تام
-WshShell.CurrentDirectory = "C:\Apache24"
-WshShell.Run "C:\Apache24\bin\httpd.exe", 0, False
+' 1. التأكد من قيام خدمة أباتشي في الخلفية دون أي تعارض منافذ
+WshShell.Run "cmd /c ""sc start Apache2.4 > NUL 2>&1""", 0, True
 
 ' 2. فحص جاهزية السيرفر حتى يرجع كود 200 OK
 Dim ready, i

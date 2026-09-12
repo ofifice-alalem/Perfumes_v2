@@ -1,6 +1,8 @@
 # 🚀 دليل تثبيت ونشر المشروع على جهاز جديد (Installation Guide)
 
-> 💡 **ملاحظة هامّة**: للتعرف على الدليل الشامل والمفصل لتثبيت وإعداد Apache 2.4 + PHP 8.4 JIT + Redis وسكريبتات التشغيل التلقائي والطوارئ، يرجى مراجعة [MASTER_DEPLOYMENT_GUIDE.md](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/deployment_and_maintenance/MASTER_DEPLOYMENT_GUIDE.md).
+> 💡 **ملاحظة هامّة**: 
+> - للتعرف على الدليل الشامل والمفصل لتثبيت وإعداد Apache 2.4 + PHP 8.4 JIT + Redis وسكريبتات التشغيل التلقائي والطوارئ، يرجى مراجعة [MASTER_DEPLOYMENT_GUIDE.md](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/deployment_and_maintenance/MASTER_DEPLOYMENT_GUIDE.md).
+> - للتعرف على إعدادات تشغيل Apache تلقائياً مع ويندوز وحل تعارض المنفذ 80 وضبط الاستعادة الذاتية بدون برامج خارجية، يرجى مراجعة [installation_part2.md](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/installation_part2.md).
 
 ---
 
