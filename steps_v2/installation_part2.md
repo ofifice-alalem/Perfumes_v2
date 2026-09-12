@@ -11,6 +11,7 @@
 3. [الخطوة الثانية: ضبط Apache للعمل تلقائياً كخدمة ويندوز](#3-الخطوة-الثانية-ضبط-apache-للعمل-تلقائياً-كخدمة-ويندوز)
 4. [الخطوة الثالثة: إعدادات الاستعادة الذاتية (Recovery) ومعانيها](#4-الخطوة-الثالثة-إعدادات-الاستعادة-الذاتية-recovery-ومعانيها)
 5. [فهم وتجنب تعارض سكريبتات الإقلاع (start.vbs vs Windows Service)](#5-فهم-وتجنب-تعارض-سكريبتات-الإقلاع-startvbs-vs-windows-service)
+6. [حل بطء الصفحات وانقطاع الاتصال (ERR_CONNECTION_RESET و In-flight Crashes)](#6-حل-بطء-الصفحات-وانقطاع-الاتصال-err_connection_reset-و-in-flight-crashes)
 
 ---
 
@@ -110,3 +111,45 @@ WshShell.Run "C:\Apache24\bin\httpd.exe", 0, False
 عند تشغيل الجهاز، يجب أن يقتصر دور ملف [`start.vbs`](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/deployment_and_maintenance/repair_and_recovery/start.vbs) على:
 1. **الانتظار والفحص الذكي (Health Check)**: مراقبة الخدمة كل 500 ملي ثانية حتى تعود استجابة `200 OK` (لأن الخدمة تقلع تلقائياً بواسطة ويندوز).
 2. **فتح المتصفح فور الجاهزية**: تشغيل متصفح Edge بملء الشاشة ووضع التطبيق (`--app=http://tajori.store --kiosk-printing`) بمجرد أن تصبح المنظومة جاهزة لاستقبال الكاشير.
+
+---
+
+## 6. حل بطء الصفحات وانقطاع الاتصال (ERR_CONNECTION_RESET و In-flight Crashes)
+
+### ⚠️ مظهر المشكلة (Symptom):
+عند التنقل بين الصفحات في المتصفح أو تحريك الماوس فوق القوائم والأزرار (مثل شاشة المبيعات أو المشتريات):
+* تصبح الصفحات بطيئة جداً في الفتح وتتجمد لبضع ثوانٍ.
+* تظهر في الكونسول أخطاء مثل:  
+  `GET https://tajori.store/purchases net::ERR_CONNECTION_RESET`  
+  `Uncaught (in promise) HttpNetworkError: Network error`
+
+### 🔍 السبب الجذري (Root Cause):
+1. **الطلبات المسبقة المتزامنة (Inertia Prefetching)**: يرسل المتصفح عدة طلبات متزامنة في أجزاء من الثانية بمجرد مرور مؤشر الماوس فوق الروابط (`onMouseEnter`).
+2. **صغر مكدس ذاكرة خيوط أباتشي (ThreadStackSize)**: القيمة الافتراضية لخيوط معالجة أباتشي في ويندوز (`mpm_winnt`) ضئيلة جداً (أقل من 1MB). إطار عمل Laravel 11/12 مع Vue و Inertia يملك شجرة استدعاءات عميقة، مما يسبب فيضان مكدس الذاكرة (*Stack Overflow*).
+3. **تضارب JIT في PHP 8.4 على ويندوز**: تفعيل `opcache.jit=tracing` في بيئة ويندوز متعددة الخيوط يسبب تعارضاً برمجياً في الذاكرة المشتركة وانهياراً للعملية (`Exception code: 0xC0000005` في `ntdll.dll`).
+4. **توقف أباتشي اللحظي**: عند انهيار العملية التابعة، تنقطع كل الاتصالات المفتوحة فوراً (`ERR_CONNECTION_RESET`)، ثم يستغرق أباتشي 3-5 ثوانٍ لإعادة تشغيل العملية من جديد في الخلفية.
+
+### 🛠️ الحل النهائي والإعدادات الواجب تطبيقها على أي جهاز جديد:
+
+#### أ. تكبير مكدس الذاكرة في ملف `C:\Apache24\conf\extra\httpd-mpm.conf`:
+افتح الملف وعدّل قسم `<IfModule mpm_winnt_module>` بإضافة سطر `ThreadStackSize 8388608`:
+```apache
+<IfModule mpm_winnt_module>
+    ThreadsPerChild        150
+    MaxConnectionsPerChild   0
+    ThreadStackSize        8388608
+</IfModule>
+```
+*(تم تعيين 8 ميجابايت كاملة لكل Thread لضمان اتساع أثقل طلبات Laravel بدون أي فيضان للذاكرة)*.
+
+#### ب. إيقاف وضع JIT غير المستقر في ملف `C:\php-8.4.24\php.ini`:
+ابحث عن قسم `[opcache_jit]` وعدله ليصبح كالتالي:
+```ini
+[opcache_jit]
+opcache.jit_buffer_size=0
+opcache.jit=disable
+```
+*(ملاحظة: كاش OPcache العادي يظل مفعّلاً بالكامل ويعطي أقصى سرعة واستقرار 100% بدون أي انهيارات)*.
+
+#### ج. إعادة تشغيل خدمة Apache لتطبيق التعديلات:
+من نافذة الخدمات (`services.msc`)، اضغط بالزر الأيمن على **`Apache2.4`** واختر **`Restart`**.

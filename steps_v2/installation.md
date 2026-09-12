@@ -18,15 +18,16 @@
 
 ---
 
-## ⚡ 1. إعدادات السرعة القصوى في PHP (`php.ini`)
-افتح ملف `C:\php-8.4.24\php.ini` وأضف/عدل الإعدادات التالية لتفعيل المترجم الفوري (JIT) وتوسيع كاش المسارات:
+## ⚡ 1. إعدادات السرعة والاستقرار القصوى في PHP (`php.ini`) و Apache
+افتح ملف `C:\php-8.4.24\php.ini` وأضف/عدل الإعدادات التالية لكاش OPcache وتوسيع كاش المسارات:
 
 ```ini
-; ── OPcache & JIT Compiler (أقصى سرعة لمعالجة الكود) ────────
+; ── OPcache (أقصى سرعة واستقرار للكود) ───────────────────────
 opcache.enable=1
 opcache.enable_cli=1
-opcache.jit=tracing
-opcache.jit_buffer_size=64M
+; ملاحظة حاسمة: يجب إيقاف JIT على ويندوز مع أباتشي متعدد الخيوط لمنع انهيار ntdll 0xC0000005
+opcache.jit=disable
+opcache.jit_buffer_size=0
 opcache.memory_consumption=256
 opcache.interned_strings_buffer=16
 opcache.max_accelerated_files=20000
@@ -41,6 +42,9 @@ memory_limit=512M
 upload_max_filesize=64M
 post_max_size=64M
 ```
+
+> ⚠️ **تنبيه حاسم لإعداد أباتشي على أي جهاز جديد**:  
+> في ملف `C:\Apache24\conf\extra\httpd-mpm.conf`، يجب حتماً إضافة سطر `ThreadStackSize 8388608` داخل قسم `<IfModule mpm_winnt_module>` لمنع حدوث *Stack Overflow* وانقطاع الاتصال (`ERR_CONNECTION_RESET`) أثناء تنقل الكاشير بين الصفحات. (راجع تفاصيل [installation_part2.md](file:///c:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/steps_v2/installation_part2.md)).
 
 ---
 

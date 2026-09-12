@@ -28,13 +28,14 @@
 
 ## 🛠️ الخطوات التفصيلية للتثبيت والإعداد
 
-### 1️⃣ الخطوة الأولى: إعدادات PHP 8.4 JIT (`php.ini`)
+### 1️⃣ الخطوة الأولى: إعدادات PHP 8.4 OPcache (`php.ini`)
 في ملف `C:\php-8.4.24\php.ini`:
 ```ini
 opcache.enable=1
 opcache.enable_cli=1
-opcache.jit=tracing
-opcache.jit_buffer_size=64M
+; يجب إيقاف JIT على ويندوز مع أباتشي لتجنب انهيار الذاكرة 0xC0000005
+opcache.jit=disable
+opcache.jit_buffer_size=0
 opcache.memory_consumption=256
 opcache.interned_strings_buffer=16
 opcache.max_accelerated_files=20000
@@ -81,6 +82,12 @@ LoadModule ssl_module modules/mod_ssl.so
 LoadModule socache_shmcb_module modules/mod_socache_shmcb.so
 LoadModule deflate_module modules/mod_deflate.so
 Include conf/extra/httpd-vhosts.conf
+Include conf/extra/httpd-mpm.conf
+
+# ضبط حجم مكدس الذاكرة لمنع انقطاع الاتصال (ERR_CONNECTION_RESET) في extra/httpd-mpm.conf:
+# <IfModule mpm_winnt_module>
+#     ThreadStackSize 8388608
+# </IfModule>
 
 # ربط PHP 8.4
 PHPIniDir "C:/php-8.4.24"

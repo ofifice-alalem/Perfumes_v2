@@ -37,15 +37,16 @@ steps_v2/deployment_and_maintenance/
 
 ## 🚀 خطوات التثبيت على جهاز جديد من الصفر
 
-### 1️⃣ الخطوة الأولى: إعداد PHP 8.4 JIT Compiler (`php.ini`)
+### 1️⃣ الخطوة الأولى: إعداد PHP 8.4 OPcache (`php.ini`)
 
 افتح `C:\php-8.4.24\php.ini` وأضف/عدل الإعدادات التالية لتحقيق أعلى أداء وسرعة معالجة:
 ```ini
-; ── OPcache & JIT Compiler ───────────────────────────────────
+; ── OPcache (أقصى سرعة واستقرار للكود) ───────────────────────
 opcache.enable=1
 opcache.enable_cli=1
-opcache.jit=tracing
-opcache.jit_buffer_size=64M
+; يجب إيقاف JIT على ويندوز مع خيوط أباتشي لمنع خطأ الذاكرة 0xC0000005
+opcache.jit=disable
+opcache.jit_buffer_size=0
 opcache.memory_consumption=256
 opcache.interned_strings_buffer=16
 opcache.max_accelerated_files=20000
