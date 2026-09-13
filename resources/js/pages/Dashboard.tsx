@@ -17,7 +17,8 @@ import {
     Sparkles,
     ChevronRight,
     PlusCircle,
-    RotateCcw
+    RotateCcw,
+    CheckCircle2
 } from 'lucide-react';
 
 interface DailyStatRow {
@@ -111,77 +112,149 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {/* ── اليوم: Metric Cards ── */}
+                {/* ── اليوم: Metric Cards (Inspired by Reference Design & Spatial UI) ── */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* إجمالي البيع اليوم */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-4 border-2 border-slate-200 dark:border-slate-700">
+
+                    {/* 1. إجمالي البيع اليوم */}
+                    <div className="spatial-card p-6 sm:p-7 flex flex-col justify-between gap-5 transition-all duration-300 group hover:-translate-y-1">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي البيع اليوم</span>
-                            <div className="w-12 h-12 rounded-[18px] bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
+                            <span className="px-3.5 py-1 rounded-full text-xs font-black border border-primary/25 bg-primary/10 text-primary tracking-wide flex items-center gap-1.5 backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                <span>{today.sales > 0 ? `تحصيل ${collectPct.toFixed(0)}%` : 'مبيعات اليوم'}</span>
+                            </span>
+                            <div className="w-12 h-12 rounded-[20px] bg-primary/10 text-primary border border-primary/25 flex items-center justify-center backdrop-blur-md group-hover:scale-105 transition-transform">
                                 <TrendingUp className="w-6 h-6" />
                             </div>
                         </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">{fmt(today.sales)}</span>
-                            <span className="text-base font-bold text-slate-400 mr-2">د.ل</span>
-                        </div>
-                        {today.sales > 0 && (
-                            <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                <div className="flex justify-between text-xs font-black text-slate-500 dark:text-slate-400">
-                                    <span>نسبة التحصيل</span>
-                                    <span>{collectPct.toFixed(0)}%</span>
-                                </div>
-                                <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                                    <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${collectPct}%` }} />
-                                </div>
-                            </div>
-                        )}
-                    </SpatialCard>
 
-                    {/* المستلم اليوم */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-4 border-2 border-emerald-500/30 bg-emerald-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">تم استلامه اليوم</span>
-                            <div className="w-12 h-12 rounded-[18px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
-                                <Wallet className="w-6 h-6" />
+                        <div className="flex flex-col gap-1">
+                            <span className="text-sm font-bold text-slate-500 dark:text-white/60 tracking-wide">
+                                إجمالي البيع اليوم
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    {fmt(today.sales)}
+                                </span>
+                                <span className="text-base font-bold text-slate-400 dark:text-white/40">
+                                    د.ل
+                                </span>
                             </div>
                         </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">{fmt(today.received)}</span>
-                            <span className="text-base font-bold text-slate-400 mr-2">د.ل</span>
-                        </div>
-                        <span className="text-xs font-bold text-emerald-600/80 dark:text-emerald-400/80">مبالغ مسددة نقداً ومصرفياً</span>
-                    </SpatialCard>
 
-                    {/* الدين اليوم */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-4 border-2 border-amber-500/30 bg-amber-500/5">
+                        <div className="w-full h-2.5 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-l from-primary to-blue-500 transition-all duration-700"
+                                style={{ width: `${today.sales > 0 ? Math.max(collectPct, 12) : 0}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* 2. المستلم اليوم (مطابق لألوان ونمط الصورة المرجعية) */}
+                    <div className="spatial-card p-6 sm:p-7 flex flex-col justify-between gap-5 transition-all duration-300 group hover:-translate-y-1">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">دين اليوم</span>
-                            <div className="w-12 h-12 rounded-[18px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                            <span className="px-3.5 py-1 rounded-full text-xs font-black border border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 tracking-wide flex items-center gap-1.5 backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                <span>نقداً ومصرفياً</span>
+                            </span>
+                            <div className="w-12 h-12 rounded-[20px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center justify-center backdrop-blur-md group-hover:scale-105 transition-transform">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1">
+                            <span className="text-sm font-bold text-slate-500 dark:text-white/60 tracking-wide">
+                                تم استلامه اليوم
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                                    {fmt(today.received)}
+                                </span>
+                                <span className="text-base font-bold text-slate-400 dark:text-white/40">
+                                    د.ل
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="w-full h-2.5 rounded-full bg-emerald-500/15 dark:bg-emerald-500/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-l from-emerald-500 to-emerald-400 transition-all duration-700"
+                                style={{ width: `${today.received > 0 ? 100 : 0}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* 3. دين اليوم */}
+                    <div className="spatial-card p-6 sm:p-7 flex flex-col justify-between gap-5 transition-all duration-300 group hover:-translate-y-1">
+                        <div className="flex items-center justify-between">
+                            <span className="px-3.5 py-1 rounded-full text-xs font-black border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400 tracking-wide flex items-center gap-1.5 backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span>آجل للعملاء</span>
+                            </span>
+                            <div className="w-12 h-12 rounded-[20px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center backdrop-blur-md group-hover:scale-105 transition-transform">
                                 <Users className="w-6 h-6" />
                             </div>
                         </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400">{fmt(today.due)}</span>
-                            <span className="text-base font-bold text-slate-400 mr-2">د.ل</span>
-                        </div>
-                        <span className="text-xs font-bold text-amber-600/80 dark:text-amber-400/80">مبالغ آجلة على العملاء اليوم</span>
-                    </SpatialCard>
 
-                    {/* عدد الفواتير اليوم */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-4 border-2 border-blue-500/30 bg-blue-500/5">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-sm font-bold text-slate-500 dark:text-white/60 tracking-wide">
+                                دين اليوم الآجل
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                                    {fmt(today.due)}
+                                </span>
+                                <span className="text-base font-bold text-slate-400 dark:text-white/40">
+                                    د.ل
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="w-full h-2.5 rounded-full bg-amber-500/15 dark:bg-amber-500/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-l from-amber-500 to-amber-400 transition-all duration-700"
+                                style={{
+                                    width: `${today.sales > 0 && today.due > 0
+                                        ? Math.min((today.due / today.sales) * 100, 100)
+                                        : (today.due > 0 ? 100 : 0)}%`
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    {/* 4. عدد الفواتير اليوم */}
+                    <div className="spatial-card p-6 sm:p-7 flex flex-col justify-between gap-5 transition-all duration-300 group hover:-translate-y-1">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">فواتير اليوم</span>
-                            <div className="w-12 h-12 rounded-[18px] bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                            <span className="px-3.5 py-1 rounded-full text-xs font-black border border-blue-500/25 bg-blue-500/10 text-blue-600 dark:text-blue-400 tracking-wide flex items-center gap-1.5 backdrop-blur-md">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                <span>عمليات اليوم</span>
+                            </span>
+                            <div className="w-12 h-12 rounded-[20px] bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 flex items-center justify-center backdrop-blur-md group-hover:scale-105 transition-transform">
                                 <ShoppingCart className="w-6 h-6" />
                             </div>
                         </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400">{today.count}</span>
-                            <span className="text-base font-bold text-slate-400 mr-2">فاتورة</span>
+
+                        <div className="flex flex-col gap-1">
+                            <span className="text-sm font-bold text-slate-500 dark:text-white/60 tracking-wide">
+                                فواتير اليوم
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400 tracking-tight">
+                                    {today.count}
+                                </span>
+                                <span className="text-base font-bold text-slate-400 dark:text-white/40">
+                                    فاتورة
+                                </span>
+                            </div>
                         </div>
-                        <span className="text-xs font-bold text-blue-600/80 dark:text-blue-400/80">إجمالي العمليات المنفذة اليوم</span>
-                    </SpatialCard>
+
+                        <div className="w-full h-2.5 rounded-full bg-blue-500/15 dark:bg-blue-500/10 overflow-hidden">
+                            <div
+                                className="h-full rounded-full bg-gradient-to-l from-blue-500 to-indigo-500 transition-all duration-700"
+                                style={{ width: `${today.count > 0 ? 100 : 0}%` }}
+                            />
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* ── ملخص الشهر ── */}
