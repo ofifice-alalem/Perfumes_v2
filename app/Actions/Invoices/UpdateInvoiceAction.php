@@ -99,14 +99,16 @@ class UpdateInvoiceAction
                 $qty      = (float) $item['quantity'];
                 $saleType = $item['sale_type'];
                 $sizeId   = !empty($item['size_id']) && is_numeric($item['size_id']) ? (int) $item['size_id'] : null;
+                $customUnitPrice = isset($item['unit_price']) && is_numeric($item['unit_price']) ? (float) $item['unit_price'] : null;
 
-                // Server-side authoritative price calculation (Fix #1: Never Trust Client Prices)
+                // Server-side authoritative price calculation (Respects user custom price within min_price policy)
                 [$authoritativeUnitPrice, $authoritativeLineTotal] = $this->calculateAuthoritativePrices(
                     $product,
                     $saleType,
                     $sizeId,
                     $qty,
-                    $isVip
+                    $isVip,
+                    $customUnitPrice
                 );
 
                 $lineTotalCents = (int) round($authoritativeLineTotal * 100);
@@ -216,12 +218,19 @@ class UpdateInvoiceAction
         });
     }
 
-    private function calculateAuthoritativePrices(Product $product, string $saleType, ?int $sizeId, float $qty, bool $isVip): array
-    {
+    private function calculateAuthoritativePrices(
+        Product $product,
+        string $saleType,
+        ?int $sizeId,
+        float $qty,
+        bool $isVip,
+        ?float $customUnitPrice = null
+    ): array {
         $pp = $product->productPrice;
         $pt = $product->priceTier;
 
         $unitPrice = 0.0;
+        $minPrice  = 0.0;
         $lineTotal = 0.0;
 
         switch ($saleType) {
@@ -229,25 +238,41 @@ class UpdateInvoiceAction
                 if ($sizeId) {
                     $tp = $pt?->tierPrices?->firstWhere('size_id', $sizeId);
                     $unitPrice = (float) ($tp ? ($isVip ? $tp->price_vip : $tp->price_regular) : 0);
+                    $minPrice  = (float) ($tp ? $tp->price_vip : 0);
 
                     $size = Size::find($sizeId);
                     $sizeValue = $size ? (float) $size->value : 0;
                     $count = ($sizeValue > 0) ? ($qty / $sizeValue) : 1;
-                    $lineTotal = $unitPrice * $count;
                 } else {
                     $unitPrice = (float) ($pp ? ($isVip ? $pp->price_per_unit_vip : $pp->price_per_unit_regular) : 0);
-                    $lineTotal = $unitPrice * $qty;
+                    $minPrice  = (float) ($pp ? $pp->price_per_unit_vip : 0);
+                    $count = $qty;
                 }
+
+                if ($customUnitPrice !== null && $customUnitPrice > 0 && ($minPrice <= 0 || $customUnitPrice >= ($minPrice - 0.01))) {
+                    $unitPrice = $customUnitPrice;
+                }
+                $lineTotal = $unitPrice * $count;
                 break;
 
             case 'unit_decant':
             case 'unit_based':
                 $unitPrice = (float) ($pp ? ($isVip ? $pp->price_per_unit_vip : $pp->price_per_unit_regular) : 0);
+                $minPrice  = (float) ($pp ? $pp->price_per_unit_vip : 0);
+
+                if ($customUnitPrice !== null && $customUnitPrice > 0 && ($minPrice <= 0 || $customUnitPrice >= ($minPrice - 0.01))) {
+                    $unitPrice = $customUnitPrice;
+                }
                 $lineTotal = $unitPrice * $qty;
                 break;
 
             case 'full_bottle':
                 $unitPrice = (float) ($pp ? ($isVip ? ($pp->full_bottle_vip ?? 0) : ($pp->full_bottle_regular ?? 0)) : 0);
+                $minPrice  = (float) ($pp ? ($pp->full_bottle_vip ?? 0) : 0);
+
+                if ($customUnitPrice !== null && $customUnitPrice > 0 && ($minPrice <= 0 || $customUnitPrice >= ($minPrice - 0.01))) {
+                    $unitPrice = $customUnitPrice;
+                }
                 $bottleVol = (float) ($product->originalPerfumeDetail?->bottle_volume ?? 0);
                 $count = ($bottleVol > 0) ? ($qty / $bottleVol) : 1;
                 $lineTotal = $unitPrice * $count;
