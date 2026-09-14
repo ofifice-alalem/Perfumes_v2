@@ -438,33 +438,24 @@ class NodeThermalPrinterController extends Controller
                 ], 400);
             }
 
-            // 1. Try ultra-fast HTTP direct print first (Sub-100ms)
-            try {
-                $payload = [
-                    'multi' => $useMulti,
-                    'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80')
-                ];
-                if ($realInvoiceData) {
-                    $payload['invoice'] = $realInvoiceData;
-                }
+            // 1. Check if Node daemon is active via fast socket probe (< 20ms)
+            $isDaemonActive = false;
+            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            if ($fp) {
+                $isDaemonActive = true;
+                fclose($fp);
+            }
 
-                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/print', $payload);
+            $payload = [
+                'multi' => $useMulti,
+                'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80')
+            ];
+            if ($realInvoiceData) {
+                $payload['invoice'] = $realInvoiceData;
+            }
 
-                if ($response->successful()) {
-                    $resData = $response->json();
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'تم إرسال الفاتورة بنجاح وبسرعة فائقة (' . ($resData['durationMs'] ?? '40') . 'ms)',
-                        'log' => $resData['message'] ?? 'Fast Print Server'
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                // Auto-start fast server in background
-                $enginePath = $this->getEnginePath();
-                @pclose(@popen(sprintf('cd /d "%s" && start /B node server.js', $enginePath), 'r'));
-
+            if ($isDaemonActive) {
                 try {
-                    usleep(350000); // 350ms wait for server bind
                     $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/print', $payload);
                     if ($response->successful()) {
                         $resData = $response->json();
@@ -474,8 +465,8 @@ class NodeThermalPrinterController extends Controller
                             'log' => $resData['message'] ?? 'Fast Print Server'
                         ]);
                     }
-                } catch (\Throwable $ex) {
-                    Log::warning("printDirect retry failed: " . $ex->getMessage());
+                } catch (\Throwable $e) {
+                    Log::warning("printDirect HTTP dispatch: " . $e->getMessage());
                 }
             }
 
