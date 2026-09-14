@@ -837,18 +837,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     return (
         <>
             <AppShell pageTitle={isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة بيع جديدة'}>
-                {/* 🌟 Floating Success Toast */}
+                {/* 🌟 Compact Floating Spatial Toast (Top-Left) */}
                 {toastMessage && (
-                    <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-top-4 duration-300">
-                        <div className="bg-emerald-600/95 dark:bg-emerald-500/95 backdrop-blur-md text-white px-5 py-3.5 rounded-[22px] shadow-2xl border border-emerald-400/40 flex items-center gap-3.5 min-w-[320px] max-w-lg">
-                            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                                <CheckCircle2 className="w-5 h-5 text-white" />
+                    <div className="fixed top-5 left-5 z-[9999] animate-in fade-in slide-in-from-left-4 duration-300">
+                        <div className="spatial-card backdrop-blur-2xl bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-white px-3.5 py-2.5 rounded-[20px] shadow-2xl border border-emerald-500/30 dark:border-emerald-500/25 flex items-center gap-3 max-w-md">
+                            <div className="w-7 h-7 rounded-full bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                                <CheckCircle2 className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-black text-sm text-white leading-snug">{toastMessage}</p>
-                                {createdInvId && (
-                                    <p className="text-xs text-white/80 font-medium">رقم الفاتورة: #{createdInvId}</p>
-                                )}
+                                <p className="font-black text-xs sm:text-sm text-slate-800 dark:text-white leading-tight">
+                                    {toastMessage}
+                                </p>
                             </div>
                             {createdInvId && (
                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -856,25 +855,26 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         type="button"
                                         disabled={reprintingToast}
                                         onClick={() => triggerNodePrint(createdInvId)}
-                                        className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 disabled:opacity-60 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                                        className="px-2 py-1 rounded-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-50 text-slate-700 dark:text-slate-200 font-black text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 border border-black/5 dark:border-white/10"
                                         title="إعادة طباعة نسخة إضافية من الإيصال الحراري"
                                     >
-                                        {reprintingToast ? 'جاري الطباعة...' : 'إعادة طباعة 🖨️'}
+                                        {reprintingToast ? 'جاري...' : 'طباعة 🖨️'}
                                     </button>
                                     <Link
                                         href={`/invoices/${createdInvId}`}
-                                        className="px-2.5 py-1 rounded-lg bg-white text-emerald-800 font-bold text-xs hover:bg-emerald-50 transition-all active:scale-95"
+                                        className="px-2 py-1 rounded-[10px] bg-primary/10 hover:bg-primary/20 text-primary font-black text-xs transition-all active:scale-95 border border-primary/20"
                                     >
-                                        عرض 👁️
+                                        عرض
                                     </Link>
                                 </div>
                             )}
                             <button
                                 type="button"
                                 onClick={() => setToastMessage(null)}
-                                className="w-7 h-7 rounded-lg hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
+                                className="w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
+                                title="إغلاق"
                             >
-                                <X className="w-4 h-4" />
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
