@@ -67,9 +67,12 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
             const resData = await res.json();
             if (resData.success && resData.preview_src) {
                 setPreviewSrc(resData.preview_src);
+            } else {
+                alert('تنبيه المعاينة: ' + (resData.message || 'تعذر توليد صورة المعاينة'));
             }
         } catch (e) {
             console.error('Error loading receipt preview:', e);
+            alert('تعذر الاتصال بمحرك المعاينة الحرارية');
         } finally {
             setLoadingPreview(false);
         }

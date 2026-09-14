@@ -59,6 +59,31 @@ const server = http.createServer(async (req, res) => {
                 const useMulti = payload.multi !== false;
                 const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
 
+                // If async flag is requested (e.g. from POS checkout), respond 200 OK immediately (< 2ms)
+                if (payload.async) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        status: 'queued',
+                        message: 'Print job queued immediately'
+                    }));
+
+                    // Execute canvas rendering and Windows Spooler transmission in the background
+                    (async () => {
+                        try {
+                            const canvas = await renderInvoiceCanvas(invoiceData, config);
+                            const escposBuffer = await encodePngToEscPosRaster(canvas, {
+                                cutPaper: config.printer?.cutPaper !== false,
+                                feedLinesAfterPrint: config.printer?.feedLinesAfterPrint || 4
+                            });
+                            await printRawBuffer(printerName, escposBuffer);
+                        } catch (bgErr) {
+                            console.error("Background async print error:", bgErr.message);
+                        }
+                    })();
+                    return;
+                }
+
                 // 1. Fast Canvas Render
                 const canvas = await renderInvoiceCanvas(invoiceData, config);
 

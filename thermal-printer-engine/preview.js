@@ -4,14 +4,32 @@ const config = require('./config.json');
 const { sampleInvoice, sampleMultiItemInvoice } = require('./src/invoice/invoice-data');
 const { renderInvoiceCanvas } = require('./src/invoice/invoice-renderer');
 
+function loadInvoiceData() {
+    const fileArg = process.argv.find(arg => arg.startsWith('--file='));
+    if (fileArg) {
+        let filePath = fileArg.replace('--file=', '').replace(/^["']|["']$/g, '');
+        if (!path.isAbsolute(filePath)) {
+            filePath = path.resolve(process.cwd(), filePath);
+        }
+        if (fs.existsSync(filePath)) {
+            try {
+                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            } catch (e) {
+                console.warn("Could not parse invoice JSON file:", e.message);
+            }
+        }
+    }
+
+    const useMulti = process.argv.includes('--multi');
+    return useMulti ? sampleMultiItemInvoice : sampleInvoice;
+}
+
 async function main() {
     console.log("==============================================");
     console.log(" Generating POS-80 Invoice Preview Image...");
     console.log("==============================================");
 
-    // Support --multi flag to test multi-item invoice preview
-    const useMulti = process.argv.includes('--multi');
-    const invoice = useMulti ? sampleMultiItemInvoice : sampleInvoice;
+    const invoice = loadInvoiceData();
 
     console.log(`Invoice Number: ${invoice.invoiceNumber}`);
     console.log(`Cashier: ${invoice.cashier}`);

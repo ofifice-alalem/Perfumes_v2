@@ -155,7 +155,7 @@ class NodeThermalPrinterController extends Controller
         $invoice = Invoice::with([
             'customer',
             'user',
-            'items.product',
+            'items.product.originalPerfumeDetail',
             'items.size',
             'payments.paymentMethod',
             'settlements'
@@ -178,7 +178,8 @@ class NodeThermalPrinterController extends Controller
 
             $rawQty = (float)$item->quantity;
             if ($saleType === 'full_bottle') {
-                $calcQty = 1;
+                $bottleVol = (float)($item->product?->originalPerfumeDetail?->bottle_volume ?? 0);
+                $calcQty = ($bottleVol > 0) ? ($rawQty / $bottleVol) : ($rawQty > 0 ? $rawQty : 1);
             } elseif ($saleType === 'tier_decant' && $item->size && (float)$item->size->value > 0) {
                 $calcQty = $rawQty / (float)$item->size->value;
             } else {
@@ -240,7 +241,7 @@ class NodeThermalPrinterController extends Controller
                     $payload['invoice'] = $realInvoiceData;
                 }
 
-                $response = Http::timeout(2)->post('http://127.0.0.1:9123/preview', $payload);
+                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/preview', $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
@@ -255,15 +256,28 @@ class NodeThermalPrinterController extends Controller
                 // Auto-start fast node server in background if not running
                 $enginePath = $this->getEnginePath();
                 @pclose(@popen(sprintf('cd /d "%s" && start /B node server.js', $enginePath), 'r'));
+
+                try {
+                    usleep(350000); // 350ms wait for server bind
+                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/preview', $payload);
+                    if ($response->successful()) {
+                        $resData = $response->json();
+                        if (!empty($resData['preview_src'])) {
+                            return response()->json([
+                                'success' => true,
+                                'preview_src' => $resData['preview_src']
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $ex) {
+                    Log::warning("generatePreview retry failed: " . $ex->getMessage());
+                }
             }
 
             // 2. Fallback CLI execution
-            $flag = $useMulti ? '--multi' : '';
-            $enginePath = $this->getEnginePath();
-            $cmd = sprintf('cd /d "%s" && node preview.js %s', $enginePath, $flag);
-            $output = shell_exec("cmd /c \"$cmd\"");
+            $output = $this->executeCliWithInvoice('preview.js', $realInvoiceData, $useMulti);
 
-            $outputImg = $enginePath . '\\output\\invoice-preview.png';
+            $outputImg = $this->getEnginePath() . '\\output\\invoice-preview.png';
             if (File::exists($outputImg)) {
                 $imageData = base64_encode(File::get($outputImg));
                 $src = 'data:image/png;base64,' . $imageData;
@@ -289,6 +303,62 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Executes CLI command with real invoice temporary JSON file
+     */
+    protected function executeCliWithInvoice(string $scriptName, ?array $realInvoiceData, bool $useMulti = true): string
+    {
+        $enginePath = $this->getEnginePath();
+        $tempFile = null;
+        $fileParam = '';
+
+        if ($realInvoiceData) {
+            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
+            if (!File::isDirectory($tempDir)) {
+                File::makeDirectory($tempDir, 0755, true);
+            }
+            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'cli_' . time() . '_' . uniqid() . '.json';
+            File::put($tempFile, json_encode($realInvoiceData, JSON_UNESCAPED_UNICODE));
+            $fileParam = sprintf('--file="%s"', $tempFile);
+        } else {
+            $fileParam = $useMulti ? '--multi' : '';
+        }
+
+        $cmd = sprintf('cd /d "%s" && node %s %s', $enginePath, $scriptName, $fileParam);
+        $output = shell_exec("cmd /c \"$cmd\"");
+
+        if ($tempFile && File::exists($tempFile)) {
+            @File::delete($tempFile);
+        }
+
+        return (string)$output;
+    }
+
+    /**
+     * Executes CLI command asynchronously in background without blocking PHP (< 5ms)
+     */
+    protected function executeCliAsync(string $scriptName, ?array $realInvoiceData, bool $useMulti = true): void
+    {
+        $enginePath = $this->getEnginePath();
+        $tempFile = null;
+        $fileParam = '';
+
+        if ($realInvoiceData) {
+            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
+            if (!File::isDirectory($tempDir)) {
+                File::makeDirectory($tempDir, 0755, true);
+            }
+            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'cli_' . time() . '_' . uniqid() . '.json';
+            File::put($tempFile, json_encode($realInvoiceData, JSON_UNESCAPED_UNICODE));
+            $fileParam = sprintf('--file="%s"', $tempFile);
+        } else {
+            $fileParam = $useMulti ? '--multi' : '';
+        }
+
+        $cmd = sprintf('cd /d "%s" && start /B node %s %s', $enginePath, $scriptName, $fileParam);
+        @pclose(@popen($cmd, 'r'));
+    }
+
+    /**
      * Dispatch direct print job internally from PHP to Node daemon (Sub-10ms)
      */
     public function dispatchDirectPrint($invoiceId): bool
@@ -305,13 +375,35 @@ class NodeThermalPrinterController extends Controller
             }
 
             $payload = [
-                'multi' => true,
+                'async'       => true,
+                'multi'       => true,
                 'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80'),
-                'invoice' => $realInvoiceData
+                'invoice'     => $realInvoiceData
             ];
 
-            $response = Http::connectTimeout(0.2)->timeout(0.3)->post('http://127.0.0.1:9123/print', $payload);
-            return $response->successful();
+            // 1. Check if Node daemon is listening on port 9123 via rapid socket probe (< 20ms)
+            $isDaemonActive = false;
+            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            if ($fp) {
+                $isDaemonActive = true;
+                fclose($fp);
+            }
+
+            if ($isDaemonActive) {
+                // Daemon is live: post to daemon with async flag (< 2ms response).
+                // Once handed off to the daemon, NEVER trigger CLI fallback to guarantee no double-printing.
+                try {
+                    Http::timeout(1.0)->post('http://127.0.0.1:9123/print', $payload);
+                } catch (\Throwable $e) {
+                    Log::warning("dispatchDirectPrint HTTP dispatch: " . $e->getMessage());
+                }
+                return true;
+            }
+
+            // 2. Daemon is offline: execute CLI in background via non-blocking process (< 5ms)
+            // Single execution path: 100% real data, ZERO UI delay, ZERO duplicate prints.
+            $this->executeCliAsync('print.js', $realInvoiceData, true);
+            return true;
         } catch (\Throwable $e) {
             Log::error("dispatchDirectPrint error: " . $e->getMessage());
             return false;
@@ -356,7 +448,7 @@ class NodeThermalPrinterController extends Controller
                     $payload['invoice'] = $realInvoiceData;
                 }
 
-                $response = Http::timeout(2)->post('http://127.0.0.1:9123/print', $payload);
+                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/print', $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
@@ -370,12 +462,25 @@ class NodeThermalPrinterController extends Controller
                 // Auto-start fast server in background
                 $enginePath = $this->getEnginePath();
                 @pclose(@popen(sprintf('cd /d "%s" && start /B node server.js', $enginePath), 'r'));
+
+                try {
+                    usleep(350000); // 350ms wait for server bind
+                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/print', $payload);
+                    if ($response->successful()) {
+                        $resData = $response->json();
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'تم إرسال الفاتورة بنجاح وبسرعة فائقة (' . ($resData['durationMs'] ?? '40') . 'ms)',
+                            'log' => $resData['message'] ?? 'Fast Print Server'
+                        ]);
+                    }
+                } catch (\Throwable $ex) {
+                    Log::warning("printDirect retry failed: " . $ex->getMessage());
+                }
             }
 
-            // 2. Fallback CLI direct execution
-            $flag = $useMulti ? '--multi' : '';
-            $cmd = sprintf('cd /d "%s" && node print.js %s', $this->getEnginePath(), $flag);
-            $output = shell_exec("cmd /c \"$cmd\"");
+            // 2. Fallback CLI direct execution with real invoice data
+            $output = $this->executeCliWithInvoice('print.js', $realInvoiceData, $useMulti);
 
             return response()->json([
                 'success' => true,

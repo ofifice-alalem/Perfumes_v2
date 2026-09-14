@@ -10,7 +10,7 @@ import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
     CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause, Edit,
-    ChevronUp, Wallet, CheckCircle2, History,
+    ChevronUp, Wallet, CheckCircle2, History, RefreshCw,
 } from 'lucide-react';
 import { ProductSelector } from './components/ProductSelector';
 import { Cart } from './components/Cart';
@@ -264,20 +264,31 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         } catch (e) { }
     };
 
-    const printedInvoicesRef = useRef<Set<string | number>>(new Set());
+    const [reprintingToast, setReprintingToast] = useState(false);
 
-    const triggerNodePrint = (invId: number | string) => {
-        if (!invId || printedInvoicesRef.current.has(invId)) return;
-        printedInvoicesRef.current.add(invId);
+    const triggerNodePrint = async (invId: number | string) => {
+        if (!invId) return;
+        setReprintingToast(true);
 
-        fetch('/settings/node-printer/print', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-            },
-            body: JSON.stringify({ invoice_id: invId, multi: true }),
-        }).catch(err => console.error('Auto print error:', err));
+        try {
+            const res = await fetch('/settings/node-printer/print', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({ invoice_id: invId, multi: true }),
+            });
+            const resData = await res.json();
+            if (!resData.success) {
+                alert('تنبيه الطباعة: ' + (resData.message || 'تعذر إرسال الفاتورة إلى الطابعة'));
+            }
+        } catch (err) {
+            console.error('Node print error:', err);
+            alert('تعذر الاتصال بمحرك الطباعة الحرارية');
+        } finally {
+            setReprintingToast(false);
+        }
     };
 
 
@@ -752,6 +763,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }
 
     function submit() {
+        if (processing) return;
         if (cart.length === 0 || (isCashCustomer && Math.abs(remaining) > 0.01)) return;
         if (!isCashCustomer && remaining > 0.01) {
             setShowCreditConfirm(true);
@@ -761,6 +773,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     }
 
     function executeSubmit() {
+        if (processing) return;
         setShowCreditConfirm(false);
         setShowPaymentDrawer(false);
         setProcessing(true);
@@ -795,6 +808,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             router.put(`/invoices/${editInvoice!.id}`, payload, {
                 preserveScroll: true,
                 preserveState: true,
+                only: ['flash', 'recentInvoices'],
                 onSuccess: () => {
                     clearForm();
                 },
@@ -804,6 +818,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             router.post('/invoices', payload, {
                 preserveScroll: true,
                 preserveState: true,
+                only: ['flash', 'recentInvoices'],
                 onSuccess: () => {
                     clearForm();
                 },
@@ -839,11 +854,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     <button
                                         type="button"
+                                        disabled={reprintingToast}
                                         onClick={() => triggerNodePrint(createdInvId)}
-                                        className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer"
-                                        title="إعادة طباعة الإيصال الحراري"
+                                        className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 disabled:opacity-60 text-white font-bold text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+                                        title="إعادة طباعة نسخة إضافية من الإيصال الحراري"
                                     >
-                                        طباعة 🖨️
+                                        {reprintingToast ? 'جاري الطباعة...' : 'إعادة طباعة 🖨️'}
                                     </button>
                                     <Link
                                         href={`/invoices/${createdInvId}`}
@@ -1405,9 +1421,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         {/* Main Action */}
                                         <button onClick={submit}
                                             disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                                            className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-lg font-black disabled:opacity-40 active:scale-95 transition-transform">
-                                            <Check className="w-5 h-5" />
-                                            <span>{isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : `تأكيد البيع — ${grandTotal.toFixed(2)}`}</span>
+                                            className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-lg font-black disabled:opacity-40 active:scale-95 transition-transform cursor-pointer">
+                                            {processing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                                            <span>{processing ? 'جاري الحفظ والطباعة...' : (isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : `تأكيد البيع — ${grandTotal.toFixed(2)}`)}</span>
                                         </button>
 
                                         {/* Secondary Actions */}

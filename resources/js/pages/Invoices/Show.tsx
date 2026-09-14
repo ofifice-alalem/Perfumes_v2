@@ -223,6 +223,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
             }
         } catch (e) {
             console.error('Error printing node direct:', e);
+            alert('تعذر الاتصال بمحرك الطباعة الحرارية');
         } finally {
             setPrintingNode(false);
         }

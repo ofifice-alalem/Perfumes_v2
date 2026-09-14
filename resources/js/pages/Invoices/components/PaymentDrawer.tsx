@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Wallet, X, Plus, Edit, Trash2, Check, Printer, ChevronDown } from 'lucide-react';
+import { Wallet, X, Plus, Edit, Trash2, Check, Printer, ChevronDown, RefreshCw } from 'lucide-react';
 import { CartItem } from './Cart';
 
 export interface PaymentEntry {
@@ -307,8 +307,15 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
                         className="spatial-button h-24 sm:h-28 rounded-[28px] text-2xl sm:text-[26px] font-black w-full flex items-center justify-center gap-4 shadow-2xl active:scale-95 hover:scale-[1.01] transition-all disabled:opacity-40 cursor-pointer"
                     >
-                        <Check className="w-8 h-8 sm:w-10 sm:h-10" />
-                        {isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة'}
+                        {processing ? (
+                            <RefreshCw className="w-8 h-8 sm:w-10 sm:h-10 animate-spin" />
+                        ) : (
+                            <Check className="w-8 h-8 sm:w-10 sm:h-10" />
+                        )}
+                        {processing
+                            ? 'جاري حفظ الفاتورة...'
+                            : (isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة')
+                        }
                     </button>
                 </div>
             </div>

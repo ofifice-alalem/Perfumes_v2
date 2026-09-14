@@ -44,6 +44,17 @@ class InvoiceController extends Controller
 
     public function create(): Response
     {
+        return Inertia::render('Invoices/Create', [
+            'customers'      => fn() => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
+            'products'       => fn() => $this->getCatalogWithLiveStock(),
+            'sizes'          => fn() => \Illuminate\Support\Facades\Cache::remember('pos_sizes_list', 86400, fn() => Size::orderBy('label')->get(['id', 'label', 'value', 'unit'])->toArray()),
+            'paymentMethods' => fn() => \Illuminate\Support\Facades\Cache::remember('pos_payment_methods_list', 86400, fn() => PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()),
+            'recentInvoices' => fn() => $this->getFormattedRecentInvoices(),
+        ]);
+    }
+
+    protected function getCatalogWithLiveStock(): array
+    {
         $catalog = \Illuminate\Support\Facades\Cache::remember('pos_products_catalog_base', 86400, function () {
             return Product::with([
                 'category:id,name,unit,is_operational',
@@ -59,13 +70,17 @@ class InvoiceController extends Controller
             ->toArray();
         });
 
-        // 100% Authoritative Live Stock sync
         $liveStocks = Product::pluck('stock', 'id');
         foreach ($catalog as &$p) {
             $p['stock'] = (string)($liveStocks[$p['id']] ?? 0);
         }
         unset($p);
 
+        return $catalog;
+    }
+
+    protected function getFormattedRecentInvoices(): array
+    {
         $recentInvoices = DB::select("
             SELECT 
                 i.id,
@@ -83,6 +98,10 @@ class InvoiceController extends Controller
         ");
 
         $invoiceIds = array_column($recentInvoices, 'id');
+        if (empty($invoiceIds)) {
+            return [];
+        }
+
         $items = DB::table('invoice_items as ii')
             ->leftJoin('products as p', 'p.id', '=', 'ii.product_id')
             ->leftJoin('sizes as s', 's.id', '=', 'ii.size_id')
@@ -91,20 +110,12 @@ class InvoiceController extends Controller
             ->get()
             ->groupBy('invoice_id');
 
-        $formattedRecent = array_map(function($inv) use ($items) {
+        return array_map(function($inv) use ($items) {
             $invItems = $items->get($inv->id, collect());
             $inv->items_count = $invItems->count();
             $inv->items_summary = $invItems->take(2)->map(fn($it) => ($it->product_name ?? 'منتج') . ($it->size_label ? " ({$it->size_label})" : ''))->join('، ');
             return (array)$inv;
         }, $recentInvoices);
-
-        return Inertia::render('Invoices/Create', [
-            'customers'      => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
-            'products'       => $catalog,
-            'sizes'          => \Illuminate\Support\Facades\Cache::remember('pos_sizes_list', 86400, fn() => Size::orderBy('label')->get(['id', 'label', 'value', 'unit'])->toArray()),
-            'paymentMethods' => \Illuminate\Support\Facades\Cache::remember('pos_payment_methods_list', 86400, fn() => PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()),
-            'recentInvoices' => $formattedRecent,
-        ]);
     }
 
     public function store(StoreInvoiceRequest $request, CreateInvoiceAction $action): RedirectResponse
