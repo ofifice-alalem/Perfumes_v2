@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
@@ -471,22 +472,18 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 )}
 
                 {/* Spatial Touch Drawer — إنشاء وتعديل المنتجات */}
-                <div
-                    className={`fixed inset-0 z-[9999] flex justify-start bg-black/65 backdrop-blur-md transition-all duration-300 ease-out cursor-pointer ${
-                        (showCreate || editingId !== null) ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-                    }`}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setShowCreate(false);
-                            cancelEdit();
-                        }
-                    }}
-                >
-                    <div
-                        className={`relative w-full sm:w-[840px] md:w-[1000px] lg:w-[1140px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 transition-all duration-300 ease-out cursor-default ${
-                            (showCreate || editingId !== null) ? 'translate-x-0' : 'translate-x-full'
-                        }`}
-                    >
+                {(showCreate || editingId !== null) && createPortal(
+                    <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
+                        <div
+                            className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+                            onClick={() => {
+                                setShowCreate(false);
+                                cancelEdit();
+                            }}
+                        />
+                        <div
+                            className="relative w-full sm:w-[840px] md:w-[1000px] lg:w-[1140px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 animate-in slide-in-from-right duration-300 cursor-default z-10"
+                        >
                             
                             {/* Drawer Header */}
                             <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
@@ -840,27 +837,22 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 </button>
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
+                )}
 
                 {/* Spatial Filter Drawer — تصفية المنتجات المتقدمة */}
-                <div
-                    className={`fixed inset-0 z-[9999] flex justify-start bg-black/65 backdrop-blur-md transition-all duration-300 ease-out cursor-pointer ${
-                        filterDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-                    }`}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) {
-                            setFilterDrawerOpen(false);
-                        }
-                    }}
-                >
-                    <div
-                        className={`relative w-full sm:w-[840px] md:w-[1000px] lg:w-[1140px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 transition-all duration-300 ease-out cursor-default ${
-                            filterDrawerOpen ? 'translate-x-0' : 'translate-x-full'
-                        }`}
-                    >
-                            
+                {filterDrawerOpen && createPortal(
+                    <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
+                        <div
+                            className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+                            onClick={() => setFilterDrawerOpen(false)}
+                        />
+                        <div
+                            className="relative w-full sm:w-[600px] md:w-[680px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col z-10 border-l-2 border-slate-200 dark:border-slate-700 animate-in slide-in-from-right duration-300 overflow-hidden cursor-default"
+                        >
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 select-none">
+                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 select-none shrink-0">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-[20px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black p-3 shadow-md">
                                         <SlidersHorizontal className="w-7 h-7" />
@@ -872,93 +864,88 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 </div>
                                 <button
                                     onClick={() => setFilterDrawerOpen(false)}
-                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600 touch-manipulation"
+                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600 touch-manipulation cursor-pointer"
+                                    aria-label="إغلاق"
                                 >
                                     <X className="w-6 h-6" />
                                 </button>
                             </div>
 
                             {/* Drawer Content — الحاويات المقسمة */}
-                            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-8 flex flex-col gap-6 scrollbar-none">
-                                
-                                {/* صف شبكي: البحث والمعلومات الأساسية + تصنيف المنتجات (جنباً إلى جنب) */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-                                    {/* حاوية 1: البحث والمعلومات الأساسية */}
-                                    <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm h-full">
-                                        <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                            <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
-                                            <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
-                                        </h4>
-                                        
-                                        <div className="flex flex-col gap-3">
-                                            <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">بحث بالاسم أو كود QR</label>
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex-1">
-                                                    <ModernSelect
-                                                        label=""
-                                                        placeholder="ابحث بالاسم أو كود QR..."
-                                                        options={products.map(p => ({
-                                                            label: p.name,
-                                                            badge: p.category.name,
-                                                            meta: fmt(p.stock),
-                                                            searchKey: p.qrcode ?? undefined
-                                                        }))}
-                                                        onSelect={val => {
-                                                            const prod = products.find(p => p.name === val);
-                                                            if (prod) setDraftSearchProdId(prod.id);
-                                                        }}
-                                                    />
-                                                </div>
-                                                {draftSearchProdId && (
-                                                    <button onClick={() => setDraftSearchProdId(null)}
-                                                        className="flex items-center gap-2 px-4 h-14 rounded-[18px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-sm shrink-0 border-2 border-red-500/30 select-none touch-manipulation">
-                                                        <X className="w-4 h-4" /> إلغاء البحث
-                                                    </button>
-                                                )}
+                            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-7 flex flex-col gap-6 scrollbar-none">
+                                {/* حاوية 1: البحث والمعلومات الأساسية */}
+                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
+                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
+                                        <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                                    </h4>
+                                    
+                                    <div className="flex flex-col gap-3">
+                                        <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">بحث بالاسم أو كود QR</label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                                <ModernSelect
+                                                    label=""
+                                                    placeholder="ابحث بالاسم أو كود QR..."
+                                                    options={products.map(p => ({
+                                                        label: p.name,
+                                                        badge: p.category.name,
+                                                        meta: fmt(p.stock),
+                                                        searchKey: p.qrcode ?? undefined
+                                                    }))}
+                                                    onSelect={val => {
+                                                        const prod = products.find(p => p.name === val);
+                                                        if (prod) setDraftSearchProdId(prod.id);
+                                                    }}
+                                                />
                                             </div>
+                                            {draftSearchProdId && (
+                                                <button onClick={() => setDraftSearchProdId(null)}
+                                                    className="flex items-center gap-2 px-4 h-14 rounded-[18px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-sm shrink-0 border-2 border-red-500/30 select-none touch-manipulation cursor-pointer">
+                                                    <X className="w-4 h-4" /> إلغاء البحث
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
 
-                                    {/* حاوية 2: تصنيف المنتجات والفرز (كاردات مكبرة ومريحة للمس) */}
-                                    <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm h-full">
-                                        <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                            <span className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 border border-purple-500/30">🏷️</span>
-                                            <span className="text-slate-900 dark:text-white tracking-wide">تصنيف المنتجات</span>
-                                        </h4>
+                                {/* حاوية 2: تصنيف المنتجات والفرز */}
+                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
+                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
+                                        <span className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 border border-purple-500/30">🏷️</span>
+                                        <span className="text-slate-900 dark:text-white tracking-wide">تصنيف المنتجات</span>
+                                    </h4>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <button onClick={() => setDraftCat(null)}
-                                                className={`flex items-center justify-between px-6 h-20 sm:h-24 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
-                                                    !draftCat
-                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                        : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                                }`}>
-                                                <span>جميع التصنيفات</span>
-                                                <span className={`text-sm sm:text-base font-black px-4 py-2 rounded-2xl ${
-                                                    !draftCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                                }`}>{products.length}</span>
-                                            </button>
-                                            {categories.map(cat => {
-                                                const count = products.filter(p => p.category.id === cat.id).length;
-                                                const active = draftCat === cat.id;
-                                                return (
-                                                    <button key={cat.id} onClick={() => setDraftCat(cat.id)}
-                                                        className={`flex items-center justify-between px-6 h-20 sm:h-24 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
-                                                            active
-                                                                ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
-                                                        }`}>
-                                                        <span className="truncate">{cat.name}</span>
-                                                        <span className={`text-sm sm:text-base font-black px-4 py-2 rounded-2xl ${
-                                                            active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                                        }`}>{count}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <button onClick={() => setDraftCat(null)}
+                                            className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                !draftCat
+                                                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
+                                                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                            }`}>
+                                            <span>جميع التصنيفات</span>
+                                            <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
+                                                !draftCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                            }`}>{products.length}</span>
+                                        </button>
+                                        {categories.map(cat => {
+                                            const count = products.filter(p => p.category.id === cat.id).length;
+                                            const active = draftCat === cat.id;
+                                            return (
+                                                <button key={cat.id} onClick={() => setDraftCat(cat.id)}
+                                                    className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                        active
+                                                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
+                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                    }`}>
+                                                    <span className="truncate">{cat.name}</span>
+                                                    <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
+                                                        active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                    }`}>{count}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-
                                 </div>
 
                                 {/* حاوية 3: حالة المخزون والتنبيهات */}
@@ -970,28 +957,27 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                     <button
                                         onClick={() => setDraftLowStockOnly(!draftLowStockOnly)}
-                                        className={`flex items-center justify-between px-6 h-18 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation ${
+                                        className={`flex items-center justify-between px-6 h-18 sm:h-20 rounded-[22px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation ${
                                             draftLowStockOnly
                                                 ? 'bg-amber-500 text-white border-amber-500 shadow-xl shadow-amber-500/30'
                                                 : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3.5">
-                                            <AlertTriangle className={`w-7 h-7 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
+                                            <AlertTriangle className={`w-6 h-6 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
                                             <span>المنتجات التي أوشكت على النفاد</span>
                                         </div>
-                                        <span className={`text-xs sm:text-sm font-black px-4 py-2 rounded-xl ${
+                                        <span className={`text-xs sm:text-sm font-black px-3.5 py-1.5 rounded-xl ${
                                             draftLowStockOnly ? 'bg-white/30 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                                         }`}>
                                             {products.filter(p => Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0).length} منتج
                                         </span>
                                     </button>
                                 </div>
-
                             </div>
 
                             {/* Drawer Footer Actions */}
-                            <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4 select-none">
+                            <div className="p-6 sm:p-7 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4 select-none shrink-0">
                                 <button
                                     onClick={() => {
                                         setFilterCat(draftCat);
@@ -999,7 +985,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         setLowStockOnly(draftLowStockOnly);
                                         setFilterDrawerOpen(false);
                                     }}
-                                    className="flex-1 spatial-button h-16 sm:h-18 rounded-[22px] text-lg sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 touch-manipulation"
+                                    className="flex-1 spatial-button h-16 sm:h-18 rounded-[22px] text-lg sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 touch-manipulation cursor-pointer"
                                 >
                                     <Check className="w-6 h-6" />
                                     عرض النتائج ({draftFiltered.length})
@@ -1011,16 +997,17 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             setDraftCat(null);
                                             setDraftLowStockOnly(false);
                                         }}
-                                        className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0 touch-manipulation"
+                                        className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-base sm:text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0 touch-manipulation cursor-pointer"
                                     >
                                         <RotateCcw className="w-5 h-5" />
                                         إعادة تعيين
                                     </button>
                                 )}
                             </div>
-
                         </div>
-                    </div>
+                    </div>,
+                    document.body
+                )}
 
                 {/* الشريط السريع للفلاتر النشطة إن وجدت */}
                 {hasActiveFilter && (
