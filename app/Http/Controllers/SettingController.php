@@ -46,6 +46,7 @@ class SettingController extends Controller
             'label_show_code_text' => 'nullable|string|in:0,1',
             'label_font_size' => 'nullable|string|max:10',
             'label_zoom' => 'nullable|string|max:10',
+            'label_rotation' => 'nullable|string|in:0,90,180,270',
         ]);
 
         if ($request->hasFile('store_logo_file')) {
@@ -71,6 +72,7 @@ class SettingController extends Controller
             'label_show_code_text',
             'label_font_size',
             'label_zoom',
+            'label_rotation',
         ];
 
         foreach ($fields as $field) {

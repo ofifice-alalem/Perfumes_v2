@@ -142,16 +142,17 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     receipt_font_size: settings.receipt_font_size || '10',
     show_qr_code: settings.show_qr_code ?? '1',
     node_printer_name: settings.node_printer_name || 'XP-80',
-    label_width_mm: settings.label_width_mm || '62.5',
-    label_height_mm: settings.label_height_mm || '40',
-    label_margin_mm: settings.label_margin_mm || '1',
+    label_width_mm: settings.label_width_mm || '50',
+    label_height_mm: settings.label_height_mm || '30',
+    label_margin_mm: settings.label_margin_mm || '0.5',
     label_orientation: settings.label_orientation || 'landscape',
+    label_rotation: settings.label_rotation || '0',
     label_barcode_type: (settings.label_barcode_type as 'qr_2d' | 'qr_3d' | 'imei' | 'serial') || 'qr_2d',
     label_show_store_name: settings.label_show_store_name ?? '0',
     label_show_price: settings.label_show_price ?? '0',
     label_show_code_text: settings.label_show_code_text ?? '0',
     label_font_size: settings.label_font_size || '11',
-    label_zoom: settings.label_zoom || '100',
+    label_zoom: settings.label_zoom || '125',
     store_logo_file: null as File | null,
   });
 
@@ -175,55 +176,72 @@ export default function SettingsIndex({ settings }: SettingsProps) {
   const hasOnlyCode = data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '1';
 
   const handleTestLabelPrint = () => {
-    const widthMm = Number(data.label_width_mm) || 62.5;
-    const heightMm = Number(data.label_height_mm) || 40;
-    const marginMm = Number(data.label_margin_mm) || 1;
+    const widthMm = Number(data.label_width_mm) || 76.2;
+    const heightMm = Number(data.label_height_mm) || 101.6;
+    const marginMm = Number(data.label_margin_mm) || 0.5;
     const isQr = data.label_barcode_type.startsWith('qr');
     const zoomPct = Number(data.label_zoom || '100');
+    const rotDeg = Number(data.label_rotation || '0');
 
-    const win = window.open('', '_blank', `width=${Math.max(widthMm * 6, 460)},height=${Math.max(heightMm * 6, 360)}`);
+    const win = window.open('', '_blank', `width=${Math.max(widthMm * 6, 500)},height=${Math.max(heightMm * 6, 400)}`);
     if (!win) return;
 
     const labelContent = labelPrintRef.current ? labelPrintRef.current.innerHTML : '';
+
+    // Calculate proportional dimensions dynamically based on label size
+    const availableHeightMm = hasNoText ? (heightMm * 0.88) : hasOnlyCode ? (heightMm * 0.75) : (heightMm * 0.60);
+    const qrPrintSizeMm = Math.min(widthMm * 0.88, availableHeightMm) * (zoomPct / 100);
+    const barPrintHeightMm = availableHeightMm * (zoomPct / 100);
 
     win.document.write(`
       <!DOCTYPE html>
       <html dir="rtl">
       <head>
         <meta charset="utf-8" />
-        <title>طباعة ملصق - ${testValue}</title>
+        <title>ملصق - ${testValue}</title>
         <style>
           @page {
             size: ${widthMm}mm ${heightMm}mm;
-            margin: 0;
+            margin: 0mm !important;
           }
-          * { margin: 0; padding: 0; box-sizing: border-box; }
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+          }
           html, body {
-            width: ${widthMm}mm;
-            height: ${heightMm}mm;
-            margin: 0;
-            padding: 0;
+            width: ${widthMm}mm !important;
+            height: ${heightMm}mm !important;
+            max-width: ${widthMm}mm !important;
+            max-height: ${heightMm}mm !important;
             background: #fff;
-            overflow: hidden;
+            overflow: hidden !important;
             display: flex;
             align-items: center;
             justify-content: center;
             text-align: center;
             direction: rtl;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
           }
           .print-label {
-            width: ${widthMm}mm;
-            height: ${heightMm}mm;
-            padding: ${marginMm}mm;
+            width: ${widthMm}mm !important;
+            height: ${heightMm}mm !important;
+            max-width: ${widthMm}mm !important;
+            max-height: ${heightMm}mm !important;
+            padding: ${marginMm}mm !important;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: ${hasNoText ? 'center' : 'space-between'};
+            justify-content: ${hasNoText ? 'center' : 'space-around'};
             box-sizing: border-box;
-            overflow: hidden;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
+            ${rotDeg !== 0 ? `transform: rotate(${rotDeg}deg); transform-origin: center center;` : ''}
           }
           .store-title {
-            font-size: ${Math.max(7, Math.min(12, Number(data.label_font_size)))}pt;
+            font-size: ${Math.max(8, Math.min(16, Number(data.label_font_size) + 2))}pt;
             font-weight: 800;
             color: #000;
             white-space: nowrap;
@@ -231,24 +249,21 @@ export default function SettingsIndex({ settings }: SettingsProps) {
             text-overflow: ellipsis;
             max-width: 100%;
             line-height: 1.1;
-            margin-bottom: 0.5mm;
           }
           .price-tag {
-            font-size: ${Math.max(8, Math.min(13, Number(data.label_font_size) + 1))}pt;
+            font-size: ${Math.max(9, Math.min(18, Number(data.label_font_size) + 4))}pt;
             font-weight: 900;
             color: #000;
             line-height: 1.1;
-            margin-top: 0.5mm;
           }
           .code-text {
             font-family: monospace;
-            font-size: ${Math.max(7, Math.min(11, Number(data.label_font_size) - 1))}pt;
+            font-size: ${Math.max(8, Math.min(14, Number(data.label_font_size) + 1))}pt;
             font-weight: 800;
             letter-spacing: 2px;
             color: #000;
-            line-height: 1;
+            line-height: 1.1;
             white-space: nowrap;
-            margin-top: 0.5mm;
           }
           .graphic-container {
             width: 100%;
@@ -257,12 +272,13 @@ export default function SettingsIndex({ settings }: SettingsProps) {
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            max-height: ${availableHeightMm}mm !important;
           }
           .graphic-container svg {
-            width: ${isQr ? (hasNoText ? `${Math.min(widthMm, heightMm) * 0.95 * (zoomPct / 100)}mm` : `${Math.min(widthMm, heightMm - 10) * 0.90 * (zoomPct / 100)}mm`) : '98%'};
-            height: ${isQr ? (hasNoText ? `${Math.min(widthMm, heightMm) * 0.95 * (zoomPct / 100)}mm` : `${Math.min(widthMm, heightMm - 10) * 0.90 * (zoomPct / 100)}mm`) : `${(hasNoText ? heightMm * 0.85 : hasOnlyCode ? heightMm * 0.65 : heightMm * 0.52) * (zoomPct / 100)}mm`};
+            width: ${isQr ? `${qrPrintSizeMm}mm` : '96%'} !important;
+            height: ${isQr ? `${qrPrintSizeMm}mm` : `${barPrintHeightMm}mm`} !important;
             max-width: 98% !important;
-            max-height: 98% !important;
+            max-height: ${availableHeightMm}mm !important;
             display: block;
             margin: 0 auto;
           }
@@ -285,12 +301,11 @@ export default function SettingsIndex({ settings }: SettingsProps) {
   };
 
   const labelPresets = [
-    { id: '62.5x40', label: '62.5 × 40 مم (2.46 × 1.58 in)', desc: 'مقاس طابعتك الحالي (taqniya-xp-235B)', width: '62.5', height: '40', orientation: 'landscape' },
-    { id: '50x30', label: '50 × 30 مم (1.97 × 1.18 in)', desc: 'Xprinter XP-235B القياسي', width: '50', height: '30', orientation: 'landscape' },
-    { id: '50x25', label: '50 × 25 مم (1.97 × 0.98 in)', desc: 'ملصقات مدمجة', width: '50', height: '25', orientation: 'landscape' },
-    { id: '40x30', label: '40 × 30 مم (1.57 × 1.18 in)', desc: 'ملصقات متوسطة', width: '40', height: '30', orientation: 'landscape' },
-    { id: '40x25', label: '40 × 25 مم (1.57 × 0.98 in)', desc: 'ملصقات العطور والعينات', width: '40', height: '25', orientation: 'landscape' },
-    { id: '75x50', label: '75 × 50 مم (2.95 × 1.97 in)', desc: 'مقاس كبير للشحنات والكراتين', width: '75', height: '50', orientation: 'landscape' },
+    { id: '3x4in', label: '76.2 × 101.6 مم (3.00 × 4.00 in)', desc: '⭐ المقاس المستقر لطابعتك بدون فصل (taqniya-xp-235B)', width: '76.2', height: '101.6', orientation: 'landscape' },
+    { id: '3x2in', label: '76.2 × 50.8 مم (3.00 × 2.00 in)', desc: 'مقاس 3 بوصة متوسط', width: '76.2', height: '50.8', orientation: 'landscape' },
+    { id: '62.5x40', label: '62.5 × 40 مم (2.46 × 1.58 in)', desc: 'مقاس 2.5 بوصة مدمج', width: '62.5', height: '40', orientation: 'landscape' },
+    { id: '50x30', label: '50 × 30 مم (1.97 × 1.18 in)', desc: 'مقاس 2 بوصة قياسي', width: '50', height: '30', orientation: 'landscape' },
+    { id: '50x25', label: '50 × 25 مم (1.97 × 0.98 in)', desc: 'ملصقات العطور والزجاجات المدمجة', width: '50', height: '25', orientation: 'landscape' },
   ];
 
   const barcodeTypes = [
@@ -1428,57 +1443,95 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   </div>
                 </div>
 
-                {/* Orientation & Font size */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-black/5 dark:border-white/8">
-                  <div className="space-y-2">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
-                      <RotateCw className="w-3.5 h-3.5 text-primary" />
-                      اتجاه الطباعة (Orientation)
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setData('label_orientation', 'landscape')}
-                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                          data.label_orientation === 'landscape'
-                            ? 'bg-primary text-white border-primary shadow-sm'
-                            : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        أفقي (Landscape)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setData('label_orientation', 'portrait')}
-                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                          data.label_orientation === 'portrait'
-                            ? 'bg-primary text-white border-primary shadow-sm'
-                            : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        عمودي (Portrait)
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
-                      <Type className="w-3.5 h-3.5 text-primary" />
-                      حجم خط الملصق (Font Size)
-                    </label>
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {['9', '10', '11', '12'].map((sz) => (
+                {/* Orientation & Rotation & Font size */}
+                <div className="space-y-4 pt-2 border-t border-black/5 dark:border-white/8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Orientation */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                        <RotateCw className="w-3.5 h-3.5 text-primary" />
+                        اتجاه الصفحة (Paper Orientation)
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
                         <button
-                          key={sz}
                           type="button"
-                          onClick={() => setData('label_font_size', sz)}
+                          onClick={() => setData('label_orientation', 'landscape')}
                           className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            data.label_font_size === sz
+                            data.label_orientation === 'landscape'
                               ? 'bg-primary text-white border-primary shadow-sm'
                               : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
                           }`}
                         >
-                          {sz}pt
+                          أفقي (Landscape)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setData('label_orientation', 'portrait')}
+                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                            data.label_orientation === 'portrait'
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          عمودي (Portrait)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Font size */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                        <Type className="w-3.5 h-3.5 text-primary" />
+                        حجم خط الملصق (Font Size)
+                      </label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {['9', '10', '11', '12'].map((sz) => (
+                          <button
+                            key={sz}
+                            type="button"
+                            onClick={() => setData('label_font_size', sz)}
+                            className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                              data.label_font_size === sz
+                                ? 'bg-primary text-white border-primary shadow-sm'
+                                : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                            }`}
+                          >
+                            {sz}pt
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rotation Angle Controls (Fix 90deg rotation) */}
+                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                        <RotateCw className="w-3.5 h-3.5 text-amber-500" />
+                        زاوية تدوير الطباعة (Rotation Angle) - لعلاج مشكلة خروج الملصق مائلاً أو معكوساً:
+                      </label>
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        {data.label_rotation === '0' ? 'طبيعي (0°)' : data.label_rotation === '90' ? 'مدور 90° يمين' : data.label_rotation === '270' ? 'مدور 90° يسار (270°)' : 'معكوس 180°'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { val: '0', label: '0° طبيعي (بدون تدوير)' },
+                        { val: '90', label: '90° تدوير يمين ↻' },
+                        { val: '270', label: '270° تدوير يسار ↺' },
+                        { val: '180', label: '180° مقلوب رأسياً' },
+                      ].map((rot) => (
+                        <button
+                          key={rot.val}
+                          type="button"
+                          onClick={() => setData('label_rotation', rot.val)}
+                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                            (data.label_rotation || '0') === rot.val
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-500/40'
+                          }`}
+                        >
+                          {rot.label}
                         </button>
                       ))}
                     </div>
@@ -1654,20 +1707,21 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   {/* Zoom / Scale Selector */}
                   <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
                     <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      نسبة حجم وتعبئة الكود داخل الملصق (Scale / Fill):
+                      حجم وتكبير الرسم داخل الملصق (Graphic Zoom & Scale):
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { val: '100', label: '100% تعبئة قصوى (الأكبر)' },
-                        { val: '85', label: '85% حجم كبير' },
-                        { val: '70', label: '70% حجم متوسط' },
+                        { val: '150', label: '150% (مضاعف 2x كبير)' },
+                        { val: '125', label: '125% (كبير جداً)' },
+                        { val: '100', label: '100% (قياسي كامل)' },
+                        { val: '85', label: '85% (متوسط)' },
                       ].map((item) => (
                         <button
                           key={item.val}
                           type="button"
                           onClick={() => setData('label_zoom', item.val)}
                           className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            (data.label_zoom || '100') === item.val
+                            (data.label_zoom || '125') === item.val
                               ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                               : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
                           }`}
@@ -1763,10 +1817,10 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                     ref={labelPrintRef}
                     className="bg-white text-slate-900 border-2 border-slate-300 shadow-2xl rounded-lg flex flex-col items-center justify-center text-center transition-all duration-300 select-none relative overflow-hidden"
                     style={{
-                      width: `${Math.min(340, Math.max(180, Number(data.label_width_mm) * 5))}px`,
-                      minHeight: `${Math.min(280, Math.max(120, Number(data.label_height_mm) * 5))}px`,
-                      padding: hasNoText ? '6px' : '10px 8px',
-                      gap: hasNoText ? '0px' : '4px',
+                      width: `${Math.min(360, Math.max(180, Number(data.label_width_mm) * 5))}px`,
+                      minHeight: `${Math.min(300, Math.max(120, Number(data.label_height_mm) * 5))}px`,
+                      padding: hasNoText ? '4px' : '8px 6px',
+                      gap: hasNoText ? '0px' : '3px',
                     }}
                   >
                     {/* Optional Store / Product Header */}
@@ -1784,7 +1838,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                       {data.label_barcode_type === 'qr_2d' && (
                         <QRCodeSVG
                           value={testValue || '240000669027'}
-                          size={Math.round((hasNoText ? 190 : hasOnlyCode ? 150 : 110) * (Number(data.label_zoom || '100') / 100))}
+                          size={Math.round((hasNoText ? 260 : hasOnlyCode ? 210 : 155) * (Number(data.label_zoom || '125') / 100))}
                           level="H"
                           fgColor="#0f172a"
                           bgColor="#ffffff"
@@ -1795,14 +1849,14 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                         <div className="p-1 rounded-xl bg-white border border-slate-200 shadow-sm">
                           <QRCodeSVG
                             value={testValue || '240000669027'}
-                            size={Math.round((hasNoText ? 180 : hasOnlyCode ? 140 : 105) * (Number(data.label_zoom || '100') / 100))}
+                            size={Math.round((hasNoText ? 250 : hasOnlyCode ? 200 : 150) * (Number(data.label_zoom || '125') / 100))}
                             level="H"
                             fgColor="#0f172a"
                             bgColor="#ffffff"
                             imageSettings={{
                               src: PERFUME_SVG_B64,
-                              width: Math.round((hasNoText ? 42 : 32) * (Number(data.label_zoom || '100') / 100)),
-                              height: Math.round((hasNoText ? 42 : 32) * (Number(data.label_zoom || '100') / 100)),
+                              width: Math.round((hasNoText ? 58 : 44) * (Number(data.label_zoom || '125') / 100)),
+                              height: Math.round((hasNoText ? 58 : 44) * (Number(data.label_zoom || '125') / 100)),
                               excavate: true,
                             }}
                           />
@@ -1814,8 +1868,8 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                           <Barcode
                             value={testValue || '240000669027'}
                             format="CODE128"
-                            width={(hasNoText ? 2.0 : hasOnlyCode ? 1.6 : 1.3) * (Number(data.label_zoom || '100') / 100)}
-                            height={Math.round((hasNoText ? 90 : hasOnlyCode ? 65 : 45) * (Number(data.label_zoom || '100') / 100))}
+                            width={(hasNoText ? 2.8 : hasOnlyCode ? 2.2 : 1.7) * (Number(data.label_zoom || '125') / 100)}
+                            height={Math.round((hasNoText ? 130 : hasOnlyCode ? 95 : 65) * (Number(data.label_zoom || '125') / 100))}
                             displayValue={false}
                             margin={0}
                             background="#ffffff"
@@ -1828,8 +1882,8 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                           <Barcode
                             value={testValue || '240000669027'}
                             format="CODE128"
-                            width={(hasNoText ? 2.2 : hasOnlyCode ? 1.8 : 1.4) * (Number(data.label_zoom || '100') / 100)}
-                            height={Math.round((hasNoText ? 95 : hasOnlyCode ? 70 : 50) * (Number(data.label_zoom || '100') / 100))}
+                            width={(hasNoText ? 3.0 : hasOnlyCode ? 2.4 : 1.8) * (Number(data.label_zoom || '125') / 100)}
+                            height={Math.round((hasNoText ? 140 : hasOnlyCode ? 100 : 70) * (Number(data.label_zoom || '125') / 100))}
                             displayValue={false}
                             margin={0}
                             background="#ffffff"
@@ -1874,6 +1928,19 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                     {testValue}
                   </span>
                 </div>
+
+                {/* Quick 90deg Rotation Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextRot = data.label_rotation === '0' ? '90' : data.label_rotation === '90' ? '270' : '0';
+                    setData('label_rotation', nextRot);
+                  }}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-200 font-black text-xs border border-amber-500/30 transition-all cursor-pointer"
+                >
+                  <RotateCw className="w-4 h-4 text-amber-600" />
+                  <span>🔄 تعديل التدوير (الحالي: {data.label_rotation === '0' ? '0° طبيعي' : `${data.label_rotation}°`}) - اضغط للتدوير</span>
+                </button>
 
                 {/* Direct Print Button */}
                 <button
