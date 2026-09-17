@@ -68,24 +68,42 @@
             <td colspan="2" style="padding: 8px 12px; font-size: 10px; font-weight: bold; color: #64748b; text-align: center; border: none;">&#x2014; {{ $labels['filter_info'] }} &#x2014;</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 10px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; width: 65%;">{{ $labels['date_from_val'] }}</td>
-            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $labels['label_date_from'] }}</td>
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; width: 65%;">{{ $labels['date_from_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left; width: 35%;">{{ $labels['label_date_from'] }}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-            <td style="padding: 10px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_to_val'] }}</td>
-            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['date_to_label'] }}</td>
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['date_to_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['date_to_label'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['user_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_user'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['customer_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_customer'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['payment_method_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_payment_method'] }}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 8px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a;">{{ $labels['category_val'] }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_category'] }}</td>
         </tr>
         <tr>
-            <td style="padding: 10px 16px; font-size: 13px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">
+            <td style="padding: 8px 16px; font-size: 12px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; line-height: 1.5;">
                 @if(!empty($labels['products_val']) && is_array($labels['products_val']))
                     @foreach($labels['products_val'] as $pName)
                         <span style="display:inline-block; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px; margin-bottom:4px;">{{ $pName }}</span>
                     @endforeach
+                @elseif(!empty($labels['search_name_val']))
+                    {{ $labels['search_name_val'] }}
                 @else
                     {{ $g('الكل') }}
                 @endif
             </td>
-            <td style="padding: 10px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
+            <td style="padding: 8px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('المنتجات المشمولة في الحساب') }}</td>
         </tr>
     </table>
 
@@ -143,7 +161,45 @@
     </div>
 </div>
 
+{{-- جدول تفصيل وسائل الدفع والتحصيل --}}
+@if(!empty($data['paymentMethodsBreakdown']))
+<div style="margin-bottom: 6px; font-size: 11px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px;">
+    {{ $labels['pm_section_title'] }}
+</div>
+<table class="main" style="margin-bottom: 16px;">
+    <thead>
+        <tr>
+            <th style="width:25%">{{ $labels['pm_col_pct'] }}</th>
+            <th style="width:30%">{{ $labels['pm_col_amount'] }}</th>
+            <th style="width:20%">{{ $labels['pm_col_count'] }}</th>
+            <th style="width:25%">{{ $labels['pm_col_name'] }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($data['paymentMethodsBreakdown'] as $i => $pm)
+        <tr class="{{ $i % 2 === 1 ? 'row-even' : '' }}">
+            <td class="num" style="color: #2563eb; font-weight: bold;">{{ $pm['percentage'] }}%</td>
+            <td class="num" style="font-weight:bold; color:#16a34a;">{{ $fmtN($pm['total_amount']) }}</td>
+            <td class="num">{{ $pm['count'] }}</td>
+            <td style="font-weight:bold; color:#0f172a;">{{ $g($pm['name']) }}</td>
+        </tr>
+        @endforeach
+    </tbody>
+    <tfoot>
+        <tr>
+            <td class="num">100%</td>
+            <td class="num" style="color:#16a34a;">{{ $labels['total_paid'] }}</td>
+            <td class="num">{{ array_sum(array_column($data['paymentMethodsBreakdown'], 'count')) }}</td>
+            <td style="color:#64748b;">{{ $g('إجمالي المدفوع') }}</td>
+        </tr>
+    </tfoot>
+</table>
+@endif
+
 {{-- جدول التفصيل الشهري --}}
+<div style="margin-bottom: 6px; font-size: 11px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px;">
+    {{ $g('تفاصيل حركة المبيعات الشهرية') }}
+</div>
 <table class="main">
     <thead>
         <tr>

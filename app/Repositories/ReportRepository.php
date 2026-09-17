@@ -2193,6 +2193,11 @@ class ReportRepository implements ReportRepositoryInterface
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
+        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
+        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
+        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
+        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
         $filename = 'sales-' . now()->format('Y-m-d') . '.xlsx';
 
         $cppLines = [];
@@ -2218,6 +2223,7 @@ class ReportRepository implements ReportRepositoryInterface
         $options->setColumnWidth(30, 1);
         $options->setColumnWidth(25, 2);
         $options->setColumnWidth(30, 3);
+        $options->setColumnWidth(25, 4);
 
         $writer->openToFile('php://output');
         $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
@@ -2236,6 +2242,11 @@ class ReportRepository implements ReportRepositoryInterface
             ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
             ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
 
+        $sectionHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+            ->withFontColor('FFFFFF')->withBackgroundColor('2E7D32')
+            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
         $monthHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
             ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
             ->withBackgroundColor('BBDEFB');
@@ -2248,20 +2259,42 @@ class ReportRepository implements ReportRepositoryInterface
             ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
             ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
 
+        // ترويسة التقرير ومعلومات الفلاتر المحددة
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير المبيعات العامة'], $titleStyle));
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['البائع', $userName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العميل', $customerName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', $paymentMethodName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['التصنيف', $categoryName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : ($searchName ? $searchName : 'الكل')], $infoStyle));
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
         $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
 
+        // كروت الملخص المالي
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المبيعات', $fmtN($data['totalSales']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $data['invoicesCount']], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $data['invoicesCount'] . ' فاتورة'], $infoStyle));
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['متوسط الفاتورة', $fmtN($data['avgInvoice']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع', $fmtN($data['totalPaid']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي', $fmtN($data['totalDue']) . ' د.ل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع (المحصل)', $fmtN($data['totalPaid']) . ' د.ل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي (الآجل)', $fmtN($data['totalDue']) . ' د.ل'], $infoStyle));
         $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
 
+        // جدول تفصيل وسائل الدفع والتحصيل
+        if (!empty($data['paymentMethodsBreakdown'])) {
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تفصيل وسائل الدفع والتحصيل'], $sectionHeaderStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', 'عدد العمليات', 'إجمالي المبلغ (د.ل)', 'النسبة المئوية'], $tblHeaderStyle));
+            foreach ($data['paymentMethodsBreakdown'] as $pm) {
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
+                    $pm['name'],
+                    $pm['count'] . ' عملية',
+                    $fmtN($pm['total_amount']) . ' د.ل',
+                    $pm['percentage'] . '%'
+                ], $rowStyle));
+            }
+            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
+        }
+
+        // جدول الحركة الشهرية واليومية
         $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الشهر / التاريخ', 'عدد الفواتير', 'إجمالي المبيعات (د.ل)'], $tblHeaderStyle));
 
         foreach ($data['monthly'] as $m) {
@@ -2290,30 +2323,49 @@ class ReportRepository implements ReportRepositoryInterface
 
         $productNames = collect($data['includedProducts'] ?? [])->pluck('name')->toArray();
 
+        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
+        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
+        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
+        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
         $labels = [
-            'title'          => $g('تقرير المبيعات'),
-            'generated_at'   => now()->format('Y-m-d H:i'),
-            'filter_info'    => $g('معلومات التقرير'),
-            'summary_label'  => $g('ملخص'),
-            'products_val'   => !empty($productNames) ? array_map($g, $productNames) : [],
-            'label_date_from'=> $g('من تاريخ'),
-            'date_from_val'  => $dateFrom ?: '—',
-            'date_to_label'  => $g('إلى تاريخ'),
-            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
-            'total_sales'    => $fmtN($data['totalSales']),
-            'invoices_count' => $data['invoicesCount'],
-            'avg_invoice'    => $fmtN($data['avgInvoice']),
-            'total_paid'     => $fmtN($data['totalPaid']),
-            'total_due'      => $fmtN($data['totalDue']),
-            'col_date'       => $g('التاريخ'),
-            'col_month'      => $g('الشهر'),
-            'col_count'      => $g('عدد الفواتير'),
-            'col_total'      => $g('إجمالي المبيعات'),
-            'lbl_total'      => $g('إجمالي المبيعات'),
-            'lbl_count'      => $g('عدد الفواتير'),
-            'lbl_avg'        => $g('متوسط الفاتورة'),
-            'lbl_paid'       => $g('إجمالي المدفوع'),
-            'lbl_due'        => $g('إجمالي المتبقي'),
+            'title'                => $g('تقرير المبيعات'),
+            'generated_at'         => now()->format('Y-m-d H:i'),
+            'filter_info'          => $g('معلومات وفلاتر التقرير'),
+            'summary_label'        => $g('الملخص المالي'),
+            'products_val'         => !empty($productNames) ? array_map($g, $productNames) : [],
+            'search_name_val'      => $searchName ? $g($searchName) : null,
+            'label_date_from'      => $g('من تاريخ'),
+            'date_from_val'        => $dateFrom ?: '—',
+            'date_to_label'        => $g('إلى تاريخ'),
+            'date_to_val'          => $dateTo ?? now()->format('Y-m-d'),
+            'label_user'           => $g('البائع'),
+            'user_val'             => $userName ? $g($userName) : $g('الكل'),
+            'label_customer'       => $g('العميل'),
+            'customer_val'         => $customerName ? $g($customerName) : $g('الكل'),
+            'label_payment_method' => $g('وسيلة الدفع'),
+            'payment_method_val'   => $paymentMethodName ? $g($paymentMethodName) : $g('الكل'),
+            'label_category'       => $g('التصنيف'),
+            'category_val'         => $categoryName ? $g($categoryName) : $g('الكل'),
+            'total_sales'          => $fmtN($data['totalSales']),
+            'invoices_count'       => $data['invoicesCount'],
+            'avg_invoice'          => $fmtN($data['avgInvoice']),
+            'total_paid'           => $fmtN($data['totalPaid']),
+            'total_due'            => $fmtN($data['totalDue']),
+            'pm_section_title'     => $g('تفصيل وسائل الدفع والتحصيل'),
+            'pm_col_name'          => $g('وسيلة الدفع'),
+            'pm_col_count'         => $g('عدد العمليات'),
+            'pm_col_amount'        => $g('إجمالي المبلغ'),
+            'pm_col_pct'           => $g('النسبة %'),
+            'col_date'             => $g('التاريخ'),
+            'col_month'            => $g('الشهر'),
+            'col_count'            => $g('عدد الفواتير'),
+            'col_total'            => $g('إجمالي المبيعات'),
+            'lbl_total'            => $g('إجمالي المبيعات'),
+            'lbl_count'            => $g('عدد الفواتير'),
+            'lbl_avg'              => $g('متوسط الفاتورة'),
+            'lbl_paid'             => $g('إجمالي المدفوع'),
+            'lbl_due'              => $g('إجمالي المتبقي'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-pdf', [
