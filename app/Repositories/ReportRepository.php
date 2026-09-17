@@ -2155,7 +2155,20 @@ class ReportRepository implements ReportRepositoryInterface
         }
 
         // تفصيل المدفوعات حسب وسيلة الدفع للفواتير المفلترة
-        $paymentMethodsBreakdown = DB::table('payments')
+        $paymentMethodsBreakdown = $this->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $totalPaid);
+
+        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
+    }
+
+    public function getSalesPaymentMethodsBreakdown(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?float $totalPaid = null): array
+    {
+        $base = $this->salesQuery($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
+
+        if ($totalPaid === null) {
+            $totalPaid = (float) (clone $base)->sum('invoices.paid_amount');
+        }
+
+        return DB::table('payments')
             ->join('payment_methods', 'payment_methods.id', '=', 'payments.payment_method_id')
             ->joinSub((clone $base)->select('invoices.id as filtered_invoice_id'), 'filtered_invoices', function ($join) {
                 $join->on('filtered_invoices.filtered_invoice_id', '=', 'payments.invoice_id');
@@ -2178,8 +2191,6 @@ class ReportRepository implements ReportRepositoryInterface
                 'percentage'   => $totalPaid > 0 ? round(((float)$row->total_amount / $totalPaid) * 100, 1) : 0,
             ])
             ->toArray();
-
-        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
     }
 
     public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
@@ -2721,314 +2732,143 @@ class ReportRepository implements ReportRepositoryInterface
         @ini_set('memory_limit', '2048M');
         @set_time_limit(600);
 
-        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx.exe') : base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx');
-        if (file_exists($cppExe)) {
-            $storageDir = storage_path('app');
-            if (!file_exists($storageDir)) { @mkdir($storageDir, 0777, true); }
-
-            $tmpTsv  = $storageDir . DIRECTORY_SEPARATOR . 'cpp_db_' . uniqid() . '.tsv';
-            $tmpXlsx = $storageDir . DIRECTORY_SEPARATOR . 'cpp_exp_' . uniqid() . '.xlsx';
-
-            $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
-            $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
-
-            $sql = "SELECT COALESCE(c.name, 'عميل عام'), i.id, DATE_FORMAT(i.created_at, '%Y-%m-%d'), i.total, COUNT(ii.id) AS item_count, COALESCE(p.name, 'منتج'), COALESCE(sz.label, '-'), SUM(ii.quantity), ii.unit_price, SUM(ii.line_total) FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id LEFT JOIN invoice_items ii ON ii.invoice_id = i.id LEFT JOIN products p ON p.id = ii.product_id LEFT JOIN sizes sz ON sz.id = ii.size_id WHERE i.deleted_at IS NULL AND i.created_at >= '{$dfStr}' AND i.created_at <= '{$dtStr}' GROUP BY i.id, c.name, i.created_at, i.total, ii.product_id, ii.size_id, ii.unit_price, p.name, sz.label ORDER BY c.name ASC, i.id DESC";
-
-            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-            $productNames = collect($includedProducts)->pluck('name')->toArray();
-            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
-            $createdAtStr = now()->format('Y-m-d H:i');
-
-            $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
-            $f = fopen($tmpTsv, 'w');
-
-            fwrite($f, "#META\t" . ($dateFrom ?? 'البداية') . "\t" . ($dateTo ?? now()->format('Y-m-d')) . "\t" . $productNamesStr . "\t" . $createdAtStr . "\n");
-
-            $stmt = $pdo->query($sql);
-            while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
-                fwrite($f, implode("\t", $row) . "\n");
-            }
-            fclose($f);
-
-            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpTsv . '"';
-            exec($cmdCpp, $out, $code);
-
-            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
-                $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-                header('X-Export-Engine: C++ Static Binary Exporter');
-                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                header('Content-Disposition: attachment; filename="' . $filename . '"');
-                header('Content-Length: ' . filesize($tmpXlsx));
-                readfile($tmpXlsx);
-                @unlink($tmpTsv);
-                @unlink($tmpXlsx);
-                exit;
-            }
-            @unlink($tmpTsv);
-            @unlink($tmpXlsx);
-        }
-
         $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
 
+        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
+        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
+        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
+        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
         $totalInvoices = array_sum(array_column($data, 'invoice_count'));
+        $grandAmount   = array_sum(array_column($data, 'total_amount'));
+        $totalPaid     = array_sum(array_column($data, 'total_paid'));
+        $totalDue      = array_sum(array_column($data, 'total_due'));
 
-        $cppExe = base_path('bin/export_xlsx.exe');
-        if (file_exists($cppExe)) {
-            $t1 = microtime(true);
-            $tmpJson = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.json';
-            $tmpXlsx = tempnam(sys_get_temp_dir(), 'cpp_exp_') . '.xlsx';
+        $paymentMethodsBreakdown = $this->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, (float)$totalPaid);
 
-            file_put_contents($tmpJson, json_encode([
-                'date_from' => $dateFrom ?? 'البداية',
-                'date_to'   => $dateTo ?? now()->format('Y-m-d'),
-                'entries'   => $data,
-            ], JSON_UNESCAPED_UNICODE));
+        $filename = 'sales-customer-invoices-' . now()->format('Y-m-d') . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
 
-            exec('"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpJson . '"', $out, $code);
-            $tCpp = microtime(true) - $t1;
+        $writer = new \OpenSpout\Writer\XLSX\Writer();
+        
+        $options = $writer->getOptions();
+        $options->setColumnWidth(48, 1);
+        $options->setColumnWidth(42, 2);
+        $options->setColumnWidth(22, 3);
+        $options->setColumnWidth(22, 4);
+        $options->setColumnWidth(26, 5);
 
-            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
-                $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-                header('X-Export-Engine: C++ libxlsxwriter (Native Binary)');
-                header('X-PHP-Query-Time-Sec: ' . round($tQuery, 3));
-                header('X-CPP-Execution-Time-Sec: ' . round($tCpp, 3));
-                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                header('Content-Disposition: attachment; filename="' . $filename . '"');
-                header('Content-Length: ' . filesize($tmpXlsx));
-                readfile($tmpXlsx);
-                @unlink($tmpJson);
-                @unlink($tmpXlsx);
-                exit;
-            }
-        }
+        $writer->openToFile('php://output');
+        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
 
-        // Fallback to OpenSpout Streamed XLSX Writer
-        if ($totalInvoices > 2000) {
-            $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-
-            $writer = new \OpenSpout\Writer\XLSX\Writer();
-            
-            // Set Natural Wide Column Widths to prevent text compression
-            $options = $writer->getOptions();
-            $options->setColumnWidth(48, 1); // Column A: Customer / Title
-            $options->setColumnWidth(42, 2); // Column B: Product Name / Date
-            $options->setColumnWidth(22, 3); // Column C: Size / Quantity
-            $options->setColumnWidth(22, 4); // Column D: Price
-            $options->setColumnWidth(26, 5); // Column E: Line Total
-
-            $writer->openToFile('php://output');
-
-            // Set Sheet Orientation Right-To-Left (RTL) for Arabic Excel layout
-            $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-            $isWhole = fn($n) => $n == floor($n);
-            $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-            // Style definitions with Tajawal font, colors, bolding, and alignment
-            $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-                ->withBackgroundColor('E3F2FD');
-
-            $customerStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
-
-            $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-                ->withBackgroundColor('BBDEFB');
-
-            $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
-                ->withBackgroundColor('F5F5F5')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(12);
-
-            $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-                ->withBackgroundColor('E8EAF6');
-
-            $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير المبيعات حسب العملاء'], $titleStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
-
-            foreach ($data as $entry) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])], $customerStyle));
-                
-                foreach ($entry['invoices'] as $inv) {
-                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], $invHeaderStyle));
-                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
-
-                    foreach ($inv['items'] as $item) {
-                        $item = (array) $item;
-                        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                            $item['count'] > 1 ? $item['count'] : '',
-                            (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
-                            $fmtN($item['quantity']),
-                            $fmtN($item['unit_price']),
-                            $fmtN($item['line_total']),
-                        ], $rowStyle));
-                    }
-                }
-
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], $subtotalStyle));
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
-            }
-
-            $grandAmount = array_sum(array_column($data, 'total_amount'));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], $grandTotalStyle));
-
-            $writer->close();
-            exit;
-        }
-
-        $spreadsheet = new Spreadsheet();
-        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setRightToLeft(true);
-        $sheet->setTitle('فواتير العملاء');
-
-        $row = 1;
-        $infoRows = [
-            ['تقرير فواتير العملاء', ''],
-            ['من تاريخ',    $dateFrom ?? 'البداية'],
-            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
-            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
-        ];
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 
-        $matchedTotal = 0;
-        foreach ($data as $entry) {
-            foreach ($entry['invoices'] as $inv) {
-                foreach ($inv['items'] as $item) {
-                    $itemArray = (array) $item;
-                    if (!empty($itemArray['is_matched'])) {
-                        $matchedTotal += (float) $itemArray['line_total'];
-                    }
-                }
+        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+            ->withBackgroundColor('E3F2FD');
+
+        $sectionHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+            ->withFontColor('FFFFFF')->withBackgroundColor('2E7D32')
+            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+        $customerStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
+
+        $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
+            ->withBackgroundColor('BBDEFB');
+
+        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
+            ->withBackgroundColor('F5F5F5')
+            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(12);
+
+        $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
+            ->withBackgroundColor('E8EAF6');
+
+        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
+            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
+            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
+            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
+
+        // ترويسة التقرير ومعلومات الفلاتر
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير المبيعات حسب العملاء'], $titleStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['البائع', $userName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العميل', $customerName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', $paymentMethodName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['التصنيف', $categoryName ?? 'الكل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : ($searchName ? $searchName : 'الكل')], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
+        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
+
+        // كروت الملخص المالي
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المبيعات', $fmtN($grandAmount) . ' د.ل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع (المحصل)', $fmtN($totalPaid) . ' د.ل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي (الآجل)', $fmtN($totalDue) . ' د.ل'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $totalInvoices . ' فاتورة'], $infoStyle));
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد العملاء', count($data) . ' عميل'], $infoStyle));
+        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
+
+        // جدول تفصيل وسائل الدفع والتحصيل
+        if (!empty($paymentMethodsBreakdown)) {
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تفصيل وسائل الدفع والتحصيل'], $sectionHeaderStyle));
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', 'عدد العمليات', 'إجمالي المبلغ (د.ل)', 'النسبة المئوية'], $tblHeaderStyle));
+            foreach ($paymentMethodsBreakdown as $pm) {
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
+                    $pm['name'],
+                    $pm['count'] . ' عملية',
+                    $fmtN($pm['total_amount']) . ' د.ل',
+                    $pm['percentage'] . '%'
+                ], $rowStyle));
             }
+            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
         }
 
-        if ($matchedTotal > 0) {
-            $infoRows[] = ['إجمالي نتائج البحث', $fmtN($matchedTotal)];
-        }
-
-        foreach ($infoRows as $info) {
-            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
-            $sheet->fromArray($cells, null, 'A' . $row);
-            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
-            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
-        $row++;
-
+        // تفاصيل فواتير العملاء
         foreach ($data as $entry) {
-            $sheet->setCellValue('A' . $row, $entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
-            $sheet->mergeCells('A' . $row . ':E' . $row);
-            $sheet->getStyle('A' . $row)->applyFromArray([
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ]);
-            $row++;
-
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']) . ' د.ل (مدفوع: ' . $fmtN($entry['total_paid'] ?? 0) . ' / متبقي: ' . $fmtN($entry['total_due'] ?? 0) . ')'], $customerStyle));
+            
             foreach ($entry['invoices'] as $inv) {
-                $sheet->fromArray(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
-                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
-                    'font'    => ['bold' => true],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                ]);
-                $row++;
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), 'الإجمالي: ' . $fmtN($inv['total']) . ' د.ل', 'المدفوع: ' . $fmtN($inv['paid_amount'] ?? 0), 'المتبقي: ' . $fmtN($inv['due_amount'] ?? 0)], $invHeaderStyle));
+                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
 
-                $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
-                    'font'      => ['bold' => true],
-                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                ]);
-                $row++;
-
-                $itemsData = [];
                 foreach ($inv['items'] as $item) {
                     $item = (array) $item;
-                    $itemsData[] = [
+                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
                         $item['count'] > 1 ? $item['count'] : '',
                         (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
                         $fmtN($item['quantity']),
                         $fmtN($item['unit_price']),
                         $fmtN($item['line_total']),
-                    ];
-                }
-                if (!empty($itemsData)) {
-                    $sheet->fromArray($itemsData, null, 'A' . $row);
-                    $row += count($itemsData);
+                    ], $rowStyle));
                 }
             }
 
-            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row += 2;
+            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي العميل', '', '', '', $fmtN($entry['total_amount']) . ' د.ل'], $subtotalStyle));
+            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
         }
 
-        if ($matchedTotal > 0) {
-            $sheet->fromArray(['إجمالي نتائج البحث', '', '', '', $fmtN($matchedTotal)], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
-                'font'    => ['bold' => true, 'color' => ['rgb' => 'D97706'], 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount) . ' د.ل'], $grandTotalStyle));
 
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $sheet->fromArray(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
-            'font'    => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        ]);
-        $row++;
-
-        foreach (range('A', 'E') as $col)
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-
-        $filename = 'فواتير_العملاء_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($spreadsheet))->save('php://output');
+        $writer->close();
         exit;
     }
 
@@ -3048,16 +2888,32 @@ class ReportRepository implements ReportRepositoryInterface
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
 
+        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
+        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
+        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
+        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
+
+        $grandAmount = array_sum(array_column($data, 'total_amount'));
+        $grandCount  = array_sum(array_column($data, 'invoice_count'));
+        $totalPaid   = array_sum(array_column($data, 'total_paid'));
+        $totalDue    = array_sum(array_column($data, 'total_due'));
+
+        $paymentMethodsBreakdown = $this->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, (float)$totalPaid);
+
         $entries = array_map(function ($entry) use ($g, $en, $fmtN) {
             return [
                 'name'          => $en($g($entry['customer_name'])),
                 'invoice_count' => $entry['invoice_count'],
                 'total_amount'  => $entry['total_amount'],
+                'total_paid'    => $entry['total_paid'] ?? 0,
+                'total_due'     => $entry['total_due'] ?? 0,
                 'invoices'      => array_map(fn($inv) => [
-                    'id'    => $inv['id'],
-                    'date'  => substr($inv['date'], 0, 10),
-                    'total' => $inv['total'],
-                    'items' => array_map(fn($i) => [
+                    'id'          => $inv['id'],
+                    'date'        => substr($inv['date'], 0, 10),
+                    'total'       => $inv['total'],
+                    'paid_amount' => $inv['paid_amount'] ?? 0,
+                    'due_amount'  => $inv['due_amount'] ?? 0,
+                    'items'       => array_map(fn($i) => [
                         'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
                         'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
                         'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
@@ -3068,9 +2924,6 @@ class ReportRepository implements ReportRepositoryInterface
                 ], $entry['invoices']),
             ];
         }, $data);
-
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $grandCount  = array_sum(array_column($data, 'invoice_count'));
 
         $matchedTotal = 0;
         foreach ($data as $entry) {
@@ -3085,46 +2938,58 @@ class ReportRepository implements ReportRepositoryInterface
         }
 
         $labels = [
-            'title'          => $g('فواتير العملاء التفصيلية'),
-            'dateFrom'       => $dateFrom ?: '—',
-            'dateTo'         => $dateTo ?? now()->format('Y-m-d'),
-            'products_val'   => !empty($productNames) ? array_map($g, $productNames) : [],
-            'labelFrom'      => $g('من'),
-            'labelTo'        => $g('إلى'),
-            'generatedAt'    => now()->format('Y-m-d H:i'),
-            'generatedLabel' => $g('تاريخ الإنشاء'),
-            'filterUser'     => $userId     ? $en($g(DB::table('users')->where('id', $userId)->value('name') ?? ''))         : null,
-            'filterCustomer' => $customerId ? $en($g(DB::table('customers')->where('id', $customerId)->value('name') ?? '')) : null,
-            'filterPayment'  => $paymentMethodId ? $en($g(DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') ?? '')) : null,
-            'filterCategory' => $categoryId ? $en($g(DB::table('categories')->where('id', $categoryId)->value('name') ?? ''))  : null,
-            'labelUser'      => $g('البائع'),
-            'labelCustomer'  => $g('العميل'),
-            'labelPayment'   => $g('وسيلة الدفع'),
-            'labelCategory'  => $g('التصنيف'),
-            'grandAmount'    => $grandAmount,
-            'grandCount'     => $grandCount,
-            'product'        => $g('المنتج'),
-            'qty'            => $g('الحجم'),
-            'count_label'    => $g('العدد'),
-            'price'          => $g('السعر'),
-            'amount'         => $g('المبلغ'),
-            'total'          => $g('الإجمالي'),
-            'invoices_label' => $g('عدد الفواتير'),
-            'customers_label'=> $g('عدد العملاء'),
-            'date_label'     => $g('التاريخ'),
-            'matchedTotal'   => $matchedTotal,
-            'matchedTotalLabel' => $g('إجمالي نتائج البحث'),
-            'totalPages'     => 1,
+            'title'                => $g('فواتير العملاء التفصيلية'),
+            'dateFrom'             => $dateFrom ?: '—',
+            'dateTo'               => $dateTo ?? now()->format('Y-m-d'),
+            'products_val'         => !empty($productNames) ? array_map($g, $productNames) : [],
+            'search_name_val'      => $searchName ? $g($searchName) : null,
+            'labelFrom'            => $g('من تاريخ'),
+            'labelTo'              => $g('إلى تاريخ'),
+            'generatedAt'          => now()->format('Y-m-d H:i'),
+            'generatedLabel'       => $g('تاريخ الإنشاء'),
+            'filterUser'           => $userName ? $en($g($userName)) : $g('الكل'),
+            'filterCustomer'       => $customerName ? $en($g($customerName)) : $g('الكل'),
+            'filterPayment'        => $paymentMethodName ? $en($g($paymentMethodName)) : $g('الكل'),
+            'filterCategory'       => $categoryName ? $en($g($categoryName)) : $g('الكل'),
+            'labelUser'            => $g('البائع'),
+            'labelCustomer'        => $g('العميل'),
+            'labelPayment'         => $g('وسيلة الدفع'),
+            'labelCategory'        => $g('التصنيف'),
+            'grandAmount'          => $grandAmount,
+            'grandCount'           => $grandCount,
+            'totalPaid'            => $totalPaid,
+            'totalDue'             => $totalDue,
+            'customersCount'       => count($data),
+            'avgInvoice'           => $grandCount > 0 ? $grandAmount / $grandCount : 0,
+            'pm_section_title'     => $g('تفصيل وسائل الدفع والتحصيل'),
+            'pm_col_name'          => $g('وسيلة الدفع'),
+            'pm_col_count'         => $g('عدد العمليات'),
+            'pm_col_amount'        => $g('إجمالي المبلغ'),
+            'pm_col_pct'           => $g('النسبة %'),
+            'product'              => $g('المنتج'),
+            'qty'                  => $g('الحجم'),
+            'count_label'          => $g('العدد'),
+            'price'                => $g('السعر'),
+            'amount'               => $g('المبلغ'),
+            'total'                => $g('الإجمالي'),
+            'paid_label'           => $g('المدفوع'),
+            'due_label'            => $g('المتبقي'),
+            'invoices_label'       => $g('عدد الفواتير'),
+            'customers_label'      => $g('عدد العملاء'),
+            'date_label'           => $g('التاريخ'),
+            'matchedTotal'         => $matchedTotal,
+            'matchedTotalLabel'    => $g('إجمالي نتائج البحث'),
+            'totalPages'           => 1,
         ];
 
         $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g', 'paymentMethodsBreakdown'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
         $pdf->render();
         $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g', 'paymentMethodsBreakdown'))->setPaper('a4');
         foreach ($options as $k => $v) $pdf->setOption($k, $v);
 
         return $pdf->stream('sales-customer-invoices-' . now()->format('Y-m-d') . '.pdf');

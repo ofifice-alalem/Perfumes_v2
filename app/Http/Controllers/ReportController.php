@@ -557,6 +557,10 @@ class ReportController extends Controller
         if (is_string($productIds)) $productIds = explode(',', $productIds);
         $productIds = array_filter(array_map('intval', (array)$productIds));
 
+        $data = $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $productIds, $searchName);
+        $totalPaid = array_sum(array_column($data, 'total_paid'));
+        $paymentMethodsBreakdown = $this->reports->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $productIds, $searchName, (float)$totalPaid);
+
         return Inertia::render('Reports/SalesCustomerInvoices', [
             'includedProducts' => $this->reports->getIncludedProducts($productIds, $searchName),
             'users'          => \App\Models\User::orderBy('name')->get(['id', 'name']),
@@ -565,7 +569,8 @@ class ReportController extends Controller
             'categories'     => \App\Models\Category::orderBy('name')->get(['id', 'name']),
             'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
             'filters'        => compact('dateFrom', 'dateTo', 'userId', 'customerId', 'paymentMethodId', 'categoryId', 'productIds', 'searchName'),
-            'data'           => $this->reports->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $productIds, $searchName),
+            'data'           => $data,
+            'paymentMethodsBreakdown' => $paymentMethodsBreakdown,
         ]);
     }
 

@@ -93,48 +93,42 @@
             <td class="ct-value">{{ $labels['dateTo'] }}</td>
         </tr>
         <tr>
+            <td class="ct-label">{{ $labels['labelUser'] }}</td>
+            <td class="ct-value">{{ $labels['filterUser'] }}</td>
+        </tr>
+        <tr>
+            <td class="ct-label">{{ $labels['labelCustomer'] }}</td>
+            <td class="ct-value">{{ $labels['filterCustomer'] }}</td>
+        </tr>
+        <tr>
+            <td class="ct-label">{{ $labels['labelPayment'] }}</td>
+            <td class="ct-value">{{ $labels['filterPayment'] }}</td>
+        </tr>
+        <tr>
+            <td class="ct-label">{{ $labels['labelCategory'] }}</td>
+            <td class="ct-value">{{ $labels['filterCategory'] }}</td>
+        </tr>
+        <tr>
             <td class="ct-label">{{ $g('المنتجات المشمولة في الحساب') }}</td>
             <td class="ct-value" style="line-height: 1.5">
                 @if(!empty($labels['products_val']) && is_array($labels['products_val']))
                     @foreach($labels['products_val'] as $pName)
                         <span style="display:inline-block; background:#e2e8f0; color:#334155; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:4px; margin-bottom:4px;">{{ $pName }}</span>
                     @endforeach
+                @elseif(!empty($labels['search_name_val']))
+                    {{ $labels['search_name_val'] }}
                 @else
                     {{ $g('الكل') }}
                 @endif
             </td>
         </tr>
-        @if($labels['filterUser'])
-        <tr>
-            <td class="ct-label">{{ $labels['labelUser'] }}</td>
-            <td class="ct-value">{{ $labels['filterUser'] }}</td>
-        </tr>
-        @endif
-        @if($labels['filterCustomer'])
-        <tr>
-            <td class="ct-label">{{ $labels['labelCustomer'] }}</td>
-            <td class="ct-value">{{ $labels['filterCustomer'] }}</td>
-        </tr>
-        @endif
-        @if($labels['filterPayment'])
-        <tr>
-            <td class="ct-label">{{ $labels['labelPayment'] }}</td>
-            <td class="ct-value">{{ $labels['filterPayment'] }}</td>
-        </tr>
-        @endif
-        @if($labels['filterCategory'])
-        <tr>
-            <td class="ct-label">{{ $labels['labelCategory'] }}</td>
-            <td class="ct-value">{{ $labels['filterCategory'] }}</td>
-        </tr>
-        @endif
         <tr>
             <td class="ct-label">{{ $labels['generatedLabel'] }}</td>
             <td class="ct-value">{{ $labels['generatedAt'] }}</td>
         </tr>
     </table>
 
-    <table class="cover-summary">
+    <table class="cover-summary" style="margin-bottom: 15px;">
         <tr>
             @if(isset($labels['matchedTotal']) && $labels['matchedTotal'] > 0)
             <td style="background-color: #FEF3C7; border-left: 1px solid #e2e8f0;">
@@ -142,6 +136,14 @@
                 <span class="cs-value" style="color: #B45309;">{{ $fmtN($labels['matchedTotal']) }}</span>
             </td>
             @endif
+            <td>
+                <span class="cs-label">{{ $labels['due_label'] }}</span>
+                <span class="cs-value" style="color: #dc2626;">{{ $fmtN($labels['totalDue']) }}</span>
+            </td>
+            <td>
+                <span class="cs-label">{{ $labels['paid_label'] }}</span>
+                <span class="cs-value" style="color: #16a34a;">{{ $fmtN($labels['totalPaid']) }}</span>
+            </td>
             <td>
                 <span class="cs-label">{{ $labels['total'] }}</span>
                 <span class="cs-value">{{ $fmtN($labels['grandAmount']) }}</span>
@@ -156,6 +158,43 @@
             </td>
         </tr>
     </table>
+
+    {{-- جدول تفصيل وسائل الدفع والتحصيل على صفحة الغلاف إن وجدت --}}
+    @if(!empty($paymentMethodsBreakdown))
+    <div style="margin-top: 14px; text-align: right;">
+        <div style="font-size: 11px; font-weight: bold; color: #0f172a; border-bottom: 2px solid #0f172a; padding-bottom: 3px; margin-bottom: 6px;">
+            {{ $labels['pm_section_title'] }}
+        </div>
+        <table style="width: 100%; border-collapse: collapse; direction: ltr; table-layout: fixed;">
+            <thead>
+                <tr style="background: #dce4ee;">
+                    <th style="padding: 6px; font-size: 10px; font-weight: bold; border: 1px solid #64748b; text-align: right; direction: rtl; width: 20%;">{{ $labels['pm_col_pct'] }}</th>
+                    <th style="padding: 6px; font-size: 10px; font-weight: bold; border: 1px solid #64748b; text-align: right; direction: rtl; width: 30%;">{{ $labels['pm_col_amount'] }}</th>
+                    <th style="padding: 6px; font-size: 10px; font-weight: bold; border: 1px solid #64748b; text-align: right; direction: rtl; width: 20%;">{{ $labels['pm_col_count'] }}</th>
+                    <th style="padding: 6px; font-size: 10px; font-weight: bold; border: 1px solid #64748b; text-align: right; direction: rtl; width: 30%;">{{ $labels['pm_col_name'] }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($paymentMethodsBreakdown as $i => $pm)
+                <tr style="background: {{ $i % 2 === 1 ? '#f8fafc' : '#fff' }};">
+                    <td style="padding: 5px 6px; font-size: 10px; border: 1px solid #94a3b8; font-weight: bold; color: #2563eb; text-align: right; direction: ltr;">{{ $pm['percentage'] }}%</td>
+                    <td style="padding: 5px 6px; font-size: 10px; border: 1px solid #94a3b8; font-weight: bold; color: #16a34a; text-align: right; direction: ltr;">{{ $fmtN($pm['total_amount']) }}</td>
+                    <td style="padding: 5px 6px; font-size: 10px; border: 1px solid #94a3b8; font-weight: bold; color: #0f172a; text-align: right; direction: ltr;">{{ $pm['count'] }}</td>
+                    <td style="padding: 5px 6px; font-size: 10px; border: 1px solid #94a3b8; font-weight: bold; color: #0f172a; text-align: right; direction: rtl;">{{ $g($pm['name']) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+            <tfoot>
+                <tr style="background: #f1f5f9; font-weight: bold;">
+                    <td style="padding: 6px; font-size: 10px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; text-align: right; direction: ltr;">100%</td>
+                    <td style="padding: 6px; font-size: 10px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; color: #16a34a; text-align: right; direction: ltr;">{{ $fmtN($labels['totalPaid']) }}</td>
+                    <td style="padding: 6px; font-size: 10px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; text-align: right; direction: ltr;">{{ array_sum(array_column($paymentMethodsBreakdown, 'count')) }}</td>
+                    <td style="padding: 6px; font-size: 10px; border: 1px solid #94a3b8; border-top: 2px solid #0f172a; color: #64748b; text-align: right; direction: rtl;">{{ $g('إجمالي المدفوع') }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    @endif
 </div>
 
 {{-- Entries --}}

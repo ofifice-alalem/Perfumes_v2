@@ -20,7 +20,10 @@ import {
     Receipt,
     Wallet,
     FileText,
-    TrendingUp
+    TrendingUp,
+    CreditCard,
+    AlertCircle,
+    Coins
 } from 'lucide-react';
 
 interface User          { id: number; name: string; }
@@ -40,6 +43,8 @@ interface InvoiceItem {
 interface Invoice {
     id: number;
     total: number;
+    paid_amount?: number;
+    due_amount?: number;
     date: string;
     items: InvoiceItem[];
 }
@@ -49,7 +54,17 @@ interface CustomerEntry {
     customer_name: string;
     invoice_count: number;
     total_amount: number;
+    total_paid?: number;
+    total_due?: number;
     invoices: Invoice[];
+}
+
+interface PaymentMethodBreakdown {
+    id: number;
+    name: string;
+    total_amount: number;
+    count: number;
+    percentage: number;
 }
 
 interface Props {
@@ -65,6 +80,7 @@ interface Props {
         productIds?: number[]; searchName?: string;
     };
     data: CustomerEntry[];
+    paymentMethodsBreakdown?: PaymentMethodBreakdown[];
     includedProducts?: { id: number; name: string; }[];
 }
 
@@ -253,7 +269,17 @@ function FilterDrawer({
 /* =========================================================================
    MAIN SALES CUSTOMER INVOICES PAGE
    ========================================================================= */
-export default function SalesCustomerInvoices({ users, customers, paymentMethods, categories, products, filters, data, includedProducts }: Props) {
+export default function SalesCustomerInvoices({
+    users,
+    customers,
+    paymentMethods,
+    categories,
+    products,
+    filters,
+    data,
+    paymentMethodsBreakdown = [],
+    includedProducts
+}: Props) {
     const [isFilterOpen,      setIsFilterOpen]      = useState(false);
     const [dateFrom,        setDateFrom]        = useState(filters.dateFrom ?? '');
     const [dateTo,          setDateTo]          = useState(filters.dateTo ?? '');
@@ -392,6 +418,9 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
 
     const grandTotal = data.reduce((s, c) => s + c.total_amount, 0);
     const grandCount = data.reduce((s, c) => s + c.invoice_count, 0);
+    const grandPaid  = data.reduce((s, c) => s + (c.total_paid || 0), 0);
+    const grandDue   = data.reduce((s, c) => s + (c.total_due || 0), 0);
+    const avgInvoice = grandCount > 0 ? grandTotal / grandCount : 0;
 
     const hasMatchedItems = data.some(c => c.invoices.some(inv => inv.items.some(item => item.is_matched)));
     const matchedTotal = data.reduce((sum, customer) =>
@@ -487,46 +516,183 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                     </SpatialCard>
                 )}
 
-                {/* Summary Metric Cards */}
-                <div className={`grid grid-cols-2 ${hasMatchedItems ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6`}>
-                    {/* Customers Count */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-slate-200 dark:border-slate-700">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">عدد العملاء</span>
-                            <Users className="w-6 h-6 text-primary" />
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">{data.length}</span>
-                    </SpatialCard>
+                {/* KPI Overview Section: Unified Financial Card (7 cols) + Payment Methods Breakdown (5 cols) */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-                    {/* Invoices Count */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-blue-500/30 bg-blue-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">إجمالي الفواتير</span>
-                            <Receipt className="w-6 h-6 text-blue-500" />
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400">{grandCount}</span>
-                    </SpatialCard>
-
-                    {/* Grand Total */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-emerald-500/30 bg-emerald-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">الإجمالي الكلي</span>
-                            <Wallet className="w-6 h-6 text-emerald-500" />
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">{fmt(grandTotal)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
-
-                    {/* Matched Total */}
-                    {hasMatchedItems && (
-                        <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-amber-500/30 bg-amber-500/5">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                                    <Star className="w-4 h-4 fill-amber-500" /> نتائج البحث
+                    {/* 1. Unified Financial Overview Card (7 cols) */}
+                    <div className="lg:col-span-7 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="الملخص المالي لفواتير العملاء"
+                            icon={<TrendingUp className="w-7 h-7 text-primary" />}
+                            action={
+                                <span className="px-3.5 py-1.5 rounded-full bg-primary/15 text-primary text-xs font-black border border-primary/30">
+                                    {data.length} عملاء
                                 </span>
+                            }
+                        >
+                            <div className="flex flex-col gap-6">
+                                {/* Total Sales Hero Section */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[24px] bg-primary/10 dark:bg-primary/15 border-2 border-primary/25 shadow-sm">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm sm:text-base font-black text-primary uppercase tracking-wider">
+                                            إجمالي مبيعات العملاء
+                                        </span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                                                {fmt(grandTotal)}
+                                            </span>
+                                            <span className="text-xl font-black text-primary">د.ل</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 border-t sm:border-t-0 sm:border-r-2 border-primary/20 pt-3 sm:pt-0 sm:pr-6">
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي الفواتير الصادرة</span>
+                                        <span className="text-2xl font-black text-slate-900 dark:text-white">{grandCount} فاتورة</span>
+                                    </div>
+                                </div>
+
+                                {/* Paid vs Due Grid Matrix */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Total Paid Pill */}
+                                    <div className="p-5 rounded-[22px] bg-emerald-500/10 dark:bg-emerald-500/15 border-2 border-emerald-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">إجمالي المدفوع (المحصل)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                                                <Wallet className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {fmt(grandPaid)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-black">
+                                                {grandTotal > 0 ? ((grandPaid / grandTotal) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Total Due Pill */}
+                                    <div className="p-5 rounded-[22px] bg-rose-500/10 dark:bg-rose-500/15 border-2 border-rose-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-rose-700 dark:text-rose-400">المتبقي الآجل (الديون)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
+                                                <AlertCircle className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400">
+                                                {fmt(grandDue)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-black">
+                                                {grandTotal > 0 ? ((grandDue / grandTotal) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Quick Bottom Insights Strip */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t-2 border-slate-200/60 dark:border-slate-700/60">
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط قيمة الفاتورة</span>
+                                        <span className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{fmt(avgInvoice)} د.ل</span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">نسبة التحصيل</span>
+                                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                            {grandTotal > 0 ? ((grandPaid / grandTotal) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60 col-span-2 sm:col-span-1">
+                                        {hasMatchedItems ? (
+                                            <>
+                                                <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                                    <Star className="w-3.5 h-3.5 fill-amber-500" /> نتائج البحث
+                                                </span>
+                                                <span className="text-lg font-black text-amber-600 dark:text-amber-400 mt-0.5">
+                                                    {fmt(matchedTotal)} د.ل
+                                                </span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط فواتير العميل</span>
+                                                <span className="text-lg font-black text-slate-700 dark:text-slate-300 mt-0.5">
+                                                    {(grandCount / (data.length || 1)).toFixed(1)} فاتورة
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <span className="text-3xl sm:text-4xl font-black text-amber-600 dark:text-amber-400">{fmt(matchedTotal)} <span className="text-base font-bold">د.ل</span></span>
                         </SpatialCard>
-                    )}
+                    </div>
+
+                    {/* 2. Payment Methods Breakdown Card (5 cols) */}
+                    <div className="lg:col-span-5 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="تفصيل وسائل الدفع والتحصيل"
+                            icon={<CreditCard className="w-7 h-7 text-primary" />}
+                            action={
+                                <span className="px-3.5 py-1.5 rounded-full bg-primary/15 text-primary text-xs font-black border border-primary/30">
+                                    {paymentMethodsBreakdown?.length || 0} طرق دفع
+                                </span>
+                            }
+                        >
+                            <div className="flex flex-col gap-4 flex-1">
+                                {(!paymentMethodsBreakdown || paymentMethodsBreakdown.length === 0) ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-3 my-auto">
+                                        <Coins className="w-12 h-12 opacity-30" />
+                                        <p className="font-bold text-base text-center">لا توجد عمليات دفع مسجلة للفواتير المحددة</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3.5 my-auto">
+                                        {paymentMethodsBreakdown.map((pm, index) => (
+                                            <div
+                                                key={pm.id || index}
+                                                className="p-4 rounded-[20px] bg-slate-100/80 dark:bg-slate-800/60 border-2 border-slate-200/80 dark:border-slate-700/60 flex flex-col gap-2.5 transition-all hover:border-primary/40 shadow-sm"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-[14px] bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-black shrink-0">
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-black text-slate-900 dark:text-white text-base">
+                                                                {pm.name}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                                {pm.count} عملية دفع
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-lg">
+                                                            {fmt(pm.total_amount)} <span className="text-xs font-bold">د.ل</span>
+                                                        </span>
+                                                        <span className="text-xs font-black text-primary">
+                                                            {pm.percentage}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Percentage Progress Bar */}
+                                                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
+                                                        style={{ width: `${Math.min(pm.percentage, 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </SpatialCard>
+                    </div>
+
                 </div>
 
                 {/* Main Content Card */}
@@ -588,9 +754,23 @@ export default function SalesCustomerInvoices({ users, customers, paymentMethods
                                                 </div>
                                             </div>
 
-                                            <div className="text-left">
-                                                <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">الإجمالي</span>
-                                                <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{fmt(customer.total_amount)} <span className="text-base font-bold text-slate-400">د.ل</span></span>
+                                            <div className="flex items-center gap-4 sm:gap-6 text-left">
+                                                {customer.total_paid !== undefined && (
+                                                    <div className="hidden sm:flex flex-col items-end">
+                                                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest block mb-0.5">المدفوع</span>
+                                                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{fmt(customer.total_paid)} <span className="text-xs font-bold text-emerald-500">د.ل</span></span>
+                                                    </div>
+                                                )}
+                                                {customer.total_due !== undefined && (
+                                                    <div className="hidden sm:flex flex-col items-end">
+                                                        <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest block mb-0.5">المتبقي</span>
+                                                        <span className="text-xl sm:text-2xl font-black text-rose-600 dark:text-rose-400">{fmt(customer.total_due)} <span className="text-xs font-bold text-rose-500">د.ل</span></span>
+                                                    </div>
+                                                )}
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block mb-1">الإجمالي</span>
+                                                    <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">{fmt(customer.total_amount)} <span className="text-base font-bold text-slate-400">د.ل</span></span>
+                                                </div>
                                             </div>
                                         </button>
 
