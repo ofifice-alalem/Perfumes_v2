@@ -1,11 +1,17 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useRef } from 'react';
 import { useForm, usePage, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
+import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 import {
   Settings as SettingsIcon, Printer, DollarSign, Users,
   RefreshCw, HardDrive, BookOpen, ChevronLeft, Store,
-  FileText, CheckCircle2, Save, Upload, Eye, ArrowRight, Type, QrCode
+  FileText, CheckCircle2, Save, Upload, Eye, ArrowRight, Type, QrCode,
+  Sliders, Tag, Sparkles, Copy, Check, Barcode as BarcodeIcon,
+  Maximize2, RotateCw, Layers
 } from 'lucide-react';
+
+const PERFUME_SVG_B64 = "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`);
 
 interface SettingsProps {
   settings: {
@@ -18,6 +24,15 @@ interface SettingsProps {
     receipt_font_size?: string;
     show_qr_code?: string;
     node_printer_name?: string;
+    label_width_mm?: string;
+    label_height_mm?: string;
+    label_margin_mm?: string;
+    label_orientation?: string;
+    label_barcode_type?: string;
+    label_show_store_name?: string;
+    label_show_price?: string;
+    label_show_code_text?: string;
+    label_font_size?: string;
   };
   flash?: {
     success?: string;
@@ -27,10 +42,17 @@ interface SettingsProps {
 export default function SettingsIndex({ settings }: SettingsProps) {
   const { flash } = usePage<{ flash: { success?: string } }>().props;
 
-  // View state: 'grid' | 'receipt' | 'node_receipt'
-  const [activeTab, setActiveTab] = useState<'grid' | 'receipt' | 'node_receipt'>('grid');
+  // View state: 'grid' | 'receipt' | 'node_receipt' | 'label_printer'
+  const [activeTab, setActiveTab] = useState<'grid' | 'receipt' | 'node_receipt' | 'label_printer'>('grid');
 
   const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/logo-black_white.png');
+
+  // Label & Barcode Studio States
+  const [testValue, setTestValue] = useState<string>('240000669027');
+  const [sampleProductName, setSampleProductName] = useState<string>('عطر تاجوري الخاص 100 مل');
+  const [samplePrice, setSamplePrice] = useState<string>('145.00 د.ل');
+  const [copiedValue, setCopiedValue] = useState<boolean>(false);
+  const labelPrintRef = useRef<HTMLDivElement>(null);
 
   // Node Thermal Printer Engine States
   const [nodePrinters, setNodePrinters] = useState<Array<{ name: string; driver: string; port: string; status: string }>>([]);
@@ -118,6 +140,16 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     policy_notes: settings.policy_notes || '',
     receipt_font_size: settings.receipt_font_size || '10',
     show_qr_code: settings.show_qr_code ?? '1',
+    node_printer_name: settings.node_printer_name || 'XP-80',
+    label_width_mm: settings.label_width_mm || '50',
+    label_height_mm: settings.label_height_mm || '30',
+    label_margin_mm: settings.label_margin_mm || '1',
+    label_orientation: settings.label_orientation || 'landscape',
+    label_barcode_type: (settings.label_barcode_type as 'qr_2d' | 'qr_3d' | 'imei' | 'serial') || 'qr_2d',
+    label_show_store_name: settings.label_show_store_name ?? '1',
+    label_show_price: settings.label_show_price ?? '1',
+    label_show_code_text: settings.label_show_code_text ?? '1',
+    label_font_size: settings.label_font_size || '11',
     store_logo_file: null as File | null,
   });
 
@@ -137,6 +169,138 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     });
   };
 
+  const handleTestLabelPrint = () => {
+    const widthMm = Number(data.label_width_mm) || 50;
+    const heightMm = Number(data.label_height_mm) || 30;
+    const marginMm = Number(data.label_margin_mm) || 1;
+    const win = window.open('', '_blank', `width=${Math.max(widthMm * 6, 420)},height=${Math.max(heightMm * 6, 320)}`);
+    if (!win) return;
+
+    const labelContent = labelPrintRef.current ? labelPrintRef.current.innerHTML : '';
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html dir="rtl">
+      <head>
+        <meta charset="utf-8" />
+        <title>طباعة ملصق تجريبي - ${testValue}</title>
+        <style>
+          @page {
+            size: ${widthMm}mm ${heightMm}mm;
+            margin: ${marginMm}mm;
+          }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: ${widthMm}mm;
+            height: ${heightMm}mm;
+            background: #fff;
+            overflow: hidden;
+            text-align: center;
+            direction: rtl;
+          }
+          .label-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: ${marginMm}mm;
+            overflow: hidden;
+            gap: 1mm;
+          }
+          .store-title {
+            font-size: ${Math.max(6, Math.min(10, Number(data.label_font_size) - 2))}pt;
+            font-weight: 800;
+            color: #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            line-height: 1.1;
+          }
+          .price-tag {
+            font-size: ${Math.max(7, Math.min(11, Number(data.label_font_size)))}pt;
+            font-weight: 800;
+            color: #000;
+            line-height: 1.1;
+          }
+          .code-text {
+            font-family: monospace;
+            font-size: ${Math.max(6, Math.min(9, Number(data.label_font_size) - 3))}pt;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #000;
+            line-height: 1;
+            white-space: nowrap;
+          }
+          svg {
+            max-width: 100% !important;
+            max-height: ${heightMm > 35 ? '38mm' : '18mm'} !important;
+            display: block;
+            margin: 0 auto;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="label-wrapper">
+          ${labelContent}
+        </div>
+        <script>
+          window.onload = () => {
+            window.print();
+            window.close();
+          };
+        <\/script>
+      </body>
+      </html>
+    `);
+    win.document.close();
+  };
+
+  const labelPresets = [
+    { id: '50x30', label: '50 × 30 مم', desc: 'Xprinter XP-235B الافتراضي', width: '50', height: '30', orientation: 'landscape' },
+    { id: '50x25', label: '50 × 25 مم', desc: 'ملصقات مدمجة', width: '50', height: '25', orientation: 'landscape' },
+    { id: '40x30', label: '40 × 30 مم', desc: 'ملصقات متوسطة', width: '40', height: '30', orientation: 'landscape' },
+    { id: '40x25', label: '40 × 25 مم', desc: 'ملصقات العطور والعينات', width: '40', height: '25', orientation: 'landscape' },
+    { id: '75x50', label: '75 × 50 مم', desc: 'مقاس كبير للشحنات والكراتين', width: '75', height: '50', orientation: 'landscape' },
+  ];
+
+  const barcodeTypes = [
+    {
+      id: 'qr_2d',
+      name: 'QR Code (2D)',
+      desc: 'رمز استجابة سريعة 2D كلاسيكي عالي الدقة وسهل المسح بكاميرا الهاتف والماسح الضوئي',
+      icon: <QrCode className="w-5 h-5" />,
+      badge: '2D Matrix',
+    },
+    {
+      id: 'qr_3d',
+      name: 'QR Code (3D / Styled)',
+      desc: 'رمز QR مجسم عصري مع شعار عطور أنيق في المركز مع الحفاظ على أعلى دقة قراءة (Error Correction Level H)',
+      icon: <Sparkles className="w-5 h-5" />,
+      badge: 'Luxury 3D',
+    },
+    {
+      id: 'imei',
+      name: 'IMEI Barcode',
+      desc: 'باركود شريطي بنمط IMEI / EAN-13 مع إمكانية مسحه السريع بالماسحات الليزرية اليدوية',
+      icon: <BarcodeIcon className="w-5 h-5" />,
+      badge: 'IMEI / EAN',
+    },
+    {
+      id: 'serial',
+      name: 'Serial Number',
+      desc: 'باركود تسلسلي شريطي قياسي Code-128 عالي التوافق مع أنظمة الجرد والتوزيع',
+      icon: <Tag className="w-5 h-5" />,
+      badge: 'Code-128',
+    },
+  ];
+
   // Modular Cards List matching Reports design
   const settingCards = [
     {
@@ -146,6 +310,15 @@ export default function SettingsIndex({ settings }: SettingsProps) {
       desc: 'تخصيص الشعار، حجم الخط، إظهار/إخفاء الـ QR Code، اسم المحل، العناوين، ورسائل الشكر والسياسات',
       action: () => setActiveTab('receipt'),
       badge: 'تخصيص الفاتورة',
+      active: true,
+    },
+    {
+      id: 'label-printer',
+      icon: <QrCode className="w-8 h-8 text-primary" />,
+      label: 'إعدادات طباعة ملصقات الباركود والـ QR Code',
+      desc: 'تخصيص أبعاد ورق وطابعات الباركود والملصقات (50x30mm)، المعاينة الحية الفورية، واختبار قراءة الباركود والـ QR (2D/3D/IMEI/Serial).',
+      action: () => setActiveTab('label_printer'),
+      badge: 'Label & Barcode Studio',
       active: true,
     },
     {
@@ -1105,6 +1278,486 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                     <span>{printingNode ? 'جاري إرسال أوامر الطباعة المباشرة...' : '⚡ طباعة حرارية فورية (Node RAW Engine)'}</span>
                   </button>
                 </div>
+
+              </div>
+            </div>
+
+          </form>
+        )}
+
+        {/* ─── LABEL & BARCODE PRINTING STUDIO ─── */}
+        {activeTab === 'label_printer' && (
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in">
+            {/* Controls Column (7 cols) */}
+            <div className="lg:col-span-7 space-y-6">
+
+              {/* Back & Title Header */}
+              <div className="flex items-center justify-between gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('grid')}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-700 transition-all border border-black/5 dark:border-white/10 cursor-pointer"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                  <span>الرجوع لقائمة الإعدادات</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-black text-xs border border-primary/20">
+                    Label & Barcode Engine
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 1: Presets & Paper Dimensions */}
+              <div className="rounded-[28px] p-7 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                      <Maximize2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white">أبعاد ومقاسات ورقة الملصق (Label Size)</h2>
+                      <p className="text-sm font-bold text-slate-400 dark:text-white/50">تحديد العرض والارتفاع المتوافق مع رول الطابعة (مثل Xprinter XP-235B)</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
+                    مقاسات قياسية جاهزة (Quick Presets):
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {labelPresets.map((preset) => {
+                      const isSelected = data.label_width_mm === preset.width && data.label_height_mm === preset.height;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            setData('label_width_mm', preset.width);
+                            setData('label_height_mm', preset.height);
+                            setData('label_orientation', preset.orientation);
+                          }}
+                          className={`p-3.5 rounded-2xl border-2 text-right transition-all flex flex-col justify-between gap-1.5 cursor-pointer active:scale-98 ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 dark:bg-primary/20 shadow-md shadow-primary/10 text-primary'
+                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="font-black text-base">{preset.label}</span>
+                            {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
+                          </div>
+                          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">{preset.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Custom Dimensions Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-black/5 dark:border-white/8">
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
+                      العرض بالملم (Width mm)
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="10"
+                      max="200"
+                      value={data.label_width_mm}
+                      onChange={(e) => setData('label_width_mm', e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
+                      الارتفاع بالملم (Height mm)
+                    </label>
+                    <input
+                      type="number"
+                      step="1"
+                      min="10"
+                      max="200"
+                      value={data.label_height_mm}
+                      onChange={(e) => setData('label_height_mm', e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
+                      الهامش الداخلي (Margin mm)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="10"
+                      value={data.label_margin_mm}
+                      onChange={(e) => setData('label_margin_mm', e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Orientation & Font size */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-black/5 dark:border-white/8">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                      <RotateCw className="w-3.5 h-3.5 text-primary" />
+                      اتجاه الطباعة (Orientation)
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setData('label_orientation', 'landscape')}
+                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                          data.label_orientation === 'landscape'
+                            ? 'bg-primary text-white border-primary shadow-sm'
+                            : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        أفقي (Landscape)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setData('label_orientation', 'portrait')}
+                        className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                          data.label_orientation === 'portrait'
+                            ? 'bg-primary text-white border-primary shadow-sm'
+                            : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        عمودي (Portrait)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
+                      <Type className="w-3.5 h-3.5 text-primary" />
+                      حجم خط الملصق (Font Size)
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {['9', '10', '11', '12'].map((sz) => (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setData('label_font_size', sz)}
+                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                            data.label_font_size === sz
+                              ? 'bg-primary text-white border-primary shadow-sm'
+                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {sz}pt
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Card 2: Barcode Type & Testing Options */}
+              <div className="rounded-[28px] p-7 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
+                      <Layers className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-slate-900 dark:text-white">نوع وشكل الباركود للتجربة والاختبار</h2>
+                      <p className="text-sm font-bold text-slate-400 dark:text-white/50">اختبار كافة الأنماط (QR 2D/3D، IMEI، Serial Number) بقيمة القراءة المحددة</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 Types Selection */}
+                <div className="space-y-3">
+                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
+                    اختر نوع وتنسيق التشفير:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {barcodeTypes.map((type) => {
+                      const isSelected = data.label_barcode_type === type.id;
+                      return (
+                        <button
+                          key={type.id}
+                          type="button"
+                          onClick={() => setData('label_barcode_type', type.id as any)}
+                          className={`p-4 rounded-2xl border-2 text-right transition-all flex flex-col justify-between gap-2.5 cursor-pointer active:scale-98 ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-md shadow-emerald-500/10'
+                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-black text-base">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                                {type.icon}
+                              </div>
+                              <span>{type.name}</span>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black">
+                              {type.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
+                            {type.desc}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Test Value Input */}
+                <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-black text-slate-700 dark:text-white/90">
+                      قيمة التشفير للاختبار (Scanner Test Value):
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setTestValue('240000669027')}
+                      className="text-xs font-black text-primary hover:underline cursor-pointer"
+                    >
+                      إعادة تعيين لـ 240000669027
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={testValue}
+                      onChange={(e) => setTestValue(e.target.value)}
+                      placeholder="أدخل رقم أو كود الاختبار"
+                      className="flex-1 px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-base focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(testValue);
+                        setCopiedValue(true);
+                        setTimeout(() => setCopiedValue(false), 2000);
+                      }}
+                      className="px-4 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                    >
+                      {copiedValue ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedValue ? 'تم النسخ' : 'نسخ'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Additional Display Elements Toggles */}
+                <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/8">
+                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
+                    العناصر المعروضة على الملصق:
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_store_name === '1'}
+                        onChange={(e) => setData('label_show_store_name', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary"
+                      />
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">اسم المحل / المنتج</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_price === '1'}
+                        onChange={(e) => setData('label_show_price', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary"
+                      />
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">سعر البيع (د.ل)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_code_text === '1'}
+                        onChange={(e) => setData('label_show_code_text', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary"
+                      />
+                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">الرقم التسلسلي المقروء</span>
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('grid')}
+                  className="px-6 py-3.5 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-all cursor-pointer"
+                >
+                  إلغاء والعودة
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={processing}
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary text-white font-black text-base hover:bg-primary/90 transition-all shadow-xl shadow-primary/30 disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-5 h-5" />
+                  {processing ? 'جاري الحفظ...' : 'حفظ إعدادات الملصقات الافتراضية'}
+                </button>
+              </div>
+
+            </div>
+
+            {/* Live Interactive Realistic Preview Column (5 cols) */}
+            <div className="lg:col-span-5 sticky top-6 space-y-4">
+              <div className="rounded-[28px] p-6 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-5">
+                
+                <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/8">
+                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black">
+                    <Eye className="w-5 h-5 text-primary" />
+                    <span>المعاينة الحية التفاعلية للملصق</span>
+                  </div>
+                  <span className="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
+                    {data.label_width_mm} × {data.label_height_mm} mm
+                  </span>
+                </div>
+
+                {/* Simulated Label Sticker Box */}
+                <div className="p-6 rounded-2xl bg-slate-200/70 dark:bg-slate-950/80 border-2 border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center min-h-[340px]">
+                  
+                  {/* The Physical Sticker Representation */}
+                  <div
+                    ref={labelPrintRef}
+                    className="bg-white text-slate-900 border-2 border-slate-300 shadow-2xl rounded-lg p-3 flex flex-col items-center justify-center text-center transition-all duration-300 select-none relative overflow-hidden"
+                    style={{
+                      width: `${Math.min(320, Math.max(180, Number(data.label_width_mm) * 5))}px`,
+                      minHeight: `${Math.min(260, Math.max(120, Number(data.label_height_mm) * 5))}px`,
+                      gap: '4px',
+                    }}
+                  >
+                    {/* Optional Store / Product Header */}
+                    {data.label_show_store_name === '1' && (
+                      <div
+                        className="store-title font-extrabold text-slate-900 leading-tight w-full truncate"
+                        style={{ fontSize: `${Math.max(8, Number(data.label_font_size) - 2)}px` }}
+                      >
+                        {data.store_name || 'تاجوري للعطور الفاخرة'}
+                      </div>
+                    )}
+
+                    {/* Barcode Graphic Rendering according to selected type */}
+                    <div className="flex flex-col items-center justify-center my-1 w-full max-h-[140px] overflow-hidden">
+                      {data.label_barcode_type === 'qr_2d' && (
+                        <QRCodeSVG
+                          value={testValue || '240000669027'}
+                          size={Number(data.label_height_mm) > 30 ? 110 : 80}
+                          level="H"
+                          fgColor="#0f172a"
+                          bgColor="#ffffff"
+                        />
+                      )}
+
+                      {data.label_barcode_type === 'qr_3d' && (
+                        <div className="p-1 rounded-xl bg-white border border-slate-200 shadow-sm">
+                          <QRCodeSVG
+                            value={testValue || '240000669027'}
+                            size={Number(data.label_height_mm) > 30 ? 110 : 80}
+                            level="H"
+                            fgColor="#0f172a"
+                            bgColor="#ffffff"
+                            imageSettings={{
+                              src: PERFUME_SVG_B64,
+                              width: 32,
+                              height: 32,
+                              excavate: true,
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {data.label_barcode_type === 'imei' && (
+                        <div className="w-full flex justify-center scale-90 sm:scale-100">
+                          <Barcode
+                            value={testValue || '240000669027'}
+                            format="CODE128"
+                            width={1.2}
+                            height={Number(data.label_height_mm) > 30 ? 45 : 30}
+                            displayValue={false}
+                            margin={0}
+                            background="#ffffff"
+                          />
+                        </div>
+                      )}
+
+                      {data.label_barcode_type === 'serial' && (
+                        <div className="w-full flex justify-center scale-90 sm:scale-100">
+                          <Barcode
+                            value={testValue || '240000669027'}
+                            format="CODE128"
+                            width={1.4}
+                            height={Number(data.label_height_mm) > 30 ? 50 : 35}
+                            displayValue={false}
+                            margin={0}
+                            background="#ffffff"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Numeric Code Text */}
+                    {data.label_show_code_text === '1' && (
+                      <div
+                        className="code-text font-mono font-bold tracking-widest text-slate-800 leading-none select-all"
+                        style={{ fontSize: `${Math.max(8, Number(data.label_font_size) - 3)}px` }}
+                      >
+                        {testValue}
+                      </div>
+                    )}
+
+                    {/* Price Tag */}
+                    {data.label_show_price === '1' && (
+                      <div
+                        className="price-tag font-black text-slate-900 leading-tight mt-0.5"
+                        style={{ fontSize: `${Math.max(9, Number(data.label_font_size))}px` }}
+                      >
+                        {samplePrice}
+                      </div>
+                    )}
+
+                  </div>
+
+                </div>
+
+                {/* Readout Summary Badge */}
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      ناتج قراءة الماسح الضوئي:
+                    </span>
+                  </div>
+                  <span className="font-mono font-black text-sm text-emerald-700 dark:text-emerald-300 tracking-wider">
+                    {testValue}
+                  </span>
+                </div>
+
+                {/* Direct Print Button */}
+                <button
+                  type="button"
+                  onClick={handleTestLabelPrint}
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base active:scale-[0.98] transition-all shadow-xl shadow-emerald-600/30 cursor-pointer"
+                >
+                  <Printer className="w-5 h-5" />
+                  <span>🖨️ طباعة ملصق تجريبي فوراً (Test Print)</span>
+                </button>
 
               </div>
             </div>
