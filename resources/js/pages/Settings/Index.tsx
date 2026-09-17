@@ -33,6 +33,7 @@ interface SettingsProps {
     label_show_price?: string;
     label_show_code_text?: string;
     label_font_size?: string;
+    label_zoom?: string;
   };
   flash?: {
     success?: string;
@@ -141,15 +142,16 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     receipt_font_size: settings.receipt_font_size || '10',
     show_qr_code: settings.show_qr_code ?? '1',
     node_printer_name: settings.node_printer_name || 'XP-80',
-    label_width_mm: settings.label_width_mm || '50',
-    label_height_mm: settings.label_height_mm || '30',
+    label_width_mm: settings.label_width_mm || '62.5',
+    label_height_mm: settings.label_height_mm || '40',
     label_margin_mm: settings.label_margin_mm || '1',
     label_orientation: settings.label_orientation || 'landscape',
     label_barcode_type: (settings.label_barcode_type as 'qr_2d' | 'qr_3d' | 'imei' | 'serial') || 'qr_2d',
-    label_show_store_name: settings.label_show_store_name ?? '1',
-    label_show_price: settings.label_show_price ?? '1',
-    label_show_code_text: settings.label_show_code_text ?? '1',
+    label_show_store_name: settings.label_show_store_name ?? '0',
+    label_show_price: settings.label_show_price ?? '0',
+    label_show_code_text: settings.label_show_code_text ?? '0',
     label_font_size: settings.label_font_size || '11',
+    label_zoom: settings.label_zoom || '100',
     store_logo_file: null as File | null,
   });
 
@@ -169,11 +171,17 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     });
   };
 
+  const hasNoText = data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '0';
+  const hasOnlyCode = data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '1';
+
   const handleTestLabelPrint = () => {
-    const widthMm = Number(data.label_width_mm) || 50;
-    const heightMm = Number(data.label_height_mm) || 30;
+    const widthMm = Number(data.label_width_mm) || 62.5;
+    const heightMm = Number(data.label_height_mm) || 40;
     const marginMm = Number(data.label_margin_mm) || 1;
-    const win = window.open('', '_blank', `width=${Math.max(widthMm * 6, 420)},height=${Math.max(heightMm * 6, 320)}`);
+    const isQr = data.label_barcode_type.startsWith('qr');
+    const zoomPct = Number(data.label_zoom || '100');
+
+    const win = window.open('', '_blank', `width=${Math.max(widthMm * 6, 460)},height=${Math.max(heightMm * 6, 360)}`);
     if (!win) return;
 
     const labelContent = labelPrintRef.current ? labelPrintRef.current.innerHTML : '';
@@ -183,38 +191,39 @@ export default function SettingsIndex({ settings }: SettingsProps) {
       <html dir="rtl">
       <head>
         <meta charset="utf-8" />
-        <title>طباعة ملصق تجريبي - ${testValue}</title>
+        <title>طباعة ملصق - ${testValue}</title>
         <style>
           @page {
             size: ${widthMm}mm ${heightMm}mm;
-            margin: ${marginMm}mm;
+            margin: 0;
           }
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+          html, body {
+            width: ${widthMm}mm;
+            height: ${heightMm}mm;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            width: ${widthMm}mm;
-            height: ${heightMm}mm;
-            background: #fff;
-            overflow: hidden;
             text-align: center;
             direction: rtl;
           }
-          .label-wrapper {
-            width: 100%;
-            height: 100%;
+          .print-label {
+            width: ${widthMm}mm;
+            height: ${heightMm}mm;
+            padding: ${marginMm}mm;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            padding: ${marginMm}mm;
+            justify-content: ${hasNoText ? 'center' : 'space-between'};
+            box-sizing: border-box;
             overflow: hidden;
-            gap: 1mm;
           }
           .store-title {
-            font-size: ${Math.max(6, Math.min(10, Number(data.label_font_size) - 2))}pt;
+            font-size: ${Math.max(7, Math.min(12, Number(data.label_font_size)))}pt;
             font-weight: 800;
             color: #000;
             white-space: nowrap;
@@ -222,32 +231,45 @@ export default function SettingsIndex({ settings }: SettingsProps) {
             text-overflow: ellipsis;
             max-width: 100%;
             line-height: 1.1;
+            margin-bottom: 0.5mm;
           }
           .price-tag {
-            font-size: ${Math.max(7, Math.min(11, Number(data.label_font_size)))}pt;
-            font-weight: 800;
+            font-size: ${Math.max(8, Math.min(13, Number(data.label_font_size) + 1))}pt;
+            font-weight: 900;
             color: #000;
             line-height: 1.1;
+            margin-top: 0.5mm;
           }
           .code-text {
             font-family: monospace;
-            font-size: ${Math.max(6, Math.min(9, Number(data.label_font_size) - 3))}pt;
-            font-weight: 700;
-            letter-spacing: 1.5px;
+            font-size: ${Math.max(7, Math.min(11, Number(data.label_font_size) - 1))}pt;
+            font-weight: 800;
+            letter-spacing: 2px;
             color: #000;
             line-height: 1;
             white-space: nowrap;
+            margin-top: 0.5mm;
           }
-          svg {
-            max-width: 100% !important;
-            max-height: ${heightMm > 35 ? '38mm' : '18mm'} !important;
+          .graphic-container {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          }
+          .graphic-container svg {
+            width: ${isQr ? (hasNoText ? `${Math.min(widthMm, heightMm) * 0.95 * (zoomPct / 100)}mm` : `${Math.min(widthMm, heightMm - 10) * 0.90 * (zoomPct / 100)}mm`) : '98%'};
+            height: ${isQr ? (hasNoText ? `${Math.min(widthMm, heightMm) * 0.95 * (zoomPct / 100)}mm` : `${Math.min(widthMm, heightMm - 10) * 0.90 * (zoomPct / 100)}mm`) : `${(hasNoText ? heightMm * 0.85 : hasOnlyCode ? heightMm * 0.65 : heightMm * 0.52) * (zoomPct / 100)}mm`};
+            max-width: 98% !important;
+            max-height: 98% !important;
             display: block;
             margin: 0 auto;
           }
         </style>
       </head>
       <body>
-        <div class="label-wrapper">
+        <div class="print-label">
           ${labelContent}
         </div>
         <script>
@@ -263,11 +285,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
   };
 
   const labelPresets = [
-    { id: '50x30', label: '50 × 30 مم', desc: 'Xprinter XP-235B الافتراضي', width: '50', height: '30', orientation: 'landscape' },
-    { id: '50x25', label: '50 × 25 مم', desc: 'ملصقات مدمجة', width: '50', height: '25', orientation: 'landscape' },
-    { id: '40x30', label: '40 × 30 مم', desc: 'ملصقات متوسطة', width: '40', height: '30', orientation: 'landscape' },
-    { id: '40x25', label: '40 × 25 مم', desc: 'ملصقات العطور والعينات', width: '40', height: '25', orientation: 'landscape' },
-    { id: '75x50', label: '75 × 50 مم', desc: 'مقاس كبير للشحنات والكراتين', width: '75', height: '50', orientation: 'landscape' },
+    { id: '62.5x40', label: '62.5 × 40 مم (2.46 × 1.58 in)', desc: 'مقاس طابعتك الحالي (taqniya-xp-235B)', width: '62.5', height: '40', orientation: 'landscape' },
+    { id: '50x30', label: '50 × 30 مم (1.97 × 1.18 in)', desc: 'Xprinter XP-235B القياسي', width: '50', height: '30', orientation: 'landscape' },
+    { id: '50x25', label: '50 × 25 مم (1.97 × 0.98 in)', desc: 'ملصقات مدمجة', width: '50', height: '25', orientation: 'landscape' },
+    { id: '40x30', label: '40 × 30 مم (1.57 × 1.18 in)', desc: 'ملصقات متوسطة', width: '40', height: '30', orientation: 'landscape' },
+    { id: '40x25', label: '40 × 25 مم (1.57 × 0.98 in)', desc: 'ملصقات العطور والعينات', width: '40', height: '25', orientation: 'landscape' },
+    { id: '75x50', label: '75 × 50 مم (2.95 × 1.97 in)', desc: 'مقاس كبير للشحنات والكراتين', width: '75', height: '50', orientation: 'landscape' },
   ];
 
   const barcodeTypes = [
@@ -1554,41 +1577,143 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   </div>
                 </div>
 
-                {/* Additional Display Elements Toggles */}
-                <div className="space-y-3 pt-2 border-t border-black/5 dark:border-white/8">
-                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
-                    العناصر المعروضة على الملصق:
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={data.label_show_store_name === '1'}
-                        onChange={(e) => setData('label_show_store_name', e.target.checked ? '1' : '0')}
-                        className="w-4 h-4 rounded text-primary focus:ring-primary"
-                      />
-                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">اسم المحل / المنتج</span>
+                {/* Quick Layout Presets & Display Elements */}
+                <div className="space-y-4 pt-2 border-t border-black/5 dark:border-white/8">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-black text-slate-700 dark:text-white/90">
+                      نمط وتخطيط محتوى الملصق:
                     </label>
+                    <span className="text-xs font-bold text-slate-500">اختر نمط سريع أو حدد يدوياً</span>
+                  </div>
 
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={data.label_show_price === '1'}
-                        onChange={(e) => setData('label_show_price', e.target.checked ? '1' : '0')}
-                        className="w-4 h-4 rounded text-primary focus:ring-primary"
-                      />
-                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">سعر البيع (د.ل)</span>
-                    </label>
+                  {/* 3 Quick Layout Mode Buttons */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData((prev) => ({
+                          ...prev,
+                          label_show_store_name: '0',
+                          label_show_price: '0',
+                          label_show_code_text: '0',
+                          label_zoom: '100',
+                        }));
+                      }}
+                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
+                        data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '0'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-md'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="font-black text-xs">🔲 باركود فقط (بدون نصوص)</div>
+                      <div className="text-[10px] font-bold text-slate-500 mt-1">تعبئة قصوى 100% لكامل الورقة</div>
+                    </button>
 
-                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={data.label_show_code_text === '1'}
-                        onChange={(e) => setData('label_show_code_text', e.target.checked ? '1' : '0')}
-                        className="w-4 h-4 rounded text-primary focus:ring-primary"
-                      />
-                      <span className="text-xs font-black text-slate-800 dark:text-slate-200">الرقم التسلسلي المقروء</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData((prev) => ({
+                          ...prev,
+                          label_show_store_name: '0',
+                          label_show_price: '0',
+                          label_show_code_text: '1',
+                          label_zoom: '100',
+                        }));
+                      }}
+                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
+                        data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '1'
+                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-md'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="font-black text-xs">🔢 باركود مع الرقم فقط</div>
+                      <div className="text-[10px] font-bold text-slate-500 mt-1">بدون اسم المحل أو السعر</div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setData((prev) => ({
+                          ...prev,
+                          label_show_store_name: '1',
+                          label_show_price: '1',
+                          label_show_code_text: '1',
+                        }));
+                      }}
+                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
+                        data.label_show_store_name === '1' && data.label_show_price === '1' && data.label_show_code_text === '1'
+                          ? 'border-primary bg-primary/10 text-primary shadow-md'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      <div className="font-black text-xs">🏷️ ملصق تجاري كامل</div>
+                      <div className="text-[10px] font-bold text-slate-500 mt-1">اسم المحل + السعر + الرقم</div>
+                    </button>
+                  </div>
+
+                  {/* Zoom / Scale Selector */}
+                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
+                      نسبة حجم وتعبئة الكود داخل الملصق (Scale / Fill):
                     </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { val: '100', label: '100% تعبئة قصوى (الأكبر)' },
+                        { val: '85', label: '85% حجم كبير' },
+                        { val: '70', label: '70% حجم متوسط' },
+                      ].map((item) => (
+                        <button
+                          key={item.val}
+                          type="button"
+                          onClick={() => setData('label_zoom', item.val)}
+                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
+                            (data.label_zoom || '100') === item.val
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Fine-Tuning Checkboxes */}
+                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
+                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
+                      التحكم اليدوي الدقيق بالعناصر:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={data.label_show_store_name === '1'}
+                          onChange={(e) => setData('label_show_store_name', e.target.checked ? '1' : '0')}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary"
+                        />
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">اسم المحل / المنتج</span>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={data.label_show_price === '1'}
+                          onChange={(e) => setData('label_show_price', e.target.checked ? '1' : '0')}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary"
+                        />
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">سعر البيع (د.ل)</span>
+                      </label>
+
+                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={data.label_show_code_text === '1'}
+                          onChange={(e) => setData('label_show_code_text', e.target.checked ? '1' : '0')}
+                          className="w-4 h-4 rounded text-primary focus:ring-primary"
+                        />
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">الرقم التسلسلي المقروء</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
 
@@ -1636,11 +1761,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   {/* The Physical Sticker Representation */}
                   <div
                     ref={labelPrintRef}
-                    className="bg-white text-slate-900 border-2 border-slate-300 shadow-2xl rounded-lg p-3 flex flex-col items-center justify-center text-center transition-all duration-300 select-none relative overflow-hidden"
+                    className="bg-white text-slate-900 border-2 border-slate-300 shadow-2xl rounded-lg flex flex-col items-center justify-center text-center transition-all duration-300 select-none relative overflow-hidden"
                     style={{
-                      width: `${Math.min(320, Math.max(180, Number(data.label_width_mm) * 5))}px`,
-                      minHeight: `${Math.min(260, Math.max(120, Number(data.label_height_mm) * 5))}px`,
-                      gap: '4px',
+                      width: `${Math.min(340, Math.max(180, Number(data.label_width_mm) * 5))}px`,
+                      minHeight: `${Math.min(280, Math.max(120, Number(data.label_height_mm) * 5))}px`,
+                      padding: hasNoText ? '6px' : '10px 8px',
+                      gap: hasNoText ? '0px' : '4px',
                     }}
                   >
                     {/* Optional Store / Product Header */}
@@ -1654,11 +1780,11 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                     )}
 
                     {/* Barcode Graphic Rendering according to selected type */}
-                    <div className="flex flex-col items-center justify-center my-1 w-full max-h-[140px] overflow-hidden">
+                    <div className="graphic-container flex flex-col items-center justify-center w-full flex-1 overflow-hidden my-auto">
                       {data.label_barcode_type === 'qr_2d' && (
                         <QRCodeSVG
                           value={testValue || '240000669027'}
-                          size={Number(data.label_height_mm) > 30 ? 110 : 80}
+                          size={Math.round((hasNoText ? 190 : hasOnlyCode ? 150 : 110) * (Number(data.label_zoom || '100') / 100))}
                           level="H"
                           fgColor="#0f172a"
                           bgColor="#ffffff"
@@ -1669,14 +1795,14 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                         <div className="p-1 rounded-xl bg-white border border-slate-200 shadow-sm">
                           <QRCodeSVG
                             value={testValue || '240000669027'}
-                            size={Number(data.label_height_mm) > 30 ? 110 : 80}
+                            size={Math.round((hasNoText ? 180 : hasOnlyCode ? 140 : 105) * (Number(data.label_zoom || '100') / 100))}
                             level="H"
                             fgColor="#0f172a"
                             bgColor="#ffffff"
                             imageSettings={{
                               src: PERFUME_SVG_B64,
-                              width: 32,
-                              height: 32,
+                              width: Math.round((hasNoText ? 42 : 32) * (Number(data.label_zoom || '100') / 100)),
+                              height: Math.round((hasNoText ? 42 : 32) * (Number(data.label_zoom || '100') / 100)),
                               excavate: true,
                             }}
                           />
@@ -1684,12 +1810,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                       )}
 
                       {data.label_barcode_type === 'imei' && (
-                        <div className="w-full flex justify-center scale-90 sm:scale-100">
+                        <div className="w-full flex justify-center scale-95 sm:scale-100">
                           <Barcode
                             value={testValue || '240000669027'}
                             format="CODE128"
-                            width={1.2}
-                            height={Number(data.label_height_mm) > 30 ? 45 : 30}
+                            width={(hasNoText ? 2.0 : hasOnlyCode ? 1.6 : 1.3) * (Number(data.label_zoom || '100') / 100)}
+                            height={Math.round((hasNoText ? 90 : hasOnlyCode ? 65 : 45) * (Number(data.label_zoom || '100') / 100))}
                             displayValue={false}
                             margin={0}
                             background="#ffffff"
@@ -1698,12 +1824,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                       )}
 
                       {data.label_barcode_type === 'serial' && (
-                        <div className="w-full flex justify-center scale-90 sm:scale-100">
+                        <div className="w-full flex justify-center scale-95 sm:scale-100">
                           <Barcode
                             value={testValue || '240000669027'}
                             format="CODE128"
-                            width={1.4}
-                            height={Number(data.label_height_mm) > 30 ? 50 : 35}
+                            width={(hasNoText ? 2.2 : hasOnlyCode ? 1.8 : 1.4) * (Number(data.label_zoom || '100') / 100)}
+                            height={Math.round((hasNoText ? 95 : hasOnlyCode ? 70 : 50) * (Number(data.label_zoom || '100') / 100))}
                             displayValue={false}
                             margin={0}
                             background="#ffffff"
