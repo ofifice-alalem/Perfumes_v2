@@ -2154,7 +2154,32 @@ class ReportRepository implements ReportRepositoryInterface
             })->get(['id', 'name'])->toArray();
         }
 
-        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison', 'includedProducts');
+        // تفصيل المدفوعات حسب وسيلة الدفع للفواتير المفلترة
+        $paymentMethodsBreakdown = DB::table('payments')
+            ->join('payment_methods', 'payment_methods.id', '=', 'payments.payment_method_id')
+            ->joinSub((clone $base)->select('invoices.id as filtered_invoice_id'), 'filtered_invoices', function ($join) {
+                $join->on('filtered_invoices.filtered_invoice_id', '=', 'payments.invoice_id');
+            })
+            ->whereNull('payments.deleted_at')
+            ->groupBy('payment_methods.id', 'payment_methods.name')
+            ->select(
+                'payment_methods.id',
+                'payment_methods.name',
+                DB::raw('SUM(payments.amount) as total_amount'),
+                DB::raw('COUNT(payments.id) as count')
+            )
+            ->orderByDesc('total_amount')
+            ->get()
+            ->map(fn($row) => [
+                'id'           => (int) $row->id,
+                'name'         => $row->name,
+                'total_amount' => (float) $row->total_amount,
+                'count'        => (int) $row->count,
+                'percentage'   => $totalPaid > 0 ? round(((float)$row->total_amount / $totalPaid) * 100, 1) : 0,
+            ])
+            ->toArray();
+
+        return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
     }
 
     public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void

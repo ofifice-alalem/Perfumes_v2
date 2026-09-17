@@ -20,7 +20,12 @@ import {
     Calendar,
     Receipt,
     Wallet,
-    Package
+    Package,
+    CreditCard,
+    AlertCircle,
+    CheckCircle2,
+    Coins,
+    Layers
 } from 'lucide-react';
 
 interface User           { id: number; name: string; }
@@ -37,6 +42,14 @@ interface Comparison {
     diff_pct: number | null;
 }
 
+interface PaymentMethodBreakdown {
+    id: number;
+    name: string;
+    total_amount: number;
+    count: number;
+    percentage: number;
+}
+
 interface SalesData {
     totalSales: number;
     invoicesCount: number;
@@ -47,6 +60,7 @@ interface SalesData {
     monthly: MonthlyBreakdown[];
     comparison: Comparison | null;
     includedProducts?: { id: number; name: string; }[];
+    paymentMethodsBreakdown?: PaymentMethodBreakdown[];
 }
 
 interface Props {
@@ -451,58 +465,176 @@ export default function Sales({ users, customers, paymentMethods, categories, pr
                     </SpatialCard>
                 )}
 
-                {/* Summary Metric Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                    {/* Total Sales */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-slate-200 dark:border-slate-700 col-span-2 md:col-span-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي المبيعات</span>
-                            {data.comparison && (
-                                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black ${(data.comparison.diff_pct ?? 0) >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'}`}>
-                                    {(data.comparison.diff_pct ?? 0) >= 0 ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
-                                    {data.comparison.diff_pct !== null ? `${Math.abs(data.comparison.diff_pct)}%` : '—'}
+                {/* KPI Overview Section: Unified Financial Card + Payment Methods Breakdown */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                    {/* 1. Unified Financial Overview Card (7 cols) */}
+                    <div className="lg:col-span-7 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="الملخص المالي للمبيعات"
+                            icon={<TrendingUp className="w-7 h-7 text-primary" />}
+                            action={
+                                data.comparison && (
+                                    <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black shadow-sm ${(data.comparison.diff_pct ?? 0) >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'}`}>
+                                        {(data.comparison.diff_pct ?? 0) >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                                        <span>مقارنة بالفترة السابقة: {data.comparison.diff_pct !== null ? `${Math.abs(data.comparison.diff_pct)}%` : '—'}</span>
+                                    </div>
+                                )
+                            }
+                        >
+                            <div className="flex flex-col gap-6">
+                                {/* Total Sales Hero Section */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[24px] bg-primary/10 dark:bg-primary/15 border-2 border-primary/25 shadow-sm">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm sm:text-base font-black text-primary uppercase tracking-wider">
+                                            إجمالي المبيعات المحققة
+                                        </span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                                                {fmt(data.totalSales)}
+                                            </span>
+                                            <span className="text-xl font-black text-primary">د.ل</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 border-t sm:border-t-0 sm:border-r-2 border-primary/20 pt-3 sm:pt-0 sm:pr-6">
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عدد الفواتير الصادرة</span>
+                                        <span className="text-2xl font-black text-slate-900 dark:text-white">{data.invoicesCount} فاتورة</span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
-                            {fmt(data.totalSales)} <span className="text-base font-bold">د.ل</span>
-                        </span>
-                    </SpatialCard>
 
-                    {/* Invoices Count */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-blue-500/30 bg-blue-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">عدد الفواتير</span>
-                            <Receipt className="w-6 h-6 text-blue-500" />
-                        </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400">{data.invoicesCount}</span>
-                            {data.comparison && (
-                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1">سابق: {data.comparison.invoices_count}</p>
-                            )}
-                        </div>
-                    </SpatialCard>
+                                {/* Paid vs Due Grid Matrix */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Total Paid Pill */}
+                                    <div className="p-5 rounded-[22px] bg-emerald-500/10 dark:bg-emerald-500/15 border-2 border-emerald-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">إجمالي المدفوع (المحصل)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                                                <Wallet className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {fmt(data.totalPaid)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-black">
+                                                {data.totalSales > 0 ? ((data.totalPaid / data.totalSales) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
 
-                    {/* Average Invoice */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-purple-500/30 bg-purple-500/5">
-                        <span className="text-sm font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">متوسط الفاتورة</span>
-                        <span className="text-3xl sm:text-4xl font-black text-purple-600 dark:text-purple-400">{fmt(data.avgInvoice)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                                    {/* Total Due Pill */}
+                                    <div className="p-5 rounded-[22px] bg-rose-500/10 dark:bg-rose-500/15 border-2 border-rose-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-rose-700 dark:text-rose-400">المتبقي الآجل (الديون)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
+                                                <AlertCircle className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400">
+                                                {fmt(data.totalDue)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-black">
+                                                {data.totalSales > 0 ? ((data.totalDue / data.totalSales) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                    {/* Total Paid */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-emerald-500/30 bg-emerald-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">المدفوع</span>
-                            <Wallet className="w-6 h-6 text-emerald-500" />
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">{fmt(data.totalPaid)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                                {/* Quick Bottom Insights Strip */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t-2 border-slate-200/60 dark:border-slate-700/60">
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط قيمة الفاتورة</span>
+                                        <span className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{fmt(data.avgInvoice)} د.ل</span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">نسبة التحصيل النقدي</span>
+                                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                            {data.totalSales > 0 ? ((data.totalPaid / data.totalSales) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60 col-span-2 sm:col-span-1">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط فواتير الفترة السابقة</span>
+                                        <span className="text-lg font-black text-slate-700 dark:text-slate-300 mt-0.5">
+                                            {data.comparison ? `${data.comparison.invoices_count} فاتورة` : '—'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </SpatialCard>
+                    </div>
 
-                    {/* Total Due */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-rose-500/30 bg-rose-500/5">
-                        <span className="text-sm font-black text-rose-500 uppercase tracking-wider">المتبقي الآجل</span>
-                        <span className="text-3xl sm:text-4xl font-black text-rose-500">{fmt(data.totalDue)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                    {/* 2. Payment Methods Breakdown Card (5 cols) */}
+                    <div className="lg:col-span-5 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="تفصيل وسائل الدفع والتحصيل"
+                            icon={<CreditCard className="w-7 h-7 text-primary" />}
+                            action={
+                                <span className="px-3.5 py-1.5 rounded-full bg-primary/15 text-primary text-xs font-black border border-primary/30">
+                                    {data.paymentMethodsBreakdown?.length || 0} طرق دفع
+                                </span>
+                            }
+                        >
+                            <div className="flex flex-col gap-4 flex-1">
+                                {(!data.paymentMethodsBreakdown || data.paymentMethodsBreakdown.length === 0) ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-3 my-auto">
+                                        <Coins className="w-12 h-12 opacity-30" />
+                                        <p className="font-bold text-base text-center">لا توجد عمليات دفع مسجلة للفواتير المحددة</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3.5 my-auto">
+                                        {data.paymentMethodsBreakdown.map((pm, index) => (
+                                            <div
+                                                key={pm.id || index}
+                                                className="p-4 rounded-[20px] bg-slate-100/80 dark:bg-slate-800/60 border-2 border-slate-200/80 dark:border-slate-700/60 flex flex-col gap-2.5 transition-all hover:border-primary/40 shadow-sm"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-[14px] bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-black shrink-0">
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-base font-black text-slate-900 dark:text-white">
+                                                                {pm.name}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                                {pm.count} عملية دفع
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className="text-xl font-black text-slate-900 dark:text-white">
+                                                                {fmt(pm.total_amount)}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-slate-500">د.ل</span>
+                                                        </div>
+                                                        <span className="text-xs font-black text-primary">
+                                                            {pm.percentage}% من المدفوع
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Percentage Progress Bar */}
+                                                <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden p-0.5">
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-primary to-blue-400 transition-all duration-500 shadow-sm"
+                                                        style={{ width: `${Math.min(Math.max(pm.percentage, 2), 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </SpatialCard>
+                    </div>
+
                 </div>
 
                 {/* Table Card */}
