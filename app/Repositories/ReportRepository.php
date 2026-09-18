@@ -2997,7 +2997,7 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Purchases ───────────────────────────────────────────────────────────────────────
 
-    private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null)
+    private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null)
     {
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
@@ -3008,6 +3008,13 @@ class ReportRepository implements ReportRepositoryInterface
             ->when($dt,         fn($q) => $q->where('purchases.created_at', '<=', $dt))
             ->when($userId,     fn($q) => $q->where('purchases.user_id', $userId))
             ->when($supplierId, fn($q) => $q->where('purchases.supplier_id', $supplierId));
+
+        if ($paymentMethodId) {
+            $query->whereExists(fn($q) => $q->from('supplier_payments')
+                ->whereColumn('supplier_payments.purchase_id', 'purchases.id')
+                ->where('supplier_payments.payment_method_id', $paymentMethodId)
+                ->whereNull('supplier_payments.deleted_at'));
+        }
 
         if ($categoryId) {
             $query->whereExists(fn($q) => $q->from('purchase_items')
@@ -3039,14 +3046,14 @@ class ReportRepository implements ReportRepositoryInterface
         return $query;
     }
 
-    public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
+    public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
         $df = $dateFrom ? $dateFrom . ' 00:00:00' : null;
         $dt = $dateTo   ? $dateTo   . ' 23:59:59' : null;
 
-        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName);
+        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
 
         $totalPurchases  = (float) (clone $base)->sum('purchases.total');
         $purchasesCount  = (int)   (clone $base)->count();
@@ -3077,7 +3084,7 @@ class ReportRepository implements ReportRepositoryInterface
             $diffDays = \Carbon\Carbon::parse($df)->diffInDays(\Carbon\Carbon::parse($dt)) + 1;
             $prevDf   = \Carbon\Carbon::parse($df)->subDays($diffDays)->toDateTimeString();
             $prevDt   = \Carbon\Carbon::parse($df)->subSecond()->toDateTimeString();
-            $prevBase = $this->purchasesQuery(substr($prevDf, 0, 10), substr($prevDt, 0, 10), $userId, $supplierId, $categoryId, $filterProductIds, $searchName);
+            $prevBase = $this->purchasesQuery(substr($prevDf, 0, 10), substr($prevDt, 0, 10), $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
             $prevTotal = (float) (clone $prevBase)->sum('purchases.total');
             $prevCount = (int)   (clone $prevBase)->count();
             $comparison = [
@@ -3087,15 +3094,64 @@ class ReportRepository implements ReportRepositoryInterface
             ];
         }
 
-        return compact('totalPurchases', 'purchasesCount', 'avgPurchase', 'totalPaid', 'totalDue', 'monthly', 'comparison');
+        $includedProducts = [];
+        if (!empty($filterProductIds) || !empty($searchName)) {
+            $includedProducts = DB::table('products')->where(function($sub) use ($filterProductIds, $searchName) {
+                if (!empty($filterProductIds)) $sub->whereIn('id', $filterProductIds);
+                if ($searchName) {
+                    foreach (explode(',', $searchName) as $term) {
+                        $term = trim($term);
+                        if ($term !== '') $sub->orWhere('name', 'like', '%' . $term . '%');
+                    }
+                }
+            })->get(['id', 'name'])->toArray();
+        }
+
+        // تفصيل المدفوعات للموردين حسب وسيلة الدفع للفواتير المفلترة
+        $paymentMethodsBreakdown = $this->getPurchasesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $totalPaid);
+
+        return compact('totalPurchases', 'purchasesCount', 'avgPurchase', 'totalPaid', 'totalDue', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
     }
 
-    public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
+    public function getPurchasesPaymentMethodsBreakdown(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?float $totalPaid = null): array
+    {
+        $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
+
+        if ($totalPaid === null) {
+            $totalPaid = (float) (clone $base)->sum('purchases.paid_amount');
+        }
+
+        return DB::table('supplier_payments')
+            ->join('payment_methods', 'payment_methods.id', '=', 'supplier_payments.payment_method_id')
+            ->joinSub((clone $base)->select('purchases.id as filtered_purchase_id'), 'filtered_purchases', function ($join) {
+                $join->on('filtered_purchases.filtered_purchase_id', '=', 'supplier_payments.purchase_id');
+            })
+            ->whereNull('supplier_payments.deleted_at')
+            ->groupBy('payment_methods.id', 'payment_methods.name')
+            ->select(
+                'payment_methods.id',
+                'payment_methods.name',
+                DB::raw('SUM(supplier_payments.amount) as total_amount'),
+                DB::raw('COUNT(supplier_payments.id) as count')
+            )
+            ->orderByDesc('total_amount')
+            ->get()
+            ->map(fn($row) => [
+                'id'           => (int) $row->id,
+                'name'         => $row->name,
+                'total_amount' => (float) $row->total_amount,
+                'count'        => (int) $row->count,
+                'percentage'   => $totalPaid > 0 ? round(((float)$row->total_amount / $totalPaid) * 100, 1) : 0,
+            ])
+            ->toArray();
+    }
+
+    public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null): void
     {
         @ini_set('memory_limit', '1024M');
         @set_time_limit(300);
 
-        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $filterProductIds, $searchName);
+        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
         $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
         $productNames = collect($includedProducts)->pluck('name')->toArray();
         $isWhole = fn($n) => $n == floor($n);
@@ -3185,13 +3241,13 @@ class ReportRepository implements ReportRepositoryInterface
         exit;
     }
 
-    public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
+    public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
-        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $categoryId, false, $filterProductIds, $searchName);
+        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
 

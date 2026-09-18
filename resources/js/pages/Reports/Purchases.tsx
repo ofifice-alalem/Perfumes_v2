@@ -20,26 +20,58 @@ import {
     Download,
     Calendar,
     Receipt,
-    Wallet
+    Wallet,
+    CreditCard,
+    AlertCircle,
+    Coins
 } from 'lucide-react';
 
-interface User     { id: number; name: string; }
-interface Supplier { id: number; name: string; }
-interface Category { id: number; name: string; }
+interface User          { id: number; name: string; }
+interface Supplier      { id: number; name: string; }
+interface PaymentMethod { id: number; name: string; }
+interface Category      { id: number; name: string; }
 
 interface DailyBreakdown   { date: string; total: number; count: number; }
 interface MonthlyBreakdown { month: string; total: number; count: number; days: DailyBreakdown[]; }
 interface Comparison { total_purchases: number; purchases_count: number; diff_pct: number | null; }
 
+interface PaymentMethodBreakdown {
+    id: number;
+    name: string;
+    total_amount: number;
+    count: number;
+    percentage: number;
+}
+
 interface PurchasesData {
-    totalPurchases: number; purchasesCount: number; avgPurchase: number;
-    totalPaid: number; totalDue: number;
-    monthly: MonthlyBreakdown[]; comparison: Comparison | null;
+    totalPurchases: number;
+    purchasesCount: number;
+    avgPurchase: number;
+    totalPaid: number;
+    totalDue: number;
+    monthly: MonthlyBreakdown[];
+    comparison: Comparison | null;
+    includedProducts?: { id: number; name: string; }[];
+    paymentMethodsBreakdown?: PaymentMethodBreakdown[];
 }
 
 interface Props {
-    users: User[]; suppliers: Supplier[]; categories: Category[]; products: { id: number; name: string; }[];
-    filters: { dateFrom: string | null; dateTo: string | null; userId: number | null; supplierId: number | null; categoryId: number | null; compare: boolean; productIds?: number[]; searchName?: string; };
+    users: User[];
+    suppliers: Supplier[];
+    paymentMethods: PaymentMethod[];
+    categories: Category[];
+    products: { id: number; name: string; }[];
+    filters: {
+        dateFrom: string | null;
+        dateTo: string | null;
+        userId: number | null;
+        supplierId: number | null;
+        paymentMethodId: number | null;
+        categoryId: number | null;
+        compare: boolean;
+        productIds?: number[];
+        searchName?: string;
+    };
     data: PurchasesData;
     includedProducts?: { id: number; name: string; }[];
 }
@@ -60,6 +92,7 @@ function FilterDrawer({
     onClose,
     users,
     suppliers,
+    paymentMethods,
     categories,
     products,
     dateFrom,
@@ -70,6 +103,8 @@ function FilterDrawer({
     setUserId,
     supplierId,
     setSupplierId,
+    paymentMethodId,
+    setPaymentMethodId,
     categoryId,
     setCategoryId,
     multiSearch,
@@ -83,6 +118,7 @@ function FilterDrawer({
     onClose: () => void;
     users: User[];
     suppliers: Supplier[];
+    paymentMethods: PaymentMethod[];
     categories: Category[];
     products: { id: number; name: string; }[];
     dateFrom: string;
@@ -93,12 +129,14 @@ function FilterDrawer({
     setUserId: (v: string) => void;
     supplierId: string;
     setSupplierId: (v: string) => void;
+    paymentMethodId: string;
+    setPaymentMethodId: (v: string) => void;
     categoryId: string;
     setCategoryId: (v: string) => void;
     multiSearch: string[];
     setMultiSearch: (v: string[]) => void;
     compare: boolean;
-    setCompare: (fn: (p: boolean) => boolean) => void;
+    setCompare: (fn: (p: boolean | ((prev: boolean) => boolean)) => void) => void;
     onSearch: () => void;
     onReset: () => void;
 }) {
@@ -124,7 +162,7 @@ function FilterDrawer({
                         <div>
                             <h3 className="text-2xl font-black text-slate-900 dark:text-white">خيارات تصفية المشتريات</h3>
                             <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-                                تحديد الفترات، الموردين، المستخدمين، والمنتجات
+                                تحديد الفترات، الموردين، وسائل الدفع، والمنتجات
                             </p>
                         </div>
                     </div>
@@ -171,6 +209,14 @@ function FilterDrawer({
                             options={[{ label: 'الكل' }, ...suppliers.map(s => ({ label: s.name }))]}
                             defaultValue={supplierId ? (suppliers.find(s => String(s.id) === supplierId)?.name ?? '') : 'الكل'}
                             onSelect={val => setSupplierId(val === 'الكل' ? '' : String(suppliers.find(s => s.name === val)?.id ?? ''))}
+                        />
+
+                        <ModernSelect
+                            label="وسيلة الدفع"
+                            placeholder="الكل"
+                            options={[{ label: 'الكل' }, ...paymentMethods.map(pm => ({ label: pm.name }))]}
+                            defaultValue={paymentMethodId ? (paymentMethods.find(pm => String(pm.id) === paymentMethodId)?.name ?? '') : 'الكل'}
+                            onSelect={val => setPaymentMethodId(val === 'الكل' ? '' : String(paymentMethods.find(pm => pm.name === val)?.id ?? ''))}
                         />
 
                         <ModernSelect
@@ -240,14 +286,15 @@ function FilterDrawer({
 /* =========================================================================
    MAIN PURCHASES REPORT PAGE
    ========================================================================= */
-export default function Purchases({ users, suppliers, categories, products, filters, data, includedProducts }: Props) {
+export default function Purchases({ users, suppliers, paymentMethods, categories, products, filters, data, includedProducts }: Props) {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [dateFrom,    setDateFrom]    = useState(filters.dateFrom ?? '');
-    const [dateTo,      setDateTo]      = useState(filters.dateTo ?? '');
-    const [userId,      setUserId]      = useState(filters.userId ? String(filters.userId) : '');
-    const [supplierId,  setSupplierId]  = useState(filters.supplierId ? String(filters.supplierId) : '');
-    const [categoryId,  setCategoryId]  = useState(filters.categoryId ? String(filters.categoryId) : '');
-    const [multiSearch, setMultiSearch] = useState<string[]>([
+    const [dateFrom,        setDateFrom]        = useState(filters.dateFrom ?? '');
+    const [dateTo,          setDateTo]          = useState(filters.dateTo ?? '');
+    const [userId,          setUserId]          = useState(filters.userId ? String(filters.userId) : '');
+    const [supplierId,      setSupplierId]      = useState(filters.supplierId ? String(filters.supplierId) : '');
+    const [paymentMethodId, setPaymentMethodId] = useState(filters.paymentMethodId ? String(filters.paymentMethodId) : '');
+    const [categoryId,      setCategoryId]      = useState(filters.categoryId ? String(filters.categoryId) : '');
+    const [multiSearch,     setMultiSearch]     = useState<string[]>([
         ...(filters.productIds?.map(String) || []),
         ...(filters.searchName ? filters.searchName.split(',') : [])
     ]);
@@ -259,6 +306,7 @@ export default function Purchases({ users, suppliers, categories, products, filt
         (dateTo ? 1 : 0) +
         (userId ? 1 : 0) +
         (supplierId ? 1 : 0) +
+        (paymentMethodId ? 1 : 0) +
         (categoryId ? 1 : 0) +
         (multiSearch.length > 0 ? 1 : 0) +
         (compare ? 1 : 0);
@@ -271,29 +319,31 @@ export default function Purchases({ users, suppliers, categories, products, filt
         const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
         const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
         router.get('/reports/purchases', {
-            date_from:   dateFrom    || undefined,
-            date_to:     dateTo      || undefined,
-            user_id:     userId      || undefined,
-            supplier_id: supplierId  || undefined,
-            category_id: categoryId  || undefined,
-            product_ids: prodIds.length > 0 ? prodIds.join(',') : undefined,
-            search_name: sName       || undefined,
-            compare:     compare     || undefined,
+            date_from:         dateFrom         || undefined,
+            date_to:           dateTo           || undefined,
+            user_id:           userId           || undefined,
+            supplier_id:       supplierId       || undefined,
+            payment_method_id: paymentMethodId || undefined,
+            category_id:       categoryId       || undefined,
+            product_ids:       prodIds.length > 0 ? prodIds.join(',') : undefined,
+            search_name:       sName            || undefined,
+            compare:           compare          || undefined,
         }, { preserveScroll: true });
     }
 
     function reset() {
-        setDateFrom(''); setDateTo(''); setUserId(''); setSupplierId(''); setCategoryId(''); setMultiSearch([]); setCompare(false);
+        setDateFrom(''); setDateTo(''); setUserId(''); setSupplierId(''); setPaymentMethodId(''); setCategoryId(''); setMultiSearch([]); setCompare(false);
         router.get('/reports/purchases', {}, { preserveScroll: true });
     }
 
     function buildParams() {
         const p: Record<string, string> = {};
-        if (dateFrom)   p.date_from   = dateFrom;
-        if (dateTo)     p.date_to     = dateTo;
-        if (userId)     p.user_id     = userId;
-        if (supplierId) p.supplier_id = supplierId;
-        if (categoryId) p.category_id = categoryId;
+        if (dateFrom)        p.date_from         = dateFrom;
+        if (dateTo)          p.date_to           = dateTo;
+        if (userId)          p.user_id           = userId;
+        if (supplierId)      p.supplier_id       = supplierId;
+        if (paymentMethodId) p.payment_method_id = paymentMethodId;
+        if (categoryId)      p.category_id       = categoryId;
         const prodIds = multiSearch.filter(s => !isNaN(Number(s)));
         const sName   = multiSearch.filter(s => isNaN(Number(s))).join(',');
         if (prodIds.length > 0) p.product_ids = prodIds.join(',');
@@ -351,6 +401,7 @@ export default function Purchases({ users, suppliers, categories, products, filt
                     onClose={() => setIsFilterOpen(false)}
                     users={users}
                     suppliers={suppliers}
+                    paymentMethods={paymentMethods}
                     categories={categories}
                     products={products}
                     dateFrom={dateFrom}
@@ -361,6 +412,8 @@ export default function Purchases({ users, suppliers, categories, products, filt
                     setUserId={setUserId}
                     supplierId={supplierId}
                     setSupplierId={setSupplierId}
+                    paymentMethodId={paymentMethodId}
+                    setPaymentMethodId={setPaymentMethodId}
                     categoryId={categoryId}
                     setCategoryId={setCategoryId}
                     multiSearch={multiSearch}
@@ -388,58 +441,172 @@ export default function Purchases({ users, suppliers, categories, products, filt
                     </SpatialCard>
                 )}
 
-                {/* Summary Metric Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-                    {/* Total Purchases */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-slate-200 dark:border-slate-700 col-span-2 md:col-span-1">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي المشتريات</span>
-                            {data.comparison && (
-                                <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black ${(data.comparison.diff_pct ?? 0) >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'}`}>
-                                    {(data.comparison.diff_pct ?? 0) >= 0 ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
-                                    {data.comparison.diff_pct !== null ? `${Math.abs(data.comparison.diff_pct)}%` : '—'}
+                {/* KPI Overview Section: Unified Financial Card + Payment Methods Breakdown */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                    {/* 1. Unified Financial Overview Card (7 cols) */}
+                    <div className="lg:col-span-7 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="الملخص المالي للمشتريات"
+                            icon={<ShoppingBag className="w-7 h-7 text-primary" />}
+                            action={
+                                data.comparison && (
+                                    <div className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black shadow-sm ${(data.comparison.diff_pct ?? 0) >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'}`}>
+                                        {(data.comparison.diff_pct ?? 0) >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+                                        <span>مقارنة بالفترة السابقة: {data.comparison.diff_pct !== null ? `${Math.abs(data.comparison.diff_pct)}%` : '—'}</span>
+                                    </div>
+                                )
+                            }
+                        >
+                            <div className="flex flex-col gap-6">
+                                {/* Total Purchases Hero Section */}
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[24px] bg-primary/10 dark:bg-primary/15 border-2 border-primary/25 shadow-sm">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm sm:text-base font-black text-primary uppercase tracking-wider">
+                                            إجمالي المشتريات المسجلة
+                                        </span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                                                {fmt(data.totalPurchases)}
+                                            </span>
+                                            <span className="text-xl font-black text-primary">د.ل</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 border-t sm:border-t-0 sm:border-r-2 border-primary/20 pt-3 sm:pt-0 sm:pr-6">
+                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عدد الفواتير المسجلة</span>
+                                        <span className="text-2xl font-black text-slate-900 dark:text-white">{data.purchasesCount} فاتورة</span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
-                            {fmt(data.totalPurchases)} <span className="text-base font-bold">د.ل</span>
-                        </span>
-                    </SpatialCard>
 
-                    {/* Purchases Count */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-blue-500/30 bg-blue-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">عدد الفواتير</span>
-                            <Receipt className="w-6 h-6 text-blue-500" />
-                        </div>
-                        <div>
-                            <span className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400">{data.purchasesCount}</span>
-                            {data.comparison && (
-                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1">سابق: {data.comparison.purchases_count}</p>
-                            )}
-                        </div>
-                    </SpatialCard>
+                                {/* Paid vs Due Grid Matrix */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Total Paid Pill */}
+                                    <div className="p-5 rounded-[22px] bg-emerald-500/10 dark:bg-emerald-500/15 border-2 border-emerald-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-emerald-700 dark:text-emerald-400">إجمالي المدفوع (المسدد للموردين)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                                                <Wallet className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400">
+                                                {fmt(data.totalPaid)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-black">
+                                                {data.totalPurchases > 0 ? ((data.totalPaid / data.totalPurchases) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
 
-                    {/* Average Purchase */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-purple-500/30 bg-purple-500/5">
-                        <span className="text-sm font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">متوسط الفاتورة</span>
-                        <span className="text-3xl sm:text-4xl font-black text-purple-600 dark:text-purple-400">{fmt(data.avgPurchase)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                                    {/* Total Due Pill */}
+                                    <div className="p-5 rounded-[22px] bg-rose-500/10 dark:bg-rose-500/15 border-2 border-rose-500/30 flex flex-col justify-between gap-3 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-black text-rose-700 dark:text-rose-400">المتبقي الآجل (ديون الموردين)</span>
+                                            <div className="w-9 h-9 rounded-[14px] bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
+                                                <AlertCircle className="w-5 h-5" />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400">
+                                                {fmt(data.totalDue)} <span className="text-sm font-bold">د.ل</span>
+                                            </span>
+                                            <span className="px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-700 dark:text-rose-300 text-xs font-black">
+                                                {data.totalPurchases > 0 ? ((data.totalDue / data.totalPurchases) * 100).toFixed(1) : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                    {/* Total Paid */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-emerald-500/30 bg-emerald-500/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">المدفوع</span>
-                            <Wallet className="w-6 h-6 text-emerald-500" />
-                        </div>
-                        <span className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400">{fmt(data.totalPaid)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                                {/* Quick Bottom Insights Strip */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t-2 border-slate-200/60 dark:border-slate-700/60">
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط قيمة الفاتورة</span>
+                                        <span className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{fmt(data.avgPurchase)} د.ل</span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">نسبة السداد للموردين</span>
+                                        <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                            {data.totalPurchases > 0 ? ((data.totalPaid / data.totalPurchases) * 100).toFixed(1) : 0}%
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col p-3 rounded-[16px] bg-slate-100/80 dark:bg-slate-800/60 col-span-2 sm:col-span-1">
+                                        <span className="text-xs font-black text-slate-500 dark:text-slate-400">متوسط فواتير الفترة السابقة</span>
+                                        <span className="text-lg font-black text-slate-700 dark:text-slate-300 mt-0.5">
+                                            {data.comparison ? `${data.comparison.purchases_count} فاتورة` : '—'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </SpatialCard>
+                    </div>
 
-                    {/* Total Due */}
-                    <SpatialCard headerDot={false} className="p-6 flex flex-col justify-between gap-2 border-2 border-rose-500/30 bg-rose-500/5">
-                        <span className="text-sm font-black text-rose-500 uppercase tracking-wider">المتبقي للموردين</span>
-                        <span className="text-3xl sm:text-4xl font-black text-rose-500">{fmt(data.totalDue)} <span className="text-base font-bold">د.ل</span></span>
-                    </SpatialCard>
+                    {/* 2. Payment Methods Breakdown Card (5 cols) */}
+                    <div className="lg:col-span-5 flex flex-col">
+                        <SpatialCard
+                            headerDot={false}
+                            className="p-6 sm:p-8 flex flex-col justify-between gap-6 border-2 border-slate-200/80 dark:border-slate-700/80 h-full"
+                            title="تفصيل وسائل الدفع والسداد"
+                            icon={<CreditCard className="w-7 h-7 text-primary" />}
+                            action={
+                                <span className="px-3.5 py-1.5 rounded-full bg-primary/15 text-primary text-xs font-black border border-primary/30">
+                                    {data.paymentMethodsBreakdown?.length || 0} طرق دفع
+                                </span>
+                            }
+                        >
+                            <div className="flex flex-col gap-4 flex-1">
+                                {(!data.paymentMethodsBreakdown || data.paymentMethodsBreakdown.length === 0) ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500 gap-3 my-auto">
+                                        <Coins className="w-12 h-12 opacity-30" />
+                                        <p className="font-bold text-base text-center">لا توجد عمليات سداد مسجلة للفواتير المحددة</p>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-3.5 my-auto">
+                                        {data.paymentMethodsBreakdown.map((pm, index) => (
+                                            <div
+                                                key={pm.id || index}
+                                                className="p-4 rounded-[20px] bg-slate-100/80 dark:bg-slate-800/60 border-2 border-slate-200/80 dark:border-slate-700/60 flex flex-col gap-2.5 transition-all hover:border-primary/40 shadow-sm"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-[14px] bg-primary/15 border border-primary/30 flex items-center justify-center text-primary font-black shrink-0">
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-base font-black text-slate-900 dark:text-white leading-tight">
+                                                                {pm.name}
+                                                            </span>
+                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                                                                {pm.count} عملية سداد
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-lg font-black text-slate-900 dark:text-white">
+                                                            {fmt(pm.total_amount)} <span className="text-xs font-bold text-primary">د.ل</span>
+                                                        </span>
+                                                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                                                            {pm.percentage}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Percentage Progress Bar */}
+                                                <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-gradient-to-r from-primary to-blue-500 transition-all duration-500"
+                                                        style={{ width: `${Math.min(100, Math.max(0, pm.percentage))}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </SpatialCard>
+                    </div>
+
                 </div>
 
                 {/* Table Card */}
