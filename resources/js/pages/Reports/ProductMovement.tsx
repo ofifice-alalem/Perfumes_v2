@@ -152,8 +152,8 @@ function FilterDrawer({
 
                 {/* Drawer Body */}
                 <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col gap-6">
-                    {/* Row 1: Product Select + Movement Type side by side */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                    {/* Full Width Product Select */}
+                    <div className="w-full">
                         <ModernSelect
                             label="المنتج *"
                             placeholder="اختر المنتج..."
@@ -164,29 +164,29 @@ function FilterDrawer({
                                 setProductId(p ? String(p.id) : '');
                             }}
                         />
+                    </div>
 
-                        {/* Movement Type Options (Extra Large POS Chips) */}
-                        <div className="flex flex-col gap-3">
-                            <label className="text-lg sm:text-xl font-black text-slate-800 dark:text-white">نوع الحركة</label>
-                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                                {typeOptions.map(t => {
-                                    const isSelected = type === t.value;
-                                    return (
-                                        <button
-                                            key={t.value}
-                                            type="button"
-                                            onClick={() => setType(t.value)}
-                                            className={`h-16 sm:h-20 px-5 rounded-[22px] font-black text-lg sm:text-xl border-2 sm:border-3 transition-all cursor-pointer select-none active:scale-95 flex items-center justify-center text-center touch-manipulation shadow-md ${
-                                                isSelected
-                                                    ? 'bg-primary text-white border-primary shadow-xl shadow-primary/30 ring-4 ring-primary/20 scale-[1.02]'
-                                                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
-                                            }`}
-                                        >
-                                            {t.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                    {/* Movement Type Options (3 per row) */}
+                    <div className="flex flex-col gap-3">
+                        <label className="text-lg sm:text-xl font-black text-slate-800 dark:text-white">نوع الحركة</label>
+                        <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                            {typeOptions.map(t => {
+                                const isSelected = type === t.value;
+                                return (
+                                    <button
+                                        key={t.value}
+                                        type="button"
+                                        onClick={() => setType(t.value)}
+                                        className={`h-14 sm:h-16 px-2 sm:px-3 rounded-[20px] font-black text-sm sm:text-base border-2 sm:border-3 transition-all cursor-pointer select-none active:scale-95 flex items-center justify-center text-center touch-manipulation shadow-md ${
+                                            isSelected
+                                                ? 'bg-primary text-white border-primary shadow-xl shadow-primary/30 ring-4 ring-primary/20 scale-[1.02]'
+                                                : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700'
+                                        }`}
+                                    >
+                                        {t.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
