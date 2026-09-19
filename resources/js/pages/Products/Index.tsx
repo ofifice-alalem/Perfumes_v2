@@ -131,10 +131,28 @@ function QrModal({ product, onClose }: QrModalProps) {
         return saved !== null ? Number(saved) : 0;
     });
 
+    const [offsetY, setOffsetY] = useState<number>(() => {
+        const saved = localStorage.getItem('label_printer_offset_y');
+        return saved !== null ? Number(saved) : 1; // إزاحة افتراضية 1 مم للأسفل لمنع الالتصاق بالأعلى والورقة البيضاء
+    });
+
+    const [qrSizeCustom, setQrSizeCustom] = useState<number | null>(() => {
+        const saved = localStorage.getItem('label_printer_qr_size');
+        return saved ? Number(saved) : null;
+    });
+
     const [copies, setCopies] = useState<number>(1);
     const [isCustomSize, setIsCustomSize] = useState<boolean>(() => {
         return !PRESET_LABEL_SIZES.some(s => s.w === widthMm && s.h === heightMm);
     });
+
+    // حساب المقاس التلقائي المتناسق لرمز QR بناءً على أبعاد الورقة المحددة
+    // يحترم أبعاد الورقة ديناميكياً (لا يتجاوز 65% من ارتفاع المساحة المتاحة ولا 28% من عرض الورقة)
+    const autoQrSizeMm = Math.max(8, Math.min(
+        15,
+        Math.round(Math.min((heightMm - (showName ? 5.5 : 2)) * 0.65, widthMm * 0.28) * 10) / 10
+    ));
+    const activeQrSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeMm;
 
     // حفظ التفضيلات محلياً
     const updateSize = (w: number, h: number) => {
@@ -151,10 +169,16 @@ function QrModal({ product, onClose }: QrModalProps) {
         localStorage.setItem('label_printer_rot', String(next));
     };
 
-    const updateOffset = (delta: number) => {
+    const updateOffsetX = (delta: number) => {
         const next = Math.max(-20, Math.min(30, offsetX + delta));
         setOffsetX(next);
         localStorage.setItem('label_printer_offset_x', String(next));
+    };
+
+    const updateOffsetY = (delta: number) => {
+        const next = Math.max(-15, Math.min(20, Math.round((offsetY + delta) * 10) / 10));
+        setOffsetY(next);
+        localStorage.setItem('label_printer_offset_y', String(next));
     };
 
     // استخراج السعر
@@ -192,23 +216,42 @@ function QrModal({ product, onClose }: QrModalProps) {
             }
         }
 
-        // حساب الارتفاع المتاح للرسمة الرسومية (QR / Barcode)
-        let textLinesH = 0;
-        if (showName) textLinesH += 4.5;
-        if (showPrice) textLinesH += 4.5;
-        if (tab === 'classic' && showCodeText) textLinesH += 3.5;
-        const availableGraphicH = Math.max(8, innerH - textLinesH - 2);
+        // حساب المقاسات المناسبة حسب نوع الرمز بناءً على أبعاد الورقة
+        const autoQrSizeForPrint = Math.max(8, Math.min(
+            15,
+            Math.round(Math.min((innerH - (showName ? 5.5 : 2)) * 0.65, innerW * 0.28) * 10) / 10
+        ));
+        const qrBoxSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeForPrint;
+        const availableBarH = Math.max(8, innerH - (showName ? 4 : 0) - (showPrice ? 4 : 0) - 2);
 
-        const labelHtml = `
+        const labelHtml = tab === 'classic' ? `
             <div class="label-page">
-                <div class="label-content">
+                <div class="label-content classic-layout">
+                    ${showName ? `<div class="p-name full-width">${product.name}</div>` : ''}
+
+                    <div class="classic-body">
+                        <div class="info-side">
+                            ${showCodeText && product.qrcode ? `<div class="p-code">${product.qrcode}</div>` : ''}
+                            ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
+                        </div>
+
+                        <div class="qr-side">
+                            <div class="graphic-wrap qr-wrap">
+                                ${graphicSvgHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        ` : `
+            <div class="label-page">
+                <div class="label-content bar-layout">
                     ${showName ? `<div class="p-name">${product.name}</div>` : ''}
 
-                    <div class="graphic-wrap">
+                    <div class="graphic-wrap bar-wrap">
                         ${graphicSvgHtml}
                     </div>
 
-                    ${tab === 'classic' && showCodeText ? `<div class="p-code">${product.qrcode || ''}</div>` : ''}
                     ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
                 </div>
             </div>
@@ -244,9 +287,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                     }
                     .label-page {
                         width: ${widthMm}mm !important;
-                        height: ${heightMm}mm !important;
+                        height: ${heightMm - 0.4}mm !important;
                         max-width: ${widthMm}mm !important;
-                        max-height: ${heightMm}mm !important;
+                        max-height: ${heightMm - 0.4}mm !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
@@ -263,12 +306,112 @@ function QrModal({ product, onClose }: QrModalProps) {
                     .label-page:last-child {
                         page-break-after: avoid !important;
                     }
-                    .label-content {
+                    
+                    /* تنسيق ملصق الـ QR المربع الحديث (اسم كامل بالعرض، الرمز بالجانب وتحته السعر، محاذاة في المنتصف ومسافات متقاربة) */
+                    .label-content.classic-layout {
                         width: ${innerW}mm !important;
-                        height: ${innerH}mm !important;
+                        height: ${innerH - 0.8}mm !important;
                         max-width: ${innerW}mm !important;
-                        max-height: ${innerH}mm !important;
-                        padding: 0.8mm 1.2mm !important;
+                        max-height: ${innerH - 0.8}mm !important;
+                        padding: 1.2mm 1.5mm !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        gap: 0.8mm !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
+                        transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
+                        transform-origin: center center;
+                    }
+                    .classic-layout .p-name.full-width {
+                        width: 100% !important;
+                        direction: rtl !important;
+                        text-align: center !important;
+                        font-size: ${Math.min(9.5, Math.max(7, innerH * 0.28))}pt;
+                        font-weight: 900;
+                        color: #000;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        line-height: 1.15;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .classic-body {
+                        width: 100% !important;
+                        display: flex !important;
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        direction: rtl !important;
+                        gap: 2.5mm !important;
+                        overflow: hidden !important;
+                        margin: 0 auto !important;
+                    }
+                    .classic-body .info-side {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        direction: rtl !important;
+                        text-align: center !important;
+                        gap: 0.8mm !important;
+                        overflow: hidden !important;
+                    }
+                    .classic-body .p-code {
+                        direction: ltr !important;
+                        text-align: center !important;
+                        font-family: monospace;
+                        font-size: 8pt;
+                        font-weight: 700;
+                        letter-spacing: 0.5px;
+                        color: #000;
+                        line-height: 1.1;
+                        margin: 0 !important;
+                    }
+                    .classic-body .p-price {
+                        direction: rtl !important;
+                        text-align: center !important;
+                        font-size: ${Math.min(12, Math.max(8.5, innerH * 0.36))}pt;
+                        font-weight: 900;
+                        color: #000;
+                        line-height: 1.1;
+                        margin: 0 !important;
+                    }
+                    .classic-body .qr-side {
+                        flex-shrink: 0 !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                    }
+                    .classic-body .graphic-wrap.qr-wrap {
+                        width: ${qrBoxSizeMm}mm !important;
+                        height: ${qrBoxSizeMm}mm !important;
+                        max-width: ${qrBoxSizeMm}mm !important;
+                        max-height: ${qrBoxSizeMm}mm !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        margin: 0 !important;
+                        overflow: hidden !important;
+                    }
+                    .classic-body .graphic-wrap.qr-wrap svg {
+                        display: block !important;
+                        width: ${qrBoxSizeMm}mm !important;
+                        height: ${qrBoxSizeMm}mm !important;
+                        max-width: ${qrBoxSizeMm}mm !important;
+                        max-height: ${qrBoxSizeMm}mm !important;
+                        margin: 0 !important;
+                    }
+
+                    /* تنسيق ملصق الباركود العادي */
+                    .label-content.bar-layout {
+                        width: ${innerW}mm !important;
+                        height: ${innerH - 0.8}mm !important;
+                        max-width: ${innerW}mm !important;
+                        max-height: ${innerH - 0.8}mm !important;
+                        padding: 1.5mm 1.2mm 0.8mm 1.2mm !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
@@ -277,57 +420,46 @@ function QrModal({ product, onClose }: QrModalProps) {
                         text-align: center !important;
                         box-sizing: border-box !important;
                         overflow: hidden !important;
-                        margin-left: ${offsetX}mm !important;
-                        ${rotation !== 0 ? `transform: rotate(${rotation}deg); transform-origin: center center;` : ''}
+                        transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
+                        transform-origin: center center;
                     }
-                    .p-name {
+                    .bar-layout .p-name {
                         direction: rtl !important;
                         text-align: center !important;
-                        font-size: ${Math.min(9, Math.max(6.5, innerH * 0.32))}pt;
+                        font-size: ${Math.min(8.5, Math.max(6.5, innerH * 0.28))}pt;
                         font-weight: 900;
                         color: #000;
                         white-space: nowrap;
                         overflow: hidden;
                         text-overflow: ellipsis;
                         width: 100%;
-                        line-height: 1.1;
+                        line-height: 1.15;
                         margin: 0 !important;
+                        padding: 0 !important;
                     }
-                    .graphic-wrap {
+                    .graphic-wrap.bar-wrap {
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        width: 100%;
-                        overflow: hidden;
-                        max-height: ${availableGraphicH}mm !important;
+                        width: 100% !important;
+                        max-height: ${availableBarH}mm !important;
+                        overflow: hidden !important;
                         margin: 0 auto !important;
-                        text-align: center !important;
                     }
-                    .graphic-wrap svg {
+                    .graphic-wrap.bar-wrap svg {
                         display: block !important;
                         margin: 0 auto !important;
                         max-width: 96% !important;
-                        max-height: ${availableGraphicH}mm !important;
+                        max-height: ${availableBarH}mm !important;
                         height: auto !important;
                     }
-                    .graphic-wrap svg g:first-of-type text {
+                    .graphic-wrap.bar-wrap svg g:first-of-type text {
                         display: none !important;
                     }
-                    .p-code {
-                        direction: ltr !important;
-                        text-align: center !important;
-                        font-family: monospace;
-                        font-size: 6.5pt;
-                        font-weight: 700;
-                        letter-spacing: 1px;
-                        color: #000;
-                        line-height: 1;
-                        margin: 0 !important;
-                    }
-                    .p-price {
+                    .bar-layout .p-price {
                         direction: rtl !important;
                         text-align: center !important;
-                        font-size: ${Math.min(9.5, Math.max(7, innerH * 0.34))}pt;
+                        font-size: ${Math.min(9, Math.max(6.8, innerH * 0.3))}pt;
                         font-weight: 900;
                         color: #000;
                         line-height: 1.1;
@@ -432,10 +564,10 @@ function QrModal({ product, onClose }: QrModalProps) {
                         >
                             <div
                                 style={{
-                                    transform: `${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}translateX(${offsetX * 2}px)`,
+                                    transform: `translate(${offsetX * 2}px, ${offsetY * 2}px) ${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}`,
                                     transformOrigin: 'center center',
                                 }}
-                                className="w-full h-full flex flex-col items-center justify-center gap-1 transition-transform py-0.5"
+                                className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1"
                             >
                                 {showName && (
                                     <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
@@ -443,71 +575,85 @@ function QrModal({ product, onClose }: QrModalProps) {
                                     </span>
                                 )}
 
-                                <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
-                                    {tab === 'classic' && (
-                                        <div id="label-modal-qr-preview" className="flex items-center justify-center">
+                                {tab === 'classic' ? (
+                                    <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
+                                        {/* جهة اليمين: الكود وتحته السعر - محاذاة في المنتصف ومسافة متقاربة */}
+                                        <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden">
+                                            {showCodeText && product.qrcode && (
+                                                <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
+                                                    {product.qrcode}
+                                                </span>
+                                            )}
+                                            {showPrice && priceDisplay && (
+                                                <span className="text-emerald-700 font-black text-sm leading-tight text-center">
+                                                    {priceDisplay}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
+                                        <div id="label-modal-qr-preview" className="shrink-0 flex items-center justify-center p-0.5">
                                             <QRCodeSVG
                                                 value={product.qrcode || '0000000000'}
-                                                size={Math.min(95, Math.max(55, Math.round(220 * (heightMm / widthMm) - 45)))}
+                                                size={Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm))))}
                                                 level="H"
                                                 fgColor="#000000"
                                                 imageSettings={{
                                                     src: PERFUME_SVG_B64,
-                                                    width: 24,
-                                                    height: 24,
+                                                    width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
+                                                    height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
                                                     excavate: true,
                                                 }}
                                             />
                                         </div>
-                                    )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
+                                            {tab === 'ean13' && (
+                                                <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
+                                                    <Barcode
+                                                        value={toEan13(product.qrcode || '0000000000')}
+                                                        format="EAN13"
+                                                        width={1.3}
+                                                        height={34}
+                                                        displayValue={showCodeText}
+                                                        textMargin={1}
+                                                        fontSize={12}
+                                                        font="monospace"
+                                                        margin={0}
+                                                        lineColor="#000000"
+                                                    />
+                                                </div>
+                                            )}
 
-                                    {tab === 'ean13' && (
-                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
-                                            <Barcode
-                                                value={toEan13(product.qrcode || '0000000000')}
-                                                format="EAN13"
-                                                width={1.3}
-                                                height={34}
-                                                displayValue={showCodeText}
-                                                textMargin={1}
-                                                fontSize={12}
-                                                font="monospace"
-                                                margin={0}
-                                                lineColor="#000000"
-                                            />
+                                            {tab === 'serial' && (
+                                                <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
+                                                    <Barcode
+                                                        value={product.qrcode || '0000000000'}
+                                                        format="CODE128"
+                                                        width={1.2}
+                                                        height={34}
+                                                        displayValue={showCodeText}
+                                                        textMargin={1}
+                                                        fontSize={12}
+                                                        font="monospace"
+                                                        margin={0}
+                                                        lineColor="#000000"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
 
-                                    {tab === 'serial' && (
-                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
-                                            <Barcode
-                                                value={product.qrcode || '0000000000'}
-                                                format="CODE128"
-                                                width={1.2}
-                                                height={34}
-                                                displayValue={showCodeText}
-                                                textMargin={1}
-                                                fontSize={12}
-                                                font="monospace"
-                                                margin={0}
-                                                lineColor="#000000"
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center justify-between w-full px-1 text-[10px] font-black leading-none mt-0.5">
-                                    {tab === 'classic' && showCodeText && (
-                                        <span className="font-mono text-slate-700 tracking-wider">
-                                            {product.qrcode}
-                                        </span>
-                                    )}
-                                    {showPrice && priceDisplay && (
-                                        <span className="text-emerald-700 font-extrabold mr-auto">
-                                            {priceDisplay}
-                                        </span>
-                                    )}
-                                </div>
+                                        {showPrice && priceDisplay && (
+                                            <div className="flex items-center justify-center w-full px-1 text-[11px] font-black leading-none mt-0.5">
+                                                <span className="text-emerald-700 font-extrabold">
+                                                    {priceDisplay}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -627,43 +773,145 @@ function QrModal({ product, onClose }: QrModalProps) {
                         </div>
                     </div>
 
-                    {/* ضبط الإزاحة الأفقية لعلاج الانزياح لليسار والفراغ الأبيض باليمين */}
-                    <div className="p-3 rounded-[16px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
-                        <div>
-                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">إزاحة الطباعة (للتوسيط الدقيق):</span>
-                            <span className="text-[10px] font-bold text-slate-400">إذا خرج الكود لليسار، اضغط (+) لنقله لليمين</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            <button
-                                type="button"
-                                onClick={() => updateOffset(-1)}
-                                className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
-                                title="إزاحة لليسار"
-                            >
-                                -
-                            </button>
-                            <span className="font-mono font-black text-xs px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md min-w-[50px] text-center">
-                                {offsetX > 0 ? `+${offsetX}` : offsetX} مم
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => updateOffset(1)}
-                                className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
-                                title="إزاحة لليمين"
-                            >
-                                +
-                            </button>
-                            {offsetX !== 0 && (
+                    {/* ضبط الإزاحة الدقيقة (أفقي وعمودي) لتوسيط المحتوى ومنع الورقة البيضاء */}
+                    <div className="p-3.5 rounded-[18px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col gap-2.5">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">إزاحة وتوسيط الملصق (بالمليمتر):</span>
+                                <span className="text-[10px] font-bold text-slate-400">تحريك المحتوى على الورقة الحرارية لتفادي الحواف الفارغة</span>
+                            </div>
+                            {(offsetX !== 0 || offsetY !== 0) && (
                                 <button
                                     type="button"
-                                    onClick={() => { setOffsetX(0); localStorage.setItem('label_printer_offset_x', '0'); }}
+                                    onClick={() => {
+                                        setOffsetX(0);
+                                        setOffsetY(0);
+                                        localStorage.setItem('label_printer_offset_x', '0');
+                                        localStorage.setItem('label_printer_offset_y', '0');
+                                    }}
                                     className="text-[10px] font-black text-red-500 hover:underline px-1 cursor-pointer"
                                 >
-                                    تصفير
+                                    إعادة ضبط (0)
                                 </button>
                             )}
                         </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {/* إزاحة رأسية (Y) - لإنزال المحتوى ومنع الالتصاق بالأعلى */}
+                            <div className="flex items-center justify-between p-2 rounded-[12px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                <div className="flex flex-col">
+                                    <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">عمودي (Y):</span>
+                                    <span className="text-[9px] font-bold text-slate-400">{offsetY > 0 ? `للأسفل (+${offsetY})` : offsetY < 0 ? `للأعلى (${offsetY})` : 'افتراضي (0)'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => updateOffsetY(-0.5)}
+                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
+                                        title="رفع للأعلى (-)"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="font-mono font-black text-xs px-1.5 py-0.5 min-w-[42px] text-center">
+                                        {offsetY > 0 ? `+${offsetY}` : offsetY}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => updateOffsetY(0.5)}
+                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
+                                        title="إنزال للأسفل (+)"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* إزاحة أفقية (X) */}
+                            <div className="flex items-center justify-between p-2 rounded-[12px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                <div className="flex flex-col">
+                                    <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">أفقي (X):</span>
+                                    <span className="text-[9px] font-bold text-slate-400">{offsetX > 0 ? `لليمين (+${offsetX})` : offsetX < 0 ? `لليسار (${offsetX})` : 'افتراضي (0)'}</span>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => updateOffsetX(-1)}
+                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
+                                        title="إزاحة لليسار (-)"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="font-mono font-black text-xs px-1.5 py-0.5 min-w-[42px] text-center">
+                                        {offsetX > 0 ? `+${offsetX}` : offsetX}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => updateOffsetX(1)}
+                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
+                                        title="إزاحة لليمين (+)"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* التحكم في حجم رمز QR (تلقائي متناسق مع الورقة أو تعديل يدوي) */}
+                    {tab === 'classic' && (
+                        <div className="p-3 rounded-[16px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                            <div>
+                                <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">حجم رمز الـ QR على الورقة:</span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                    {qrSizeCustom === null ? 'متناسق تلقائياً حسب مقاس الورقة' : 'مقاس يدوي مخصص'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const current = activeQrSizeMm;
+                                        const next = Math.max(8, Math.round((current - 1) * 10) / 10);
+                                        setQrSizeCustom(next);
+                                        localStorage.setItem('label_printer_qr_size', String(next));
+                                    }}
+                                    className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
+                                    title="تصغير رمز الـ QR"
+                                >
+                                    -
+                                </button>
+                                <span className="font-mono font-black text-xs px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md min-w-[55px] text-center">
+                                    {activeQrSizeMm} مم
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const current = activeQrSizeMm;
+                                        const next = Math.min(22, Math.round((current + 1) * 10) / 10);
+                                        setQrSizeCustom(next);
+                                        localStorage.setItem('label_printer_qr_size', String(next));
+                                    }}
+                                    className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
+                                    title="تكبير رمز الـ QR"
+                                >
+                                    +
+                                </button>
+                                {qrSizeCustom !== null && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setQrSizeCustom(null);
+                                            localStorage.removeItem('label_printer_qr_size');
+                                        }}
+                                        className="text-[10px] font-black text-primary hover:underline px-1 cursor-pointer"
+                                        title="الرجوع للمقاس التلقائي المحسوب بناءً على الورقة"
+                                    >
+                                        تلقائي
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* خيارات المحتوى الظاهر على الملصق */}
                     <div className="p-3.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs font-black">
