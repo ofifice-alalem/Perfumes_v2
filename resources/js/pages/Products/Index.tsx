@@ -173,10 +173,24 @@ function QrModal({ product, onClose }: QrModalProps) {
         const innerW = isRotated ? heightMm : widthMm;
         const innerH = isRotated ? widthMm : heightMm;
 
-        // استخراج SVG مباشرة دون تكرار وسوم الـ svg
-        const qrSvgEl = document.querySelector('#label-modal-qr-preview svg') as SVGElement | null;
-        const barSvgEl = document.querySelector('#label-modal-bar-preview svg') as SVGElement | null;
-        const graphicSvgHtml = tab === 'classic' ? (qrSvgEl ? qrSvgEl.outerHTML : '') : (barSvgEl ? barSvgEl.outerHTML : '');
+        // استخراج SVG مباشرة دون تكرار وسوم الـ svg مع إزالة الرقم الخارجي البارز على اليسار في EAN-13 ليطابق شاشة المعاينة تماماً
+        let graphicSvgHtml = '';
+        if (tab === 'classic') {
+            const qrSvgEl = document.querySelector('#label-modal-qr-preview svg') as SVGElement | null;
+            graphicSvgHtml = qrSvgEl ? qrSvgEl.outerHTML : '';
+        } else {
+            const barSvgEl = document.querySelector('#label-modal-bar-preview svg') as SVGElement | null;
+            if (barSvgEl) {
+                const cloned = barSvgEl.cloneNode(true) as SVGElement;
+                if (tab === 'ean13') {
+                    const firstText = cloned.querySelector('g:first-of-type text');
+                    if (firstText) {
+                        firstText.remove();
+                    }
+                }
+                graphicSvgHtml = cloned.outerHTML;
+            }
+        }
 
         // حساب الارتفاع المتاح للرسمة الرسومية (QR / Barcode)
         let textLinesH = 0;
@@ -295,6 +309,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                         max-width: 96% !important;
                         max-height: ${availableGraphicH}mm !important;
                         height: auto !important;
+                    }
+                    .graphic-wrap svg g:first-of-type text {
+                        display: none !important;
                     }
                     .p-code {
                         direction: ltr !important;
@@ -445,7 +462,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                     )}
 
                                     {tab === 'ean13' && (
-                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
+                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
                                             <Barcode
                                                 value={toEan13(product.qrcode || '0000000000')}
                                                 format="EAN13"
