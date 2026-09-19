@@ -481,488 +481,530 @@ function QrModal({ product, onClose }: QrModalProps) {
         win.document.close();
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
+    return createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+            {/* الخلفية المعتمة ببلور ناعم وتعتيم كامل */}
+            <div
+                className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer transition-opacity"
+                onClick={onClose}
+            />
 
-            <div className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-[28px] shadow-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh]">
+            {/* نافذة الموديل بنمط Spatial UI العصري */}
+            <div className="relative z-10 w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_25px_70px_rgba(0,0,0,0.6)] border-2 border-slate-200/80 dark:border-white/10 flex flex-col max-h-[92vh] my-auto overflow-hidden animate-in zoom-in-95 duration-200">
                 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8 bg-slate-50 dark:bg-slate-800/50 shrink-0">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8 bg-slate-50/80 dark:bg-slate-800/40 backdrop-blur-sm shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-[16px] bg-primary/15 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
                             <QrCode className="w-5 h-5" />
                         </div>
                         <div>
                             <h3 className="font-black text-slate-900 dark:text-white text-base">طباعة ملصق الباركود والـ QR</h3>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{product.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-[320px]">{product.name}</span>
+                                {product.qrcode && (
+                                    <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                        {product.qrcode}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all cursor-pointer">
+                    <button
+                        onClick={onClose}
+                        className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500 hover:text-white text-slate-400 hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95"
+                        title="إغلاق"
+                    >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Body Content */}
-                <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
+                {/* Body Content: شبكة مقسمة لعمودين (معاينة حية على جانب، والإعدادات على الجانب الآخر) */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
 
-                    {/* نوع الرمز: 3 خيارات احترافية */}
-                    <div className="flex items-center gap-1.5 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => { setTab('ean13'); localStorage.setItem('label_printer_tab', 'ean13'); }}
-                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
-                                tab === 'ean13'
-                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                            }`}
-                        >
-                            <span>||| تجاري مجزأ (EAN-13)</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setTab('serial'); localStorage.setItem('label_printer_tab', 'serial'); }}
-                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
-                                tab === 'serial'
-                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                            }`}
-                        >
-                            <span>||| مباشر (Code 128)</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
-                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
-                                tab === 'classic'
-                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-                            }`}
-                        >
-                            <span>🔳 مربع (QR)</span>
-                        </button>
-                    </div>
-
-                    {/* المعاينة الحية للملصق (Live Real-time Preview) */}
-                    <div className="flex flex-col items-center justify-center p-4 rounded-[22px] bg-slate-100/70 dark:bg-slate-800/50 border-2 border-dashed border-slate-300 dark:border-slate-700">
-                        <div className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-2">
-                            <span>معاينة الملصق الفعلية ({widthMm} × {heightMm} مم)</span>
-                            {rotation !== 0 && (
-                                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/30">
-                                    دوران {rotation}°
-                                </span>
-                            )}
-                        </div>
-
-                        {/* الصندوق النسبي للملصق */}
-                        <div
-                            style={{
-                                width: '220px',
-                                height: `${Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm))))}px`,
-                            }}
-                            className="bg-white rounded-[10px] shadow-md border border-slate-300 p-2 flex flex-col items-center justify-between text-slate-900 transition-all overflow-hidden select-none relative"
-                        >
-                            <div
-                                style={{
-                                    transform: `translate(${offsetX * 2}px, ${offsetY * 2}px) ${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}`,
-                                    transformOrigin: 'center center',
-                                }}
-                                className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1"
-                            >
-                                {showName && (
-                                    <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
-                                        {product.name}
+                        {/* العمود 1 (اليمين في RTL): المعاينة الحية للملصق وخيارات الإظهار */}
+                        <div className="md:col-span-5 flex flex-col gap-4">
+                            {/* صندوق المعاينة الفضائي */}
+                            <div className="flex flex-col items-center justify-center p-4 rounded-[24px] bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80">
+                                <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-between w-full">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        معاينة الملصق المباشرة
                                     </span>
-                                )}
-
-                                {tab === 'classic' ? (
-                                    <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
-                                        {/* جهة اليمين: الكود وتحته السعر - محاذاة في المنتصف ومسافة متقاربة */}
-                                        <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden">
-                                            {showCodeText && product.qrcode && (
-                                                <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
-                                                    {product.qrcode}
-                                                </span>
-                                            )}
-                                            {showPrice && priceDisplay && (
-                                                <span className="text-emerald-700 font-black text-sm leading-tight text-center">
-                                                    {priceDisplay}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
-                                        <div id="label-modal-qr-preview" className="shrink-0 flex items-center justify-center p-0.5">
-                                            <QRCodeSVG
-                                                value={product.qrcode || '0000000000'}
-                                                size={Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm))))}
-                                                level="H"
-                                                fgColor="#000000"
-                                                imageSettings={{
-                                                    src: PERFUME_SVG_B64,
-                                                    width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
-                                                    height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
-                                                    excavate: true,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
-                                            {tab === 'ean13' && (
-                                                <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
-                                                    <Barcode
-                                                        value={toEan13(product.qrcode || '0000000000')}
-                                                        format="EAN13"
-                                                        width={1.3}
-                                                        height={34}
-                                                        displayValue={showCodeText}
-                                                        textMargin={1}
-                                                        fontSize={12}
-                                                        font="monospace"
-                                                        margin={0}
-                                                        lineColor="#000000"
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {tab === 'serial' && (
-                                                <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
-                                                    <Barcode
-                                                        value={product.qrcode || '0000000000'}
-                                                        format="CODE128"
-                                                        width={1.2}
-                                                        height={34}
-                                                        displayValue={showCodeText}
-                                                        textMargin={1}
-                                                        fontSize={12}
-                                                        font="monospace"
-                                                        margin={0}
-                                                        lineColor="#000000"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {showPrice && priceDisplay && (
-                                            <div className="flex items-center justify-center w-full px-1 text-[11px] font-black leading-none mt-0.5">
-                                                <span className="text-emerald-700 font-extrabold">
-                                                    {priceDisplay}
-                                                </span>
-                                            </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold border border-primary/20">
+                                            {widthMm} × {heightMm} مم
+                                        </span>
+                                        {rotation !== 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/30">
+                                                {rotation}°
+                                            </span>
                                         )}
-                                    </>
-                                )}
+                                    </div>
+                                </div>
+
+                                {/* الصندوق الأبيض الحقيقي للملصق */}
+                                <div
+                                    style={{
+                                        width: '210px',
+                                        height: `${Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm))))}px`,
+                                    }}
+                                    className="bg-white rounded-[12px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] border border-slate-300/80 p-2 flex flex-col items-center justify-center text-slate-900 transition-all overflow-hidden select-none relative"
+                                >
+                                    <div
+                                        style={{
+                                            transform: `translate(${offsetX * 2}px, ${offsetY * 2}px) ${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}`,
+                                            transformOrigin: 'center center',
+                                        }}
+                                        className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1"
+                                    >
+                                        {showName && (
+                                            <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                                                {product.name}
+                                            </span>
+                                        )}
+
+                                        {tab === 'classic' ? (
+                                            <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
+                                                {/* جهة اليمين: الكود وتحته السعر */}
+                                                <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden">
+                                                    {showCodeText && product.qrcode && (
+                                                        <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
+                                                            {product.qrcode}
+                                                        </span>
+                                                    )}
+                                                    {showPrice && priceDisplay && (
+                                                        <span className="text-emerald-700 font-black text-sm leading-tight text-center">
+                                                            {priceDisplay}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
+                                                <div id="label-modal-qr-preview" className="shrink-0 flex items-center justify-center p-0.5">
+                                                    <QRCodeSVG
+                                                        value={product.qrcode || '0000000000'}
+                                                        size={Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm))))}
+                                                        level="H"
+                                                        fgColor="#000000"
+                                                        imageSettings={{
+                                                            src: PERFUME_SVG_B64,
+                                                            width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
+                                                            height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
+                                                            excavate: true,
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
+                                                    {tab === 'ean13' && (
+                                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
+                                                            <Barcode
+                                                                value={toEan13(product.qrcode || '0000000000')}
+                                                                format="EAN13"
+                                                                width={1.3}
+                                                                height={34}
+                                                                displayValue={showCodeText}
+                                                                textMargin={1}
+                                                                fontSize={12}
+                                                                font="monospace"
+                                                                margin={0}
+                                                                lineColor="#000000"
+                                                            />
+                                                        </div>
+                                                    )}
+
+                                                    {tab === 'serial' && (
+                                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
+                                                            <Barcode
+                                                                value={product.qrcode || '0000000000'}
+                                                                format="CODE128"
+                                                                width={1.2}
+                                                                height={34}
+                                                                displayValue={showCodeText}
+                                                                textMargin={1}
+                                                                fontSize={12}
+                                                                font="monospace"
+                                                                margin={0}
+                                                                lineColor="#000000"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {showPrice && priceDisplay && (
+                                                    <div className="flex items-center justify-center w-full px-1 text-[11px] font-black leading-none mt-0.5">
+                                                        <span className="text-emerald-700 font-extrabold">
+                                                            {priceDisplay}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className="text-[10px] font-bold text-slate-400 text-center mt-2">
+                                    المعاينة مطابقة تماماً للملصق الحراري الفعلي 100%
+                                </p>
+                            </div>
+
+                            {/* خيارات المحتوى الظاهر على الملصق */}
+                            <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                <span className="text-xs font-black text-slate-700 dark:text-slate-300">عناصر الملصق:</span>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                        showName
+                                            ? 'bg-white dark:bg-slate-700/80 text-primary dark:text-white border-primary/30 shadow-xs'
+                                            : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={showName}
+                                            onChange={e => {
+                                                setShowName(e.target.checked);
+                                                localStorage.setItem('label_printer_show_name', String(e.target.checked));
+                                            }}
+                                            className="hidden"
+                                        />
+                                        <span>اسم العطر</span>
+                                    </label>
+
+                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                        showPrice
+                                            ? 'bg-white dark:bg-slate-700/80 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs'
+                                            : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={showPrice}
+                                            onChange={e => {
+                                                setShowPrice(e.target.checked);
+                                                localStorage.setItem('label_printer_show_price', String(e.target.checked));
+                                            }}
+                                            className="hidden"
+                                        />
+                                        <span>السعر</span>
+                                    </label>
+
+                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                        showCodeText
+                                            ? 'bg-white dark:bg-slate-700/80 text-primary dark:text-white border-primary/30 shadow-xs'
+                                            : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
+                                    }`}>
+                                        <input
+                                            type="checkbox"
+                                            checked={showCodeText}
+                                            onChange={e => {
+                                                setShowCodeText(e.target.checked);
+                                                localStorage.setItem('label_printer_show_code', String(e.target.checked));
+                                            }}
+                                            className="hidden"
+                                        />
+                                        <span>رقم الكود</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* مقاسات الورق السريعة (Presets) */}
-                    <div>
-                        <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-2">
-                            مقاس ورقة الملصق (Label Size):
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {PRESET_LABEL_SIZES.map(s => {
-                                const isSelected = !isCustomSize && widthMm === s.w && heightMm === s.h;
-                                return (
+                        {/* العمود 2 (اليسار في RTL): أدوات الضبط والإعدادات */}
+                        <div className="md:col-span-7 flex flex-col gap-4">
+
+                            {/* 1. نوع الرمز: 3 خيارات */}
+                            <div>
+                                <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                    نوع الرمز (Code Type):
+                                </label>
+                                <div className="flex items-center gap-1.5 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
                                     <button
-                                        key={`${s.w}x${s.h}`}
                                         type="button"
-                                        onClick={() => updateSize(s.w, s.h)}
-                                        className={`px-3 py-2.5 rounded-[14px] text-xs font-black border-2 transition-all cursor-pointer text-center ${
-                                            isSelected
-                                                ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
-                                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                        onClick={() => { setTab('ean13'); localStorage.setItem('label_printer_tab', 'ean13'); }}
+                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                            tab === 'ean13'
+                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                                         }`}
                                     >
-                                        {s.label}
+                                        <span>||| EAN-13 تجاري</span>
                                     </button>
-                                );
-                            })}
-                        </div>
-
-                        {/* مقاس مخصص */}
-                        <div className="mt-2.5 flex items-center gap-2">
-                            <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-[14px] border border-slate-200 dark:border-slate-700">
-                                <span className="text-xs font-bold text-slate-500">العرض:</span>
-                                <input
-                                    type="number"
-                                    min="20"
-                                    max="120"
-                                    value={widthMm}
-                                    onChange={e => {
-                                        const val = Number(e.target.value);
-                                        setWidthMm(val);
-                                        setIsCustomSize(true);
-                                        localStorage.setItem('label_printer_w', String(val));
-                                    }}
-                                    className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                                />
-                                <span className="text-[11px] font-bold text-slate-400">مم</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTab('serial'); localStorage.setItem('label_printer_tab', 'serial'); }}
+                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                            tab === 'serial'
+                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                                        }`}
+                                    >
+                                        <span>||| Code 128 مباشر</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
+                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                            tab === 'classic'
+                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                                        }`}
+                                    >
+                                        <span>🔳 QR مربع</span>
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-[14px] border border-slate-200 dark:border-slate-700">
-                                <span className="text-xs font-bold text-slate-500">الارتفاع:</span>
-                                <input
-                                    type="number"
-                                    min="15"
-                                    max="120"
-                                    value={heightMm}
-                                    onChange={e => {
-                                        const val = Number(e.target.value);
-                                        setHeightMm(val);
-                                        setIsCustomSize(true);
-                                        localStorage.setItem('label_printer_h', String(val));
-                                    }}
-                                    className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
-                                />
-                                <span className="text-[11px] font-bold text-slate-400">مم</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* زاوية الدوران وعدد النسخ */}
-                    <div className="grid grid-cols-2 gap-3">
-                        {/* زر تدوير الاتجاه لعلاج مشكلة المقلوب */}
-                        <div>
-                            <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
-                                اتجاه / دوران الطباعة:
-                            </label>
-                            <button
-                                type="button"
-                                onClick={toggleRotation}
-                                className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs hover:border-primary transition-all cursor-pointer"
-                                title="اضغط لتدوير الملصق 90 درجة لعلاج مشكلة خروج الملصق مقلوباً"
-                            >
-                                <RotateCcw className="w-4 h-4 text-primary" />
-                                <span>{rotation === 0 ? 'عادي (0°)' : rotation === 90 ? 'مدوّر (90°)' : rotation === 180 ? 'معكوس (180°)' : 'مدوّر (270°)'}</span>
-                            </button>
-                        </div>
-
-                        {/* عدد النسخ */}
-                        <div>
-                            <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
-                                عدد النسخ (Copies):
-                            </label>
-                            <div className="flex items-center h-11 rounded-[14px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setCopies(c => Math.max(1, c - 1))}
-                                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-sm cursor-pointer hover:bg-slate-200"
-                                >
-                                    -
-                                </button>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="100"
-                                    value={copies}
-                                    onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
-                                    className="flex-1 text-center font-mono font-black text-sm bg-transparent text-slate-900 dark:text-white focus:outline-none"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setCopies(c => Math.min(100, c + 1))}
-                                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-sm cursor-pointer hover:bg-slate-200"
-                                >
-                                    +
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* ضبط الإزاحة الدقيقة (أفقي وعمودي) لتوسيط المحتوى ومنع الورقة البيضاء */}
-                    <div className="p-3.5 rounded-[18px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col gap-2.5">
-                        <div className="flex items-center justify-between">
+                            {/* 2. مقاس ورقة الملصق (Presets + مخصص) */}
                             <div>
-                                <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">إزاحة وتوسيط الملصق (بالمليمتر):</span>
-                                <span className="text-[10px] font-bold text-slate-400">تحريك المحتوى على الورقة الحرارية لتفادي الحواف الفارغة</span>
+                                <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                    مقاس ورقة الملصق (Label Size):
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {PRESET_LABEL_SIZES.map(s => {
+                                        const isSelected = !isCustomSize && widthMm === s.w && heightMm === s.h;
+                                        return (
+                                            <button
+                                                key={`${s.w}x${s.h}`}
+                                                type="button"
+                                                onClick={() => updateSize(s.w, s.h)}
+                                                className={`py-2 px-1.5 rounded-[12px] text-xs font-black border-2 transition-all cursor-pointer text-center ${
+                                                    isSelected
+                                                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
+                                                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                }`}
+                                            >
+                                                {s.w}×{s.h} مم
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* مقاس مخصص */}
+                                <div className="mt-2 flex items-center gap-2">
+                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
+                                        <span className="text-[11px] font-bold text-slate-400">العرض:</span>
+                                        <input
+                                            type="number"
+                                            min="20"
+                                            max="120"
+                                            value={widthMm}
+                                            onChange={e => {
+                                                const val = Number(e.target.value);
+                                                setWidthMm(val);
+                                                setIsCustomSize(true);
+                                                localStorage.setItem('label_printer_w', String(val));
+                                            }}
+                                            className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-400">مم</span>
+                                    </div>
+
+                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
+                                        <span className="text-[11px] font-bold text-slate-400">الارتفاع:</span>
+                                        <input
+                                            type="number"
+                                            min="15"
+                                            max="120"
+                                            value={heightMm}
+                                            onChange={e => {
+                                                const val = Number(e.target.value);
+                                                setHeightMm(val);
+                                                setIsCustomSize(true);
+                                                localStorage.setItem('label_printer_h', String(val));
+                                            }}
+                                            className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                                        />
+                                        <span className="text-[10px] font-bold text-slate-400">مم</span>
+                                    </div>
+                                </div>
                             </div>
-                            {(offsetX !== 0 || offsetY !== 0) && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setOffsetX(0);
-                                        setOffsetY(0);
-                                        localStorage.setItem('label_printer_offset_x', '0');
-                                        localStorage.setItem('label_printer_offset_y', '0');
-                                    }}
-                                    className="text-[10px] font-black text-red-500 hover:underline px-1 cursor-pointer"
-                                >
-                                    إعادة ضبط (0)
-                                </button>
+
+                            {/* 3. الدوران وعدد النسخ */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1">
+                                        دوران الاتجاه:
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={toggleRotation}
+                                        className="w-full flex items-center justify-center gap-2 h-10 rounded-[12px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs hover:border-primary transition-all cursor-pointer"
+                                        title="تدوير الملصق"
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5 text-primary" />
+                                        <span>{rotation === 0 ? 'عادي (0°)' : rotation === 90 ? 'مدوّر (90°)' : rotation === 180 ? 'معكوس (180°)' : 'مدوّر (270°)'}</span>
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1">
+                                        عدد النسخ:
+                                    </label>
+                                    <div className="flex items-center h-10 rounded-[12px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setCopies(c => Math.max(1, c - 1))}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200"
+                                        >
+                                            -
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={copies}
+                                            onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
+                                            className="flex-1 text-center font-mono font-black text-xs bg-transparent text-slate-900 dark:text-white focus:outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setCopies(c => Math.min(100, c + 1))}
+                                            className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 4. إزاحة وتوسيط الطباعة (X و Y) */}
+                            <div className="p-3 rounded-[18px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">إزاحة الطباعة (للتوسيط الدقيق بالمليمتر):</span>
+                                    {(offsetX !== 0 || offsetY !== 0) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOffsetX(0);
+                                                setOffsetY(0);
+                                                localStorage.setItem('label_printer_offset_x', '0');
+                                                localStorage.setItem('label_printer_offset_y', '0');
+                                            }}
+                                            className="text-[10px] font-black text-red-500 hover:underline cursor-pointer"
+                                        >
+                                            تصفير
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">عمودي (Y):</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetY(-0.5)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
+                                                {offsetY > 0 ? `+${offsetY}` : offsetY}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetY(0.5)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">أفقي (X):</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetX(-1)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
+                                                {offsetX > 0 ? `+${offsetX}` : offsetX}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetX(1)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 5. حجم رمز الـ QR (عند اختيار QR فقط) */}
+                            {tab === 'classic' && (
+                                <div className="p-2.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2">
+                                    <div>
+                                        <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">حجم رمز الـ QR:</span>
+                                        <span className="text-[10px] font-bold text-slate-400">
+                                            {qrSizeCustom === null ? 'محسوب تلقائياً حسب الورقة' : 'مقاس يدوي'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = activeQrSizeMm;
+                                                const next = Math.max(8, Math.round((current - 1) * 10) / 10);
+                                                setQrSizeCustom(next);
+                                                localStorage.setItem('label_printer_qr_size', String(next));
+                                            }}
+                                            className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95"
+                                            title="تصغير"
+                                        >
+                                            -
+                                        </button>
+                                        <span className="font-mono font-black text-xs px-2 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded min-w-[48px] text-center">
+                                            {activeQrSizeMm} مم
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const current = activeQrSizeMm;
+                                                const next = Math.min(22, Math.round((current + 1) * 10) / 10);
+                                                setQrSizeCustom(next);
+                                                localStorage.setItem('label_printer_qr_size', String(next));
+                                            }}
+                                            className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95"
+                                            title="تكبير"
+                                        >
+                                            +
+                                        </button>
+                                        {qrSizeCustom !== null && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setQrSizeCustom(null);
+                                                    localStorage.removeItem('label_printer_qr_size');
+                                                }}
+                                                className="text-[10px] font-black text-primary hover:underline px-1 cursor-pointer"
+                                            >
+                                                تلقائي
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             )}
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-2.5">
-                            {/* إزاحة رأسية (Y) - لإنزال المحتوى ومنع الالتصاق بالأعلى */}
-                            <div className="flex items-center justify-between p-2 rounded-[12px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
-                                <div className="flex flex-col">
-                                    <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">عمودي (Y):</span>
-                                    <span className="text-[9px] font-bold text-slate-400">{offsetY > 0 ? `للأسفل (+${offsetY})` : offsetY < 0 ? `للأعلى (${offsetY})` : 'افتراضي (0)'}</span>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => updateOffsetY(-0.5)}
-                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
-                                        title="رفع للأعلى (-)"
-                                    >
-                                        -
-                                    </button>
-                                    <span className="font-mono font-black text-xs px-1.5 py-0.5 min-w-[42px] text-center">
-                                        {offsetY > 0 ? `+${offsetY}` : offsetY}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => updateOffsetY(0.5)}
-                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
-                                        title="إنزال للأسفل (+)"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* إزاحة أفقية (X) */}
-                            <div className="flex items-center justify-between p-2 rounded-[12px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
-                                <div className="flex flex-col">
-                                    <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">أفقي (X):</span>
-                                    <span className="text-[9px] font-bold text-slate-400">{offsetX > 0 ? `لليمين (+${offsetX})` : offsetX < 0 ? `لليسار (${offsetX})` : 'افتراضي (0)'}</span>
-                                </div>
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <button
-                                        type="button"
-                                        onClick={() => updateOffsetX(-1)}
-                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
-                                        title="إزاحة لليسار (-)"
-                                    >
-                                        -
-                                    </button>
-                                    <span className="font-mono font-black text-xs px-1.5 py-0.5 min-w-[42px] text-center">
-                                        {offsetX > 0 ? `+${offsetX}` : offsetX}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => updateOffsetX(1)}
-                                        className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-200 active:scale-95"
-                                        title="إزاحة لليمين (+)"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
-
-                    {/* التحكم في حجم رمز QR (تلقائي متناسق مع الورقة أو تعديل يدوي) */}
-                    {tab === 'classic' && (
-                        <div className="p-3 rounded-[16px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
-                            <div>
-                                <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">حجم رمز الـ QR على الورقة:</span>
-                                <span className="text-[10px] font-bold text-slate-400">
-                                    {qrSizeCustom === null ? 'متناسق تلقائياً حسب مقاس الورقة' : 'مقاس يدوي مخصص'}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const current = activeQrSizeMm;
-                                        const next = Math.max(8, Math.round((current - 1) * 10) / 10);
-                                        setQrSizeCustom(next);
-                                        localStorage.setItem('label_printer_qr_size', String(next));
-                                    }}
-                                    className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
-                                    title="تصغير رمز الـ QR"
-                                >
-                                    -
-                                </button>
-                                <span className="font-mono font-black text-xs px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md min-w-[55px] text-center">
-                                    {activeQrSizeMm} مم
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        const current = activeQrSizeMm;
-                                        const next = Math.min(22, Math.round((current + 1) * 10) / 10);
-                                        setQrSizeCustom(next);
-                                        localStorage.setItem('label_printer_qr_size', String(next));
-                                    }}
-                                    className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
-                                    title="تكبير رمز الـ QR"
-                                >
-                                    +
-                                </button>
-                                {qrSizeCustom !== null && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setQrSizeCustom(null);
-                                            localStorage.removeItem('label_printer_qr_size');
-                                        }}
-                                        className="text-[10px] font-black text-primary hover:underline px-1 cursor-pointer"
-                                        title="الرجوع للمقاس التلقائي المحسوب بناءً على الورقة"
-                                    >
-                                        تلقائي
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* خيارات المحتوى الظاهر على الملصق */}
-                    <div className="p-3.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs font-black">
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
-                            <input
-                                type="checkbox"
-                                checked={showName}
-                                onChange={e => {
-                                    setShowName(e.target.checked);
-                                    localStorage.setItem('label_printer_show_name', String(e.target.checked));
-                                }}
-                                className="w-4 h-4 rounded text-primary focus:ring-0"
-                            />
-                            <span>اسم العطر</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
-                            <input
-                                type="checkbox"
-                                checked={showPrice}
-                                onChange={e => {
-                                    setShowPrice(e.target.checked);
-                                    localStorage.setItem('label_printer_show_price', String(e.target.checked));
-                                }}
-                                className="w-4 h-4 rounded text-primary focus:ring-0"
-                            />
-                            <span>سعر البيع</span>
-                        </label>
-
-                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
-                            <input
-                                type="checkbox"
-                                checked={showCodeText}
-                                onChange={e => {
-                                    setShowCodeText(e.target.checked);
-                                    localStorage.setItem('label_printer_show_code', String(e.target.checked));
-                                }}
-                                className="w-4 h-4 rounded text-primary focus:ring-0"
-                            />
-                            <span>رقم الكود</span>
-                        </label>
-                    </div>
-
                 </div>
 
                 {/* Footer زر الطباعة */}
-                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50/90 dark:bg-slate-800/40 backdrop-blur-sm shrink-0 flex items-center justify-between gap-4">
+                    <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        <Printer className="w-4 h-4 text-primary" />
+                        <span>جاهز للطباعة على طابعات الملصقات (Xprinter / Zebra)</span>
+                    </div>
                     <button
                         type="button"
                         onClick={handlePrint}
-                        className="w-full flex items-center justify-center gap-2.5 h-13 rounded-[18px] bg-primary text-white font-black text-base hover:bg-primary/90 active:scale-98 transition-all shadow-lg shadow-primary/30 cursor-pointer"
+                        className="flex-1 sm:flex-initial sm:min-w-[280px] flex items-center justify-center gap-2.5 h-12 rounded-[16px] bg-primary text-white font-black text-sm hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 cursor-pointer mr-auto"
                     >
                         <Printer className="w-5 h-5" />
                         <span>طباعة الملصق الآن ({copies} {copies > 1 ? 'ملصقات' : 'ملصق'})</span>
@@ -970,7 +1012,8 @@ function QrModal({ product, onClose }: QrModalProps) {
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
 
