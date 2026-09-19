@@ -224,7 +224,7 @@ function QrModal({ product, onClose }: QrModalProps) {
         const qrBoxSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeForPrint;
         const availableBarH = Math.max(8, innerH - (showName ? 4 : 0) - (showPrice ? 4 : 0) - 2);
 
-        const labelHtml = tab === 'classic' ? `
+        const labelHtml = (tab === 'classic' ? `
             <div class="label-page">
                 <div class="label-content classic-layout">
                     ${showName ? `<div class="p-name full-width">${product.name}</div>` : ''}
@@ -255,7 +255,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
                 </div>
             </div>
-        `;
+        `).trim();
 
         win.document.write(`
             <!DOCTYPE html>
@@ -266,7 +266,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                 <style>
                     @page {
                         size: ${widthMm}mm ${heightMm}mm;
-                        margin: 0mm !important;
+                        margin: 0 !important;
                     }
                     * {
                         margin: 0 !important;
@@ -275,21 +275,29 @@ function QrModal({ product, onClose }: QrModalProps) {
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
-                    html, body {
+                    html {
+                        margin: 0 !important;
+                        padding: 0 !important;
                         width: ${widthMm}mm !important;
                         height: ${heightMm}mm !important;
+                        background: #fff;
+                    }
+                    body {
+                        width: ${widthMm}mm !important;
                         margin: 0 !important;
                         padding: 0 !important;
                         background: #fff;
                         overflow: hidden !important;
                         direction: ltr !important;
+                        font-size: 0 !important;
+                        line-height: 0 !important;
                         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
                     }
                     .label-page {
                         width: ${widthMm}mm !important;
-                        height: ${heightMm - 0.4}mm !important;
+                        height: ${heightMm - 1}mm !important;
                         max-width: ${widthMm}mm !important;
-                        max-height: ${heightMm - 0.4}mm !important;
+                        max-height: ${heightMm - 1}mm !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
@@ -299,20 +307,23 @@ function QrModal({ product, onClose }: QrModalProps) {
                         text-align: center !important;
                         box-sizing: border-box !important;
                         page-break-inside: avoid !important;
+                        break-inside: avoid !important;
                     }
                     .label-page:not(:last-child) {
                         page-break-after: always !important;
+                        break-after: page !important;
                     }
                     .label-page:last-child {
                         page-break-after: avoid !important;
+                        break-after: avoid !important;
                     }
                     
                     /* تنسيق ملصق الـ QR المربع الحديث (اسم كامل بالعرض، الرمز بالجانب وتحته السعر، محاذاة في المنتصف ومسافات متقاربة) */
                     .label-content.classic-layout {
                         width: ${innerW}mm !important;
-                        height: ${innerH - 0.8}mm !important;
+                        height: ${innerH - 1.2}mm !important;
                         max-width: ${innerW}mm !important;
-                        max-height: ${innerH - 0.8}mm !important;
+                        max-height: ${innerH - 1.2}mm !important;
                         padding: 1.2mm 1.5mm !important;
                         display: flex !important;
                         flex-direction: column !important;
@@ -408,10 +419,10 @@ function QrModal({ product, onClose }: QrModalProps) {
                     /* تنسيق ملصق الباركود العادي */
                     .label-content.bar-layout {
                         width: ${innerW}mm !important;
-                        height: ${innerH - 0.8}mm !important;
+                        height: ${innerH - 1.2}mm !important;
                         max-width: ${innerW}mm !important;
-                        max-height: ${innerH - 0.8}mm !important;
-                        padding: 1.5mm 1.2mm 0.8mm 1.2mm !important;
+                        max-height: ${innerH - 1.2}mm !important;
+                        padding: 1.2mm 1.2mm 0.8mm 1.2mm !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
@@ -463,16 +474,14 @@ function QrModal({ product, onClose }: QrModalProps) {
                         margin: 0 !important;
                     }
                 </style>
-            </head>
-            <body>
-                ${Array.from({ length: Math.max(1, copies) }).map(() => labelHtml).join('')}
                 <script>
                     window.onload = () => {
                         window.print();
                         window.close();
                     };
                 <\/script>
-            </body>
+            </head>
+            <body>${Array.from({ length: Math.max(1, copies) }).map(() => labelHtml).join('')}</body>
             </html>
         `);
         win.document.close();
