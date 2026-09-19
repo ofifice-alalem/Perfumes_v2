@@ -453,9 +453,6 @@ function QrModal({ product, onClose }: QrModalProps) {
                         max-height: ${availableBarH}mm !important;
                         height: auto !important;
                     }
-                    .graphic-wrap.bar-wrap svg g:first-of-type text {
-                        display: none !important;
-                    }
                     .bar-layout .p-price {
                         direction: rtl !important;
                         text-align: center !important;
