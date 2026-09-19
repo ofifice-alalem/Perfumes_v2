@@ -59,46 +59,239 @@ function generateQrCode(): string {
 
 
 
-// ─── Modal عرض QR ──────────────────────────────────────────────
+// ─── Modal عرض وطباعة ملصق المنتج (Thermal Label Printer Engine) ───
 interface QrModalProps { product: Product; onClose: () => void; }
 
 const PERFUME_SVG_B64 = "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`);
 
+const PRESET_LABEL_SIZES = [
+    { label: '50 × 25 مم (الأكثر شيوعاً)', w: 50, h: 25 },
+    { label: '50 × 30 مم', w: 50, h: 30 },
+    { label: '40 × 25 مم', w: 40, h: 25 },
+    { label: '60 × 40 مم', w: 60, h: 40 },
+];
+
 function QrModal({ product, onClose }: QrModalProps) {
-    const printRef = useRef<HTMLDivElement>(null);
-    const [tab, setTab] = useState<'classic' | 'serial'>('classic');
+    const [tab, setTab] = useState<'classic' | 'serial'>(() => {
+        return (localStorage.getItem('label_printer_tab') as 'classic' | 'serial') || 'classic';
+    });
+
+    const [widthMm, setWidthMm] = useState<number>(() => {
+        const saved = localStorage.getItem('label_printer_w');
+        return saved ? Number(saved) : 50;
+    });
+
+    const [heightMm, setHeightMm] = useState<number>(() => {
+        const saved = localStorage.getItem('label_printer_h');
+        return saved ? Number(saved) : 25;
+    });
+
+    const [rotation, setRotation] = useState<number>(() => {
+        const saved = localStorage.getItem('label_printer_rot');
+        return saved !== null ? Number(saved) : 0;
+    });
+
+    const [showName, setShowName] = useState<boolean>(() => {
+        return localStorage.getItem('label_printer_show_name') !== 'false';
+    });
+
+    const [showPrice, setShowPrice] = useState<boolean>(() => {
+        return localStorage.getItem('label_printer_show_price') !== 'false';
+    });
+
+    const [showCodeText, setShowCodeText] = useState<boolean>(() => {
+        return localStorage.getItem('label_printer_show_code') !== 'false';
+    });
+
+    const [offsetX, setOffsetX] = useState<number>(() => {
+        const saved = localStorage.getItem('label_printer_offset_x');
+        return saved !== null ? Number(saved) : 0;
+    });
+
+    const [copies, setCopies] = useState<number>(1);
+    const [isCustomSize, setIsCustomSize] = useState<boolean>(() => {
+        return !PRESET_LABEL_SIZES.some(s => s.w === widthMm && s.h === heightMm);
+    });
+
+    // حفظ التفضيلات محلياً
+    const updateSize = (w: number, h: number) => {
+        setWidthMm(w);
+        setHeightMm(h);
+        setIsCustomSize(false);
+        localStorage.setItem('label_printer_w', String(w));
+        localStorage.setItem('label_printer_h', String(h));
+    };
+
+    const toggleRotation = () => {
+        const next = rotation === 0 ? 90 : rotation === 90 ? 180 : rotation === 180 ? 270 : 0;
+        setRotation(next);
+        localStorage.setItem('label_printer_rot', String(next));
+    };
+
+    const updateOffset = (delta: number) => {
+        const next = Math.max(-20, Math.min(30, offsetX + delta));
+        setOffsetX(next);
+        localStorage.setItem('label_printer_offset_x', String(next));
+    };
+
+    // استخراج السعر
+    const priceDisplay = product.product_price?.full_bottle_regular && Number(product.product_price.full_bottle_regular) > 0
+        ? `${Number(product.product_price.full_bottle_regular).toLocaleString('en-US')} د.ل`
+        : product.product_price?.price_per_unit_regular && Number(product.product_price.price_per_unit_regular) > 0
+        ? `${Number(product.product_price.price_per_unit_regular).toLocaleString('en-US')} د.ل`
+        : '';
 
     function handlePrint() {
-        const content = printRef.current;
-        if (!content) return;
-        const isSerial = tab === 'serial';
-        const win = window.open('', '_blank', isSerial ? 'width=420,height=220' : 'width=400,height=400');
+        const win = window.open('', '_blank', 'width=550,height=550');
         if (!win) return;
+
+        const isRotated = rotation === 90 || rotation === 270;
+        // الأبعاد الحقيقية للمحتوى الداخلي عند التدوير
+        const innerW = isRotated ? heightMm : widthMm;
+        const innerH = isRotated ? widthMm : heightMm;
+
+        // استخراج SVG مباشرة دون تكرار وسوم الـ svg
+        const qrSvgEl = document.querySelector('#label-modal-qr-preview svg') as SVGElement | null;
+        const barSvgEl = document.querySelector('#label-modal-bar-preview svg') as SVGElement | null;
+        const graphicSvgHtml = tab === 'classic' ? (qrSvgEl ? qrSvgEl.outerHTML : '') : (barSvgEl ? barSvgEl.outerHTML : '');
+
+        // حساب الارتفاع المتاح للرسمة الرسومية (QR / Barcode)
+        let textLinesH = 0;
+        if (showName) textLinesH += 4.5;
+        if (showPrice) textLinesH += 4.5;
+        if (showCodeText) textLinesH += 3.5;
+        const availableGraphicH = Math.max(8, innerH - textLinesH - 3);
+
+        const labelHtml = `
+            <div class="label-page">
+                <div class="label-content">
+                    ${showName ? `<div class="p-name">${product.name}</div>` : ''}
+
+                    <div class="graphic-wrap">
+                        ${graphicSvgHtml}
+                    </div>
+
+                    ${showCodeText ? `<div class="p-code">${product.qrcode || ''}</div>` : ''}
+                    ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
+                </div>
+            </div>
+        `;
+
         win.document.write(`
             <!DOCTYPE html>
-            <html dir="rtl">
+            <html dir="ltr">
             <head>
                 <meta charset="utf-8" />
-                <title>QR - ${product.name}</title>
+                <title>طباعة ملصق - ${product.name}</title>
                 <style>
-                    ${isSerial
-                        ? `@page { size: landscape; margin: 8mm; }
-                           * { margin:0; padding:0; box-sizing:border-box; }
-                           body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
-                           .wrap { display:flex; flex-direction:column; align-items:center; gap:10px; width:100%; max-width:240mm; }
-                           .code { font-size:${(product.qrcode || '').length > 15 ? '12pt' : '20pt'}; color:#1e293b; font-family:monospace; font-weight:700; text-align:center; letter-spacing:${(product.qrcode || '').length > 15 ? '2px' : '6px'}; white-space:nowrap; }
-                           svg { width:100% !important; max-width:65mm; height:40mm !important; display:block; margin:0 auto; }`
-                        : `@page { size: portrait; margin: 0; }
-                           * { margin:0; padding:0; box-sizing:border-box; }
-                           body { font-family:'Segoe UI',Arial,sans-serif; display:flex; align-items:center; justify-content:center; min-height:100vh; background:#fff; }
-                           .wrap { display:flex; flex-direction:column; align-items:center; gap:16px; padding:28px; border:2px solid #e5e7eb; border-radius:16px; width:280px; }
-                           svg { display:block; }`
+                    @page {
+                        size: ${widthMm}mm ${heightMm}mm;
+                        margin: 0mm !important;
+                    }
+                    * {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        box-sizing: border-box !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    html, body {
+                        width: 100% !important;
+                        height: 100% !important;
+                        background: #fff;
+                        overflow: hidden !important;
+                        direction: ltr !important;
+                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
+                    }
+                    .label-page {
+                        width: ${widthMm}mm !important;
+                        height: ${heightMm}mm !important;
+                        max-width: ${widthMm}mm !important;
+                        max-height: ${heightMm}mm !important;
+                        page-break-after: always;
+                        page-break-inside: avoid;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        overflow: hidden !important;
+                        background: #fff;
+                        margin: 0 auto !important;
+                        text-align: center !important;
+                    }
+                    .label-content {
+                        width: ${innerW}mm !important;
+                        height: ${innerH}mm !important;
+                        max-width: ${innerW}mm !important;
+                        max-height: ${innerH}mm !important;
+                        padding: 1mm 1.5mm !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        text-align: center !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
+                        margin-left: ${offsetX}mm !important;
+                        ${rotation !== 0 ? `transform: rotate(${rotation}deg); transform-origin: center center;` : ''}
+                    }
+                    .p-name {
+                        direction: rtl !important;
+                        text-align: center !important;
+                        font-size: ${Math.min(9, Math.max(6.5, innerH * 0.32))}pt;
+                        font-weight: 900;
+                        color: #000;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        width: 100%;
+                        line-height: 1.1;
+                    }
+                    .graphic-wrap {
+                        flex: 1;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        width: 100%;
+                        overflow: hidden;
+                        max-height: ${availableGraphicH}mm !important;
+                        margin: 0 auto !important;
+                        text-align: center !important;
+                    }
+                    .graphic-wrap svg {
+                        display: block !important;
+                        margin: 0 auto !important;
+                        max-width: 95% !important;
+                        max-height: ${availableGraphicH}mm !important;
+                        height: auto !important;
+                    }
+                    .p-code {
+                        direction: ltr !important;
+                        text-align: center !important;
+                        font-family: monospace;
+                        font-size: 6.5pt;
+                        font-weight: 700;
+                        letter-spacing: 1px;
+                        color: #000;
+                        line-height: 1;
+                    }
+                    .p-price {
+                        direction: rtl !important;
+                        text-align: center !important;
+                        font-size: ${Math.min(10, Math.max(7, innerH * 0.35))}pt;
+                        font-weight: 900;
+                        color: #000;
+                        line-height: 1.1;
                     }
                 </style>
             </head>
             <body>
-                <div class="wrap">${content.innerHTML}</div>
-                <script>window.onload = () => { window.print(); window.close(); }<\/script>
+                ${Array.from({ length: Math.max(1, copies) }).map(() => labelHtml).join('')}
+                <script>
+                    window.onload = () => {
+                        window.print();
+                        window.close();
+                    };
+                <\/script>
             </body>
             </html>
         `);
@@ -106,94 +299,344 @@ function QrModal({ product, onClose }: QrModalProps) {
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
 
-            <div className="relative z-10 w-full max-w-sm bg-white dark:bg-slate-900 rounded-[24px] shadow-2xl overflow-hidden">
+            <div className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-[28px] shadow-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-800 flex flex-col max-h-[92vh]">
+                
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8">
-                    <div className="flex items-center gap-2">
-                        <QrCode className="w-5 h-5 text-primary" />
-                        <span className="font-black text-slate-800 dark:text-white text-sm">QR Code المنتج</span>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8 bg-slate-50 dark:bg-slate-800/50 shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
+                            <QrCode className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-slate-900 dark:text-white text-base">طباعة ملصق الباركود والـ QR</h3>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{product.name}</p>
+                        </div>
                     </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all">
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/8 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all cursor-pointer">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-1 mx-6 mt-4 p-1 rounded-[14px] bg-black/5 dark:bg-white/8">
-                    {(['classic', 'serial'] as const).map(t => (
+                {/* Body Content */}
+                <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
+
+                    {/* نوع الرمز: QR مربع أو باركود خطي */}
+                    <div className="flex items-center gap-2 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
                         <button
-                            key={t}
-                            onClick={() => setTab(t)}
-                            className={`flex-1 h-8 rounded-[10px] text-xs font-bold transition-all ${
-                                tab === t
-                                    ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm'
-                                    : 'text-slate-400 dark:text-white/40 hover:text-slate-600 dark:hover:text-white/60'
+                            type="button"
+                            onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
+                            className={`flex-1 py-2 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                tab === 'classic'
+                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                             }`}
                         >
-                            {t === 'classic' ? 'مربع' : 'Serial No.'}
+                            <span>🔳 رمز مربع (QR Code)</span>
                         </button>
-                    ))}
-                </div>
-
-                {/* Content */}
-                <div className="flex flex-col items-center gap-5 p-6">
-
-                    {/* Classic */}
-                    {tab === 'classic' && (
-                        <div
-                            ref={printRef}
-                            className="flex flex-col items-center gap-4 p-6 rounded-[20px] border-2 border-black/8 bg-white w-full"
+                        <button
+                            type="button"
+                            onClick={() => { setTab('serial'); localStorage.setItem('label_printer_tab', 'serial'); }}
+                            className={`flex-1 py-2 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                tab === 'serial'
+                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                            }`}
                         >
-                            <div className="rounded-[16px] overflow-hidden p-2 bg-white border border-black/8">
-                                <QRCodeSVG
-                                    value={product.qrcode!}
-                                    size={180}
-                                    level="H"
-                                    fgColor="#1e293b"
-                                    imageSettings={{
-                                        src: PERFUME_SVG_B64,
-                                        width: 56,
-                                        height: 56,
-                                        excavate: true,
-                                    }}
-                                />
+                            <span>||| باركود خطي (Barcode)</span>
+                        </button>
+                    </div>
+
+                    {/* المعاينة الحية للملصق (Live Real-time Preview) */}
+                    <div className="flex flex-col items-center justify-center p-4 rounded-[22px] bg-slate-100/70 dark:bg-slate-800/50 border-2 border-dashed border-slate-300 dark:border-slate-700">
+                        <div className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-2">
+                            <span>معاينة الملصق الفعلية ({widthMm} × {heightMm} مم)</span>
+                            {rotation !== 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/30">
+                                    دوران {rotation}°
+                                </span>
+                            )}
+                        </div>
+
+                        {/* الصندوق النسبي للملصق */}
+                        <div
+                            style={{
+                                width: '220px',
+                                height: `${Math.max(100, Math.min(180, Math.round(220 * (heightMm / widthMm))))}px`,
+                            }}
+                            className="bg-white rounded-[10px] shadow-md border border-slate-300 p-2 flex flex-col items-center justify-between text-slate-900 transition-all overflow-hidden select-none relative"
+                        >
+                            <div
+                                style={{
+                                    transform: `${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}translateX(${offsetX * 2}px)`,
+                                    transformOrigin: 'center center',
+                                }}
+                                className="w-full h-full flex flex-col items-center justify-between transition-transform"
+                            >
+                                {showName && (
+                                    <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                                        {product.name}
+                                    </span>
+                                )}
+
+                                <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
+                                    {tab === 'classic' ? (
+                                        <div id="label-modal-qr-preview" className="flex items-center justify-center">
+                                            <QRCodeSVG
+                                                value={product.qrcode || '0000000000'}
+                                                size={Math.min(95, Math.max(55, Math.round(220 * (heightMm / widthMm) - 45)))}
+                                                level="H"
+                                                fgColor="#000000"
+                                                imageSettings={{
+                                                    src: PERFUME_SVG_B64,
+                                                    width: 24,
+                                                    height: 24,
+                                                    excavate: true,
+                                                }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center scale-90">
+                                            <Barcode
+                                                value={product.qrcode || '0000000000'}
+                                                format="CODE128"
+                                                width={1.2}
+                                                height={38}
+                                                displayValue={false}
+                                                margin={0}
+                                                lineColor="#000000"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between w-full px-1 text-[10px] font-black leading-none">
+                                    {showCodeText && (
+                                        <span className="font-mono text-slate-700 tracking-wider">
+                                            {product.qrcode}
+                                        </span>
+                                    )}
+                                    {showPrice && priceDisplay && (
+                                        <span className="text-emerald-700 font-extrabold mr-auto">
+                                            {priceDisplay}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    )}
+                    </div>
 
-                    {/* Serial */}
-                    {tab === 'serial' && (() => {
-                        const isLong = (product.qrcode || '').length > 12;
-                        return (
-                            <div
-                                ref={printRef}
-                                className="flex flex-col items-center bg-white border-2 border-black/10 rounded-[16px] px-4 py-5 gap-3 w-full"
-                            >
-                                <Barcode
-                                    value={product.qrcode!}
-                                    width={isLong ? 1 : 1.8}
-                                    height={90}
-                                    margin={0}
-                                    background="#ffffff"
-                                    lineColor="#1e293b"
-                                    displayValue={false}
+                    {/* مقاسات الورق السريعة (Presets) */}
+                    <div>
+                        <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-2">
+                            مقاس ورقة الملصق (Label Size):
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {PRESET_LABEL_SIZES.map(s => {
+                                const isSelected = !isCustomSize && widthMm === s.w && heightMm === s.h;
+                                return (
+                                    <button
+                                        key={`${s.w}x${s.h}`}
+                                        type="button"
+                                        onClick={() => updateSize(s.w, s.h)}
+                                        className={`px-3 py-2.5 rounded-[14px] text-xs font-black border-2 transition-all cursor-pointer text-center ${
+                                            isSelected
+                                                ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
+                                                : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                        }`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* مقاس مخصص */}
+                        <div className="mt-2.5 flex items-center gap-2">
+                            <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-[14px] border border-slate-200 dark:border-slate-700">
+                                <span className="text-xs font-bold text-slate-500">العرض:</span>
+                                <input
+                                    type="number"
+                                    min="20"
+                                    max="120"
+                                    value={widthMm}
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        setWidthMm(val);
+                                        setIsCustomSize(true);
+                                        localStorage.setItem('label_printer_w', String(val));
+                                    }}
+                                    className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
                                 />
-                                <p className={`code font-mono font-bold text-center break-all text-slate-700 ${isLong ? 'text-xs tracking-normal' : 'text-sm tracking-widest'}`}>{product.qrcode}</p>
+                                <span className="text-[11px] font-bold text-slate-400">مم</span>
                             </div>
-                        );
-                    })()}
 
+                            <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-[14px] border border-slate-200 dark:border-slate-700">
+                                <span className="text-xs font-bold text-slate-500">الارتفاع:</span>
+                                <input
+                                    type="number"
+                                    min="15"
+                                    max="120"
+                                    value={heightMm}
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        setHeightMm(val);
+                                        setIsCustomSize(true);
+                                        localStorage.setItem('label_printer_h', String(val));
+                                    }}
+                                    className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                                />
+                                <span className="text-[11px] font-bold text-slate-400">مم</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* زاوية الدوران وعدد النسخ */}
+                    <div className="grid grid-cols-2 gap-3">
+                        {/* زر تدوير الاتجاه لعلاج مشكلة المقلوب */}
+                        <div>
+                            <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                اتجاه / دوران الطباعة:
+                            </label>
+                            <button
+                                type="button"
+                                onClick={toggleRotation}
+                                className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs hover:border-primary transition-all cursor-pointer"
+                                title="اضغط لتدوير الملصق 90 درجة لعلاج مشكلة خروج الملصق مقلوباً"
+                            >
+                                <RotateCcw className="w-4 h-4 text-primary" />
+                                <span>{rotation === 0 ? 'عادي (0°)' : rotation === 90 ? 'مدوّر (90°)' : rotation === 180 ? 'معكوس (180°)' : 'مدوّر (270°)'}</span>
+                            </button>
+                        </div>
+
+                        {/* عدد النسخ */}
+                        <div>
+                            <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                عدد النسخ (Copies):
+                            </label>
+                            <div className="flex items-center h-11 rounded-[14px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 px-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setCopies(c => Math.max(1, c - 1))}
+                                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-sm cursor-pointer hover:bg-slate-200"
+                                >
+                                    -
+                                </button>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={copies}
+                                    onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
+                                    className="flex-1 text-center font-mono font-black text-sm bg-transparent text-slate-900 dark:text-white focus:outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setCopies(c => Math.min(100, c + 1))}
+                                    className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-sm cursor-pointer hover:bg-slate-200"
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ضبط الإزاحة الأفقية لعلاج الانزياح لليسار والفراغ الأبيض باليمين */}
+                    <div className="p-3 rounded-[16px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-2">
+                        <div>
+                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">إزاحة الطباعة (للتوسيط الدقيق):</span>
+                            <span className="text-[10px] font-bold text-slate-400">إذا خرج الكود لليسار، اضغط (+) لنقله لليمين</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => updateOffset(-1)}
+                                className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
+                                title="إزاحة لليسار"
+                            >
+                                -
+                            </button>
+                            <span className="font-mono font-black text-xs px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md min-w-[50px] text-center">
+                                {offsetX > 0 ? `+${offsetX}` : offsetX} مم
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => updateOffset(1)}
+                                className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs text-slate-700 dark:text-white cursor-pointer hover:bg-slate-300 active:scale-95"
+                                title="إزاحة لليمين"
+                            >
+                                +
+                            </button>
+                            {offsetX !== 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setOffsetX(0); localStorage.setItem('label_printer_offset_x', '0'); }}
+                                    className="text-[10px] font-black text-red-500 hover:underline px-1 cursor-pointer"
+                                >
+                                    تصفير
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* خيارات المحتوى الظاهر على الملصق */}
+                    <div className="p-3.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs font-black">
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={showName}
+                                onChange={e => {
+                                    setShowName(e.target.checked);
+                                    localStorage.setItem('label_printer_show_name', String(e.target.checked));
+                                }}
+                                className="w-4 h-4 rounded text-primary focus:ring-0"
+                            />
+                            <span>اسم العطر</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={showPrice}
+                                onChange={e => {
+                                    setShowPrice(e.target.checked);
+                                    localStorage.setItem('label_printer_show_price', String(e.target.checked));
+                                }}
+                                className="w-4 h-4 rounded text-primary focus:ring-0"
+                            />
+                            <span>سعر البيع</span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
+                            <input
+                                type="checkbox"
+                                checked={showCodeText}
+                                onChange={e => {
+                                    setShowCodeText(e.target.checked);
+                                    localStorage.setItem('label_printer_show_code', String(e.target.checked));
+                                }}
+                                className="w-4 h-4 rounded text-primary focus:ring-0"
+                            />
+                            <span>رقم الكود</span>
+                        </label>
+                    </div>
+
+                </div>
+
+                {/* Footer زر الطباعة */}
+                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50 dark:bg-slate-800/50 shrink-0">
                     <button
+                        type="button"
                         onClick={handlePrint}
-                        className="w-full flex items-center justify-center gap-2 h-11 rounded-[14px] bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-all"
+                        className="w-full flex items-center justify-center gap-2.5 h-13 rounded-[18px] bg-primary text-white font-black text-base hover:bg-primary/90 active:scale-98 transition-all shadow-lg shadow-primary/30 cursor-pointer"
                     >
-                        <Printer className="w-4 h-4" />
-                        طباعة QR Code
+                        <Printer className="w-5 h-5" />
+                        <span>طباعة الملصق الآن ({copies} {copies > 1 ? 'ملصقات' : 'ملصق'})</span>
                     </button>
                 </div>
+
             </div>
         </div>
     );
