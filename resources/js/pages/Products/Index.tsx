@@ -71,9 +71,32 @@ const PRESET_LABEL_SIZES = [
     { label: '60 × 40 مم', w: 60, h: 40 },
 ];
 
+function toEan13(code: string): string {
+    const digits = String(code || '').replace(/\D/g, '');
+    let base12 = '';
+    if (digits.length === 12) {
+        base12 = digits;
+    } else if (digits.length === 13) {
+        base12 = digits.slice(0, 12);
+    } else if (digits.length === 10) {
+        base12 = '20' + digits; // بادئة المتاجر الداخلية القياسية GS1
+    } else {
+        base12 = digits.padStart(12, '0').slice(-12);
+    }
+
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        sum += parseInt(base12[i], 10) * (i % 2 === 0 ? 1 : 3);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return base12 + checkDigit;
+}
+
 function QrModal({ product, onClose }: QrModalProps) {
-    const [tab, setTab] = useState<'classic' | 'serial'>(() => {
-        return (localStorage.getItem('label_printer_tab') as 'classic' | 'serial') || 'classic';
+    const [tab, setTab] = useState<'ean13' | 'serial' | 'classic'>(() => {
+        const saved = localStorage.getItem('label_printer_tab');
+        if (saved === 'classic' || saved === 'serial' || saved === 'ean13') return saved;
+        return 'ean13';
     });
 
     const [widthMm, setWidthMm] = useState<number>(() => {
@@ -159,8 +182,8 @@ function QrModal({ product, onClose }: QrModalProps) {
         let textLinesH = 0;
         if (showName) textLinesH += 4.5;
         if (showPrice) textLinesH += 4.5;
-        if (showCodeText) textLinesH += 3.5;
-        const availableGraphicH = Math.max(8, innerH - textLinesH - 3);
+        if (tab === 'classic' && showCodeText) textLinesH += 3.5;
+        const availableGraphicH = Math.max(8, innerH - textLinesH - 2);
 
         const labelHtml = `
             <div class="label-page">
@@ -171,7 +194,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         ${graphicSvgHtml}
                     </div>
 
-                    ${showCodeText ? `<div class="p-code">${product.qrcode || ''}</div>` : ''}
+                    ${tab === 'classic' && showCodeText ? `<div class="p-code">${product.qrcode || ''}</div>` : ''}
                     ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
                 </div>
             </div>
@@ -196,8 +219,10 @@ function QrModal({ product, onClose }: QrModalProps) {
                         print-color-adjust: exact;
                     }
                     html, body {
-                        width: 100% !important;
-                        height: 100% !important;
+                        width: ${widthMm}mm !important;
+                        height: ${heightMm}mm !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                         background: #fff;
                         overflow: hidden !important;
                         direction: ltr !important;
@@ -208,8 +233,6 @@ function QrModal({ product, onClose }: QrModalProps) {
                         height: ${heightMm}mm !important;
                         max-width: ${widthMm}mm !important;
                         max-height: ${heightMm}mm !important;
-                        page-break-after: always;
-                        page-break-inside: avoid;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
@@ -217,17 +240,26 @@ function QrModal({ product, onClose }: QrModalProps) {
                         background: #fff;
                         margin: 0 auto !important;
                         text-align: center !important;
+                        box-sizing: border-box !important;
+                        page-break-inside: avoid !important;
+                    }
+                    .label-page:not(:last-child) {
+                        page-break-after: always !important;
+                    }
+                    .label-page:last-child {
+                        page-break-after: avoid !important;
                     }
                     .label-content {
                         width: ${innerW}mm !important;
                         height: ${innerH}mm !important;
                         max-width: ${innerW}mm !important;
                         max-height: ${innerH}mm !important;
-                        padding: 1mm 1.5mm !important;
+                        padding: 0.8mm 1.2mm !important;
                         display: flex !important;
                         flex-direction: column !important;
                         align-items: center !important;
-                        justify-content: space-between !important;
+                        justify-content: center !important;
+                        gap: 0.6mm !important;
                         text-align: center !important;
                         box-sizing: border-box !important;
                         overflow: hidden !important;
@@ -245,9 +277,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                         text-overflow: ellipsis;
                         width: 100%;
                         line-height: 1.1;
+                        margin: 0 !important;
                     }
                     .graphic-wrap {
-                        flex: 1;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
@@ -260,7 +292,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     .graphic-wrap svg {
                         display: block !important;
                         margin: 0 auto !important;
-                        max-width: 95% !important;
+                        max-width: 96% !important;
                         max-height: ${availableGraphicH}mm !important;
                         height: auto !important;
                     }
@@ -273,14 +305,16 @@ function QrModal({ product, onClose }: QrModalProps) {
                         letter-spacing: 1px;
                         color: #000;
                         line-height: 1;
+                        margin: 0 !important;
                     }
                     .p-price {
                         direction: rtl !important;
                         text-align: center !important;
-                        font-size: ${Math.min(10, Math.max(7, innerH * 0.35))}pt;
+                        font-size: ${Math.min(9.5, Math.max(7, innerH * 0.34))}pt;
                         font-weight: 900;
                         color: #000;
                         line-height: 1.1;
+                        margin: 0 !important;
                     }
                 </style>
             </head>
@@ -323,29 +357,40 @@ function QrModal({ product, onClose }: QrModalProps) {
                 {/* Body Content */}
                 <div className="flex-1 overflow-y-auto p-5 sm:p-6 flex flex-col gap-5">
 
-                    {/* نوع الرمز: QR مربع أو باركود خطي */}
-                    <div className="flex items-center gap-2 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
+                    {/* نوع الرمز: 3 خيارات احترافية */}
+                    <div className="flex items-center gap-1.5 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
                         <button
                             type="button"
-                            onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
-                            className={`flex-1 py-2 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                                tab === 'classic'
+                            onClick={() => { setTab('ean13'); localStorage.setItem('label_printer_tab', 'ean13'); }}
+                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                tab === 'ean13'
                                     ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                             }`}
                         >
-                            <span>🔳 رمز مربع (QR Code)</span>
+                            <span>||| تجاري مجزأ (EAN-13)</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => { setTab('serial'); localStorage.setItem('label_printer_tab', 'serial'); }}
-                            className={`flex-1 py-2 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
                                 tab === 'serial'
                                     ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                             }`}
                         >
-                            <span>||| باركود خطي (Barcode)</span>
+                            <span>||| مباشر (Code 128)</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
+                            className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                tab === 'classic'
+                                    ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                            }`}
+                        >
+                            <span>🔳 مربع (QR)</span>
                         </button>
                     </div>
 
@@ -373,7 +418,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                     transform: `${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}translateX(${offsetX * 2}px)`,
                                     transformOrigin: 'center center',
                                 }}
-                                className="w-full h-full flex flex-col items-center justify-between transition-transform"
+                                className="w-full h-full flex flex-col items-center justify-center gap-1 transition-transform py-0.5"
                             >
                                 {showName && (
                                     <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
@@ -382,7 +427,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 )}
 
                                 <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
-                                    {tab === 'classic' ? (
+                                    {tab === 'classic' && (
                                         <div id="label-modal-qr-preview" className="flex items-center justify-center">
                                             <QRCodeSVG
                                                 value={product.qrcode || '0000000000'}
@@ -397,14 +442,36 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                 }}
                                             />
                                         </div>
-                                    ) : (
-                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center scale-90">
+                                    )}
+
+                                    {tab === 'ean13' && (
+                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
+                                            <Barcode
+                                                value={toEan13(product.qrcode || '0000000000')}
+                                                format="EAN13"
+                                                width={1.3}
+                                                height={34}
+                                                displayValue={showCodeText}
+                                                textMargin={1}
+                                                fontSize={12}
+                                                font="monospace"
+                                                margin={0}
+                                                lineColor="#000000"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {tab === 'serial' && (
+                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
                                             <Barcode
                                                 value={product.qrcode || '0000000000'}
                                                 format="CODE128"
                                                 width={1.2}
-                                                height={38}
-                                                displayValue={false}
+                                                height={34}
+                                                displayValue={showCodeText}
+                                                textMargin={1}
+                                                fontSize={12}
+                                                font="monospace"
                                                 margin={0}
                                                 lineColor="#000000"
                                             />
@@ -412,8 +479,8 @@ function QrModal({ product, onClose }: QrModalProps) {
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between w-full px-1 text-[10px] font-black leading-none">
-                                    {showCodeText && (
+                                <div className="flex items-center justify-between w-full px-1 text-[10px] font-black leading-none mt-0.5">
+                                    {tab === 'classic' && showCodeText && (
                                         <span className="font-mono text-slate-700 tracking-wider">
                                             {product.qrcode}
                                         </span>

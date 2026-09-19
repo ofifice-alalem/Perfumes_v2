@@ -137,7 +137,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
             if (e.key === 'Enter') {
                 if (buffer.length > 3) {
-                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                    const scanned = products.find(p => p.qrcode && (
+                        p.qrcode.toLowerCase() === buffer.toLowerCase() ||
+                        buffer.toLowerCase().includes(p.qrcode.toLowerCase())
+                    ));
                     if (scanned) {
                         e.preventDefault();
                         setSelProduct(String(scanned.id));
