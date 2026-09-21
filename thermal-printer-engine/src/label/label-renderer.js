@@ -199,18 +199,21 @@ async function renderLabelCanvas(labelData = {}) {
             curY += nameH;
         }
 
-        // نسبة عرض الباركود (88% إلى 92% لملء المساحة)
-        const barW = Math.round(innerW * 0.90);
-        const barCanvas = createCanvas(barW, barAvailableH);
+        const barcodeVal = tab === 'ean13' ? toEan13(code) : code;
+        const barcodeFormat = tab === 'ean13' ? 'EAN13' : 'CODE128';
 
-        const totalModules = tab === 'ean13' ? 95 : Math.max(70, (String(code).length + 2) * 11);
-        const modW = Math.max(1.4, Math.min(3.8, Math.floor((barW / totalModules) * 10) / 10));
+        // حساب عرض العمود modW
+        const targetW = Math.round(innerW * 0.88);
+        const estModules = tab === 'ean13' ? 95 : Math.max(60, (String(barcodeVal).length + 2) * 11);
+        const modW = Math.max(1.6, Math.min(3.8, Math.floor((targetW / estModules) * 10) / 10));
         const digitFontSize = Math.min(22, Math.max(12, Math.round(innerH * 0.075)));
 
-        try {
-            const barcodeVal = tab === 'ean13' ? toEan13(code) : code;
-            const barcodeFormat = tab === 'ean13' ? 'EAN13' : 'CODE128';
+        const barCanvas = createCanvas(innerW, barAvailableH);
+        const bCtx = barCanvas.getContext('2d');
+        bCtx.fillStyle = '#FFFFFF';
+        bCtx.fillRect(0, 0, innerW, barAvailableH);
 
+        try {
             JsBarcode(barCanvas, barcodeVal, {
                 format: barcodeFormat,
                 displayValue: showCodeText,
@@ -219,13 +222,26 @@ async function renderLabelCanvas(labelData = {}) {
                 textMargin: 3,
                 margin: 0,
                 width: modW,
-                height: showCodeText ? barAvailableH - digitFontSize - 8 : barAvailableH,
+                height: showCodeText ? Math.max(25, barAvailableH - digitFontSize - 8) : barAvailableH,
                 lineColor: '#000000',
             });
 
-            // رسم الباركود في المنتصف
-            const drawX = Math.round((innerW - barCanvas.width) / 2);
-            ctx.drawImage(barCanvas, drawX, curY);
+            // قياس حدود الرسم الفعلي بدقة لضمان التوسيط التام في المنتصف 100%
+            const imgData = bCtx.getImageData(0, 0, innerW, barAvailableH).data;
+            let minX = innerW, maxX = 0;
+            for (let y = 0; y < barAvailableH; y += 2) {
+                for (let x = 0; x < innerW; x++) {
+                    const idx = (y * innerW + x) * 4;
+                    if (imgData[idx] < 128 && imgData[idx + 3] > 128) {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                    }
+                }
+            }
+
+            const drawnWidth = (maxX >= minX) ? (maxX - minX + 1) : innerW;
+            const drawX = Math.round((innerW - drawnWidth) / 2);
+            ctx.drawImage(barCanvas, minX, 0, drawnWidth, barAvailableH, drawX, curY, drawnWidth, barAvailableH);
             curY += barAvailableH + 4;
         } catch (e) {
             console.error("Error drawing JsBarcode on label:", e.message);
