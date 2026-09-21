@@ -1716,7 +1716,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                   className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base active:scale-[0.98] transition-all shadow-xl shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
                 >
                   <Printer className="w-5 h-5" />
-                  <span>{printingNodeLabel ? 'جاري إرسال الملصق للطابعة...' : '⚡ طباعة ملصق تجريبي فوراً (Node RAW)'}</span>
+                  <span>{printingNodeLabel ? 'جاري إرسال الملصق للطابعة...' : 'طباعة ملصق تجريبي مباشر'}</span>
                 </button>
 
               </div>

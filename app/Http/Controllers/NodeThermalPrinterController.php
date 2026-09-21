@@ -571,7 +571,7 @@ class NodeThermalPrinterController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم إرسال الملصق بنجاح إلى طابعة الباركود (Node RAW Engine)',
+                'message' => 'تم إرسال الملصق بنجاح إلى طابعة الباركود',
                 'log'     => $output,
             ]);
         } catch (\Throwable $e) {

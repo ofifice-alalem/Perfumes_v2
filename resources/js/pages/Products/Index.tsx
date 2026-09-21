@@ -247,9 +247,9 @@ function QrModal({ product, onClose }: QrModalProps) {
             });
             const data = await res.json();
             if (data.success) {
-                setNodePrintMsg({ success: true, text: data.message || 'تمت الطباعة بنجاح عبر محرك Node!' });
+                setNodePrintMsg({ success: true, text: data.message || 'تم إرسال الملصق بنجاح إلى الطابعة!' });
             } else {
-                setNodePrintMsg({ success: false, text: data.message || 'فشلت الطباعة عبر محرك Node' });
+                setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة' });
             }
         } catch (e: any) {
             setNodePrintMsg({ success: false, text: e?.message || 'تعذر الاتصال بمحرك الطباعة' });
@@ -1372,23 +1372,23 @@ function QrModal({ product, onClose }: QrModalProps) {
                             </div>
                         )}
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2.5 w-full sm:w-auto">
                         <button
                             type="button"
                             onClick={handlePrint}
-                            className="flex-1 sm:flex-initial px-4 h-12 rounded-[16px] bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black text-xs hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-[0.98] transition-all cursor-pointer"
+                            className="flex-1 sm:flex-initial px-4 h-12 rounded-[16px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs active:scale-[0.98] transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
                             title="فتح نافذة طباعة المتصفح التقليدية"
                         >
-                            <span>طباعة عبر المتصفح</span>
+                            <span>طباعة المتصفح</span>
                         </button>
                         <button
                             type="button"
                             onClick={handleNodePrint}
                             disabled={printingNode}
-                            className="flex-1 sm:flex-initial sm:min-w-[220px] flex items-center justify-center gap-2 h-12 rounded-[16px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm active:scale-[0.98] transition-all shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                            className="flex-1 sm:flex-initial px-6 h-12 rounded-[16px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2.5 active:scale-[0.98] transition-all shadow-md shadow-emerald-600/25 cursor-pointer disabled:opacity-50 border border-emerald-500/30 whitespace-nowrap"
                         >
-                            <Printer className="w-5 h-5" />
-                            <span>{printingNode ? 'جاري الإرسال للطابعة...' : `⚡ طباعة مباشرة عبر Node (${copies})`}</span>
+                            <Printer className="w-4 h-4 shrink-0" />
+                            <span>{printingNode ? 'جاري الإرسال للطابعة...' : `طباعة مباشرة (${copies})`}</span>
                         </button>
                     </div>
                 </div>
