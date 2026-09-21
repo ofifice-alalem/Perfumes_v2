@@ -239,6 +239,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     show_name: showName,
                     show_price: showPrice,
                     show_code_text: showCodeText,
+                    qr_size: activeQrSizeMm,
                     title_font_size: activeTitleFontSizePt,
                     copies: copies,
                     protocol: 'tspl',
@@ -721,18 +722,25 @@ function QrModal({ product, onClose }: QrModalProps) {
 
                                                 {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
                                                 <div id="label-modal-qr-preview" className="shrink-0 flex items-center justify-center p-0.5">
-                                                    <QRCodeSVG
-                                                        value={toAsciiDigits(product.qrcode || '0000000000')}
-                                                        size={Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm))))}
-                                                        level="H"
-                                                        fgColor="#000000"
-                                                        imageSettings={{
-                                                            src: PERFUME_SVG_B64,
-                                                            width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
-                                                            height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm)))) * 0.22)),
-                                                            excavate: true,
-                                                        }}
-                                                    />
+                                                    {(() => {
+                                                        const previewBoxH = Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm))));
+                                                        const previewQrSize = Math.max(30, Math.min(Math.round(previewBoxH - 16), Math.round(activeQrSizeMm * (210 / widthMm))));
+                                                        const logoSize = Math.max(8, Math.round(previewQrSize * 0.22));
+                                                        return (
+                                                            <QRCodeSVG
+                                                                value={toAsciiDigits(product.qrcode || '0000000000')}
+                                                                size={previewQrSize}
+                                                                level="H"
+                                                                fgColor="#000000"
+                                                                imageSettings={{
+                                                                    src: PERFUME_SVG_B64,
+                                                                    width: logoSize,
+                                                                    height: logoSize,
+                                                                    excavate: true,
+                                                                }}
+                                                            />
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         ) : (
@@ -921,6 +929,92 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                     }}
                                                     className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
                                                         activeTitleFontSizePt === opt.val
+                                                            ? 'bg-primary text-white border-primary shadow-xs'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                    }`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* حجم رمز الـ QR (عند اختيار QR فقط) */}
+                            {tab === 'classic' && (
+                                <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 block">
+                                                حجم رمز الـ QR:
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {qrSizeCustom === null ? 'محسوب تلقائياً حسب الورقة' : 'مقاس يدوي مخصص'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.max(8, Math.round((activeQrSizeMm - 1) * 10) / 10);
+                                                    setQrSizeCustom(next);
+                                                    localStorage.setItem('label_printer_qr_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                title="تصغير"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                                                {activeQrSizeMm} مم
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.min(30, Math.round((activeQrSizeMm + 1) * 10) / 10);
+                                                    setQrSizeCustom(next);
+                                                    localStorage.setItem('label_printer_qr_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                title="تكبير"
+                                            >
+                                                +
+                                            </button>
+                                            {qrSizeCustom !== null && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setQrSizeCustom(null);
+                                                        localStorage.removeItem('label_printer_qr_size');
+                                                    }}
+                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                                                >
+                                                    تلقائي
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* أزرار سريعة لأحجام الـ QR */}
+                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام شائعة:</span>
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            {[
+                                                { label: 'صغير (10 مم)', val: 10 },
+                                                { label: 'متوسط (14 مم)', val: 14 },
+                                                { label: 'كبير (18 مم)', val: 18 },
+                                                { label: 'عريض (22 مم)', val: 22 },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.val}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setQrSizeCustom(opt.val);
+                                                        localStorage.setItem('label_printer_qr_size', String(opt.val));
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                                                        activeQrSizeMm === opt.val
                                                             ? 'bg-primary text-white border-primary shadow-xs'
                                                             : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
                                                     }`}
@@ -1245,60 +1339,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 </div>
                             </div>
 
-                            {/* 5. حجم رمز الـ QR (عند اختيار QR فقط) */}
-                            {tab === 'classic' && (
-                                <div className="p-2.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2">
-                                    <div>
-                                        <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">حجم رمز الـ QR:</span>
-                                        <span className="text-[10px] font-bold text-slate-400">
-                                            {qrSizeCustom === null ? 'محسوب تلقائياً حسب الورقة' : 'مقاس يدوي'}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = activeQrSizeMm;
-                                                const next = Math.max(8, Math.round((current - 1) * 10) / 10);
-                                                setQrSizeCustom(next);
-                                                localStorage.setItem('label_printer_qr_size', String(next));
-                                            }}
-                                            className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95"
-                                            title="تصغير"
-                                        >
-                                            -
-                                        </button>
-                                        <span className="font-mono font-black text-xs px-2 py-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded min-w-[48px] text-center">
-                                            {activeQrSizeMm} مم
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const current = activeQrSizeMm;
-                                                const next = Math.min(22, Math.round((current + 1) * 10) / 10);
-                                                setQrSizeCustom(next);
-                                                localStorage.setItem('label_printer_qr_size', String(next));
-                                            }}
-                                            className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95"
-                                            title="تكبير"
-                                        >
-                                            +
-                                        </button>
-                                        {qrSizeCustom !== null && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setQrSizeCustom(null);
-                                                    localStorage.removeItem('label_printer_qr_size');
-                                                }}
-                                                className="text-[10px] font-black text-primary hover:underline px-1 cursor-pointer"
-                                            >
-                                                تلقائي
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+
 
                         </div>
                     </div>

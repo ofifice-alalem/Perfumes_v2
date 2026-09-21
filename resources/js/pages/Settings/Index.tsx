@@ -37,6 +37,8 @@ interface SettingsProps {
     label_printer_name?: string;
     label_default_tab?: string;
     label_rotation?: string;
+    label_qr_size?: string;
+    label_title_font_size?: string;
   };
   products?: Array<{
     id: number;
@@ -220,6 +222,8 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
           show_name: data.label_show_store_name === '1',
           show_price: data.label_show_price === '1',
           show_code_text: data.label_show_code_text === '1',
+          qr_size: Number(data.label_qr_size) || 0,
+          title_font_size: Number(data.label_title_font_size) || 0,
           copies: labelCopies,
           protocol: 'tspl',
         }),
@@ -259,6 +263,8 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
     label_show_code_text: settings.label_show_code_text ?? '1',
     label_font_size: settings.label_font_size || '11',
     label_zoom: settings.label_zoom || '125',
+    label_qr_size: settings.label_qr_size || '',
+    label_title_font_size: settings.label_title_font_size || '',
     store_logo_file: null as File | null,
   });
 
@@ -1601,18 +1607,28 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
 
                           {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
                           <div className="shrink-0 flex items-center justify-center p-0.5">
-                            <QRCodeSVG
-                              value={testValue || '240000669027'}
-                              size={Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm)))))}
-                              level="H"
-                              fgColor="#000000"
-                              imageSettings={{
-                                src: PERFUME_SVG_B64,
-                                width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm))))) * 0.22)),
-                                height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm))))) * 0.22)),
-                                excavate: true,
-                              }}
-                            />
+                            {(() => {
+                              const hMm = Number(data.label_height_mm) || 25;
+                              const wMm = Number(data.label_width_mm) || 50;
+                              const previewBoxH = Math.max(95, Math.min(160, Math.round(210 * (hMm / wMm))));
+                              const activeQrMm = Number(data.label_qr_size) || Math.max(8, Math.min(15, Math.round(Math.min((hMm - 5.5) * 0.65, wMm * 0.28) * 10) / 10));
+                              const previewQrSize = Math.max(30, Math.min(Math.round(previewBoxH - 16), Math.round(activeQrMm * (210 / wMm))));
+                              const logoSize = Math.max(8, Math.round(previewQrSize * 0.22));
+                              return (
+                                <QRCodeSVG
+                                  value={testValue || '240000669027'}
+                                  size={previewQrSize}
+                                  level="H"
+                                  fgColor="#000000"
+                                  imageSettings={{
+                                    src: PERFUME_SVG_B64,
+                                    width: logoSize,
+                                    height: logoSize,
+                                    excavate: true,
+                                  }}
+                                />
+                              );
+                            })()}
                           </div>
                         </div>
                       ) : (
@@ -1943,6 +1959,135 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                       />
                       <span className="text-xs font-bold text-slate-800 dark:text-slate-200">الأرقام أسفل الرمز</span>
                     </label>
+                  </div>
+                </div>
+
+                {/* 5. حجم رمز الـ QR الافتراضي وحجم خط العنوان */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-4">
+                  {/* حجم رمز الـ QR */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                          حجم رمز الـ QR الافتراضي (Classic QR):
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {!data.label_qr_size ? 'محسوب تلقائياً حسب مقاس الورقة' : 'مقاس يدوي محدد'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = Number(data.label_qr_size) || 14;
+                            const next = Math.max(8, Math.round((current - 1) * 10) / 10);
+                            setData('label_qr_size', String(next));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                          {data.label_qr_size ? `${data.label_qr_size} مم` : 'تلقائي'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = Number(data.label_qr_size) || 14;
+                            const next = Math.min(30, Math.round((current + 1) * 10) / 10);
+                            setData('label_qr_size', String(next));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        >
+                          +
+                        </button>
+                        {data.label_qr_size && (
+                          <button
+                            type="button"
+                            onClick={() => setData('label_qr_size', '')}
+                            className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                          >
+                            تلقائي
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* أزرار سريعة لأحجام الـ QR */}
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام سريعة:</span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {[
+                          { label: 'صغير (10 مم)', val: '10' },
+                          { label: 'متوسط (14 مم)', val: '14' },
+                          { label: 'كبير (18 مم)', val: '18' },
+                          { label: 'عريض (22 مم)', val: '22' },
+                        ].map(opt => (
+                          <button
+                            key={opt.val}
+                            type="button"
+                            onClick={() => setData('label_qr_size', opt.val)}
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                              data.label_qr_size === opt.val
+                                ? 'bg-primary text-white border-primary shadow-xs'
+                                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* حجم خط عنوان المنتج */}
+                  <div className="space-y-2 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                          حجم خط عنوان المنتج الافتراضي:
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {!data.label_title_font_size ? 'محسوب تلقائياً حسب مقاس الورقة' : 'حجم خط ثابت بالنقاط pt'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = Number(data.label_title_font_size) || 8;
+                            const next = Math.max(4.5, Math.round((current - 0.5) * 10) / 10);
+                            setData('label_title_font_size', String(next));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                          {data.label_title_font_size ? `${data.label_title_font_size} pt` : 'تلقائي'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = Number(data.label_title_font_size) || 8;
+                            const next = Math.min(16, Math.round((current + 0.5) * 10) / 10);
+                            setData('label_title_font_size', String(next));
+                          }}
+                          className="w-7 h-7 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                        >
+                          +
+                        </button>
+                        {data.label_title_font_size && (
+                          <button
+                            type="button"
+                            onClick={() => setData('label_title_font_size', '')}
+                            className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                          >
+                            تلقائي
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 

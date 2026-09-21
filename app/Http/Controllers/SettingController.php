@@ -56,6 +56,8 @@ class SettingController extends Controller
             'label_rotation' => 'nullable|string|in:0,90,180,270',
             'label_printer_name' => 'nullable|string|max:255',
             'label_default_tab' => 'nullable|string|in:ean13,serial,classic',
+            'label_qr_size' => 'nullable|numeric|min:5|max:60',
+            'label_title_font_size' => 'nullable|numeric|min:4|max:30',
         ]);
 
         if ($request->hasFile('store_logo_file')) {
@@ -84,6 +86,8 @@ class SettingController extends Controller
             'label_font_size',
             'label_zoom',
             'label_rotation',
+            'label_qr_size',
+            'label_title_font_size',
         ];
 
         foreach ($fields as $field) {

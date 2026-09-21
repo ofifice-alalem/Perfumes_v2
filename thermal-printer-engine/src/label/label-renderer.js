@@ -197,7 +197,12 @@ async function renderLabelCanvas(labelData = {}) {
         }
 
         const remainingH = innerH - curY - 6;
-        const qrSize = Math.max(50, Math.min(Math.round(innerW * 0.44), remainingH - 4));
+        const customQrPx = (labelData.qrSize && Number(labelData.qrSize) > 0)
+            ? Math.round(Number(labelData.qrSize) * DOTS_PER_MM)
+            : null;
+        const qrSize = customQrPx
+            ? Math.max(30, Math.min(customQrPx, remainingH - 4, innerW - 20))
+            : Math.max(50, Math.min(Math.round(innerW * 0.44), remainingH - 4));
         const qrX = innerW - qrSize - 12;
         const qrY = curY + Math.max(0, Math.round((remainingH - qrSize) / 2));
 
