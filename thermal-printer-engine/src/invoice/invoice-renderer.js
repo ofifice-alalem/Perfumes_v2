@@ -4,24 +4,45 @@ const path = require('path');
 const { fixArabic } = require('./arabic-helper');
 const QRCode = require('qrcode');
 
-// Register Cairo Font automatically
-let isCairoRegistered = false;
-function registerCairoFont() {
-    if (isCairoRegistered) return;
+// Register Cairo & Tajawal Fonts automatically (Both Arabic & Latin subsets so numbers render cleanly)
+let isFontsRegistered = false;
+function registerFonts() {
+    if (isFontsRegistered) return;
     try {
-        const fontPath700 = path.join(__dirname, '../../node_modules/@fontsource/cairo/files/cairo-arabic-700-normal.woff');
-        const fontPath400 = path.join(__dirname, '../../node_modules/@fontsource/cairo/files/cairo-arabic-400-normal.woff');
-        
-        if (fs.existsSync(fontPath700)) {
-            GlobalFonts.registerFromPath(fontPath700, 'Cairo');
+        const cairoDir = path.join(__dirname, '../../node_modules/@fontsource/cairo/files');
+        const tajawalDir = path.join(__dirname, '../../../node_modules/@fontsource/tajawal/files');
+
+        // Cairo fonts (Arabic + Latin)
+        const cairoAr700 = path.join(cairoDir, 'cairo-arabic-700-normal.woff');
+        const cairoLat700 = path.join(cairoDir, 'cairo-latin-700-normal.woff');
+        const cairoAr400 = path.join(cairoDir, 'cairo-arabic-400-normal.woff');
+        const cairoLat400 = path.join(cairoDir, 'cairo-latin-400-normal.woff');
+
+        if (fs.existsSync(cairoAr700)) GlobalFonts.registerFromPath(cairoAr700, 'Cairo');
+        if (fs.existsSync(cairoLat700)) GlobalFonts.registerFromPath(cairoLat700, 'CairoLatin');
+        if (fs.existsSync(cairoAr400)) GlobalFonts.registerFromPath(cairoAr400, 'Cairo');
+        if (fs.existsSync(cairoLat400)) GlobalFonts.registerFromPath(cairoLat400, 'CairoLatin');
+
+        // Tajawal fonts (Arabic + Latin)
+        if (fs.existsSync(tajawalDir)) {
+            const tajAr700 = path.join(tajawalDir, 'tajawal-arabic-700-normal.woff');
+            const tajLat700 = path.join(tajawalDir, 'tajawal-latin-700-normal.woff');
+            const tajAr400 = path.join(tajawalDir, 'tajawal-arabic-400-normal.woff');
+            const tajLat400 = path.join(tajawalDir, 'tajawal-latin-400-normal.woff');
+
+            if (fs.existsSync(tajAr700)) GlobalFonts.registerFromPath(tajAr700, 'Tajawal');
+            if (fs.existsSync(tajLat700)) GlobalFonts.registerFromPath(tajLat700, 'TajawalLatin');
+            if (fs.existsSync(tajAr400)) GlobalFonts.registerFromPath(tajAr400, 'Tajawal');
+            if (fs.existsSync(tajLat400)) GlobalFonts.registerFromPath(tajLat400, 'TajawalLatin');
         }
-        if (fs.existsSync(fontPath400)) {
-            GlobalFonts.registerFromPath(fontPath400, 'Cairo');
-        }
-        isCairoRegistered = true;
+
+        isFontsRegistered = true;
     } catch (err) {
-        console.warn("Could not load Cairo font from node_modules, using system fallback font:", err.message);
+        console.warn("Could not register fonts in Node canvas:", err.message);
     }
+}
+function registerCairoFont() {
+    registerFonts();
 }
 
 /**
@@ -245,11 +266,11 @@ async function drawCenterLogoOrOval(ctx, cx, cy, rx = 170, ry = 80, storeName = 
     const mainTitle = storeName || 'تاجوري للعطور';
     const subTitle = storeSubname || 'للعطور الفاخرة';
 
-    ctx.font = 'bold 28px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 28px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.fillText(fixArabic(mainTitle), cx, cy - 18);
 
     if (subTitle) {
-        ctx.font = '17px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = '17px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.fillText(fixArabic(subTitle), cx, cy + 20);
     }
 
@@ -322,19 +343,19 @@ async function renderInvoiceCanvas(invoiceData, config) {
     // -------------------------------------------------------------
     // 2. STORE NAME & ADDRESS
     // -------------------------------------------------------------
-    ctx.font = 'bold 30px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 30px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(fixArabic(config.store?.name || 'تاجوري للعطور الفاخرة'), width / 2, y);
     y += 38;
 
     if (config.store?.subname) {
-        ctx.font = 'bold 18px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 18px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.fillText(fixArabic(config.store.subname), width / 2, y);
         y += 24;
     }
 
     if (config.store?.address) {
-        ctx.font = 'bold 16px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 16px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         const addressLines = config.store.address.split('\n');
         for (const line of addressLines) {
             if (line.trim()) {
@@ -365,13 +386,13 @@ async function renderInvoiceCanvas(invoiceData, config) {
 
     // Invoice Number Text (Black text inside white box)
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 25px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 25px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(fixArabic(invoiceData.invoiceNumber || '50621'), numberBoxX + (numberBoxWidth / 2), numberBoxY + 3);
 
     // "فاتورة مبيعات" Text (White text on black background)
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 22px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 22px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(fixArabic('فاتورة مبيعات'), pillX + pillWidth - 92, y + 11);
 
@@ -393,11 +414,11 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.lineWidth = 2.2;
     drawRoundedRect(ctx, margin, y, contentWidth, dateBoxHeight, 9, false, true);
 
-    ctx.font = 'bold 18px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 18px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
 
     // Right Side: Cashier (starts line in RTL)
     ctx.textAlign = 'right';
-    const cashierLabel = fixArabic('الكاشير') + ': ' + fixArabic(invoiceData.cashier || 'سليم');
+    const cashierLabel = fixArabic('الكاشير:') + '\u200F ' + fixArabic(invoiceData.cashier || 'سليم');
     ctx.fillText(cashierLabel, width - margin - 16, y + 14);
 
     // Left Side: Date/Time (ends line in RTL)
@@ -429,7 +450,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
 
     // White Header Labels
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 19px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 19px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
 
     // Column 1 (Right): المنتج
     ctx.textAlign = 'right';
@@ -453,7 +474,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     const tableBodyStartY = y;
 
     // Table Item Rows
-    ctx.font = 'bold 17px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 17px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
 
     for (let idx = 0; idx < items.length; idx++) {
         const item = items[idx];
@@ -523,11 +544,11 @@ async function renderInvoiceCanvas(invoiceData, config) {
     // -------------------------------------------------------------
     // 6. TOTALS & PAYMENTS SECTION (عكس الترتيب: دينار 596)
     // -------------------------------------------------------------
-    ctx.font = 'bold 17px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 17px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
 
     // Total Row
     ctx.textAlign = 'right';
-    ctx.fillText(fixArabic('المجموع الإجمالي') + ':', width - margin - 10, y);
+    ctx.fillText(fixArabic('المجموع الإجمالي:') + '\u200F', width - margin - 10, y);
     ctx.textAlign = 'left';
     ctx.fillText(fixArabic('دينار'), margin + 10, y);
     const dinarW1 = ctx.measureText(fixArabic('دينار')).width;
@@ -548,9 +569,9 @@ async function renderInvoiceCanvas(invoiceData, config) {
     // Render Each Payment Method Row
     for (let pIdx = 0; pIdx < paymentsList.length; pIdx++) {
         const p = paymentsList[pIdx];
-        const paidLabel = fixArabic('المدفوع') + ' (' + fixArabic(p.method) + '):';
+        const paidLabel = fixArabic(`المدفوع (${p.method}):`) + '\u200F';
 
-        ctx.font = 'bold 16px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 16px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText(paidLabel, width - margin - 10, y);
         ctx.textAlign = 'left';
@@ -576,9 +597,9 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.lineWidth = 2.0;
     drawRoundedRect(ctx, margin, y, contentWidth, dueBoxHeight, 8, false, true);
 
-    ctx.font = 'bold 18px Cairo, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 18px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(fixArabic('المتبقي') + ' (Due):', width - margin - 18, y + 10);
+    ctx.fillText(fixArabic('المتبقي (Due):') + '\u200F', width - margin - 18, y + 10);
     ctx.textAlign = 'left';
     ctx.fillText(fixArabic('دينار'), margin + 18, y + 10);
     const dinarW3 = ctx.measureText(fixArabic('دينار')).width;
@@ -622,7 +643,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     }
 
     if (config.footerText) {
-        ctx.font = 'bold 18px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 18px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(fixArabic(config.footerText), width / 2, y);
         y += 32;
@@ -632,7 +653,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
         const policyBoxHeight = 54;
         drawDashedRoundedRect(ctx, margin, y, contentWidth, policyBoxHeight, 9, [6, 4]);
 
-        ctx.font = 'bold 15px Cairo, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 15px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(fixArabic(config.returnPolicy), width / 2, y + 16);
         y += policyBoxHeight + 12;

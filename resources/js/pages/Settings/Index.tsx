@@ -38,6 +38,15 @@ interface SettingsProps {
     label_default_tab?: string;
     label_rotation?: string;
   };
+  products?: Array<{
+    id: number;
+    name: string;
+    qrcode: string | null;
+    product_price?: {
+      price_per_unit_regular?: string;
+      full_bottle_regular?: string | null;
+    };
+  }>;
   flash?: {
     success?: string;
   };
@@ -72,7 +81,7 @@ function toEan13(code: string): string {
   return base12 + checkDigit;
 }
 
-export default function SettingsIndex({ settings }: SettingsProps) {
+export default function SettingsIndex({ settings, products = [] }: SettingsProps) {
   const { flash } = usePage<{ flash: { success?: string } }>().props;
 
   // View state: 'grid' | 'receipt' | 'node_receipt' | 'label_printer'
@@ -80,10 +89,19 @@ export default function SettingsIndex({ settings }: SettingsProps) {
 
   const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/logo-black_white.png');
 
+  // أول منتج متوفر للتجربة
+  const firstProd = products[0];
+  const initialPrice = firstProd?.product_price?.full_bottle_regular
+    ? `${Number(firstProd.product_price.full_bottle_regular).toLocaleString('en-US')} د.ل`
+    : firstProd?.product_price?.price_per_unit_regular
+    ? `${Number(firstProd.product_price.price_per_unit_regular).toLocaleString('en-US')} د.ل`
+    : '145.00 د.ل';
+
   // Label & Barcode Studio States (Spatial UI + Node Engine)
-  const [testValue, setTestValue] = useState<string>('240000669027');
-  const [sampleProductName, setSampleProductName] = useState<string>('عطر تاجوري الخاص 100 مل');
-  const [samplePrice, setSamplePrice] = useState<string>('145.00 د.ل');
+  const [selectedProductId, setSelectedProductId] = useState<number | string>(firstProd?.id || '');
+  const [testValue, setTestValue] = useState<string>(firstProd?.qrcode || '240000669027');
+  const [sampleProductName, setSampleProductName] = useState<string>(firstProd?.name || 'عطر تاجوري الخاص 100 مل');
+  const [samplePrice, setSamplePrice] = useState<string>(initialPrice);
   const [copiedValue, setCopiedValue] = useState<boolean>(false);
   const labelPrintRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +119,7 @@ export default function SettingsIndex({ settings }: SettingsProps) {
   const [nodeLabelPrintStatus, setNodeLabelPrintStatus] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // Node Thermal Printer Engine States
-  const [nodePrinters, setNodePrinters] = useState<Array<{ name: string; driver: string; port: string; status: string }>>([]);
+  const [nodePrinters, setNodePrinters] = useState<Array<{ name: string; driver: string; port: string; status: string; forms?: string[] }>>([]);
   const [loadingPrinters, setLoadingPrinters] = useState<boolean>(false);
   const [selectedNodePrinter, setSelectedNodePrinter] = useState<string>(settings.node_printer_name || 'XP-80');
   const [nodePreviewImg, setNodePreviewImg] = useState<string | null>(null);
@@ -1486,12 +1504,50 @@ export default function SettingsIndex({ settings }: SettingsProps) {
               {/* ══ Column 1: Live Interactive Preview Card (5 cols) ══ */}
               <div className="lg:col-span-5 flex flex-col gap-4">
 
-                {/* Simulated Label Sticker Box */}
-                <div className="flex flex-col items-center justify-center p-5 rounded-[28px] bg-slate-100/90 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 shadow-inner">
+                {/* قائمة اختيار منتج حقيقي من المنظومة للتجربة والمعاينة الحية */}
+                <div className="p-4 rounded-3xl bg-slate-50/90 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      اختر منتجاً حقيقياً من المنظومة للمعاينة:
+                    </label>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {products.length} منتجات متاحة
+                    </span>
+                  </div>
+                  <select
+                    value={selectedProductId}
+                    onChange={e => {
+                      const id = e.target.value;
+                      setSelectedProductId(id);
+                      const prod = products.find(p => String(p.id) === String(id));
+                      if (prod) {
+                        setSampleProductName(prod.name);
+                        setTestValue(prod.qrcode || '240000669027');
+                        const pDisplay = prod.product_price?.full_bottle_regular
+                          ? `${Number(prod.product_price.full_bottle_regular).toLocaleString('en-US')} د.ل`
+                          : prod.product_price?.price_per_unit_regular
+                          ? `${Number(prod.product_price.price_per_unit_regular).toLocaleString('en-US')} د.ل`
+                          : '';
+                        setSamplePrice(pDisplay);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.qrcode ? `(${p.qrcode})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Simulated Label Sticker Box - متطابق 100% مع صفحة المنتجات Products/Index.tsx */}
+                <div className="flex flex-col items-center justify-center p-4 rounded-[24px] bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80">
                   <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-between w-full">
                     <span className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      المعاينة الحية للملصق (1:1)
+                      معاينة الملصق المباشرة (مطابقة لصفحة المنتجات)
                     </span>
                     <div className="flex items-center gap-1">
                       <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold border border-primary/20">
@@ -1505,96 +1561,108 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                     </div>
                   </div>
 
-                  {/* Physical Label White Representation */}
+                  {/* الصندوق الأبيض الحقيقي للملصق */}
                   <div
                     ref={labelPrintRef}
                     style={{
-                      width: '220px',
-                      height: `${Math.max(95, Math.min(170, Math.round(220 * (Number(data.label_height_mm) / Number(data.label_width_mm)))))}px`,
-                      transform: `rotate(${data.label_rotation || '0'}deg)`,
+                      width: '210px',
+                      height: `${Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm)))))}px`,
                     }}
-                    className="bg-white rounded-md shadow-2xl p-2.5 flex flex-col items-center justify-between text-black transition-all border border-slate-300 select-none overflow-hidden relative"
+                    className="bg-white rounded-[12px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] border border-slate-300/80 p-2 flex flex-col items-center justify-center text-slate-900 font-sans transition-all overflow-hidden select-none relative"
                   >
-                    {/* Store / Product Name */}
-                    {data.label_show_store_name === '1' && (
-                      <span className="font-sans font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
-                        {sampleProductName}
-                      </span>
-                    )}
+                    <div
+                      style={{
+                        transform: `translate(${labelOffsetX * 2}px, ${labelOffsetY * 2}px) ${data.label_rotation !== '0' ? `rotate(${data.label_rotation}deg) ` : ''}`,
+                        transformOrigin: 'center center',
+                      }}
+                      className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1 font-sans"
+                    >
+                      {data.label_show_store_name === '1' && (
+                        <span className="font-sans font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                          {sampleProductName}
+                        </span>
+                      )}
 
-                    {/* Barcode / QR Body */}
-                    {labelTab === 'classic' ? (
-                      <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
-                        <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
-                          {data.label_show_code_text === '1' && (
-                            <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
-                              {testValue}
-                            </span>
-                          )}
-                          {data.label_show_price === '1' && (
-                            <span className="font-sans text-emerald-700 font-black text-sm leading-tight text-center">
-                              {samplePrice}
-                            </span>
-                          )}
-                        </div>
-                        <div className="shrink-0 flex items-center justify-center p-0.5">
-                          <QRCodeSVG
-                            value={testValue || '240000669027'}
-                            size={Math.max(38, Math.min(68, Math.round(Math.max(95, Math.min(170, Math.round(220 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm)))))}
-                            level="H"
-                            fgColor="#000000"
-                            imageSettings={{
-                              src: PERFUME_SVG_B64,
-                              width: 14,
-                              height: 14,
-                              excavate: true,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center w-full overflow-hidden my-0.5">
-                        {labelTab === 'ean13' && (
-                          <div className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
-                            <Barcode
-                              value={toEan13(testValue || '240000669027')}
-                              format="EAN13"
-                              width={1.3}
-                              height={36}
-                              displayValue={data.label_show_code_text === '1'}
-                              textMargin={1}
-                              fontSize={11}
-                              font="monospace"
-                              margin={0}
-                              lineColor="#000000"
-                            />
+                      {labelTab === 'classic' ? (
+                        <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
+                          {/* جهة اليمين: الكود وتحته السعر */}
+                          <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
+                            {data.label_show_code_text === '1' && testValue && (
+                              <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
+                                {testValue}
+                              </span>
+                            )}
+                            {data.label_show_price === '1' && samplePrice && (
+                              <span className="font-sans text-emerald-700 font-black text-sm leading-tight text-center">
+                                {samplePrice}
+                              </span>
+                            )}
                           </div>
-                        )}
 
-                        {labelTab === 'serial' && (
-                          <div className="w-full flex items-center justify-center">
-                            <Barcode
+                          {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
+                          <div className="shrink-0 flex items-center justify-center p-0.5">
+                            <QRCodeSVG
                               value={testValue || '240000669027'}
-                              format="CODE128"
-                              width={1.2}
-                              height={34}
-                              displayValue={data.label_show_code_text === '1'}
-                              textMargin={1}
-                              fontSize={11}
-                              font="monospace"
-                              margin={0}
-                              lineColor="#000000"
+                              size={Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm)))))}
+                              level="H"
+                              fgColor="#000000"
+                              imageSettings={{
+                                src: PERFUME_SVG_B64,
+                                width: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm))))) * 0.22)),
+                                height: Math.max(8, Math.round(Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm))))) * 0.22)),
+                                excavate: true,
+                              }}
                             />
                           </div>
-                        )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex-1 flex items-center justify-center w-full overflow-hidden my-0.5">
+                            {labelTab === 'ean13' && (
+                              <div className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
+                                <Barcode
+                                  value={toEan13(testValue || '240000669027')}
+                                  format="EAN13"
+                                  width={1.3}
+                                  height={34}
+                                  displayValue={data.label_show_code_text === '1'}
+                                  textMargin={1}
+                                  fontSize={12}
+                                  font="monospace"
+                                  margin={0}
+                                  lineColor="#000000"
+                                />
+                              </div>
+                            )}
 
-                        {data.label_show_price === '1' && (
-                          <div className="price-tag font-black text-slate-900 leading-tight mt-0.5 text-xs text-center font-sans">
-                            {samplePrice}
+                            {labelTab === 'serial' && (
+                              <div className="w-full flex items-center justify-center">
+                                <Barcode
+                                  value={testValue || '240000669027'}
+                                  format="CODE128"
+                                  width={1.2}
+                                  height={34}
+                                  displayValue={data.label_show_code_text === '1'}
+                                  textMargin={1}
+                                  fontSize={12}
+                                  font="monospace"
+                                  margin={0}
+                                  lineColor="#000000"
+                                />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )}
+
+                          {data.label_show_price === '1' && samplePrice && (
+                            <div className="flex items-center justify-center w-full px-1 text-[11px] font-black leading-none mt-0.5">
+                              <span className="font-sans text-emerald-700 font-extrabold">
+                                {samplePrice}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1665,11 +1733,13 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   </p>
 
                   <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400">اسم الطابعة:</label>
                     <select
                       value={data.label_printer_name}
                       onChange={e => {
-                        setData('label_printer_name', e.target.value);
-                        setSelectedLabelPrinter(e.target.value);
+                        const newName = e.target.value;
+                        setData('label_printer_name', newName);
+                        setSelectedLabelPrinter(newName);
                       }}
                       className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-black text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary"
                     >
@@ -1686,6 +1756,47 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                       )}
                     </select>
                   </div>
+
+                  {/* اختيار قالب الورق Stock من تعريف الطابعة في الويندوز */}
+                  {(() => {
+                    const currentPrinter = nodePrinters.find(p => p.name === data.label_printer_name || p.name === selectedLabelPrinter);
+                    const forms = currentPrinter?.forms || [];
+                    if (forms.length === 0) return null;
+                    return (
+                      <div className="space-y-1.5 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                            قالب الورق في الويندوز (Stock Name):
+                          </label>
+                          <span className="text-[10px] font-mono text-slate-400">Seagull / Windows Stock</span>
+                        </div>
+                        <select
+                          onChange={e => {
+                            const val = e.target.value;
+                            if (val.includes('BIG') || val.includes('2.36')) {
+                              setData('label_width_mm', '58');
+                              setData('label_height_mm', '40');
+                            } else if (val.includes('XP-365B') || val.includes('1.97')) {
+                              setData('label_width_mm', '50');
+                              setData('label_height_mm', '30');
+                            } else if (val.includes('2 x 4')) {
+                              setData('label_width_mm', '50');
+                              setData('label_height_mm', '100');
+                            }
+                          }}
+                          className="w-full px-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                        >
+                          <option value="">-- اختر قالب Stock مسجل في الطابعة لتعبئة الأبعاد تلقائياً --</option>
+                          {forms.map(f => (
+                            <option key={f} value={f}>
+                              {f}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* 2. نوع الترميز والتشفير */}

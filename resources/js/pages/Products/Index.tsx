@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -147,6 +147,23 @@ function QrModal({ product, onClose }: QrModalProps) {
     });
     const [printingNode, setPrintingNode] = useState<boolean>(false);
     const [nodePrintMsg, setNodePrintMsg] = useState<{ success: boolean; text: string } | null>(null);
+    const [stockForms, setStockForms] = useState<string[]>([]);
+    const [selectedStock, setSelectedStock] = useState<string>(() => localStorage.getItem('label_printer_stock') || '');
+
+    useEffect(() => {
+        fetch('/settings/node-printer/printers')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success && Array.isArray(res.printers)) {
+                    // ابحث عن طابعة الباركود
+                    const labelP = res.printers.find((p: any) => p.name.includes('365') || p.name.includes('235') || p.name.includes('XP-')) || res.printers[0];
+                    if (labelP && Array.isArray(labelP.forms)) {
+                        setStockForms(labelP.forms);
+                    }
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const handleNodePrint = async () => {
         setPrintingNode(true);
@@ -839,6 +856,42 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         );
                                     })}
                                 </div>
+
+                                {/* اختيار قالب Stock المسجل في الطابعة */}
+                                {stockForms.length > 0 && (
+                                    <div className="mb-2.5 p-2 rounded-[14px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mt-2">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                                قالب ورق الطابعة بالويندوز (Stock):
+                                            </span>
+                                            <span className="text-[9px] font-mono text-slate-400">Seagull Presets</span>
+                                        </div>
+                                        <select
+                                            value={selectedStock}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setSelectedStock(val);
+                                                localStorage.setItem('label_printer_stock', val);
+                                                if (val.includes('BIG') || val.includes('2.36')) {
+                                                    updateSize(58, 40);
+                                                } else if (val.includes('XP-365B') || val.includes('1.97')) {
+                                                    updateSize(50, 30);
+                                                } else if (val.includes('2 x 4')) {
+                                                    updateSize(50, 100);
+                                                }
+                                            }}
+                                            className="w-full px-2.5 py-1.5 rounded-[10px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                                        >
+                                            <option value="">-- اختيار قالب Stock من الطابعة (مثل XP-365-BIG) --</option>
+                                            {stockForms.map(f => (
+                                                <option key={f} value={f}>
+                                                    {f}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 {/* مقاس مخصص */}
                                 <div className="mt-2 flex items-center gap-2">

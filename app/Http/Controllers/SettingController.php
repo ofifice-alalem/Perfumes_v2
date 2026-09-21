@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Repositories\Contracts\SettingRepositoryInterface;
+use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -10,18 +11,24 @@ use Inertia\Response;
 class SettingController extends Controller
 {
     protected SettingRepositoryInterface $settingRepo;
+    protected ProductRepositoryInterface $productRepo;
 
-    public function __construct(SettingRepositoryInterface $settingRepo)
-    {
+    public function __construct(
+        SettingRepositoryInterface $settingRepo,
+        ProductRepositoryInterface $productRepo
+    ) {
         $this->settingRepo = $settingRepo;
+        $this->productRepo = $productRepo;
     }
 
     public function index(): Response
     {
         $settings = $this->settingRepo->getAll();
+        $products = $this->productRepo->allWithRelations();
 
         return Inertia::render('Settings/Index', [
             'settings' => $settings,
+            'products' => $products,
         ]);
     }
 

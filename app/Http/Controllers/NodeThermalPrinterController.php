@@ -109,7 +109,7 @@ class NodeThermalPrinterController extends Controller
             $output = shell_exec("powershell -NoProfile -Command \"$cmd\"");
             
             $printers = [];
-            $psDirect = shell_exec('powershell -NoProfile -Command "Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | ConvertTo-Json"');
+            $psDirect = shell_exec('powershell -NoProfile -Command "Get-CimInstance Win32_Printer | ForEach-Object { [PSCustomObject]@{ Name = $_.Name; DriverName = $_.DriverName; PortName = $_.PortName; PrinterPaperNames = $_.PrinterPaperNames } } | ConvertTo-Json -Depth 3"');
             
             if ($psDirect) {
                 $decoded = json_decode($psDirect, true);
@@ -118,11 +118,16 @@ class NodeThermalPrinterController extends Controller
                         $decoded = [$decoded];
                     }
                     foreach ($decoded as $p) {
+                        $forms = [];
+                        if (isset($p['PrinterPaperNames'])) {
+                            $forms = is_array($p['PrinterPaperNames']) ? $p['PrinterPaperNames'] : [$p['PrinterPaperNames']];
+                        }
                         $printers[] = [
                             'name' => $p['Name'] ?? 'Unknown',
                             'driver' => $p['DriverName'] ?? '',
                             'port' => $p['PortName'] ?? '',
-                            'status' => $p['PrinterStatus'] ?? 'Ready',
+                            'status' => 'Ready',
+                            'forms' => $forms,
                         ];
                     }
                 }

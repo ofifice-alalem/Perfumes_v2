@@ -6,7 +6,7 @@ const { execSync } = require('child_process');
  */
 function getInstalledPrinters() {
     try {
-        const psCommand = `powershell -NoProfile -Command "Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | ConvertTo-Json"`;
+        const psCommand = `powershell -NoProfile -Command "Get-CimInstance Win32_Printer | ForEach-Object { [PSCustomObject]@{ Name = $_.Name; DriverName = $_.DriverName; PortName = $_.PortName; PrinterPaperNames = $_.PrinterPaperNames } } | ConvertTo-Json -Depth 3"`;
         const stdout = execSync(psCommand, { encoding: 'utf8', timeout: 10000 });
         if (!stdout || !stdout.trim()) return [];
 
@@ -17,10 +17,11 @@ function getInstalledPrinters() {
             name: p.Name || '',
             driver: p.DriverName || '',
             port: p.PortName || '',
-            status: p.PrinterStatus || 'Unknown'
+            status: 'Ready',
+            forms: Array.isArray(p.PrinterPaperNames) ? p.PrinterPaperNames : (p.PrinterPaperNames ? [p.PrinterPaperNames] : [])
         }));
     } catch (err) {
-        console.warn("Failed to query printers via PowerShell Get-Printer:", err.message);
+        console.warn("Failed to query printers via PowerShell Get-CimInstance:", err.message);
         return [];
     }
 }

@@ -5,34 +5,51 @@ const QRCode = require('qrcode');
 const JsBarcode = require('jsbarcode');
 const { fixArabic } = require('../invoice/arabic-helper');
 
-// تسجيل خط تاجوال تلقائياً من حزمة @fontsource/tajawal
+// تسجيل خط تاجوال والقاهرة (Arabic + Latin) لضمان طباعة الأرقام والإنجليزية دون مربعات
 let isTajawalRegistered = false;
 function registerTajawalFont() {
     if (isTajawalRegistered) return;
     try {
         const tajawalDir = path.join(__dirname, '../../../node_modules/@fontsource/tajawal/files');
-        const fontPath800 = path.join(tajawalDir, 'tajawal-arabic-800-normal.woff');
-        const fontPath700 = path.join(tajawalDir, 'tajawal-arabic-700-normal.woff');
-        const fontPath400 = path.join(tajawalDir, 'tajawal-arabic-400-normal.woff');
+        const cairoDir = path.join(__dirname, '../../node_modules/@fontsource/cairo/files');
 
-        if (fs.existsSync(fontPath800)) {
-            GlobalFonts.registerFromPath(fontPath800, 'Tajawal');
-        } else if (fs.existsSync(fontPath700)) {
-            GlobalFonts.registerFromPath(fontPath700, 'Tajawal');
-        } else if (fs.existsSync(fontPath400)) {
-            GlobalFonts.registerFromPath(fontPath400, 'Tajawal');
+        // تسجيل خطوط تاجوال (عربي + لاتيني للأرقام)
+        if (fs.existsSync(tajawalDir)) {
+            const fontPath900 = path.join(tajawalDir, 'tajawal-arabic-900-normal.woff');
+            const fontPath800 = path.join(tajawalDir, 'tajawal-arabic-800-normal.woff');
+            const fontPath700 = path.join(tajawalDir, 'tajawal-arabic-700-normal.woff');
+            const fontPath400 = path.join(tajawalDir, 'tajawal-arabic-400-normal.woff');
+            const fontPathLat900 = path.join(tajawalDir, 'tajawal-latin-900-normal.woff');
+            const fontPathLat800 = path.join(tajawalDir, 'tajawal-latin-800-normal.woff');
+            const fontPathLat700 = path.join(tajawalDir, 'tajawal-latin-700-normal.woff');
+            const fontPathLat400 = path.join(tajawalDir, 'tajawal-latin-400-normal.woff');
+
+            if (fs.existsSync(fontPath900)) GlobalFonts.registerFromPath(fontPath900, 'Tajawal');
+            if (fs.existsSync(fontPath800)) GlobalFonts.registerFromPath(fontPath800, 'Tajawal');
+            if (fs.existsSync(fontPath700)) GlobalFonts.registerFromPath(fontPath700, 'Tajawal');
+            if (fs.existsSync(fontPath400)) GlobalFonts.registerFromPath(fontPath400, 'Tajawal');
+            if (fs.existsSync(fontPathLat900)) GlobalFonts.registerFromPath(fontPathLat900, 'TajawalLatin');
+            if (fs.existsSync(fontPathLat800)) GlobalFonts.registerFromPath(fontPathLat800, 'TajawalLatin');
+            if (fs.existsSync(fontPathLat700)) GlobalFonts.registerFromPath(fontPathLat700, 'TajawalLatin');
+            if (fs.existsSync(fontPathLat400)) GlobalFonts.registerFromPath(fontPathLat400, 'TajawalLatin');
         }
 
-        // تسجيل خط القاهرة كبديل احتياطي
-        const cairoDir = path.join(__dirname, '../../../node_modules/@fontsource/cairo/files');
-        const cairo700 = path.join(cairoDir, 'cairo-arabic-700-normal.woff');
-        if (fs.existsSync(cairo700)) {
-            GlobalFonts.registerFromPath(cairo700, 'Cairo');
+        // تسجيل خط القاهرة كبديل احتياطي (عربي + لاتيني)
+        if (fs.existsSync(cairoDir)) {
+            const cairo700 = path.join(cairoDir, 'cairo-arabic-700-normal.woff');
+            const cairo400 = path.join(cairoDir, 'cairo-arabic-400-normal.woff');
+            const cairoLat700 = path.join(cairoDir, 'cairo-latin-700-normal.woff');
+            const cairoLat400 = path.join(cairoDir, 'cairo-latin-400-normal.woff');
+
+            if (fs.existsSync(cairo700)) GlobalFonts.registerFromPath(cairo700, 'Cairo');
+            if (fs.existsSync(cairo400)) GlobalFonts.registerFromPath(cairo400, 'Cairo');
+            if (fs.existsSync(cairoLat700)) GlobalFonts.registerFromPath(cairoLat700, 'CairoLatin');
+            if (fs.existsSync(cairoLat400)) GlobalFonts.registerFromPath(cairoLat400, 'CairoLatin');
         }
 
         isTajawalRegistered = true;
     } catch (err) {
-        console.warn("Could not load Tajawal font in Node canvas:", err.message);
+        console.warn("Could not load fonts in Node canvas:", err.message);
     }
 }
 
@@ -116,7 +133,7 @@ async function renderLabelCanvas(labelData = {}) {
         let curY = 6;
         if (showName && productName) {
             const nameFontSize = Math.min(26, Math.max(16, Math.round(innerH * 0.14)));
-            ctx.font = `900 ${nameFontSize}px Tajawal, Cairo, sans-serif`;
+            ctx.font = `700 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(fixArabic(productName), innerW / 2, curY, innerW - 12);
@@ -148,7 +165,7 @@ async function renderLabelCanvas(labelData = {}) {
         let infoY = curY + Math.round(remainingH * 0.15);
 
         if (showCodeText && code) {
-            ctx.font = '700 16px monospace';
+            ctx.font = '700 16px Tajawal, TajawalLatin, monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(code, infoCx, infoY, infoW);
@@ -157,7 +174,7 @@ async function renderLabelCanvas(labelData = {}) {
 
         if (showPrice && price) {
             const priceFontSize = Math.min(32, Math.max(20, Math.round(innerH * 0.18)));
-            ctx.font = `900 ${priceFontSize}px Tajawal, Cairo, sans-serif`;
+            ctx.font = `700 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(fixArabic(price), infoCx, infoY, infoW);
@@ -168,11 +185,11 @@ async function renderLabelCanvas(labelData = {}) {
         let topY = 6;
         if (showName && productName) {
             const nameFontSize = Math.min(24, Math.max(16, Math.round(innerH * 0.13)));
-            ctx.font = `900 ${nameFontSize}px Tajawal, Cairo, sans-serif`;
+            ctx.font = `700 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(fixArabic(productName), innerW / 2, topY, innerW - 12);
-            topY += nameFontSize + 4;
+            topY += nameFontSize + 6;
         }
 
         let bottomReservedH = 0;
@@ -180,8 +197,9 @@ async function renderLabelCanvas(labelData = {}) {
             bottomReservedH = Math.min(28, Math.max(20, Math.round(innerH * 0.15))) + 6;
         }
 
-        const barAvailableH = Math.max(40, innerH - topY - bottomReservedH - 8);
-        const barCanvas = createCanvas(innerW - 16, barAvailableH);
+        const maxBarH = Math.min(Math.round(innerH * 0.50), 140);
+        const barAvailableH = Math.max(40, Math.min(innerH - topY - bottomReservedH - 8, maxBarH));
+        const barCanvas = createCanvas(innerW - 24, barAvailableH);
 
         try {
             const barcodeVal = tab === 'ean13' ? toEan13(code) : code;
@@ -190,26 +208,26 @@ async function renderLabelCanvas(labelData = {}) {
             JsBarcode(barCanvas, barcodeVal, {
                 format: barcodeFormat,
                 displayValue: showCodeText,
-                fontSize: 14,
-                font: 'monospace',
-                textMargin: 2,
+                fontSize: 16,
+                font: 'Tajawal, TajawalLatin, Arial, sans-serif',
+                textMargin: 3,
                 margin: 0,
-                width: 1.6,
-                height: showCodeText ? barAvailableH - 18 : barAvailableH,
+                width: 1.8,
+                height: showCodeText ? barAvailableH - 24 : barAvailableH,
                 lineColor: '#000000',
             });
 
             // رسم الباركود في المنتصف
             const drawX = Math.round((innerW - barCanvas.width) / 2);
             ctx.drawImage(barCanvas, drawX, topY, barCanvas.width, barAvailableH);
-            topY += barAvailableH + 4;
+            topY += barAvailableH + 6;
         } catch (e) {
             console.error("Error drawing JsBarcode on label:", e.message);
         }
 
         if (showPrice && price) {
             const priceFontSize = Math.min(28, Math.max(18, Math.round(innerH * 0.15)));
-            ctx.font = `900 ${priceFontSize}px Tajawal, Cairo, sans-serif`;
+            ctx.font = `700 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(fixArabic(price), innerW / 2, topY, innerW - 12);

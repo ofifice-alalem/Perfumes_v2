@@ -22,18 +22,22 @@ function encodeCanvasToTspl(canvas, options = {}) {
     const widthBytes = Math.ceil(width / 8);
     const bitmapData = Buffer.alloc(widthBytes * height);
 
-    // تحويل الصورة إلى مصفوفة نقطية أحادية اللون (Monochrome 1-bit)
-    // في بروتوكول TSPL: 0 = أبيض (White)، 1 = أسود (Black)
+    // في بروتوكول TSPL أمر BITMAP mode 0:
+    // 0 = نقطة سوداء (طباعة حرارية)، 1 = نقطة بيضاء (خلفية)
+    // لذلك نقوم بتهيئة الـ Buffer بالقيمة 0xFF (أبيض بالكامل)
+    bitmapData.fill(0xFF);
+
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const idx = (y * width + x) * 4;
-            // حساب الإضاءة (Luminance)
             const lum = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
-            // البكسل الداكن (أقل من العتبة 160) يُعتبر نقطة سوداء
-            if (lum < 160) {
+            const alpha = pixels[idx + 3];
+
+            // إذا كان البكسل داكناً (أقل من 160) وغير شفاف -> نجعله نقطة سوداء (0 في TSPL BITMAP)
+            if (alpha > 128 && lum < 160) {
                 const byteIdx = y * widthBytes + Math.floor(x / 8);
                 const bit = 7 - (x % 8);
-                bitmapData[byteIdx] |= (1 << bit);
+                bitmapData[byteIdx] &= ~(1 << bit);
             }
         }
     }
