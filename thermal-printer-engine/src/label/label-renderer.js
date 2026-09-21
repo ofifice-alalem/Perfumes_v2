@@ -130,19 +130,19 @@ async function renderLabelCanvas(labelData = {}) {
 
     if (tab === 'classic') {
         // ── نمط الـ QR Code المربع ──────────────────────────────────────────
-        let curY = 6;
+        let curY = 8;
         if (showName && productName) {
-            const nameFontSize = Math.min(26, Math.max(16, Math.round(innerH * 0.14)));
-            ctx.font = `700 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
+            const nameFontSize = Math.min(36, Math.max(18, Math.round(innerH * 0.12)));
+            ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(fixArabic(productName), innerW / 2, curY, innerW - 12);
-            curY += nameFontSize + 6;
+            ctx.fillText(productName, innerW / 2, curY, innerW - 16);
+            curY += nameFontSize + 8;
         }
 
-        const remainingH = innerH - curY - 6;
-        const qrSize = Math.max(50, Math.min(Math.round(innerW * 0.42), remainingH - 4));
-        const qrX = innerW - qrSize - 10;
+        const remainingH = innerH - curY - 8;
+        const qrSize = Math.max(60, Math.min(Math.round(innerW * 0.46), remainingH - 4));
+        const qrX = innerW - qrSize - 12;
         const qrY = curY + Math.max(0, Math.round((remainingH - qrSize) / 2));
 
         // توليد ورسم QR Code
@@ -160,46 +160,52 @@ async function renderLabelCanvas(labelData = {}) {
         }
 
         // تفاصيل النص والسعر جهة اليسار
-        const infoW = qrX - 8;
-        const infoCx = infoW / 2 + 4;
-        let infoY = curY + Math.round(remainingH * 0.15);
+        const infoW = qrX - 12;
+        const infoCx = infoW / 2 + 6;
+        let infoY = curY + Math.round(remainingH * 0.12);
 
         if (showCodeText && code) {
-            ctx.font = '700 16px Tajawal, TajawalLatin, monospace';
+            const codeFontSize = Math.min(22, Math.max(13, Math.round(innerH * 0.075)));
+            ctx.font = `700 ${codeFontSize}px Tajawal, TajawalLatin, monospace`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(code, infoCx, infoY, infoW);
-            infoY += 24;
+            infoY += codeFontSize + 12;
         }
 
         if (showPrice && price) {
-            const priceFontSize = Math.min(32, Math.max(20, Math.round(innerH * 0.18)));
-            ctx.font = `700 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
+            const priceFontSize = Math.min(46, Math.max(22, Math.round(innerH * 0.17)));
+            ctx.font = `800 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(fixArabic(price), infoCx, infoY, infoW);
+            ctx.fillText(price, infoCx, infoY, infoW);
         }
 
     } else {
         // ── نمط الباركود الشريطي (EAN-13 أو Code 128) ─────────────────────
-        let topY = 6;
+        const nameFontSize = Math.min(34, Math.max(16, Math.round(innerH * 0.11)));
+        const priceFontSize = Math.min(48, Math.max(18, Math.round(innerH * 0.16)));
+
+        const nameH = (showName && productName) ? (nameFontSize + 8) : 0;
+        const priceH = (showPrice && price) ? (priceFontSize + 8) : 0;
+        const barAvailableH = Math.max(35, innerH - nameH - priceH - 12);
+
+        let curY = 8;
         if (showName && productName) {
-            const nameFontSize = Math.min(24, Math.max(16, Math.round(innerH * 0.13)));
-            ctx.font = `700 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
+            ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(fixArabic(productName), innerW / 2, topY, innerW - 12);
-            topY += nameFontSize + 6;
+            ctx.fillText(productName, innerW / 2, curY, innerW - 12);
+            curY += nameH;
         }
 
-        let bottomReservedH = 0;
-        if (showPrice && price) {
-            bottomReservedH = Math.min(28, Math.max(20, Math.round(innerH * 0.15))) + 6;
-        }
+        // نسبة عرض الباركود (88% إلى 92% لملء المساحة)
+        const barW = Math.round(innerW * 0.90);
+        const barCanvas = createCanvas(barW, barAvailableH);
 
-        const maxBarH = Math.min(Math.round(innerH * 0.50), 140);
-        const barAvailableH = Math.max(40, Math.min(innerH - topY - bottomReservedH - 8, maxBarH));
-        const barCanvas = createCanvas(innerW - 24, barAvailableH);
+        const totalModules = tab === 'ean13' ? 95 : Math.max(70, (String(code).length + 2) * 11);
+        const modW = Math.max(1.4, Math.min(3.8, Math.floor((barW / totalModules) * 10) / 10));
+        const digitFontSize = Math.min(22, Math.max(12, Math.round(innerH * 0.075)));
 
         try {
             const barcodeVal = tab === 'ean13' ? toEan13(code) : code;
@@ -208,29 +214,28 @@ async function renderLabelCanvas(labelData = {}) {
             JsBarcode(barCanvas, barcodeVal, {
                 format: barcodeFormat,
                 displayValue: showCodeText,
-                fontSize: 16,
+                fontSize: digitFontSize,
                 font: 'Tajawal, TajawalLatin, Arial, sans-serif',
                 textMargin: 3,
                 margin: 0,
-                width: 1.8,
-                height: showCodeText ? barAvailableH - 24 : barAvailableH,
+                width: modW,
+                height: showCodeText ? barAvailableH - digitFontSize - 8 : barAvailableH,
                 lineColor: '#000000',
             });
 
             // رسم الباركود في المنتصف
             const drawX = Math.round((innerW - barCanvas.width) / 2);
-            ctx.drawImage(barCanvas, drawX, topY, barCanvas.width, barAvailableH);
-            topY += barAvailableH + 6;
+            ctx.drawImage(barCanvas, drawX, curY);
+            curY += barAvailableH + 4;
         } catch (e) {
             console.error("Error drawing JsBarcode on label:", e.message);
         }
 
         if (showPrice && price) {
-            const priceFontSize = Math.min(28, Math.max(18, Math.round(innerH * 0.15)));
-            ctx.font = `700 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
+            ctx.font = `800 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(fixArabic(price), innerW / 2, topY, innerW - 12);
+            ctx.fillText(price, innerW / 2, curY, innerW - 12);
         }
     }
 
