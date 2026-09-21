@@ -71,8 +71,15 @@ const PRESET_LABEL_SIZES = [
     { label: '60 × 40 مم', w: 60, h: 40 },
 ];
 
+function toAsciiDigits(str: string | number | null | undefined): string {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+}
+
 function toEan13(code: string): string {
-    const digits = String(code || '').replace(/\D/g, '');
+    const digits = toAsciiDigits(code).replace(/\D/g, '');
     let base12 = '';
     if (digits.length === 12) {
         base12 = digits;
@@ -291,11 +298,11 @@ function QrModal({ product, onClose }: QrModalProps) {
         localStorage.setItem('label_printer_offset_y', String(next));
     };
 
-    // استخراج السعر
+    // استخراج السعر بصيغة 0123456789 حصراً
     const priceDisplay = product.product_price?.full_bottle_regular && Number(product.product_price.full_bottle_regular) > 0
-        ? `${Number(product.product_price.full_bottle_regular).toLocaleString('en-US')} د.ل`
+        ? `${toAsciiDigits(Number(product.product_price.full_bottle_regular).toLocaleString('en-US'))} د.ل`
         : product.product_price?.price_per_unit_regular && Number(product.product_price.price_per_unit_regular) > 0
-        ? `${Number(product.product_price.price_per_unit_regular).toLocaleString('en-US')} د.ل`
+        ? `${toAsciiDigits(Number(product.product_price.price_per_unit_regular).toLocaleString('en-US'))} د.ل`
         : '';
 
     function handlePrint() {
@@ -702,7 +709,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                 <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
                                                     {showCodeText && product.qrcode && (
                                                         <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
-                                                            {product.qrcode}
+                                                            {toAsciiDigits(product.qrcode)}
                                                         </span>
                                                     )}
                                                     {showPrice && priceDisplay && (
@@ -715,7 +722,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                 {/* جهة اليسار: رمز QR متناسق الأبعاد مع الورقة ومقترب من السعر */}
                                                 <div id="label-modal-qr-preview" className="shrink-0 flex items-center justify-center p-0.5">
                                                     <QRCodeSVG
-                                                        value={product.qrcode || '0000000000'}
+                                                        value={toAsciiDigits(product.qrcode || '0000000000')}
                                                         size={Math.max(38, Math.min(70, Math.round(Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm)))) * (activeQrSizeMm / heightMm))))}
                                                         level="H"
                                                         fgColor="#000000"
@@ -751,7 +758,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                     {tab === 'serial' && (
                                                          <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
                                                             <Barcode
-                                                                value={product.qrcode || '0000000000'}
+                                                                value={toAsciiDigits(product.qrcode || '0000000000')}
                                                                 format="CODE128"
                                                                 width={1.75}
                                                                 height={34}
@@ -837,6 +844,160 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         />
                                         <span>رقم الكود</span>
                                     </label>
+                                </div>
+                            </div>
+
+                            {/* حجم خط عنوان المنتج (مفيد جداً للعناوين الطويلة) */}
+                            {showName && (
+                                <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 block">
+                                                حجم خط عنوان المنتج:
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {titleFontSizeCustom === null ? 'محسوب تلقائياً حسب حجم الملصق' : 'حجم خط مخصص للعناوين الطويلة'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.max(4.5, Math.round((activeTitleFontSizePt - 0.5) * 10) / 10);
+                                                    setTitleFontSizeCustom(next);
+                                                    localStorage.setItem('label_printer_title_font_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                title="تصغير الخط للعناوين الطويلة"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                                                {activeTitleFontSizePt} pt
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.min(16, Math.round((activeTitleFontSizePt + 0.5) * 10) / 10);
+                                                    setTitleFontSizeCustom(next);
+                                                    localStorage.setItem('label_printer_title_font_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                title="تكبير الخط"
+                                            >
+                                                +
+                                            </button>
+                                            {titleFontSizeCustom !== null && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTitleFontSizeCustom(null);
+                                                        localStorage.removeItem('label_printer_title_font_size');
+                                                    }}
+                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                                                >
+                                                    تلقائي
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* أزرار سريعة للأحجام الشائعة */}
+                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام سريعة:</span>
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            {[
+                                                { label: 'صغير جداً (5.5)', val: 5.5 },
+                                                { label: 'صغير (7)', val: 7 },
+                                                { label: 'متوسط (8.5)', val: 8.5 },
+                                                { label: 'كبير (10)', val: 10 },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.val}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTitleFontSizeCustom(opt.val);
+                                                        localStorage.setItem('label_printer_title_font_size', String(opt.val));
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                                                        activeTitleFontSizePt === opt.val
+                                                            ? 'bg-primary text-white border-primary shadow-xs'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                    }`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* إزاحة وتوسيط الطباعة (X و Y) */}
+                            <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300">إزاحة الطباعة (للتوسيط الدقيق بالمليمتر):</span>
+                                    {(offsetX !== 0 || offsetY !== 0) && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOffsetX(0);
+                                                setOffsetY(0);
+                                                localStorage.setItem('label_printer_offset_x', '0');
+                                                localStorage.setItem('label_printer_offset_y', '0');
+                                            }}
+                                            className="text-[10px] font-black text-red-500 hover:underline cursor-pointer"
+                                        >
+                                            تصفير
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">عمودي (Y):</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetY(-0.5)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
+                                                {offsetY > 0 ? `+${offsetY}` : offsetY}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetY(0.5)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">أفقي (X):</span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetX(-1)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
+                                                {offsetX > 0 ? `+${offsetX}` : offsetX}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateOffsetX(1)}
+                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1084,74 +1245,6 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 </div>
                             </div>
 
-                            {/* 4. إزاحة وتوسيط الطباعة (X و Y) */}
-                            <div className="p-3 rounded-[18px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-2">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">إزاحة الطباعة (للتوسيط الدقيق بالمليمتر):</span>
-                                    {(offsetX !== 0 || offsetY !== 0) && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setOffsetX(0);
-                                                setOffsetY(0);
-                                                localStorage.setItem('label_printer_offset_x', '0');
-                                                localStorage.setItem('label_printer_offset_y', '0');
-                                            }}
-                                            className="text-[10px] font-black text-red-500 hover:underline cursor-pointer"
-                                        >
-                                            تصفير
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
-                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">عمودي (Y):</span>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => updateOffsetY(-0.5)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
-                                                {offsetY > 0 ? `+${offsetY}` : offsetY}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => updateOffsetY(0.5)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
-                                        <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">أفقي (X):</span>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => updateOffsetX(-1)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="font-mono font-bold text-[11px] min-w-[36px] text-center">
-                                                {offsetX > 0 ? `+${offsetX}` : offsetX}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => updateOffsetX(1)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
                             {/* 5. حجم رمز الـ QR (عند اختيار QR فقط) */}
                             {tab === 'classic' && (
                                 <div className="p-2.5 rounded-[16px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-2">
@@ -1203,92 +1296,6 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                 تلقائي
                                             </button>
                                         )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 6. تعديل حجم خط عنوان المنتج (مفيد جداً للعناوين الطويلة) */}
-                            {showName && (
-                                <div className="p-3 rounded-[18px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-2">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
-                                                حجم خط عنوان المنتج:
-                                            </span>
-                                            <span className="text-[10px] font-bold text-slate-400">
-                                                {titleFontSizeCustom === null ? 'محسوب تلقائياً حسب حجم الملصق' : 'حجم خط مخصص للعناوين الطويلة'}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const next = Math.max(4.5, Math.round((activeTitleFontSizePt - 0.5) * 10) / 10);
-                                                    setTitleFontSizeCustom(next);
-                                                    localStorage.setItem('label_printer_title_font_size', String(next));
-                                                }}
-                                                className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95 cursor-pointer"
-                                                title="تصغير الخط للعناوين الطويلة"
-                                            >
-                                                -
-                                            </button>
-                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
-                                                {activeTitleFontSizePt} pt
-                                            </span>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const next = Math.min(16, Math.round((activeTitleFontSizePt + 0.5) * 10) / 10);
-                                                    setTitleFontSizeCustom(next);
-                                                    localStorage.setItem('label_printer_title_font_size', String(next));
-                                                }}
-                                                className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95 cursor-pointer"
-                                                title="تكبير الخط"
-                                            >
-                                                +
-                                            </button>
-                                            {titleFontSizeCustom !== null && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setTitleFontSizeCustom(null);
-                                                        localStorage.removeItem('label_printer_title_font_size');
-                                                    }}
-                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
-                                                >
-                                                    تلقائي
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* أزرار سريعة للأحجام الشائعة */}
-                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام سريعة:</span>
-                                        <div className="flex items-center gap-1 flex-wrap">
-                                            {[
-                                                { label: 'صغير جداً (5.5)', val: 5.5 },
-                                                { label: 'صغير (7)', val: 7 },
-                                                { label: 'متوسط (8.5)', val: 8.5 },
-                                                { label: 'كبير (10)', val: 10 },
-                                            ].map(opt => (
-                                                <button
-                                                    key={opt.val}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setTitleFontSizeCustom(opt.val);
-                                                        localStorage.setItem('label_printer_title_font_size', String(opt.val));
-                                                    }}
-                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
-                                                        activeTitleFontSizePt === opt.val
-                                                            ? 'bg-primary text-white border-primary shadow-xs'
-                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
-                                                    }`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
                                     </div>
                                 </div>
                             )}
