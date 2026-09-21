@@ -128,11 +128,16 @@ async function renderLabelCanvas(labelData = {}) {
     ctx.fillStyle = '#000000';
     ctx.strokeStyle = '#000000';
 
+    // إذا تم تحديد حجم خط مخصص للعنوان بالنقاط pt نحوله إلى بكسل الكانفاس (203 DPI ≈ 2.82 dots/pt)
+    const customTitleFontSizePx = (labelData.titleFontSize && Number(labelData.titleFontSize) > 0)
+        ? Math.round(Number(labelData.titleFontSize) * 2.82)
+        : null;
+
     if (tab === 'classic') {
         // ── نمط الـ QR Code المربع ──────────────────────────────────────────
         let curY = 8;
         if (showName && productName) {
-            const nameFontSize = Math.min(36, Math.max(18, Math.round(innerH * 0.12)));
+            const nameFontSize = customTitleFontSizePx || Math.min(36, Math.max(18, Math.round(innerH * 0.12)));
             ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
@@ -183,12 +188,12 @@ async function renderLabelCanvas(labelData = {}) {
 
     } else {
         // ── نمط الباركود الشريطي (EAN-13 أو Code 128) ─────────────────────
-        const nameFontSize = Math.min(34, Math.max(16, Math.round(innerH * 0.11)));
+        const nameFontSize = customTitleFontSizePx || Math.min(34, Math.max(16, Math.round(innerH * 0.11)));
         const priceFontSize = Math.min(48, Math.max(18, Math.round(innerH * 0.16)));
 
-        const nameH = (showName && productName) ? (nameFontSize + 8) : 0;
+        const nameH = (showName && productName) ? (nameFontSize + 6) : 0;
         const priceH = (showPrice && price) ? (priceFontSize + 8) : 0;
-        const barAvailableH = Math.max(35, innerH - nameH - priceH - 12);
+        const barAvailableH = Math.max(35, innerH - nameH - priceH - 10);
 
         let curY = 8;
         if (showName && productName) {

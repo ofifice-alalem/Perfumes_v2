@@ -141,6 +141,11 @@ function QrModal({ product, onClose }: QrModalProps) {
         return saved ? Number(saved) : null;
     });
 
+    const [titleFontSizeCustom, setTitleFontSizeCustom] = useState<number | null>(() => {
+        const saved = localStorage.getItem('label_printer_title_font_size');
+        return saved ? Number(saved) : null;
+    });
+
     const [copies, setCopies] = useState<number>(1);
     const [isCustomSize, setIsCustomSize] = useState<boolean>(() => {
         return !PRESET_LABEL_SIZES.some(s => s.w === widthMm && s.h === heightMm);
@@ -151,18 +156,20 @@ function QrModal({ product, onClose }: QrModalProps) {
     const [selectedStock, setSelectedStock] = useState<string>(() => localStorage.getItem('label_printer_stock') || '');
     const [printersList, setPrintersList] = useState<{ name: string; forms?: string[] }[]>([]);
     const [selectedPrinter, setSelectedPrinter] = useState<string>(() => localStorage.getItem('label_printer_name') || '');
+    const [loadingPrinters, setLoadingPrinters] = useState<boolean>(false);
 
-    useEffect(() => {
+    const loadPrinters = (preferCurrent: boolean = true) => {
+        setLoadingPrinters(true);
         fetch('/settings/node-printer/printers')
             .then(r => r.json())
             .then(res => {
                 if (res.success && Array.isArray(res.printers)) {
                     setPrintersList(res.printers);
-                    const saved = localStorage.getItem('label_printer_name');
-                    const exists = saved && res.printers.some((p: any) => p.name === saved);
+                    const currentSelected = selectedPrinter || localStorage.getItem('label_printer_name');
+                    const exists = currentSelected && res.printers.some((p: any) => p.name === currentSelected);
                     let target = '';
-                    if (saved && exists) {
-                        target = saved;
+                    if (preferCurrent && currentSelected && exists) {
+                        target = currentSelected;
                     } else if (res.label_configured && res.printers.some((p: any) => p.name === res.label_configured)) {
                         target = res.label_configured;
                     } else {
@@ -174,6 +181,7 @@ function QrModal({ product, onClose }: QrModalProps) {
 
                     if (target) {
                         setSelectedPrinter(target);
+                        localStorage.setItem('label_printer_name', target);
                         const pObj = res.printers.find((p: any) => p.name === target);
                         if (pObj && Array.isArray(pObj.forms)) {
                             setStockForms(pObj.forms);
@@ -181,8 +189,24 @@ function QrModal({ product, onClose }: QrModalProps) {
                     }
                 }
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setLoadingPrinters(false));
+    };
+
+    useEffect(() => {
+        loadPrinters(true);
     }, []);
+
+    const handleSelectPrinter = (name: string) => {
+        setSelectedPrinter(name);
+        localStorage.setItem('label_printer_name', name);
+        const pObj = printersList.find(p => p.name === name);
+        if (pObj && Array.isArray(pObj.forms)) {
+            setStockForms(pObj.forms);
+        } else {
+            setStockForms([]);
+        }
+    };
 
     const handleNodePrint = async () => {
         setPrintingNode(true);
@@ -208,6 +232,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     show_name: showName,
                     show_price: showPrice,
                     show_code_text: showCodeText,
+                    title_font_size: activeTitleFontSizePt,
                     copies: copies,
                     protocol: 'tspl',
                 }),
@@ -232,6 +257,12 @@ function QrModal({ product, onClose }: QrModalProps) {
         Math.round(Math.min((heightMm - (showName ? 5.5 : 2)) * 0.65, widthMm * 0.28) * 10) / 10
     ));
     const activeQrSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeMm;
+
+    // حساب حجم الخط التلقائي أو المخصص لاسم المنتج (بالنقاط pt)
+    const isRotated = rotation === 90 || rotation === 270;
+    const labelInnerH = isRotated ? widthMm : heightMm;
+    const autoTitleFontSizePt = Math.round(Math.min(10, Math.max(6.5, labelInnerH * 0.28)) * 10) / 10;
+    const activeTitleFontSizePt = titleFontSizeCustom !== null ? titleFontSizeCustom : autoTitleFontSizePt;
 
     // حفظ التفضيلات محلياً
     const updateSize = (w: number, h: number) => {
@@ -422,7 +453,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         width: 100% !important;
                         direction: rtl !important;
                         text-align: center !important;
-                        font-size: ${Math.min(9.5, Math.max(7, innerH * 0.28))}pt;
+                        font-size: ${activeTitleFontSizePt}pt !important;
                         font-weight: 900;
                         color: #000;
                         white-space: nowrap;
@@ -522,7 +553,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         font-family: 'Tajawal', sans-serif !important;
                         direction: rtl !important;
                         text-align: center !important;
-                        font-size: ${Math.min(8.5, Math.max(6.5, innerH * 0.28))}pt;
+                        font-size: ${activeTitleFontSizePt}pt !important;
                         font-weight: 900;
                         color: #000;
                         white-space: nowrap;
@@ -657,7 +688,11 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1 font-sans"
                                     >
                                         {showName && (
-                                            <span className="font-sans font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                                            <span
+                                                style={{ fontSize: `${activeTitleFontSizePt}pt`, lineHeight: 1.15 }}
+                                                className="font-sans font-black text-slate-900 truncate w-full text-center px-0.5"
+                                                title={product.name}
+                                            >
                                                 {product.name}
                                             </span>
                                         )}
@@ -809,6 +844,55 @@ function QrModal({ product, onClose }: QrModalProps) {
 
                         {/* العمود 2 (اليسار في RTL): أدوات الضبط والإعدادات */}
                         <div className="md:col-span-7 flex flex-col gap-4">
+
+                            {/* 0. اختيار طابعة الباركود والملصقات */}
+                            <div className="p-3.5 rounded-[18px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                        <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                        <span>طابعة الملصقات والباركود:</span>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => loadPrinters(false)}
+                                        disabled={loadingPrinters}
+                                        className="text-[11px] font-bold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-1 cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                                        title="إعادة فحص طابعات الويندوز"
+                                    >
+                                        <RefreshCw className={`w-3 h-3 ${loadingPrinters ? 'animate-spin text-primary' : ''}`} />
+                                        <span>{loadingPrinters ? 'جاري الفحص...' : 'تحديث الطابعات'}</span>
+                                    </button>
+                                </div>
+                                <select
+                                    value={selectedPrinter}
+                                    onChange={e => handleSelectPrinter(e.target.value)}
+                                    className="w-full h-10 px-3 rounded-[12px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-black text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary shadow-xs cursor-pointer"
+                                >
+                                    {printersList.length > 0 ? (
+                                        printersList.map(p => {
+                                            const isRecommended = /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name);
+                                            return (
+                                                <option key={p.name} value={p.name}>
+                                                    {p.name} {isRecommended ? '⭐ (موصى بها للباركود)' : ''}
+                                                </option>
+                                            );
+                                        })
+                                    ) : (
+                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>
+                                            {selectedPrinter || 'Xprinter XP-365B'}
+                                        </option>
+                                    )}
+                                </select>
+                                <div className="mt-2 flex items-center justify-between text-[10px]">
+                                    <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        طباعة مباشرة صامتة (TSPL Direct)
+                                    </span>
+                                    <span className="text-slate-400 font-mono">
+                                        {printersList.length > 0 ? `${printersList.length} طابعات متوفرة` : 'طابعة افتراضية'}
+                                    </span>
+                                </div>
+                            </div>
 
                             {/* 1. نوع الرمز: 3 خيارات */}
                             <div>
@@ -1124,6 +1208,92 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 </div>
                             )}
 
+                            {/* 6. تعديل حجم خط عنوان المنتج (مفيد جداً للعناوين الطويلة) */}
+                            {showName && (
+                                <div className="p-3 rounded-[18px] bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                                                حجم خط عنوان المنتج:
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {titleFontSizeCustom === null ? 'محسوب تلقائياً حسب حجم الملصق' : 'حجم خط مخصص للعناوين الطويلة'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.max(4.5, Math.round((activeTitleFontSizePt - 0.5) * 10) / 10);
+                                                    setTitleFontSizeCustom(next);
+                                                    localStorage.setItem('label_printer_title_font_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95 cursor-pointer"
+                                                title="تصغير الخط للعناوين الطويلة"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                                                {activeTitleFontSizePt} pt
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const next = Math.min(16, Math.round((activeTitleFontSizePt + 0.5) * 10) / 10);
+                                                    setTitleFontSizeCustom(next);
+                                                    localStorage.setItem('label_printer_title_font_size', String(next));
+                                                }}
+                                                className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-300 active:scale-95 cursor-pointer"
+                                                title="تكبير الخط"
+                                            >
+                                                +
+                                            </button>
+                                            {titleFontSizeCustom !== null && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTitleFontSizeCustom(null);
+                                                        localStorage.removeItem('label_printer_title_font_size');
+                                                    }}
+                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                                                >
+                                                    تلقائي
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* أزرار سريعة للأحجام الشائعة */}
+                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
+                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام سريعة:</span>
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            {[
+                                                { label: 'صغير جداً (5.5)', val: 5.5 },
+                                                { label: 'صغير (7)', val: 7 },
+                                                { label: 'متوسط (8.5)', val: 8.5 },
+                                                { label: 'كبير (10)', val: 10 },
+                                            ].map(opt => (
+                                                <button
+                                                    key={opt.val}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTitleFontSizeCustom(opt.val);
+                                                        localStorage.setItem('label_printer_title_font_size', String(opt.val));
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                                                        activeTitleFontSizePt === opt.val
+                                                            ? 'bg-primary text-white border-primary shadow-xs'
+                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                    }`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 </div>
@@ -1141,10 +1311,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                 <span className="text-[11px] font-bold text-slate-400">الطابعة:</span>
                                 <select
                                     value={selectedPrinter}
-                                    onChange={e => {
-                                        setSelectedPrinter(e.target.value);
-                                        localStorage.setItem('label_printer_name', e.target.value);
-                                    }}
+                                    onChange={e => handleSelectPrinter(e.target.value)}
                                     className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-black text-slate-800 dark:text-slate-200 focus:outline-none"
                                 >
                                     {printersList.length > 0 ? (

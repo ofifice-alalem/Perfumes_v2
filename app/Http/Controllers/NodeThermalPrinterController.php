@@ -518,6 +518,7 @@ class NodeThermalPrinterController extends Controller
                 'showName'     => $request->boolean('show_name', true),
                 'showPrice'    => $request->boolean('show_price', true),
                 'showCodeText' => $request->boolean('show_code_text', true),
+                'titleFontSize'=> (float)$request->input('title_font_size', 0),
                 'copies'       => max(1, (int)$request->input('copies', 1)),
                 'protocol'     => $request->input('protocol', 'tspl'),
                 'printerName'  => $printerName,
