@@ -263,6 +263,9 @@ function QrModal({ product, onClose }: QrModalProps) {
             <head>
                 <meta charset="utf-8" />
                 <title>طباعة ملصق - ${product.name}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
                 <style>
                     @page {
                         size: ${widthMm}mm ${heightMm}mm;
@@ -291,7 +294,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         direction: ltr !important;
                         font-size: 0 !important;
                         line-height: 0 !important;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Cairo", sans-serif;
+                        font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
                     }
                     .label-page {
                         width: ${widthMm}mm !important;
@@ -336,6 +339,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         transform-origin: center center;
                     }
                     .classic-layout .p-name.full-width {
+                        font-family: 'Tajawal', sans-serif !important;
                         width: 100% !important;
                         direction: rtl !important;
                         text-align: center !important;
@@ -382,6 +386,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         margin: 0 !important;
                     }
                     .classic-body .p-price {
+                        font-family: 'Tajawal', sans-serif !important;
                         direction: rtl !important;
                         text-align: center !important;
                         font-size: ${Math.min(12, Math.max(8.5, innerH * 0.36))}pt;
@@ -435,6 +440,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         transform-origin: center center;
                     }
                     .bar-layout .p-name {
+                        font-family: 'Tajawal', sans-serif !important;
                         direction: rtl !important;
                         text-align: center !important;
                         font-size: ${Math.min(8.5, Math.max(6.5, innerH * 0.28))}pt;
@@ -465,6 +471,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                         height: auto !important;
                     }
                     .bar-layout .p-price {
+                        font-family: 'Tajawal', sans-serif !important;
                         direction: rtl !important;
                         text-align: center !important;
                         font-size: ${Math.min(9, Math.max(6.8, innerH * 0.3))}pt;
@@ -475,7 +482,12 @@ function QrModal({ product, onClose }: QrModalProps) {
                     }
                 </style>
                 <script>
-                    window.onload = () => {
+                    window.onload = async () => {
+                        if (document.fonts) {
+                            try {
+                                await document.fonts.ready;
+                            } catch (e) {}
+                        }
                         window.print();
                         window.close();
                     };
@@ -556,17 +568,17 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         width: '210px',
                                         height: `${Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm))))}px`,
                                     }}
-                                    className="bg-white rounded-[12px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] border border-slate-300/80 p-2 flex flex-col items-center justify-center text-slate-900 transition-all overflow-hidden select-none relative"
+                                    className="bg-white rounded-[12px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] border border-slate-300/80 p-2 flex flex-col items-center justify-center text-slate-900 font-sans transition-all overflow-hidden select-none relative"
                                 >
                                     <div
                                         style={{
                                             transform: `translate(${offsetX * 2}px, ${offsetY * 2}px) ${rotation !== 0 ? `rotate(${rotation}deg) ` : ''}`,
                                             transformOrigin: 'center center',
                                         }}
-                                        className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1"
+                                        className="w-full h-full flex flex-col items-center justify-center gap-1.5 transition-transform py-1 px-1 font-sans"
                                     >
                                         {showName && (
-                                            <span className="font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                                            <span className="font-sans font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
                                                 {product.name}
                                             </span>
                                         )}
@@ -574,14 +586,14 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         {tab === 'classic' ? (
                                             <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
                                                 {/* جهة اليمين: الكود وتحته السعر */}
-                                                <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden">
+                                                <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
                                                     {showCodeText && product.qrcode && (
                                                         <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
                                                             {product.qrcode}
                                                         </span>
                                                     )}
                                                     {showPrice && priceDisplay && (
-                                                        <span className="text-emerald-700 font-black text-sm leading-tight text-center">
+                                                        <span className="font-sans text-emerald-700 font-black text-sm leading-tight text-center">
                                                             {priceDisplay}
                                                         </span>
                                                     )}
@@ -643,7 +655,7 @@ function QrModal({ product, onClose }: QrModalProps) {
 
                                                 {showPrice && priceDisplay && (
                                                     <div className="flex items-center justify-center w-full px-1 text-[11px] font-black leading-none mt-0.5">
-                                                        <span className="text-emerald-700 font-extrabold">
+                                                        <span className="font-sans text-emerald-700 font-extrabold">
                                                             {priceDisplay}
                                                         </span>
                                                     </div>
