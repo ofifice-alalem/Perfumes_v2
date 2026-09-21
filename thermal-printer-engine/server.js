@@ -165,7 +165,7 @@ const server = http.createServer(async (req, res) => {
                     try { payload = JSON.parse(bodyStr); } catch (e) {}
                 }
 
-                const printerName = payload.printerName || config.labelPrinter?.name || config.printer?.name || 'XP-365B';
+                const printerName = payload.printerName || config.labelPrinter?.name || 'Xprinter XP-365B';
                 const labelData = payload.label || payload;
 
                 const { renderLabelCanvas } = require('./src/label/label-renderer');

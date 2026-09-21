@@ -136,7 +136,8 @@ class NodeThermalPrinterController extends Controller
             return response()->json([
                 'success' => true,
                 'printers' => $printers,
-                'configured' => $this->settingRepo->get('node_printer_name', 'XP-80')
+                'configured' => $this->settingRepo->get('node_printer_name', 'XP-80'),
+                'label_configured' => $this->settingRepo->get('label_printer_name', 'Xprinter XP-365B')
             ]);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController getPrinters error: " . $e->getMessage());
@@ -498,8 +499,11 @@ class NodeThermalPrinterController extends Controller
     public function printLabelDirect(Request $request)
     {
         try {
-            $defaultPrinter = $this->settingRepo->get('label_printer_name', $this->settingRepo->get('node_printer_name', 'XP-365B'));
-            $printerName = $request->input('printer_name', $defaultPrinter);
+            $defaultPrinter = $this->settingRepo->get('label_printer_name') ?: 'Xprinter XP-365B';
+            $printerName = $request->input('printer_name') ?: $defaultPrinter;
+            if ($printerName === 'XP-80') {
+                $printerName = $defaultPrinter;
+            }
 
             $labelData = [
                 'widthMm'      => (float)($request->input('width_mm') ?: $this->settingRepo->get('label_width_mm', 50)),

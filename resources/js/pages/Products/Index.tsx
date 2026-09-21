@@ -149,16 +149,35 @@ function QrModal({ product, onClose }: QrModalProps) {
     const [nodePrintMsg, setNodePrintMsg] = useState<{ success: boolean; text: string } | null>(null);
     const [stockForms, setStockForms] = useState<string[]>([]);
     const [selectedStock, setSelectedStock] = useState<string>(() => localStorage.getItem('label_printer_stock') || '');
+    const [printersList, setPrintersList] = useState<{ name: string; forms?: string[] }[]>([]);
+    const [selectedPrinter, setSelectedPrinter] = useState<string>(() => localStorage.getItem('label_printer_name') || '');
 
     useEffect(() => {
         fetch('/settings/node-printer/printers')
             .then(r => r.json())
             .then(res => {
                 if (res.success && Array.isArray(res.printers)) {
-                    // ابحث عن طابعة الباركود
-                    const labelP = res.printers.find((p: any) => p.name.includes('365') || p.name.includes('235') || p.name.includes('XP-')) || res.printers[0];
-                    if (labelP && Array.isArray(labelP.forms)) {
-                        setStockForms(labelP.forms);
+                    setPrintersList(res.printers);
+                    const saved = localStorage.getItem('label_printer_name');
+                    const exists = saved && res.printers.some((p: any) => p.name === saved);
+                    let target = '';
+                    if (saved && exists) {
+                        target = saved;
+                    } else if (res.label_configured && res.printers.some((p: any) => p.name === res.label_configured)) {
+                        target = res.label_configured;
+                    } else {
+                        const labelP = res.printers.find((p: any) => /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name))
+                            || res.printers.find((p: any) => !/80|58|pos|receipt|pdf|xps|onenote/i.test(p.name))
+                            || res.printers[0];
+                        if (labelP) target = labelP.name;
+                    }
+
+                    if (target) {
+                        setSelectedPrinter(target);
+                        const pObj = res.printers.find((p: any) => p.name === target);
+                        if (pObj && Array.isArray(pObj.forms)) {
+                            setStockForms(pObj.forms);
+                        }
                     }
                 }
             })
@@ -176,6 +195,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                 },
                 body: JSON.stringify({
+                    printer_name: selectedPrinter || 'Xprinter XP-365B',
                     width_mm: widthMm,
                     height_mm: heightMm,
                     rotation: rotation,
@@ -1110,16 +1130,32 @@ function QrModal({ product, onClose }: QrModalProps) {
 
                 {/* Footer زر الطباعة */}
                 <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50/90 dark:bg-slate-800/40 backdrop-blur-sm shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                         {nodePrintMsg ? (
                             <span className={nodePrintMsg.success ? 'text-emerald-600 font-black' : 'text-rose-500 font-black'}>
                                 {nodePrintMsg.text}
                             </span>
                         ) : (
-                            <>
-                                <Printer className="w-4 h-4 text-primary" />
-                                <span>طباعة صامتة عبر Node أو عبر المتصفح</span>
-                            </>
+                            <div className="flex items-center gap-1.5">
+                                <Printer className="w-4 h-4 text-primary shrink-0" />
+                                <span className="text-[11px] font-bold text-slate-400">الطابعة:</span>
+                                <select
+                                    value={selectedPrinter}
+                                    onChange={e => {
+                                        setSelectedPrinter(e.target.value);
+                                        localStorage.setItem('label_printer_name', e.target.value);
+                                    }}
+                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-black text-slate-800 dark:text-slate-200 focus:outline-none"
+                                >
+                                    {printersList.length > 0 ? (
+                                        printersList.map(p => (
+                                            <option key={p.name} value={p.name}>{p.name}</option>
+                                        ))
+                                    ) : (
+                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>{selectedPrinter || 'Xprinter XP-365B'}</option>
+                                    )}
+                                </select>
+                            </div>
                         )}
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
