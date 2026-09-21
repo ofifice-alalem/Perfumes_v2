@@ -76,6 +76,43 @@ function toEan13(code) {
 }
 
 /**
+ * تقسيم العنوان بذكاء إلى سطر أو سطرين حسب العرض المتاح مع الحفاظ على الكلمات كاملة
+ * @param {CanvasRenderingContext2D} ctx سياق الرسم
+ * @param {string} text نص العنوان
+ * @param {number} maxW أقصى عرض متاح للسطر بالبكسل
+ * @returns {string[]} مصفوفة الأسطر (سطر أو سطرين)
+ */
+function splitTitleLines(ctx, text, maxW) {
+    if (!text) return [];
+    const trimmed = String(text).trim();
+    if (!trimmed) return [];
+    if (ctx.measureText(trimmed).width <= maxW) {
+        return [trimmed];
+    }
+    const words = trimmed.split(/\s+/);
+    if (words.length <= 1) {
+        return [trimmed];
+    }
+    let line1 = '';
+    let line2 = '';
+    const mid = Math.ceil(words.length / 2);
+    for (let i = 0; i < words.length; i++) {
+        const testLine = line1 ? (line1 + ' ' + words[i]) : words[i];
+        if (i < mid || ctx.measureText(testLine).width <= maxW) {
+            line1 = testLine;
+        } else {
+            line2 = words.slice(i).join(' ');
+            break;
+        }
+    }
+    if (!line2 && words.length > 1) {
+        line1 = words.slice(0, mid).join(' ');
+        line2 = words.slice(mid).join(' ');
+    }
+    return line2 ? [line1, line2] : [line1];
+}
+
+/**
  * رسم ملصق الباركود أو الـ QR بدقة 203 DPI (8 dots per mm)
  * 
  * @param {Object} labelData بيانات الملصق
@@ -135,18 +172,24 @@ async function renderLabelCanvas(labelData = {}) {
 
     if (tab === 'classic') {
         // ── نمط الـ QR Code المربع ──────────────────────────────────────────
-        let curY = 8;
+        let curY = 6;
         if (showName && productName) {
-            const nameFontSize = customTitleFontSizePx || Math.min(36, Math.max(18, Math.round(innerH * 0.12)));
+            const nameFontSize = customTitleFontSizePx || Math.min(32, Math.max(16, Math.round(innerH * (widthMm <= 40 ? 0.10 : 0.12))));
             ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(productName, innerW / 2, curY, innerW - 16);
-            curY += nameFontSize + 8;
+
+            const maxTitleW = innerW - (widthMm <= 40 ? 20 : 28);
+            const titleLines = splitTitleLines(ctx, productName, maxTitleW);
+            for (const line of titleLines) {
+                ctx.fillText(line, innerW / 2, curY, maxTitleW);
+                curY += nameFontSize + 2;
+            }
+            curY += 4;
         }
 
-        const remainingH = innerH - curY - 8;
-        const qrSize = Math.max(60, Math.min(Math.round(innerW * 0.46), remainingH - 4));
+        const remainingH = innerH - curY - 6;
+        const qrSize = Math.max(50, Math.min(Math.round(innerW * 0.44), remainingH - 4));
         const qrX = innerW - qrSize - 12;
         const qrY = curY + Math.max(0, Math.round((remainingH - qrSize) / 2));
 
@@ -167,7 +210,7 @@ async function renderLabelCanvas(labelData = {}) {
         // تفاصيل النص والسعر جهة اليسار
         const infoW = qrX - 12;
         const infoCx = infoW / 2 + 6;
-        let infoY = curY + Math.round(remainingH * 0.12);
+        let infoY = curY + Math.round(remainingH * 0.10);
 
         if (showCodeText && code) {
             const codeFontSize = Math.min(22, Math.max(13, Math.round(innerH * 0.075)));
@@ -175,7 +218,7 @@ async function renderLabelCanvas(labelData = {}) {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             ctx.fillText(code, infoCx, infoY, infoW);
-            infoY += codeFontSize + 12;
+            infoY += codeFontSize + 10;
         }
 
         if (showPrice && price) {
@@ -188,35 +231,47 @@ async function renderLabelCanvas(labelData = {}) {
 
     } else {
         // ── نمط الباركود الشريطي (EAN-13 أو Code 128) ─────────────────────
-        const nameFontSize = customTitleFontSizePx || Math.min(34, Math.max(16, Math.round(innerH * 0.11)));
-        const priceFontSize = Math.min(48, Math.max(18, Math.round(innerH * 0.16)));
+        const nameFontSize = customTitleFontSizePx || Math.min(30, Math.max(15, Math.round(innerH * (widthMm <= 40 ? 0.095 : 0.11))));
+        const priceFontSize = Math.min(44, Math.max(18, Math.round(innerH * (widthMm <= 40 ? 0.14 : 0.16))));
+        const digitFontSize = Math.min(18, Math.max(11, Math.round(innerH * 0.07)));
 
-        const nameH = (showName && productName) ? (nameFontSize + 6) : 0;
-        const priceH = (showPrice && price) ? (priceFontSize + 8) : 0;
-        const barAvailableH = Math.max(35, innerH - nameH - priceH - 10);
+        ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
+        const maxTitleW = innerW - (widthMm <= 40 ? 20 : 28);
+        const titleLines = (showName && productName) ? splitTitleLines(ctx, productName, maxTitleW) : [];
+        const nameH = titleLines.length > 0 ? (titleLines.length * (nameFontSize + 2) + 2) : 0;
+        const priceH = (showPrice && price) ? (priceFontSize + 4) : 0;
 
-        let curY = 8;
-        if (showName && productName) {
+        // زيادة ارتفاع أعمدة الباركود لتكون واضحة ومقروءة ومرتفعة بشكل ممتاز ومتناسق
+        const barH = Math.min(80, Math.max(46, Math.round(innerH * 0.32)));
+        const barTotalH = barH + (showCodeText ? digitFontSize + 4 : 0);
+
+        // توزيع المسافات الرأسية بمرونة وبشكل متوازن
+        const leftoverH = Math.max(0, innerH - nameH - priceH - barTotalH);
+        const gap = Math.round(leftoverH / 3);
+        let curY = Math.max(4, Math.min(12, gap));
+
+        if (titleLines.length > 0) {
             ctx.font = `800 ${nameFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(productName, innerW / 2, curY, innerW - 12);
-            curY += nameH;
+            for (const line of titleLines) {
+                ctx.fillText(line, innerW / 2, curY, maxTitleW);
+                curY += nameFontSize + 2;
+            }
+            curY += gap;
         }
 
         const barcodeVal = tab === 'ean13' ? toEan13(code) : code;
         const barcodeFormat = tab === 'ean13' ? 'EAN13' : 'CODE128';
 
-        // حساب عرض العمود modW
-        const targetW = Math.round(innerW * 0.88);
-        const estModules = tab === 'ean13' ? 95 : Math.max(60, (String(barcodeVal).length + 2) * 11);
-        const modW = Math.max(1.6, Math.min(3.8, Math.floor((targetW / estModules) * 10) / 10));
-        const digitFontSize = Math.min(22, Math.max(12, Math.round(innerH * 0.075)));
+        // حساب عرض العمود modW ليكون الباركود عريضاً وممتداً أفقياً بنسبة 85% من عرض الملصق
+        const estModules = tab === 'ean13' ? 105 : 102;
+        const modW = Math.max(1.8, Math.min(3.8, Math.floor(((innerW * 0.86) / estModules) * 10) / 10));
 
-        const barCanvas = createCanvas(innerW, barAvailableH);
+        const barCanvas = createCanvas(innerW, barTotalH + 10);
         const bCtx = barCanvas.getContext('2d');
         bCtx.fillStyle = '#FFFFFF';
-        bCtx.fillRect(0, 0, innerW, barAvailableH);
+        bCtx.fillRect(0, 0, innerW, barTotalH + 10);
 
         try {
             JsBarcode(barCanvas, barcodeVal, {
@@ -224,17 +279,17 @@ async function renderLabelCanvas(labelData = {}) {
                 displayValue: showCodeText,
                 fontSize: digitFontSize,
                 font: 'Tajawal, TajawalLatin, Arial, sans-serif',
-                textMargin: 3,
+                textMargin: 2,
                 margin: 0,
                 width: modW,
-                height: showCodeText ? Math.max(25, barAvailableH - digitFontSize - 8) : barAvailableH,
+                height: barH,
                 lineColor: '#000000',
             });
 
             // قياس حدود الرسم الفعلي بدقة لضمان التوسيط التام في المنتصف 100%
-            const imgData = bCtx.getImageData(0, 0, innerW, barAvailableH).data;
+            const imgData = bCtx.getImageData(0, 0, innerW, barTotalH + 10).data;
             let minX = innerW, maxX = 0;
-            for (let y = 0; y < barAvailableH; y += 2) {
+            for (let y = 0; y < barTotalH + 10; y += 2) {
                 for (let x = 0; x < innerW; x++) {
                     const idx = (y * innerW + x) * 4;
                     if (imgData[idx] < 128 && imgData[idx + 3] > 128) {
@@ -246,8 +301,8 @@ async function renderLabelCanvas(labelData = {}) {
 
             const drawnWidth = (maxX >= minX) ? (maxX - minX + 1) : innerW;
             const drawX = Math.round((innerW - drawnWidth) / 2);
-            ctx.drawImage(barCanvas, minX, 0, drawnWidth, barAvailableH, drawX, curY, drawnWidth, barAvailableH);
-            curY += barAvailableH + 4;
+            ctx.drawImage(barCanvas, minX, 0, drawnWidth, barTotalH, drawX, curY, drawnWidth, barTotalH);
+            curY += barTotalH + gap;
         } catch (e) {
             console.error("Error drawing JsBarcode on label:", e.message);
         }
@@ -256,7 +311,7 @@ async function renderLabelCanvas(labelData = {}) {
             ctx.font = `800 ${priceFontSize}px Tajawal, TajawalLatin, Cairo, CairoLatin, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
-            ctx.fillText(price, innerW / 2, curY, innerW - 12);
+            ctx.fillText(price, innerW / 2, curY, innerW - 16);
         }
     }
 

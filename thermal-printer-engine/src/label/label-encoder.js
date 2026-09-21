@@ -46,6 +46,7 @@ function encodeCanvasToTspl(canvas, options = {}) {
     const header = Buffer.from(
         `SIZE ${widthMm} mm, ${heightMm} mm\r\n` +
         `GAP ${gapMm} mm, 0 mm\r\n` +
+        `REFERENCE 0,0\r\n` +
         `DIRECTION 1\r\n` +
         `CLS\r\n` +
         `BITMAP 0,0,${widthBytes},${height},0,`

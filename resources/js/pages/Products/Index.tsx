@@ -332,7 +332,9 @@ function QrModal({ product, onClose }: QrModalProps) {
             Math.round(Math.min((innerH - (showName ? 5.5 : 2)) * 0.65, innerW * 0.28) * 10) / 10
         ));
         const qrBoxSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeForPrint;
-        const availableBarH = Math.max(8, innerH - (showName ? 4 : 0) - (showPrice ? 4 : 0) - 2);
+        const isLongTitle = product.name && product.name.length > 18;
+        const titleAllocatedH = showName ? (isLongTitle ? 6.5 : 4) : 0;
+        const availableBarH = Math.max(7, innerH - titleAllocatedH - (showPrice ? 4 : 0) - 2);
 
         const labelHtml = (tab === 'classic' ? `
             <div class="label-page">
@@ -393,10 +395,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                         padding: 0 !important;
                         width: ${widthMm}mm !important;
                         height: ${heightMm}mm !important;
-                        background: #fff;
+                        overflow: hidden !important;
                     }
                     body {
-                        width: ${widthMm}mm !important;
                         margin: 0 !important;
                         padding: 0 !important;
                         background: #fff;
@@ -456,12 +457,15 @@ function QrModal({ product, onClose }: QrModalProps) {
                         font-size: ${activeTitleFontSizePt}pt !important;
                         font-weight: 900;
                         color: #000;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        line-height: 1.15;
+                        display: -webkit-box !important;
+                        -webkit-line-clamp: 2 !important;
+                        -webkit-box-orient: vertical !important;
+                        overflow: hidden !important;
+                        word-break: break-word !important;
+                        white-space: normal !important;
+                        line-height: 1.15 !important;
                         margin: 0 !important;
-                        padding: 0 !important;
+                        padding: 0 1mm !important;
                     }
                     .classic-body {
                         width: 100% !important;
@@ -479,56 +483,50 @@ function QrModal({ product, onClose }: QrModalProps) {
                         flex-direction: column !important;
                         align-items: center !important;
                         justify-content: center !important;
-                        direction: rtl !important;
-                        text-align: center !important;
                         gap: 0.8mm !important;
+                        text-align: center !important;
+                        flex: 1 1 auto !important;
                         overflow: hidden !important;
+                        direction: rtl !important;
                     }
-                    .classic-body .p-code {
+                    .classic-body .info-side .p-code {
+                        font-family: monospace, sans-serif !important;
+                        font-size: 6.5pt !important;
+                        font-weight: 800;
+                        color: #111;
+                        letter-spacing: 0.6px;
                         direction: ltr !important;
                         text-align: center !important;
-                        font-family: monospace;
-                        font-size: 8pt;
-                        font-weight: 700;
-                        letter-spacing: 0.5px;
-                        color: #000;
-                        line-height: 1.1;
-                        margin: 0 !important;
                     }
-                    .classic-body .p-price {
+                    .classic-body .info-side .p-price {
                         font-family: 'Tajawal', sans-serif !important;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        font-size: ${Math.min(12, Math.max(8.5, innerH * 0.36))}pt;
+                        font-size: 10pt !important;
                         font-weight: 900;
                         color: #000;
-                        line-height: 1.1;
-                        margin: 0 !important;
+                        direction: rtl !important;
+                        text-align: center !important;
+                        white-space: nowrap;
                     }
                     .classic-body .qr-side {
-                        flex-shrink: 0 !important;
                         display: flex !important;
                         align-items: center !important;
                         justify-content: center !important;
+                        flex-shrink: 0 !important;
                     }
-                    .classic-body .graphic-wrap.qr-wrap {
+                    .graphic-wrap.qr-wrap {
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
                         width: ${qrBoxSizeMm}mm !important;
                         height: ${qrBoxSizeMm}mm !important;
-                        max-width: ${qrBoxSizeMm}mm !important;
-                        max-height: ${qrBoxSizeMm}mm !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        margin: 0 !important;
-                        overflow: hidden !important;
+                        margin: 0 auto !important;
                     }
-                    .classic-body .graphic-wrap.qr-wrap svg {
+                    .graphic-wrap.qr-wrap svg {
                         display: block !important;
                         width: ${qrBoxSizeMm}mm !important;
                         height: ${qrBoxSizeMm}mm !important;
                         max-width: ${qrBoxSizeMm}mm !important;
                         max-height: ${qrBoxSizeMm}mm !important;
-                        margin: 0 !important;
                     }
 
                     /* تنسيق ملصق الباركود العادي */
@@ -556,13 +554,16 @@ function QrModal({ product, onClose }: QrModalProps) {
                         font-size: ${activeTitleFontSizePt}pt !important;
                         font-weight: 900;
                         color: #000;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        width: 100%;
-                        line-height: 1.15;
+                        display: -webkit-box !important;
+                        -webkit-line-clamp: 2 !important;
+                        -webkit-box-orient: vertical !important;
+                        overflow: hidden !important;
+                        word-break: break-word !important;
+                        white-space: normal !important;
+                        width: 100% !important;
+                        line-height: 1.15 !important;
                         margin: 0 !important;
-                        padding: 0 !important;
+                        padding: 0 1mm !important;
                     }
                     .graphic-wrap.bar-wrap {
                         display: flex !important;
@@ -576,32 +577,30 @@ function QrModal({ product, onClose }: QrModalProps) {
                     .graphic-wrap.bar-wrap svg {
                         display: block !important;
                         margin: 0 auto !important;
-                        max-width: 96% !important;
+                        width: 92% !important;
                         max-height: ${availableBarH}mm !important;
                         height: auto !important;
+                        object-fit: contain !important;
                     }
                     .bar-layout .p-price {
                         font-family: 'Tajawal', sans-serif !important;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        font-size: ${Math.min(9, Math.max(6.8, innerH * 0.3))}pt;
+                        font-size: 10.5pt !important;
                         font-weight: 900;
                         color: #000;
+                        direction: rtl !important;
+                        text-align: center !important;
                         line-height: 1.1;
-                        margin: 0 !important;
+                        white-space: nowrap;
                     }
                 </style>
                 <script>
-                    window.onload = async () => {
-                        if (document.fonts) {
-                            try {
-                                await document.fonts.ready;
-                            } catch (e) {}
-                        }
-                        window.print();
-                        window.close();
+                    window.onload = function() {
+                        setTimeout(function() {
+                            window.print();
+                            window.close();
+                        }, 250);
                     };
-                <\/script>
+                </script>
             </head>
             <body>${Array.from({ length: Math.max(1, copies) }).map(() => labelHtml).join('')}</body>
             </html>
@@ -690,7 +689,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         {showName && (
                                             <span
                                                 style={{ fontSize: `${activeTitleFontSizePt}pt`, lineHeight: 1.15 }}
-                                                className="font-sans font-black text-slate-900 truncate w-full text-center px-0.5"
+                                                className="font-sans font-black text-slate-900 line-clamp-2 break-words w-full text-center px-1"
                                                 title={product.name}
                                             >
                                                 {product.name}
@@ -737,11 +736,11 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                             <Barcode
                                                                 value={toEan13(product.qrcode || '0000000000')}
                                                                 format="EAN13"
-                                                                width={1.3}
+                                                                width={1.85}
                                                                 height={34}
                                                                 displayValue={showCodeText}
                                                                 textMargin={1}
-                                                                fontSize={12}
+                                                                fontSize={11}
                                                                 font="monospace"
                                                                 margin={0}
                                                                 lineColor="#000000"
@@ -750,15 +749,15 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                     )}
 
                                                     {tab === 'serial' && (
-                                                        <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
+                                                         <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
                                                             <Barcode
                                                                 value={product.qrcode || '0000000000'}
                                                                 format="CODE128"
-                                                                width={1.2}
+                                                                width={1.75}
                                                                 height={34}
                                                                 displayValue={showCodeText}
                                                                 textMargin={1}
-                                                                fontSize={12}
+                                                                fontSize={11}
                                                                 font="monospace"
                                                                 margin={0}
                                                                 lineColor="#000000"
