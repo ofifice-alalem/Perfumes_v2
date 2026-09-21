@@ -34,10 +34,42 @@ interface SettingsProps {
     label_show_code_text?: string;
     label_font_size?: string;
     label_zoom?: string;
+    label_printer_name?: string;
+    label_default_tab?: string;
+    label_rotation?: string;
   };
   flash?: {
     success?: string;
   };
+}
+
+const PRESET_LABEL_SIZES = [
+  { label: '50 × 25 مم (الأكثر شيوعاً)', w: 50, h: 25 },
+  { label: '50 × 30 مم', w: 50, h: 30 },
+  { label: '40 × 25 مم', w: 40, h: 25 },
+  { label: '58 × 40 مم (رول 58 مم)', w: 58, h: 40 },
+  { label: '60 × 40 مم (رول 60 مم)', w: 60, h: 40 },
+];
+
+function toEan13(code: string): string {
+  const digits = String(code || '').replace(/\D/g, '');
+  let base12 = '';
+  if (digits.length === 12) {
+    base12 = digits;
+  } else if (digits.length === 13) {
+    base12 = digits.slice(0, 12);
+  } else if (digits.length === 10) {
+    base12 = '20' + digits;
+  } else {
+    base12 = digits.padStart(12, '0').slice(-12);
+  }
+
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(base12[i], 10) * (i % 2 === 0 ? 1 : 3);
+  }
+  const checkDigit = (10 - (sum % 10)) % 10;
+  return base12 + checkDigit;
 }
 
 export default function SettingsIndex({ settings }: SettingsProps) {
@@ -48,12 +80,25 @@ export default function SettingsIndex({ settings }: SettingsProps) {
 
   const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/logo-black_white.png');
 
-  // Label & Barcode Studio States
+  // Label & Barcode Studio States (Spatial UI + Node Engine)
   const [testValue, setTestValue] = useState<string>('240000669027');
   const [sampleProductName, setSampleProductName] = useState<string>('عطر تاجوري الخاص 100 مل');
   const [samplePrice, setSamplePrice] = useState<string>('145.00 د.ل');
   const [copiedValue, setCopiedValue] = useState<boolean>(false);
   const labelPrintRef = useRef<HTMLDivElement>(null);
+
+  const [labelTab, setLabelTab] = useState<'ean13' | 'serial' | 'classic'>(
+    (settings.label_default_tab as any) || 'ean13'
+  );
+  const [labelOffsetX, setLabelOffsetX] = useState<number>(0);
+  const [labelOffsetY, setLabelOffsetY] = useState<number>(1);
+  const [labelCopies, setLabelCopies] = useState<number>(1);
+  const [labelQrSizeCustom, setLabelQrSizeCustom] = useState<number | null>(null);
+  const [selectedLabelPrinter, setSelectedLabelPrinter] = useState<string>(
+    settings.label_printer_name || settings.node_printer_name || 'XP-365B'
+  );
+  const [printingNodeLabel, setPrintingNodeLabel] = useState<boolean>(false);
+  const [nodeLabelPrintStatus, setNodeLabelPrintStatus] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // Node Thermal Printer Engine States
   const [nodePrinters, setNodePrinters] = useState<Array<{ name: string; driver: string; port: string; status: string }>>([]);
@@ -133,6 +178,47 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     }
   };
 
+  const handleNodeLabelPrint = async () => {
+    setPrintingNodeLabel(true);
+    setNodeLabelPrintStatus(null);
+    try {
+      const res = await fetch('/settings/node-printer/print-label', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        body: JSON.stringify({
+          printer_name: data.label_printer_name || selectedLabelPrinter,
+          width_mm: Number(data.label_width_mm) || 50,
+          height_mm: Number(data.label_height_mm) || 25,
+          rotation: Number(data.label_rotation || 0),
+          offset_x: Number(labelOffsetX),
+          offset_y: Number(labelOffsetY),
+          tab: labelTab,
+          product_name: sampleProductName,
+          price: samplePrice,
+          code: testValue,
+          show_name: data.label_show_store_name === '1',
+          show_price: data.label_show_price === '1',
+          show_code_text: data.label_show_code_text === '1',
+          copies: labelCopies,
+          protocol: 'tspl',
+        }),
+      });
+      const resData = await res.json();
+      if (resData.success) {
+        setNodeLabelPrintStatus({ success: true, message: resData.message || 'تمت الطباعة بنجاح عبر محرك Node!' });
+      } else {
+        setNodeLabelPrintStatus({ success: false, message: resData.message || 'تعذر إرسال الملصق إلى الطابعة' });
+      }
+    } catch (e: any) {
+      setNodeLabelPrintStatus({ success: false, message: e?.message || 'تعذر الاتصال بمحرك الطباعة الحرارية' });
+    } finally {
+      setPrintingNodeLabel(false);
+    }
+  };
+
   const { data, setData, post, processing, errors } = useForm({
     store_name: settings.store_name || '',
     store_subname: settings.store_subname || '',
@@ -142,15 +228,17 @@ export default function SettingsIndex({ settings }: SettingsProps) {
     receipt_font_size: settings.receipt_font_size || '10',
     show_qr_code: settings.show_qr_code ?? '1',
     node_printer_name: settings.node_printer_name || 'XP-80',
+    label_printer_name: settings.label_printer_name || 'XP-365B',
+    label_default_tab: settings.label_default_tab || 'ean13',
     label_width_mm: settings.label_width_mm || '50',
-    label_height_mm: settings.label_height_mm || '30',
+    label_height_mm: settings.label_height_mm || '25',
     label_margin_mm: settings.label_margin_mm || '0.5',
     label_orientation: settings.label_orientation || 'landscape',
     label_rotation: settings.label_rotation || '0',
     label_barcode_type: (settings.label_barcode_type as 'qr_2d' | 'qr_3d' | 'imei' | 'serial') || 'qr_2d',
-    label_show_store_name: settings.label_show_store_name ?? '0',
-    label_show_price: settings.label_show_price ?? '0',
-    label_show_code_text: settings.label_show_code_text ?? '0',
+    label_show_store_name: settings.label_show_store_name ?? '1',
+    label_show_price: settings.label_show_price ?? '1',
+    label_show_code_text: settings.label_show_code_text ?? '1',
     label_font_size: settings.label_font_size || '11',
     label_zoom: settings.label_zoom || '125',
     store_logo_file: null as File | null,
@@ -354,9 +442,12 @@ export default function SettingsIndex({ settings }: SettingsProps) {
       id: 'label-printer',
       icon: <QrCode className="w-8 h-8 text-primary" />,
       label: 'إعدادات طباعة ملصقات الباركود والـ QR Code',
-      desc: 'تخصيص أبعاد ورق وطابعات الباركود والملصقات (50x30mm)، المعاينة الحية الفورية، واختبار قراءة الباركود والـ QR (2D/3D/IMEI/Serial).',
-      action: () => setActiveTab('label_printer'),
-      badge: 'Label & Barcode Studio',
+      desc: 'تخصيص أبعاد ورق وطابعات الباركود، كشف طابعات الويندوز عبر Node، المعاينة الحية بخط تاجوال، والطباعة الصامتة المباشرة (TSPL).',
+      action: () => {
+        setActiveTab('label_printer');
+        fetchNodePrinters();
+      },
+      badge: 'Node RAW Studio',
       active: true,
     },
     {
@@ -1323,597 +1414,188 @@ export default function SettingsIndex({ settings }: SettingsProps) {
           </form>
         )}
 
-        {/* ─── LABEL & BARCODE PRINTING STUDIO ─── */}
+        {/* ─── LABEL & BARCODE PRINTING STUDIO (SPATIAL UI + NODE RAW ENGINE) ─── */}
         {activeTab === 'label_printer' && (
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-in fade-in">
-            {/* Controls Column (7 cols) */}
-            <div className="lg:col-span-7 space-y-6">
-
-              {/* Back & Title Header */}
-              <div className="flex items-center justify-between gap-4">
+          <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in">
+            {/* Header Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-black/5 dark:border-white/8">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => setActiveTab('grid')}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-700 transition-all border border-black/5 dark:border-white/10 cursor-pointer"
+                  className="p-3 rounded-2xl bg-slate-200/80 dark:bg-slate-800 text-slate-800 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-700 transition-all border border-black/5 dark:border-white/10 cursor-pointer"
+                  title="الرجوع"
                 >
                   <ArrowRight className="w-5 h-5" />
-                  <span>الرجوع لقائمة الإعدادات</span>
                 </button>
-
-                <div className="flex items-center gap-2">
-                  <span className="px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-black text-xs border border-primary/20">
-                    Label & Barcode Engine
-                  </span>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    استوديو ملصقات الباركود والـ QR
+                    <span className="px-3 py-0.5 rounded-full bg-primary text-white text-xs font-black shadow-sm">
+                      Node.js RAW
+                    </span>
+                  </h2>
+                  <p className="text-xs sm:text-sm font-bold text-slate-400 dark:text-white/60">
+                    تخصيص أبعاد الورق، المعاينة الحية بخط تاجوال، وتحديد الطابعة الافتراضية للطباعة المباشرة الصامتة
+                  </p>
                 </div>
               </div>
 
-              {/* Card 1: Presets & Paper Dimensions */}
-              <div className="rounded-[28px] p-7 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-                      <Maximize2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white">أبعاد ومقاسات ورقة الملصق (Label Size)</h2>
-                      <p className="text-sm font-bold text-slate-400 dark:text-white/50">تحديد العرض والارتفاع المتوافق مع رول الطابعة (مثل Xprinter XP-235B)</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Presets */}
-                <div className="space-y-3">
-                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
-                    مقاسات قياسية جاهزة (Quick Presets):
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {labelPresets.map((preset) => {
-                      const isSelected = data.label_width_mm === preset.width && data.label_height_mm === preset.height;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => {
-                            setData('label_width_mm', preset.width);
-                            setData('label_height_mm', preset.height);
-                            setData('label_orientation', preset.orientation);
-                          }}
-                          className={`p-3.5 rounded-2xl border-2 text-right transition-all flex flex-col justify-between gap-1.5 cursor-pointer active:scale-98 ${
-                            isSelected
-                              ? 'border-primary bg-primary/10 dark:bg-primary/20 shadow-md shadow-primary/10 text-primary'
-                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-200'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="font-black text-base">{preset.label}</span>
-                            {isSelected && <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />}
-                          </div>
-                          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">{preset.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Custom Dimensions Inputs */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-black/5 dark:border-white/8">
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      العرض بالملم (Width mm)
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="10"
-                      max="200"
-                      value={data.label_width_mm}
-                      onChange={(e) => setData('label_width_mm', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      الارتفاع بالملم (Height mm)
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      min="10"
-                      max="200"
-                      value={data.label_height_mm}
-                      onChange={(e) => setData('label_height_mm', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      الهامش الداخلي (Margin mm)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max="10"
-                      value={data.label_margin_mm}
-                      onChange={(e) => setData('label_margin_mm', e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                {/* Orientation & Rotation & Font size */}
-                <div className="space-y-4 pt-2 border-t border-black/5 dark:border-white/8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Orientation */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
-                        <RotateCw className="w-3.5 h-3.5 text-primary" />
-                        اتجاه الصفحة (Paper Orientation)
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setData('label_orientation', 'landscape')}
-                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            data.label_orientation === 'landscape'
-                              ? 'bg-primary text-white border-primary shadow-sm'
-                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          أفقي (Landscape)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setData('label_orientation', 'portrait')}
-                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            data.label_orientation === 'portrait'
-                              ? 'bg-primary text-white border-primary shadow-sm'
-                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          عمودي (Portrait)
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Font size */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
-                        <Type className="w-3.5 h-3.5 text-primary" />
-                        حجم خط الملصق (Font Size)
-                      </label>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {['9', '10', '11', '12'].map((sz) => (
-                          <button
-                            key={sz}
-                            type="button"
-                            onClick={() => setData('label_font_size', sz)}
-                            className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                              data.label_font_size === sz
-                                ? 'bg-primary text-white border-primary shadow-sm'
-                                : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                            }`}
-                          >
-                            {sz}pt
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Rotation Angle Controls (Fix 90deg rotation) */}
-                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-black text-slate-700 dark:text-white/80 flex items-center gap-1.5">
-                        <RotateCw className="w-3.5 h-3.5 text-amber-500" />
-                        زاوية تدوير الطباعة (Rotation Angle) - لعلاج مشكلة خروج الملصق مائلاً أو معكوساً:
-                      </label>
-                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                        {data.label_rotation === '0' ? 'طبيعي (0°)' : data.label_rotation === '90' ? 'مدور 90° يمين' : data.label_rotation === '270' ? 'مدور 90° يسار (270°)' : 'معكوس 180°'}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { val: '0', label: '0° طبيعي (بدون تدوير)' },
-                        { val: '90', label: '90° تدوير يمين ↻' },
-                        { val: '270', label: '270° تدوير يسار ↺' },
-                        { val: '180', label: '180° مقلوب رأسياً' },
-                      ].map((rot) => (
-                        <button
-                          key={rot.val}
-                          type="button"
-                          onClick={() => setData('label_rotation', rot.val)}
-                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            (data.label_rotation || '0') === rot.val
-                              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:border-amber-500/40'
-                          }`}
-                        >
-                          {rot.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Card 2: Barcode Type & Testing Options */}
-              <div className="rounded-[28px] p-7 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/8">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600">
-                      <Layers className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-slate-900 dark:text-white">نوع وشكل الباركود للتجربة والاختبار</h2>
-                      <p className="text-sm font-bold text-slate-400 dark:text-white/50">اختبار كافة الأنماط (QR 2D/3D، IMEI، Serial Number) بقيمة القراءة المحددة</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4 Types Selection */}
-                <div className="space-y-3">
-                  <label className="block text-sm font-black text-slate-700 dark:text-white/90">
-                    اختر نوع وتنسيق التشفير:
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {barcodeTypes.map((type) => {
-                      const isSelected = data.label_barcode_type === type.id;
-                      return (
-                        <button
-                          key={type.id}
-                          type="button"
-                          onClick={() => setData('label_barcode_type', type.id as any)}
-                          className={`p-4 rounded-2xl border-2 text-right transition-all flex flex-col justify-between gap-2.5 cursor-pointer active:scale-98 ${
-                            isSelected
-                              ? 'border-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/15 shadow-md shadow-emerald-500/10'
-                              : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center gap-2.5 text-slate-900 dark:text-white font-black text-base">
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
-                                {type.icon}
-                              </div>
-                              <span>{type.name}</span>
-                            </div>
-                            <span className="px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black">
-                              {type.badge}
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
-                            {type.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Test Value Input */}
-                <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-black text-slate-700 dark:text-white/90">
-                      قيمة التشفير للاختبار (Scanner Test Value):
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setTestValue('240000669027')}
-                      className="text-xs font-black text-primary hover:underline cursor-pointer"
-                    >
-                      إعادة تعيين لـ 240000669027
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={testValue}
-                      onChange={(e) => setTestValue(e.target.value)}
-                      placeholder="أدخل رقم أو كود الاختبار"
-                      className="flex-1 px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono font-bold text-base focus:ring-2 focus:ring-primary focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(testValue);
-                        setCopiedValue(true);
-                        setTimeout(() => setCopiedValue(false), 2000);
-                      }}
-                      className="px-4 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-black text-xs flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      {copiedValue ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                      <span>{copiedValue ? 'تم النسخ' : 'نسخ'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Layout Presets & Display Elements */}
-                <div className="space-y-4 pt-2 border-t border-black/5 dark:border-white/8">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-sm font-black text-slate-700 dark:text-white/90">
-                      نمط وتخطيط محتوى الملصق:
-                    </label>
-                    <span className="text-xs font-bold text-slate-500">اختر نمط سريع أو حدد يدوياً</span>
-                  </div>
-
-                  {/* 3 Quick Layout Mode Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setData((prev) => ({
-                          ...prev,
-                          label_show_store_name: '0',
-                          label_show_price: '0',
-                          label_show_code_text: '0',
-                          label_zoom: '100',
-                        }));
-                      }}
-                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
-                        data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '0'
-                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-md'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <div className="font-black text-xs">🔲 باركود فقط (بدون نصوص)</div>
-                      <div className="text-[10px] font-bold text-slate-500 mt-1">تعبئة قصوى 100% لكامل الورقة</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setData((prev) => ({
-                          ...prev,
-                          label_show_store_name: '0',
-                          label_show_price: '0',
-                          label_show_code_text: '1',
-                          label_zoom: '100',
-                        }));
-                      }}
-                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
-                        data.label_show_store_name === '0' && data.label_show_price === '0' && data.label_show_code_text === '1'
-                          ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-md'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <div className="font-black text-xs">🔢 باركود مع الرقم فقط</div>
-                      <div className="text-[10px] font-bold text-slate-500 mt-1">بدون اسم المحل أو السعر</div>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setData((prev) => ({
-                          ...prev,
-                          label_show_store_name: '1',
-                          label_show_price: '1',
-                          label_show_code_text: '1',
-                        }));
-                      }}
-                      className={`p-3 rounded-2xl border-2 text-center transition-all cursor-pointer ${
-                        data.label_show_store_name === '1' && data.label_show_price === '1' && data.label_show_code_text === '1'
-                          ? 'border-primary bg-primary/10 text-primary shadow-md'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      <div className="font-black text-xs">🏷️ ملصق تجاري كامل</div>
-                      <div className="text-[10px] font-bold text-slate-500 mt-1">اسم المحل + السعر + الرقم</div>
-                    </button>
-                  </div>
-
-                  {/* Zoom / Scale Selector */}
-                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      حجم وتكبير الرسم داخل الملصق (Graphic Zoom & Scale):
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { val: '150', label: '150% (مضاعف 2x كبير)' },
-                        { val: '125', label: '125% (كبير جداً)' },
-                        { val: '100', label: '100% (قياسي كامل)' },
-                        { val: '85', label: '85% (متوسط)' },
-                      ].map((item) => (
-                        <button
-                          key={item.val}
-                          type="button"
-                          onClick={() => setData('label_zoom', item.val)}
-                          className={`p-2.5 rounded-xl font-bold text-xs border transition-all cursor-pointer ${
-                            (data.label_zoom || '125') === item.val
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                              : 'bg-black/3 dark:bg-white/5 border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300'
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fine-Tuning Checkboxes */}
-                  <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/8">
-                    <label className="block text-xs font-black text-slate-700 dark:text-white/80">
-                      التحكم اليدوي الدقيق بالعناصر:
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={data.label_show_store_name === '1'}
-                          onChange={(e) => setData('label_show_store_name', e.target.checked ? '1' : '0')}
-                          className="w-4 h-4 rounded text-primary focus:ring-primary"
-                        />
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">اسم المحل / المنتج</span>
-                      </label>
-
-                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={data.label_show_price === '1'}
-                          onChange={(e) => setData('label_show_price', e.target.checked ? '1' : '0')}
-                          className="w-4 h-4 rounded text-primary focus:ring-primary"
-                        />
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">سعر البيع (د.ل)</span>
-                      </label>
-
-                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-black/2 dark:bg-white/5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={data.label_show_code_text === '1'}
-                          onChange={(e) => setData('label_show_code_text', e.target.checked ? '1' : '0')}
-                          className="w-4 h-4 rounded text-primary focus:ring-primary"
-                        />
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">الرقم التسلسلي المقروء</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('grid')}
-                  className="px-6 py-3.5 rounded-2xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-all cursor-pointer"
-                >
-                  إلغاء والعودة
-                </button>
-
+              <div className="flex items-center gap-2.5">
                 <button
                   type="submit"
                   disabled={processing}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-primary text-white font-black text-base hover:bg-primary/90 transition-all shadow-xl shadow-primary/30 disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-white font-black text-sm hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/25 cursor-pointer disabled:opacity-50"
                 >
-                  <Save className="w-5 h-5" />
-                  {processing ? 'جاري الحفظ...' : 'حفظ إعدادات الملصقات الافتراضية'}
+                  <Save className="w-4 h-4" />
+                  <span>{processing ? 'جاري الحفظ...' : 'حفظ كإعدادات افتراضية'}</span>
                 </button>
               </div>
-
             </div>
 
-            {/* Live Interactive Realistic Preview Column (5 cols) */}
-            <div className="lg:col-span-5 sticky top-6 space-y-4">
-              <div className="rounded-[28px] p-6 border border-black/8 dark:border-white/10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-xl shadow-black/5 space-y-5">
-                
-                <div className="flex items-center justify-between pb-3 border-b border-black/5 dark:border-white/8">
-                  <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black">
-                    <Eye className="w-5 h-5 text-primary" />
-                    <span>المعاينة الحية التفاعلية للملصق</span>
-                  </div>
-                  <span className="text-xs font-black px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
-                    {data.label_width_mm} × {data.label_height_mm} mm
-                  </span>
+            {/* Status Alert if printed */}
+            {nodeLabelPrintStatus && (
+              <div
+                className={`p-4 rounded-2xl flex items-center justify-between gap-3 animate-in fade-in duration-200 ${
+                  nodeLabelPrintStatus.success
+                    ? 'bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-rose-500/15 border-2 border-rose-500/30 text-rose-800 dark:text-rose-300'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 font-black text-sm">
+                  {nodeLabelPrintStatus.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  ) : (
+                    <span className="text-rose-500 font-bold">⚠️</span>
+                  )}
+                  <span>{nodeLabelPrintStatus.message}</span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setNodeLabelPrintStatus(null)}
+                  className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-xs font-bold cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Grid: 2 Columns (Preview on right/top, Controls on left/bottom in RTL) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+              {/* ══ Column 1: Live Interactive Preview Card (5 cols) ══ */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
 
                 {/* Simulated Label Sticker Box */}
-                <div className="p-6 rounded-2xl bg-slate-200/70 dark:bg-slate-950/80 border-2 border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center min-h-[340px]">
-                  
-                  {/* The Physical Sticker Representation */}
+                <div className="flex flex-col items-center justify-center p-5 rounded-[28px] bg-slate-100/90 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80 shadow-inner">
+                  <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-between w-full">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      المعاينة الحية للملصق (1:1)
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold border border-primary/20">
+                        {data.label_width_mm} × {data.label_height_mm} مم
+                      </span>
+                      {data.label_rotation !== '0' && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/30">
+                          {data.label_rotation}°
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Physical Label White Representation */}
                   <div
                     ref={labelPrintRef}
-                    className="bg-white text-slate-900 border-2 border-slate-300 shadow-2xl rounded-lg flex flex-col items-center justify-center text-center transition-all duration-300 select-none relative overflow-hidden"
                     style={{
-                      width: `${Math.min(360, Math.max(180, Number(data.label_width_mm) * 5))}px`,
-                      minHeight: `${Math.min(300, Math.max(120, Number(data.label_height_mm) * 5))}px`,
-                      padding: hasNoText ? '4px' : '8px 6px',
-                      gap: hasNoText ? '0px' : '3px',
+                      width: '220px',
+                      height: `${Math.max(95, Math.min(170, Math.round(220 * (Number(data.label_height_mm) / Number(data.label_width_mm)))))}px`,
+                      transform: `rotate(${data.label_rotation || '0'}deg)`,
                     }}
+                    className="bg-white rounded-md shadow-2xl p-2.5 flex flex-col items-center justify-between text-black transition-all border border-slate-300 select-none overflow-hidden relative"
                   >
-                    {/* Optional Store / Product Header */}
+                    {/* Store / Product Name */}
                     {data.label_show_store_name === '1' && (
-                      <div
-                        className="store-title font-extrabold text-slate-900 leading-tight w-full truncate"
-                        style={{ fontSize: `${Math.max(8, Number(data.label_font_size) - 2)}px` }}
-                      >
-                        {data.store_name || 'تاجوري للعطور الفاخرة'}
-                      </div>
+                      <span className="font-sans font-black text-xs text-slate-900 truncate w-full text-center leading-tight">
+                        {sampleProductName}
+                      </span>
                     )}
 
-                    {/* Barcode Graphic Rendering according to selected type */}
-                    <div className="graphic-container flex flex-col items-center justify-center w-full flex-1 overflow-hidden my-auto">
-                      {data.label_barcode_type === 'qr_2d' && (
-                        <QRCodeSVG
-                          value={testValue || '240000669027'}
-                          size={Math.round((hasNoText ? 260 : hasOnlyCode ? 210 : 155) * (Number(data.label_zoom || '125') / 100))}
-                          level="H"
-                          fgColor="#0f172a"
-                          bgColor="#ffffff"
-                        />
-                      )}
-
-                      {data.label_barcode_type === 'qr_3d' && (
-                        <div className="p-1 rounded-xl bg-white border border-slate-200 shadow-sm">
+                    {/* Barcode / QR Body */}
+                    {labelTab === 'classic' ? (
+                      <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
+                        <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
+                          {data.label_show_code_text === '1' && (
+                            <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
+                              {testValue}
+                            </span>
+                          )}
+                          {data.label_show_price === '1' && (
+                            <span className="font-sans text-emerald-700 font-black text-sm leading-tight text-center">
+                              {samplePrice}
+                            </span>
+                          )}
+                        </div>
+                        <div className="shrink-0 flex items-center justify-center p-0.5">
                           <QRCodeSVG
                             value={testValue || '240000669027'}
-                            size={Math.round((hasNoText ? 250 : hasOnlyCode ? 200 : 150) * (Number(data.label_zoom || '125') / 100))}
+                            size={Math.max(38, Math.min(68, Math.round(Math.max(95, Math.min(170, Math.round(220 * (Number(data.label_height_mm) / Number(data.label_width_mm))))) * ((labelQrSizeCustom || 14) / Number(data.label_height_mm)))))}
                             level="H"
-                            fgColor="#0f172a"
-                            bgColor="#ffffff"
+                            fgColor="#000000"
                             imageSettings={{
                               src: PERFUME_SVG_B64,
-                              width: Math.round((hasNoText ? 58 : 44) * (Number(data.label_zoom || '125') / 100)),
-                              height: Math.round((hasNoText ? 58 : 44) * (Number(data.label_zoom || '125') / 100)),
+                              width: 14,
+                              height: 14,
                               excavate: true,
                             }}
                           />
                         </div>
-                      )}
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center w-full overflow-hidden my-0.5">
+                        {labelTab === 'ean13' && (
+                          <div className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
+                            <Barcode
+                              value={toEan13(testValue || '240000669027')}
+                              format="EAN13"
+                              width={1.3}
+                              height={36}
+                              displayValue={data.label_show_code_text === '1'}
+                              textMargin={1}
+                              fontSize={11}
+                              font="monospace"
+                              margin={0}
+                              lineColor="#000000"
+                            />
+                          </div>
+                        )}
 
-                      {data.label_barcode_type === 'imei' && (
-                        <div className="w-full flex justify-center scale-95 sm:scale-100">
-                          <Barcode
-                            value={testValue || '240000669027'}
-                            format="CODE128"
-                            width={(hasNoText ? 2.8 : hasOnlyCode ? 2.2 : 1.7) * (Number(data.label_zoom || '125') / 100)}
-                            height={Math.round((hasNoText ? 130 : hasOnlyCode ? 95 : 65) * (Number(data.label_zoom || '125') / 100))}
-                            displayValue={false}
-                            margin={0}
-                            background="#ffffff"
-                          />
-                        </div>
-                      )}
+                        {labelTab === 'serial' && (
+                          <div className="w-full flex items-center justify-center">
+                            <Barcode
+                              value={testValue || '240000669027'}
+                              format="CODE128"
+                              width={1.2}
+                              height={34}
+                              displayValue={data.label_show_code_text === '1'}
+                              textMargin={1}
+                              fontSize={11}
+                              font="monospace"
+                              margin={0}
+                              lineColor="#000000"
+                            />
+                          </div>
+                        )}
 
-                      {data.label_barcode_type === 'serial' && (
-                        <div className="w-full flex justify-center scale-95 sm:scale-100">
-                          <Barcode
-                            value={testValue || '240000669027'}
-                            format="CODE128"
-                            width={(hasNoText ? 3.0 : hasOnlyCode ? 2.4 : 1.8) * (Number(data.label_zoom || '125') / 100)}
-                            height={Math.round((hasNoText ? 140 : hasOnlyCode ? 100 : 70) * (Number(data.label_zoom || '125') / 100))}
-                            displayValue={false}
-                            margin={0}
-                            background="#ffffff"
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Numeric Code Text */}
-                    {data.label_show_code_text === '1' && (
-                      <div
-                        className="code-text font-mono font-bold tracking-widest text-slate-800 leading-none select-all"
-                        style={{ fontSize: `${Math.max(8, Number(data.label_font_size) - 3)}px` }}
-                      >
-                        {testValue}
+                        {data.label_show_price === '1' && (
+                          <div className="price-tag font-black text-slate-900 leading-tight mt-0.5 text-xs text-center font-sans">
+                            {samplePrice}
+                          </div>
+                        )}
                       </div>
                     )}
-
-                    {/* Price Tag */}
-                    {data.label_show_price === '1' && (
-                      <div
-                        className="price-tag font-black text-slate-900 leading-tight mt-0.5"
-                        style={{ fontSize: `${Math.max(9, Number(data.label_font_size))}px` }}
-                      >
-                        {samplePrice}
-                      </div>
-                    )}
-
                   </div>
-
                 </div>
 
                 {/* Readout Summary Badge */}
@@ -1942,17 +1624,309 @@ export default function SettingsIndex({ settings }: SettingsProps) {
                   <span>🔄 تعديل التدوير (الحالي: {data.label_rotation === '0' ? '0° طبيعي' : `${data.label_rotation}°`}) - اضغط للتدوير</span>
                 </button>
 
-                {/* Direct Print Button */}
+                {/* Direct Print Button (Node RAW) */}
                 <button
                   type="button"
-                  onClick={handleTestLabelPrint}
-                  className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base active:scale-[0.98] transition-all shadow-xl shadow-emerald-600/30 cursor-pointer"
+                  onClick={handleNodeLabelPrint}
+                  disabled={printingNodeLabel}
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base active:scale-[0.98] transition-all shadow-xl shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
                 >
                   <Printer className="w-5 h-5" />
-                  <span>🖨️ طباعة ملصق تجريبي فوراً (Test Print)</span>
+                  <span>{printingNodeLabel ? 'جاري إرسال الملصق للطابعة...' : '⚡ طباعة ملصق تجريبي فوراً (Node RAW)'}</span>
                 </button>
 
               </div>
+
+              {/* ══ Column 2: Controls & Settings Form (7 cols) ══ */}
+              <div className="lg:col-span-7 space-y-5">
+
+                {/* 1. اختيار طابعة الملصقات من Node */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Printer className="w-5 h-5 text-primary" />
+                      <h3 className="font-black text-slate-900 dark:text-white text-base">
+                        طابعة الملصقات الافتراضية (Node Spooler)
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={fetchNodePrinters}
+                      disabled={loadingPrinters}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-600 transition-all cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${loadingPrinters ? 'animate-spin' : ''}`} />
+                      <span>تحديث الطابعات</span>
+                    </button>
+                  </div>
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+                    يتم هنا سرد كافة الطابعات الموصلة بالويندوز مباشرة عبر Node.js. اختر طابعة الباركود (مثل Xprinter XP-365B أو Zebra) لتكون الوجهة الافتراضية الصامتة دون الحاجة لفتح نافذة المتصفح.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <select
+                      value={data.label_printer_name}
+                      onChange={e => {
+                        setData('label_printer_name', e.target.value);
+                        setSelectedLabelPrinter(e.target.value);
+                      }}
+                      className="w-full px-4 py-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-black text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                    >
+                      {nodePrinters.length > 0 ? (
+                        nodePrinters.map(p => (
+                          <option key={p.name} value={p.name}>
+                            {p.name} {p.driver ? `(${p.driver})` : ''}
+                          </option>
+                        ))
+                      ) : (
+                        <option value={data.label_printer_name || 'XP-365B'}>
+                          {data.label_printer_name || 'XP-365B'} (المسجلة حالياً)
+                        </option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. نوع الترميز والتشفير */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <label className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                    نوع الترميز وشكل الرمز الافتراضي:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-200/80 dark:bg-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLabelTab('ean13');
+                        setData('label_default_tab', 'ean13');
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                        labelTab === 'ean13'
+                          ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      |||| EAN-13 دولي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLabelTab('serial');
+                        setData('label_default_tab', 'serial');
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                        labelTab === 'serial'
+                          ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      ||| Code 128 مباشر
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLabelTab('classic');
+                        setData('label_default_tab', 'classic');
+                      }}
+                      className={`py-2.5 px-2 rounded-xl text-xs font-black transition-all cursor-pointer text-center ${
+                        labelTab === 'classic'
+                          ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      🔳 QR مربع
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. مقاس ورقة الملصق (Presets + مخصص) */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <label className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                    مقاس ورقة الملصق (Label Size):
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {PRESET_LABEL_SIZES.map(s => {
+                      const isSelected = Number(data.label_width_mm) === s.w && Number(data.label_height_mm) === s.h;
+                      return (
+                        <button
+                          key={`${s.w}x${s.h}`}
+                          type="button"
+                          onClick={() => {
+                            setData('label_width_mm', String(s.w));
+                            setData('label_height_mm', String(s.h));
+                          }}
+                          className={`py-2.5 px-3 rounded-2xl text-xs font-black border-2 transition-all cursor-pointer text-center ${
+                            isSelected
+                              ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                          }`}
+                        >
+                          {s.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* إدخال يدوي للأبعاد */}
+                  <div className="mt-3 grid grid-cols-2 gap-3 pt-2">
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <span className="text-xs font-bold text-slate-400">العرض:</span>
+                      <input
+                        type="number"
+                        min="20"
+                        max="120"
+                        value={data.label_width_mm}
+                        onChange={e => setData('label_width_mm', e.target.value)}
+                        className="w-full bg-transparent font-black text-sm font-mono text-slate-900 dark:text-white focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-slate-400">مم</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-2xl border border-slate-200 dark:border-slate-700">
+                      <span className="text-xs font-bold text-slate-400">الارتفاع:</span>
+                      <input
+                        type="number"
+                        min="15"
+                        max="120"
+                        value={data.label_height_mm}
+                        onChange={e => setData('label_height_mm', e.target.value)}
+                        className="w-full bg-transparent font-black text-sm font-mono text-slate-900 dark:text-white focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-slate-400">مم</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. خيارات الإظهار والإخفاء */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200 block">
+                    عناصر الملصق:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_store_name === '1'}
+                        onChange={e => setData('label_show_store_name', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">اسم المنتج / المحل</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_price === '1'}
+                        onChange={e => setData('label_show_price', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">سعر البيع</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={data.label_show_code_text === '1'}
+                        onChange={e => setData('label_show_code_text', e.target.checked ? '1' : '0')}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer"
+                      />
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200">الأرقام أسفل الرمز</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* 5. إزاحة وتوسيط الطباعة (X و Y) */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                      إزاحة الطباعة الدقيقة (Offset بالمليمتر):
+                    </span>
+                    {(labelOffsetX !== 0 || labelOffsetY !== 0) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLabelOffsetX(0);
+                          setLabelOffsetY(0);
+                        }}
+                        className="text-[11px] font-black text-red-500 hover:underline cursor-pointer"
+                      >
+                        تصفير
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">عمودي (Y):</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setLabelOffsetY(y => y - 0.5)}
+                          className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-xs hover:bg-slate-200"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono font-bold text-xs min-w-[36px] text-center">
+                          {labelOffsetY > 0 ? `+${labelOffsetY}` : labelOffsetY}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setLabelOffsetY(y => y + 0.5)}
+                          className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-xs hover:bg-slate-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">أفقي (X):</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setLabelOffsetX(x => x - 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-xs hover:bg-slate-200"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono font-bold text-xs min-w-[36px] text-center">
+                          {labelOffsetX > 0 ? `+${labelOffsetX}` : labelOffsetX}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setLabelOffsetX(x => x + 1)}
+                          className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-xs hover:bg-slate-200"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. عدد النسخ التجريبية */}
+                <div className="p-5 rounded-3xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-200">عدد النسخ للطباعة التجريبية:</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setLabelCopies(c => Math.max(1, c - 1))}
+                      className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-sm"
+                    >
+                      -
+                    </button>
+                    <span className="font-mono font-black text-sm px-3">{labelCopies}</span>
+                    <button
+                      type="button"
+                      onClick={() => setLabelCopies(c => Math.min(20, c + 1))}
+                      className="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-black text-sm"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
 
           </form>

@@ -153,6 +153,90 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (url.pathname === '/print-label' && req.method === 'POST') {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            const startTime = Date.now();
+            try {
+                loadConfig();
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                const printerName = payload.printerName || config.labelPrinter?.name || config.printer?.name || 'XP-365B';
+                const labelData = payload.label || payload;
+
+                const { renderLabelCanvas } = require('./src/label/label-renderer');
+                const { encodeCanvasToTspl, encodeCanvasToEscPos } = require('./src/label/label-encoder');
+
+                const canvas = await renderLabelCanvas(labelData);
+                const protocol = labelData.protocol || 'tspl';
+                let rawBuffer;
+
+                if (protocol === 'escpos') {
+                    rawBuffer = encodeCanvasToEscPos(canvas, labelData);
+                } else {
+                    rawBuffer = encodeCanvasToTspl(canvas, labelData);
+                }
+
+                const result = await printRawBuffer(printerName, rawBuffer);
+                const durationMs = Date.now() - startTime;
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    message: result.message,
+                    printerUsed: result.printerUsed,
+                    durationMs
+                }));
+            } catch (err) {
+                const durationMs = Date.now() - startTime;
+                console.error("Print Label Error:", err.message);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message,
+                    durationMs
+                }));
+            }
+        });
+        return;
+    }
+
+    if (url.pathname === '/preview-label' && (req.method === 'GET' || req.method === 'POST')) {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            try {
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                const labelData = payload.label || payload;
+                const { renderLabelCanvas } = require('./src/label/label-renderer');
+                const canvas = await renderLabelCanvas(labelData);
+                const pngBuffer = canvas.toBuffer ? canvas.toBuffer('image/png') : canvas;
+                const base64Src = 'data:image/png;base64,' + pngBuffer.toString('base64');
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    preview_src: base64Src
+                }));
+            } catch (err) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message
+                }));
+            }
+        });
+        return;
+    }
+
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Not Found' }));
 });

@@ -145,6 +145,48 @@ function QrModal({ product, onClose }: QrModalProps) {
     const [isCustomSize, setIsCustomSize] = useState<boolean>(() => {
         return !PRESET_LABEL_SIZES.some(s => s.w === widthMm && s.h === heightMm);
     });
+    const [printingNode, setPrintingNode] = useState<boolean>(false);
+    const [nodePrintMsg, setNodePrintMsg] = useState<{ success: boolean; text: string } | null>(null);
+
+    const handleNodePrint = async () => {
+        setPrintingNode(true);
+        setNodePrintMsg(null);
+        try {
+            const res = await fetch('/settings/node-printer/print-label', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({
+                    width_mm: widthMm,
+                    height_mm: heightMm,
+                    rotation: rotation,
+                    offset_x: offsetX,
+                    offset_y: offsetY,
+                    tab: tab,
+                    product_name: product.name,
+                    price: priceDisplay,
+                    code: product.qrcode || '0000000000',
+                    show_name: showName,
+                    show_price: showPrice,
+                    show_code_text: showCodeText,
+                    copies: copies,
+                    protocol: 'tspl',
+                }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setNodePrintMsg({ success: true, text: data.message || 'تمت الطباعة بنجاح عبر محرك Node!' });
+            } else {
+                setNodePrintMsg({ success: false, text: data.message || 'فشلت الطباعة عبر محرك Node' });
+            }
+        } catch (e: any) {
+            setNodePrintMsg({ success: false, text: e?.message || 'تعذر الاتصال بمحرك الطباعة' });
+        } finally {
+            setPrintingNode(false);
+        }
+    };
 
     // حساب المقاس التلقائي المتناسق لرمز QR بناءً على أبعاد الورقة المحددة
     // يحترم أبعاد الورقة ديناميكياً (لا يتجاوز 65% من ارتفاع المساحة المتاحة ولا 28% من عرض الورقة)
@@ -1014,19 +1056,38 @@ function QrModal({ product, onClose }: QrModalProps) {
                 </div>
 
                 {/* Footer زر الطباعة */}
-                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50/90 dark:bg-slate-800/40 backdrop-blur-sm shrink-0 flex items-center justify-between gap-4">
-                    <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
-                        <Printer className="w-4 h-4 text-primary" />
-                        <span>جاهز للطباعة على طابعات الملصقات (Xprinter / Zebra)</span>
+                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50/90 dark:bg-slate-800/40 backdrop-blur-sm shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
+                        {nodePrintMsg ? (
+                            <span className={nodePrintMsg.success ? 'text-emerald-600 font-black' : 'text-rose-500 font-black'}>
+                                {nodePrintMsg.text}
+                            </span>
+                        ) : (
+                            <>
+                                <Printer className="w-4 h-4 text-primary" />
+                                <span>طباعة صامتة عبر Node أو عبر المتصفح</span>
+                            </>
+                        )}
                     </div>
-                    <button
-                        type="button"
-                        onClick={handlePrint}
-                        className="flex-1 sm:flex-initial sm:min-w-[280px] flex items-center justify-center gap-2.5 h-12 rounded-[16px] bg-primary text-white font-black text-sm hover:bg-primary/90 active:scale-[0.98] transition-all shadow-lg shadow-primary/30 cursor-pointer mr-auto"
-                    >
-                        <Printer className="w-5 h-5" />
-                        <span>طباعة الملصق الآن ({copies} {copies > 1 ? 'ملصقات' : 'ملصق'})</span>
-                    </button>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button
+                            type="button"
+                            onClick={handlePrint}
+                            className="flex-1 sm:flex-initial px-4 h-12 rounded-[16px] bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white font-black text-xs hover:bg-slate-300 dark:hover:bg-slate-600 active:scale-[0.98] transition-all cursor-pointer"
+                            title="فتح نافذة طباعة المتصفح التقليدية"
+                        >
+                            <span>طباعة عبر المتصفح</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleNodePrint}
+                            disabled={printingNode}
+                            className="flex-1 sm:flex-initial sm:min-w-[220px] flex items-center justify-center gap-2 h-12 rounded-[16px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm active:scale-[0.98] transition-all shadow-lg shadow-emerald-600/30 cursor-pointer disabled:opacity-50"
+                        >
+                            <Printer className="w-5 h-5" />
+                            <span>{printingNode ? 'جاري الإرسال للطابعة...' : `⚡ طباعة مباشرة عبر Node (${copies})`}</span>
+                        </button>
+                    </div>
                 </div>
 
             </div>

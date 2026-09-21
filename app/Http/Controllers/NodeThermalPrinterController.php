@@ -486,4 +486,90 @@ class NodeThermalPrinterController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Send direct print RAW job for Barcode/QR labels via Node engine
+     */
+    public function printLabelDirect(Request $request)
+    {
+        try {
+            $defaultPrinter = $this->settingRepo->get('label_printer_name', $this->settingRepo->get('node_printer_name', 'XP-365B'));
+            $printerName = $request->input('printer_name', $defaultPrinter);
+
+            $labelData = [
+                'widthMm'      => (float)($request->input('width_mm') ?: $this->settingRepo->get('label_width_mm', 50)),
+                'heightMm'     => (float)($request->input('height_mm') ?: $this->settingRepo->get('label_height_mm', 25)),
+                'rotation'     => (int)($request->input('rotation') ?? $this->settingRepo->get('label_rotation', 0)),
+                'offsetX'      => (float)($request->input('offset_x') ?? 0),
+                'offsetY'      => (float)($request->input('offset_y') ?? 0),
+                'tab'          => $request->input('tab', 'ean13'),
+                'productName'  => $request->input('product_name', 'عطر تجريبي فاخر'),
+                'price'        => $request->input('price', ''),
+                'code'         => $request->input('code', '240000669027'),
+                'showName'     => $request->boolean('show_name', true),
+                'showPrice'    => $request->boolean('show_price', true),
+                'showCodeText' => $request->boolean('show_code_text', true),
+                'copies'       => max(1, (int)$request->input('copies', 1)),
+                'protocol'     => $request->input('protocol', 'tspl'),
+                'printerName'  => $printerName,
+            ];
+
+            // 1. Fast socket probe to check port 9123
+            $isDaemonActive = false;
+            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            if ($fp) {
+                $isDaemonActive = true;
+                fclose($fp);
+            }
+
+            if ($isDaemonActive) {
+                try {
+                    $response = Http::connectTimeout(1.0)->timeout(3.0)->post('http://127.0.0.1:9123/print-label', [
+                        'printerName' => $printerName,
+                        'label'       => $labelData,
+                    ]);
+                    if ($response->successful()) {
+                        $resData = $response->json();
+                        return response()->json([
+                            'success'     => true,
+                            'message'     => 'تم إرسال ملصق الباركود بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
+                            'printerUsed' => $resData['printerUsed'] ?? $printerName,
+                            'durationMs'  => $resData['durationMs'] ?? null,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("printLabelDirect HTTP dispatch: " . $e->getMessage());
+                }
+            }
+
+            // 2. Fallback CLI execution with temp json file
+            $enginePath = $this->getEnginePath();
+            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
+            if (!File::isDirectory($tempDir)) {
+                File::makeDirectory($tempDir, 0755, true);
+            }
+            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'label_' . time() . '_' . uniqid() . '.json';
+            File::put($tempFile, json_encode($labelData, JSON_UNESCAPED_UNICODE));
+
+            $cmd = sprintf('cd /d "%s" && node print-label.js --file="%s" --printer="%s"', $enginePath, $tempFile, $printerName);
+            $output = shell_exec("cmd /c \"$cmd\"");
+
+            if (File::exists($tempFile)) {
+                @File::delete($tempFile);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إرسال الملصق بنجاح إلى طابعة الباركود (Node RAW Engine)',
+                'log'     => $output,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("NodeThermalPrinterController printLabelDirect error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء طباعة الملصق: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
+

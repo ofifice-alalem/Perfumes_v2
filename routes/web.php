@@ -83,10 +83,13 @@ Route::middleware('auth')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings', [SettingController::class, 'update'])->name('settings.update');
 
-        // محرك الفواتير الحرارية M المباشر باستعمال Node.js
+    // محرك الفواتير والملصقات الحرارية المباشر باستعمال Node.js (متاح للجميع: super-admin + admin + saler)
+    Route::middleware('role:super-admin|admin|saler')->group(function () {
         Route::get('settings/node-printer/printers', [NodeThermalPrinterController::class, 'getPrinters'])->name('settings.node-printer.printers');
         Route::post('settings/node-printer/preview', [NodeThermalPrinterController::class, 'generatePreview'])->name('settings.node-printer.preview');
         Route::post('settings/node-printer/print', [NodeThermalPrinterController::class, 'printDirect'])->name('settings.node-printer.print');
+        Route::post('settings/node-printer/print-label', [NodeThermalPrinterController::class, 'printLabelDirect'])->name('settings.node-printer.print-label');
+    });
 
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
         Route::resource('sizes', SizeController::class)->except(['create', 'edit', 'show']);
