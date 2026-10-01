@@ -18,6 +18,7 @@ interface Product  { id: number; name: string; }
 interface PaymentMethod { id: number; name: string; }
 interface Invoice {
     id: number;
+    invoice_number: string | null;
     customer: Customer | null;
     user: { name: string } | null;
     total: string;
@@ -383,7 +384,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                         <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                             {displayInvoices.map(inv => (
                                                 <tr key={inv.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors cursor-pointer group ${inv.deleted_at ? 'opacity-50' : ''}`}>
-                                                    <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{inv.id}</td>
+                                                    <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{inv.invoice_number || inv.id}</td>
                                                     <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{inv.customer?.name ?? 'زبون نقدي'}</td>
                                                     <td className="px-5 py-6 font-bold text-slate-600 dark:text-white/70 text-lg sm:text-xl">{inv.user?.name ?? '—'}</td>
                                                     <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl sm:text-3xl whitespace-nowrap">{fmt(inv.total)} <span className="text-sm font-bold">د.ل</span></td>
@@ -429,7 +430,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                 <div>
                                                     <span className="font-black text-lg text-slate-800 dark:text-white">{inv.customer?.name ?? 'زبون نقدي'}</span>
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{inv.id}</span>
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-white/40">#{inv.invoice_number || inv.id}</span>
                                                         {inv.deleted_at && (
                                                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500">ملغي</span>
                                                         )}

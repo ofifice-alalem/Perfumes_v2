@@ -9,15 +9,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('settings', function (Blueprint $table) {
-            $table->id();
-            $table->string('key')->unique();
-            $table->text('value')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('settings')) {
+            Schema::create('settings', function (Blueprint $table) {
+                $table->id();
+                $table->string('key')->unique();
+                $table->text('value')->nullable();
+                $table->timestamps();
+            });
+        }
 
         // Insert initial default store and receipt settings
-        DB::table('settings')->insert([
+        DB::table('settings')->insertOrIgnore([
             [
                 'key' => 'store_name',
                 'value' => 'تاجوري للعطور الفاخرة',

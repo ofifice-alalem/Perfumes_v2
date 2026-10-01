@@ -84,6 +84,7 @@ class InvoiceController extends Controller
         $recentInvoices = DB::select("
             SELECT 
                 i.id,
+                i.invoice_number,
                 COALESCE(c.name, 'زبون نقدي') as customer_name,
                 COALESCE(u.name, 'الكاشير') as user_name,
                 CAST(i.total AS DOUBLE) as total,
@@ -129,9 +130,12 @@ class InvoiceController extends Controller
         $productIds = $invoice->items->pluck('product_id')->unique()->values()->all();
         $updatedStocks = Product::whereIn('id', $productIds)->pluck('stock', 'id')->map(fn($st) => (string)$st)->all();
 
+        $displayNumber = $invoice->invoice_number ?? $invoice->id;
+
         return redirect()->route('invoices.create')
-            ->with('success', 'تم إنشاء فاتورة البيع بنجاح #' . $invoice->id)
+            ->with('success', 'تم إنشاء فاتورة البيع بنجاح #' . $displayNumber)
             ->with('created_invoice_id', $invoice->id)
+            ->with('created_invoice_number', $displayNumber)
             ->with('updated_stocks', $updatedStocks);
     }
 

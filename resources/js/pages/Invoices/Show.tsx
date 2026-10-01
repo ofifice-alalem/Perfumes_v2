@@ -33,7 +33,7 @@ interface InvoiceReturn {
     settlement: Settlement | null;
 }
 interface Invoice {
-    id: number; customer: Customer | null; user: { name: string } | null;
+    id: number; invoice_number: string | null; customer: Customer | null; user: { name: string } | null;
     total: string; paid_amount: string; due_amount: string;
     payment_status: 'unpaid' | 'partial' | 'paid';
     notes: string | null; created_at: string; deleted_at: string | null;
@@ -231,7 +231,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
     return (
         <>
-            <AppShell pageTitle={`فاتورة #${invoice.id}`}>
+            <AppShell pageTitle={`فاتورة #${invoice.invoice_number || invoice.id}`}>
                 <div className="flex flex-col gap-6 pb-32 lg:pb-0">
 
                     {/* Header Top Bar */}
@@ -243,7 +243,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
                             <div className="flex items-center gap-2.5">
                                 <span className="px-4 py-2 rounded-2xl bg-slate-950 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 font-black text-xl shadow-md">
-                                    #{invoice.id}
+                                    #{invoice.invoice_number || invoice.id}
                                 </span>
                                 <span className={`text-sm sm:text-base font-black px-3.5 py-1.5 rounded-xl border ${statusClass[invoice.payment_status]}`}>
                                     {statusLabel[invoice.payment_status]}

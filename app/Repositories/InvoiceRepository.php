@@ -21,7 +21,8 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
 
         return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['customer', 'user'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
             ->allowedFilters(
-                AllowedFilter::exact('id'),
+                AllowedFilter::callback('id', fn($q, $v) => $q->where(fn($sub) => $sub->where('id', $v)->orWhere('invoice_number', $v))),
+                AllowedFilter::exact('invoice_number'),
                 AllowedFilter::exact('customer_id'),
                 AllowedFilter::exact('user_id'),
                 AllowedFilter::exact('payment_status'),

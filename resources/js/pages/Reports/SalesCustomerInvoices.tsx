@@ -797,7 +797,7 @@ export default function SalesCustomerInvoices({
                                                                             <tr key={inv.id} className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors">
                                                                                 <td className="p-5 font-black text-primary flex items-center gap-2">
                                                                                     <Receipt className="w-5 h-5 text-primary/70 shrink-0" />
-                                                                                    <span>INV#{inv.id}</span>
+                                                                                    <span>#{inv.invoice_number || inv.id}</span>
                                                                                 </td>
                                                                                 <td className="p-5 text-slate-600 dark:text-slate-300 font-bold whitespace-nowrap">{inv.date ? inv.date.substring(0, 10) : '—'}</td>
                                                                                 <td className="p-5 font-black text-slate-900 dark:text-white whitespace-nowrap">{fmt(inv.total)} د.ل</td>
@@ -830,7 +830,7 @@ export default function SalesCustomerInvoices({
                                                                                             <div className="flex items-center justify-between px-2 mb-1">
                                                                                                 <h5 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
                                                                                                     <FileText className="w-5 h-5 text-primary" />
-                                                                                                    <span>الأصناف والكميات بالفاتورة #{inv.id}</span>
+                                                                                                    <span>الأصناف والكميات بالفاتورة #{inv.invoice_number || inv.id}</span>
                                                                                                 </h5>
                                                                                             </div>
 

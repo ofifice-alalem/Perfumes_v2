@@ -7,13 +7,13 @@
         "cutPaper": true
     },
     "store": {
-        "name": "طيب التاجوري",
-        "subname": null,
-        "address": "تاجوراء - مقابل صالة العزوزي للملابس\r\nهاتف: 091-2345678 \/ 092-8765432",
+        "name": "تاجوري للعطور الفاخرة",
+        "subname": "TAJORI PERFUMES & ESSENCES",
+        "address": "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 \/ 092-8765432",
         "phones": "",
         "logoPath": "C:\\Users\\alale\\OneDrive\\Desktop\\work\\Perfumes_v2\\thermal-printer-engine\\assets\\current_logo.png"
     },
-    "returnPolicy": null,
-    "footerText": null,
-    "showQrCode": false
+    "returnPolicy": "• البضاعة المباعة (العطور الأصلية والعبوات) تستبدل خلال 3 أيام بشرط وجود الفاتورة الأصلية وأن تكون بحالتها الأولى.\n• ⚠️ العطور التقسيم والزيوت العطرية المعبأة لا ترد ولا تستبدل لدواعي السلامة وصحة العامة.",
+    "footerText": "✨ شكراً لزيارتكم! نتمنى لكم يوماً معطراً ✨",
+    "showQrCode": true
 }

@@ -5,6 +5,7 @@ import { History, X, Printer, Eye, CheckCircle2, User, Clock, Package, RefreshCw
 
 export interface RecentInvoiceItem {
     id: number;
+    invoice_number?: string | null;
     customer_name: string;
     user_name: string;
     total: number;
@@ -136,7 +137,7 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
                                 <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
                                     <div className="flex items-center gap-2.5">
                                         <span className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white dark:bg-blue-600/30 dark:text-blue-200 border border-slate-700/30 dark:border-blue-500/40 font-black text-base shadow-sm">
-                                            #{inv.id}
+                                            #{inv.invoice_number || inv.id}
                                         </span>
                                         <span className="text-sm sm:text-base font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                                             <User className="w-4 h-4 text-blue-500" />

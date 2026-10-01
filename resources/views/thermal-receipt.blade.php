@@ -650,7 +650,7 @@
                 <!-- الوسم الرئيسي يحتوي على رقم الفاتورة -->
                 <div class="receipt-title-badge">
                     <span>فاتورة مبيعات</span>
-                    <span class="badge-number-box">{{ $invoice->id }}</span>
+                    <span class="badge-number-box">{{ $invoice->invoice_number ?? $invoice->id }}</span>
                 </div>
             </div>
 

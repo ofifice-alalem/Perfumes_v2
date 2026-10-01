@@ -54,8 +54,22 @@ class CreateInvoiceAction
                 }
             }
 
-            // 4. Prepare base invoice data
+            // 4. Generate atomic, race-condition protected daily date-based invoice number (e.g. 261001101)
+            $todayPrefix = now()->format('ymd');
+            $baseOffset  = 100;
+
+            $maxInvoiceNumber = DB::table('invoices')
+                ->where('invoice_number', 'LIKE', "{$todayPrefix}%")
+                ->lockForUpdate()
+                ->max('invoice_number');
+
+            $nextInvoiceNumber = $maxInvoiceNumber
+                ? (string) ((int) $maxInvoiceNumber + 1)
+                : $todayPrefix . ($baseOffset + 1);
+
+            // 4b. Prepare base invoice data
             $invoiceData = [
+                'invoice_number'  => $nextInvoiceNumber,
                 'user_id'         => Auth::id() ?? 1,
                 'customer_id'     => $customerId,
                 'customer_type'   => $customerType,
@@ -154,9 +168,10 @@ class CreateInvoiceAction
             );
 
             // 8b. Record Inventory Movement Log (Phase 3 Requirement)
+            $displayNumber = $invoice->invoice_number ?? $invoice->id;
             $inventoryLog = \App\Models\InventoryLog::create([
                 'user_id' => Auth::id() ?? 1,
-                'notes'   => "فاتورة مبيعات رقم #{$invoice->id}",
+                'notes'   => "فاتورة مبيعات رقم #{$displayNumber}",
             ]);
 
             $logItems = [];

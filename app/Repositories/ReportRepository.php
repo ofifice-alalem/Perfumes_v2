@@ -2445,7 +2445,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         $invoices = $invoicesQuery
             ->join('customers', 'customers.id', '=', 'invoices.customer_id')
-            ->select('invoices.id', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at', 'customers.id as customer_id', 'customers.name as customer_name')
+            ->select('invoices.id', 'invoices.invoice_number', 'invoices.total', 'invoices.paid_amount', 'invoices.due_amount', 'invoices.created_at', 'customers.id as customer_id', 'customers.name as customer_name')
             ->orderBy('invoices.created_at')
             ->get();
 
@@ -2551,12 +2551,13 @@ class ReportRepository implements ReportRepositoryInterface
 
             if ($invoicesLimitPerCustomer === null || count($customersData[$cid]['invoices']) < $invoicesLimitPerCustomer) {
                 $customersData[$cid]['invoices'][] = [
-                    'id'          => $inv->id,
-                    'total'       => (float) $inv->total,
-                    'paid_amount' => (float) $inv->paid_amount,
-                    'due_amount'  => (float) $inv->due_amount,
-                    'date'        => $inv->created_at,
-                    'items'       => $invItems,
+                    'id'             => $inv->id,
+                    'invoice_number' => $inv->invoice_number,
+                    'total'          => (float) $inv->total,
+                    'paid_amount'    => (float) $inv->paid_amount,
+                    'due_amount'     => (float) $inv->due_amount,
+                    'date'           => $inv->created_at,
+                    'items'          => $invItems,
                 ];
             }
         }
