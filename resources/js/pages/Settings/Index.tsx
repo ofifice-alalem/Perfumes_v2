@@ -906,7 +906,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                       {data.store_details || "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432"}
                     </div>
                     <div className="inline-block bg-black text-white text-[0.9em] font-black px-2.5 py-0.5 rounded mt-1.5 mb-0.5">
-                      فاتورة مبيعات #50621
+                      فاتورة مبيعات #261001101
                     </div>
                   </div>
 
@@ -1374,7 +1374,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                     value={previewInvoiceId}
                     onChange={(e) => setPreviewInvoiceId(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); fetchNodePreview(); } }}
-                    placeholder="أدخل رقم الفاتورة للمعاينة (مثال: 50621)"
+                    placeholder="أدخل رقم الفاتورة للمعاينة (مثال: 261001101)"
                     className="flex-1 px-3 py-1.5 text-sm font-black bg-transparent border-0 outline-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                   <button

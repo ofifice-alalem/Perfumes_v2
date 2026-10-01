@@ -4,9 +4,9 @@
 
 // Single Item Sample Invoice (from 1st reference image)
 const sampleInvoice = {
-    invoiceNumber: "50904",
+    invoiceNumber: "261001101",
     cashier: "Super Admin",
-    dateTime: "2026-08-17 | 12:22 PM",
+    dateTime: "2026-10-01 | 12:22 PM",
 
     items: [
         {
@@ -25,9 +25,9 @@ const sampleInvoice = {
 
 // Multi Item Sample Invoice (from 2nd reference image)
 const sampleMultiItemInvoice = {
-    invoiceNumber: "50621",
+    invoiceNumber: "261001101",
     cashier: "سليم",
-    dateTime: "2026-08-15 | 08:20 PM",
+    dateTime: "2026-10-01 | 08:20 PM",
 
     items: [
         {

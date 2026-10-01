@@ -366,35 +366,44 @@ async function renderInvoiceCanvas(invoiceData, config) {
     }
 
     // -------------------------------------------------------------
-    // 3. INVOICE BADGE PILL (صندوق فاتورة مبيعات | 50621)
+    // 3. INVOICE BADGE PILL (صندوق فاتورة مبيعات | 261001103)
     // -------------------------------------------------------------
-    const pillWidth = 300;
-    const pillHeight = 54;
+    const pillWidth = 380;
+    const pillHeight = 56;
     const pillX = (width - pillWidth) / 2;
 
     ctx.fillStyle = '#000000';
     drawRoundedRect(ctx, pillX, y, pillWidth, pillHeight, 9, true, false);
 
-    // Inner White Box for Invoice Number
-    const numberBoxWidth = 100;
-    const numberBoxHeight = 38;
-    const numberBoxX = pillX + 12;
+    // Inner White Box for Invoice Number (Spacious 175px for 9-12 digit codes)
+    const numberBoxWidth = 175;
+    const numberBoxHeight = 40;
+    const numberBoxX = pillX + 10;
     const numberBoxY = y + 8;
 
     ctx.fillStyle = '#FFFFFF';
-    drawRoundedRect(ctx, numberBoxX, numberBoxY, numberBoxWidth, numberBoxHeight, 6, true, false);
+    drawRoundedRect(ctx, numberBoxX, numberBoxY, numberBoxWidth, numberBoxHeight, 7, true, false);
 
-    // Invoice Number Text (Black text inside white box)
+    // Invoice Number Text (Centered inside white box)
+    ctx.save();
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 25px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
+    ctx.font = 'bold 24px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(fixArabic(invoiceData.invoiceNumber || '50621'), numberBoxX + (numberBoxWidth / 2), numberBoxY + 3);
+    ctx.textBaseline = 'middle';
+    const displayInvoiceNum = String(invoiceData.invoiceNumber || '261001101');
+    ctx.fillText(displayInvoiceNum, numberBoxX + (numberBoxWidth / 2), numberBoxY + (numberBoxHeight / 2) + 1);
+    ctx.restore();
 
-    // "فاتورة مبيعات" Text (White text on black background)
+    // "فاتورة مبيعات" Text (Centered inside right section of the pill)
+    ctx.save();
     ctx.fillStyle = '#FFFFFF';
     ctx.font = 'bold 22px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(fixArabic('فاتورة مبيعات'), pillX + pillWidth - 92, y + 11);
+    ctx.textBaseline = 'middle';
+    const labelAreaStartX = numberBoxX + numberBoxWidth;
+    const labelAreaWidth = (pillX + pillWidth) - labelAreaStartX;
+    ctx.fillText(fixArabic('فاتورة مبيعات'), labelAreaStartX + (labelAreaWidth / 2), y + (pillHeight / 2) + 1);
+    ctx.restore();
 
     ctx.fillStyle = '#000000';
     y += pillHeight + 14;
@@ -622,7 +631,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     // 7. QR CODE, THANK YOU NOTE & RETURN POLICY BOX
     // -------------------------------------------------------------
     if (config.showQrCode !== false) {
-        const qrContent = invoiceData.qrData || `Invoice #${invoiceData.invoiceNumber || '50621'} | ${config.store?.name || 'تاجوري للعطور'} | Total: ${invoiceData.total || 0} LYD`;
+        const qrContent = invoiceData.qrData || `Invoice #${invoiceData.invoiceNumber || '261001101'} | ${config.store?.name || 'تاجوري للعطور'} | Total: ${invoiceData.total || 0} LYD`;
         try {
             const qrBuffer = await QRCode.toBuffer(qrContent, {
                 margin: 1,
@@ -650,12 +659,40 @@ async function renderInvoiceCanvas(invoiceData, config) {
     }
 
     if (config.returnPolicy) {
-        const policyBoxHeight = 54;
+        const rawLines = config.returnPolicy.split('\n');
+        const lines = [];
+        const maxChars = 52;
+
+        for (const rawLine of rawLines) {
+            if (!rawLine.trim()) continue;
+            if (rawLine.length <= maxChars) {
+                lines.push(rawLine.trim());
+            } else {
+                const words = rawLine.split(' ');
+                let current = '';
+                for (const w of words) {
+                    if ((current + ' ' + w).trim().length > maxChars) {
+                        if (current) lines.push(current.trim());
+                        current = w;
+                    } else {
+                        current = (current + ' ' + w).trim();
+                    }
+                }
+                if (current) lines.push(current.trim());
+            }
+        }
+
+        const lineHeight = 22;
+        const policyBoxHeight = Math.max(54, 18 + lines.length * lineHeight);
         drawDashedRoundedRect(ctx, margin, y, contentWidth, policyBoxHeight, 9, [6, 4]);
 
-        ctx.font = 'bold 15px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
+        ctx.font = 'bold 14px Tajawal, TajawalLatin, Cairo, CairoLatin, "Segoe UI", Arial, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(fixArabic(config.returnPolicy), width / 2, y + 16);
+        let lineY = y + 20;
+        for (const line of lines) {
+            ctx.fillText(fixArabic(line), width / 2, lineY);
+            lineY += lineHeight;
+        }
         y += policyBoxHeight + 12;
     }
 

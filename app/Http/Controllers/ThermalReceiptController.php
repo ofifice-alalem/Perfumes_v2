@@ -32,7 +32,19 @@ class ThermalReceiptController extends Controller
 
         if ($id) {
             try {
-                $invoice = $this->invoiceRepo->findWithRelations((int)$id);
+                $invoice = Invoice::with([
+                    'customer', 
+                    'user', 
+                    'items.product', 
+                    'items.size', 
+                    'payments.paymentMethod', 
+                    'settlements'
+                ])
+                ->where(function($q) use ($id) {
+                    $q->where('id', $id)
+                      ->orWhere('invoice_number', (string)$id);
+                })
+                ->first();
             } catch (\Throwable $e) {
                 $invoice = null;
             }

@@ -165,7 +165,12 @@ class NodeThermalPrinterController extends Controller
             'items.size',
             'payments.paymentMethod',
             'settlements'
-        ])->find($invoiceId);
+        ])
+        ->where(function ($q) use ($invoiceId) {
+            $q->where('id', $invoiceId)
+              ->orWhere('invoice_number', (string)$invoiceId);
+        })
+        ->first();
 
         if (!$invoice) {
             return null;
@@ -247,7 +252,7 @@ class NodeThermalPrinterController extends Controller
                     $payload['invoice'] = $realInvoiceData;
                 }
 
-                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/preview', $payload);
+                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/preview', $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
@@ -265,7 +270,7 @@ class NodeThermalPrinterController extends Controller
 
                 try {
                     usleep(350000); // 350ms wait for server bind
-                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/preview', $payload);
+                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/preview', $payload);
                     if ($response->successful()) {
                         $resData = $response->json();
                         if (!empty($resData['preview_src'])) {
@@ -387,9 +392,9 @@ class NodeThermalPrinterController extends Controller
                 'invoice'     => $realInvoiceData
             ];
 
-            // 1. Check if Node daemon is listening on port 9123 via rapid socket probe (< 20ms)
+            // 1. Check if Node daemon is listening on port 9124 via rapid socket probe (< 20ms)
             $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
             if ($fp) {
                 $isDaemonActive = true;
                 fclose($fp);
@@ -399,7 +404,7 @@ class NodeThermalPrinterController extends Controller
                 // Daemon is live: post to daemon with async flag (< 2ms response).
                 // Once handed off to the daemon, NEVER trigger CLI fallback to guarantee no double-printing.
                 try {
-                    Http::timeout(1.0)->post('http://127.0.0.1:9123/print', $payload);
+                    Http::timeout(1.0)->post('http://127.0.0.1:9124/print', $payload);
                 } catch (\Throwable $e) {
                     Log::warning("dispatchDirectPrint HTTP dispatch: " . $e->getMessage());
                 }
@@ -446,7 +451,7 @@ class NodeThermalPrinterController extends Controller
 
             // 1. Check if Node daemon is active via fast socket probe (< 20ms)
             $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
             if ($fp) {
                 $isDaemonActive = true;
                 fclose($fp);
@@ -462,7 +467,7 @@ class NodeThermalPrinterController extends Controller
 
             if ($isDaemonActive) {
                 try {
-                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9123/print', $payload);
+                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/print', $payload);
                     if ($response->successful()) {
                         $resData = $response->json();
                         return response()->json([
@@ -525,9 +530,9 @@ class NodeThermalPrinterController extends Controller
                 'printerName'  => $printerName,
             ];
 
-            // 1. Fast socket probe to check port 9123
+            // 1. Fast socket probe to check port 9124
             $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9123, $errno, $errstr, 0.05);
+            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
             if ($fp) {
                 $isDaemonActive = true;
                 fclose($fp);
@@ -535,7 +540,7 @@ class NodeThermalPrinterController extends Controller
 
             if ($isDaemonActive) {
                 try {
-                    $response = Http::connectTimeout(1.0)->timeout(3.0)->post('http://127.0.0.1:9123/print-label', [
+                    $response = Http::connectTimeout(1.0)->timeout(3.0)->post('http://127.0.0.1:9124/print-label', [
                         'printerName' => $printerName,
                         'label'       => $labelData,
                     ]);

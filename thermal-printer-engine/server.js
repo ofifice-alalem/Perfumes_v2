@@ -6,7 +6,7 @@ const { renderInvoiceCanvas } = require('./src/invoice/invoice-renderer');
 const { encodePngToEscPosRaster } = require('./src/printer/escpos-encoder');
 const { printRawBuffer } = require('./src/printer/printer-service');
 
-const PORT = 9123;
+const PORT = 9124;
 const HOST = '127.0.0.1';
 
 // Pre-load fonts and initial config on server boot
@@ -23,6 +23,16 @@ function loadConfig() {
 }
 loadConfig();
 
+function getInvoiceModules() {
+    try {
+        delete require.cache[require.resolve('./src/invoice/invoice-renderer')];
+        delete require.cache[require.resolve('./src/invoice/invoice-data')];
+    } catch (e) {}
+    const { sampleInvoice, sampleMultiItemInvoice } = require('./src/invoice/invoice-data');
+    const { renderInvoiceCanvas } = require('./src/invoice/invoice-renderer');
+    return { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas };
+}
+
 const server = http.createServer(async (req, res) => {
     // CORS headers for local app
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -36,6 +46,13 @@ const server = http.createServer(async (req, res) => {
     }
 
     const url = new URL(req.url, `http://${HOST}:${PORT}`);
+
+    if (url.pathname === '/shutdown' || url.pathname === '/restart') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Server shutting down...' }));
+        setTimeout(() => process.exit(0), 100);
+        return;
+    }
 
     if (url.pathname === '/health' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -55,6 +72,7 @@ const server = http.createServer(async (req, res) => {
                     try { payload = JSON.parse(bodyStr); } catch (e) {}
                 }
 
+                const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
                 const printerName = payload.printerName || config.printer?.name || 'XP-80';
                 const useMulti = payload.multi !== false;
                 const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
@@ -129,6 +147,7 @@ const server = http.createServer(async (req, res) => {
                     try { payload = JSON.parse(bodyStr); } catch (e) {}
                 }
 
+                const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
                 const useMulti = payload.multi !== false;
                 const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
 
