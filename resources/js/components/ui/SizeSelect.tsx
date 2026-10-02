@@ -1,7 +1,3 @@
-import { useState } from 'react';
-import { NumberPadModal } from './NumberPadModal';
-import { Plus } from 'lucide-react';
-
 interface Size { id: number; label: string; value: string; }
 
 interface SizeSelectProps {
@@ -16,9 +12,6 @@ interface SizeSelectProps {
 }
 
 export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolved, className = '', product, isVip = false }: SizeSelectProps) {
-  const [showNumberPad, setShowNumberPad] = useState(false);
-  const [customSizes, setCustomSizes] = useState<Record<string, string>>({});
-
   const availableSizes = sizes.filter(size => {
     if (!product) return false;
     try {
@@ -31,8 +24,6 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
       return unitPrice && +unitPrice > 0;
     } catch { return false; }
   });
-
-  const isCustom = selectedSizeId.startsWith('-custom-');
 
   function getPrice(size: Size): number {
     const range = getPriceRange(size);
@@ -61,24 +52,8 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
     }
   }
 
-  function handleCustomSize(val: string) {
-    if (!val || val === '0') return;
-    const existing = availableSizes.find(s => s.value === val);
-    if (existing) { handleSelect(String(existing.id), existing); return; }
-    const customId = `-custom-${val}`;
-    setCustomSizes(prev => ({ ...prev, [customId]: val }));
-    onSizeSelect(customId);
-    // للأحجام المخصصة نستخدم سعر الوحدة مباشرة
-    if (onPriceResolved && product?.product_price) {
-      const r = +product.product_price.price_per_unit_regular || 0;
-      const v = +product.product_price.price_per_unit_vip || 0;
-      onPriceResolved(isVip ? v : r, v);
-    }
-  }
-
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
-
       {/* Mobile: grid 2 cols — Desktop: flex wrap */}
       <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3.5">
         {availableSizes.map(size => {
@@ -103,27 +78,7 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
             </button>
           );
         })}
-
-        {/* Custom size */}
-        {isCustom && customSizes[selectedSizeId] && (
-          <button onClick={() => onSizeSelect('')}
-            className="flex items-center justify-between px-5 h-16 rounded-[20px] border-2 border-primary bg-primary text-white shadow-lg shadow-primary/25 relative active:scale-95 sm:flex-col sm:justify-center sm:px-6 sm:h-[84px] sm:min-w-[105px]">
-            <span className="font-black text-base sm:text-lg leading-tight">مخصص</span>
-            <span className="text-xs sm:text-sm font-black sm:mt-1 text-white/90">{customSizes[selectedSizeId]} مل</span>
-            <span className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-black shadow-md">×</span>
-          </button>
-        )}
-
-        {/* Add custom */}
-        <button onClick={() => setShowNumberPad(true)}
-          className="flex items-center justify-center gap-2 h-16 rounded-[20px] border-2 border-dashed border-black/20 dark:border-white/20 text-slate-500 dark:text-white/40 hover:border-primary/40 hover:text-primary transition-all active:scale-95 sm:flex-col sm:px-6 sm:h-[84px] sm:min-w-[105px] sm:gap-1">
-          <Plus className="w-5 h-5 sm:w-6 sm:h-6" />
-          <span className="text-xs sm:text-sm font-black">حجم مخصص</span>
-        </button>
       </div>
-
-      <NumberPadModal isOpen={showNumberPad} onClose={() => setShowNumberPad(false)}
-        onConfirm={handleCustomSize} title="حجم مخصص (مل)" initialValue="" />
     </div>
   );
 }
