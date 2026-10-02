@@ -4749,6 +4749,12 @@ class ReportRepository implements ReportRepositoryInterface
             }
         }
 
+        $scopePeriod = function ($q, string $table) use ($periodId) {
+            if ($periodId) {
+                $q->where(fn($sq) => $sq->where("{$table}.period_id", $periodId)->orWhereNull("{$table}.period_id"));
+            }
+        };
+
         // 2. Fetch ALL Events up to $dt for Timeline
         $events = [];
 
@@ -4757,6 +4763,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('purchases.deleted_at')
             ->whereIn('purchase_items.product_id', $productIds)
             ->where('purchases.created_at', '<=', $dt)
+            ->tap(fn($q) => $scopePeriod($q, 'purchases'))
             ->select('purchase_items.product_id as pid', 'purchase_items.quantity as qty', 'purchase_items.line_total as val', 'purchases.created_at as date', 'purchases.id')
             ->get();
         foreach ($purchases as $row) $events[] = ['date' => $row->date, 'type' => 1, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
@@ -4766,6 +4773,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('invoices.deleted_at')
             ->whereIn('invoice_items.product_id', $productIds)
             ->where('invoices.created_at', '<=', $dt)
+            ->tap(fn($q) => $scopePeriod($q, 'invoices'))
             ->select('invoice_items.product_id as pid', 'invoice_items.quantity as qty', 'invoice_items.line_total as val', 'invoices.created_at as date', 'invoices.id')
             ->get();
         foreach ($sales as $row) $events[] = ['date' => $row->date, 'type' => 2, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
@@ -4775,6 +4783,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('invoice_returns.deleted_at')
             ->whereIn('invoice_return_items.product_id', $productIds)
             ->where('invoice_returns.created_at', '<=', $dt)
+            ->tap(fn($q) => $scopePeriod($q, 'invoice_returns'))
             ->select('invoice_return_items.product_id as pid', 'invoice_return_items.quantity as qty', 'invoice_return_items.line_total as val', 'invoice_returns.created_at as date', 'invoice_returns.id')
             ->get();
         foreach ($returnsIn as $row) $events[] = ['date' => $row->date, 'type' => 3, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
@@ -4784,6 +4793,7 @@ class ReportRepository implements ReportRepositoryInterface
             ->whereNull('purchase_returns.deleted_at')
             ->whereIn('purchase_return_items.product_id', $productIds)
             ->where('purchase_returns.created_at', '<=', $dt)
+            ->tap(fn($q) => $scopePeriod($q, 'purchase_returns'))
             ->select('purchase_return_items.product_id as pid', 'purchase_return_items.quantity as qty', 'purchase_return_items.line_total as val', 'purchase_returns.created_at as date', 'purchase_returns.id')
             ->get();
         foreach ($returnsOut as $row) $events[] = ['date' => $row->date, 'type' => 4, 'pid' => $row->pid, 'qty' => (float)$row->qty, 'val' => (float)$row->val, 'id' => $row->id];
