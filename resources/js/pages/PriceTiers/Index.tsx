@@ -265,9 +265,9 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
       {drawerOpen && createPortal(
         <div className="fixed inset-0 z-[1000] select-none">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={closeDrawer} />
-          <div className="absolute top-0 right-0 w-full max-w-lg h-full bg-white dark:bg-slate-900 shadow-2xl p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-black/10 dark:border-white/10 z-10" dir="rtl">
+          <div className="absolute top-0 right-0 w-full max-w-lg h-full bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)] shadow-[-24px_0_60px_rgba(0,0,0,0.2)] dark:shadow-[-24px_0_60px_rgba(0,0,0,0.6)] p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-slate-200 dark:border-white/10 z-10" dir="rtl">
 
-            <div className="flex items-center justify-between pb-5 border-b border-black/5 dark:border-white/5">
+            <div className="flex items-center justify-between pb-5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3.5">
                 <div className="w-14 h-14 rounded-[20px] bg-primary/10 border-2 border-primary/20 flex items-center justify-center">
                   <Tags className="w-7 h-7 text-primary" />
@@ -276,7 +276,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                   {editingTier ? `تعديل "${editingTier.name}"` : 'إضافة تير جديد'}
                 </h2>
               </div>
-              <button onClick={closeDrawer} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10">
+              <button onClick={closeDrawer} className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-slate-200 dark:border-white/10">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -307,7 +307,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                 {form.errors.description && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.description}</p>}
               </div>
 
-              <div className="flex flex-col gap-3.5 mt-auto pt-6 border-t border-black/5 dark:border-white/5">
+              <div className="flex flex-col gap-3.5 mt-auto pt-6 border-t border-slate-200/80 dark:border-white/10">
                 <button
                   type="submit"
                   disabled={form.processing}
@@ -319,7 +319,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                 <button
                   type="button"
                   onClick={closeDrawer}
-                  className="w-full h-16 sm:h-18 rounded-[22px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-black/10 transition-all flex items-center justify-center active:scale-95 border border-black/5 dark:border-white/5"
+                  className="w-full h-16 sm:h-18 rounded-[22px] bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-slate-300/80 transition-all flex items-center justify-center active:scale-95 border border-slate-300/60 dark:border-white/5"
                 >
                   إلغاء
                 </button>
@@ -334,9 +334,9 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
       {pricesDrawerOpen && pricingTier && createPortal(
         <div className="fixed inset-0 z-[1000] select-none">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-200" onClick={closePricesDrawer} />
-          <div className="absolute top-0 right-0 w-full md:w-[92vw] max-w-7xl h-full bg-white dark:bg-slate-900 shadow-2xl p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-black/10 dark:border-white/10 z-10" dir="rtl">
+          <div className="absolute top-0 right-0 w-full md:w-[92vw] max-w-7xl h-full bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)] shadow-[-24px_0_60px_rgba(0,0,0,0.2)] dark:shadow-[-24px_0_60px_rgba(0,0,0,0.6)] p-6 sm:p-8 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-300 border-l-2 border-slate-200 dark:border-white/10 z-10" dir="rtl">
 
-            <div className="flex items-center justify-between pb-5 border-b border-black/5 dark:border-white/5">
+            <div className="flex items-center justify-between pb-5 border-b border-slate-200/80 dark:border-white/10">
               <div className="flex items-center gap-3.5">
                 <div className="w-14 h-14 rounded-[20px] bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
                   <Tags className="w-7 h-7 text-primary" />
@@ -345,7 +345,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                   أسعار {pricingTier.name} (بالدينار)
                 </h2>
               </div>
-              <button onClick={closePricesDrawer} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10">
+              <button onClick={closePricesDrawer} className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-slate-200 dark:border-white/10">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -360,8 +360,8 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {sizes.map(size => (
-                    <div key={size.id} className="flex flex-col gap-3.5 p-5 rounded-[26px] bg-slate-50 dark:bg-slate-800/60 border-2 border-black/10 dark:border-white/20 hover:border-primary/40 transition-all shadow-md">
-                      <div className="flex items-center gap-3 pb-2 border-b border-black/5 dark:border-white/10">
+                    <div key={size.id} className="flex flex-col gap-3.5 p-5 rounded-[26px] bg-white dark:bg-slate-800/70 border-2 border-slate-200/90 dark:border-white/15 hover:border-primary/40 transition-all shadow-md shadow-slate-200/50 dark:shadow-none">
+                      <div className="flex items-center gap-3 pb-2 border-b border-slate-100 dark:border-white/10">
                         <div className="w-14 h-14 rounded-[18px] bg-blue-500/15 text-blue-600 dark:text-blue-400 border-2 border-blue-500/30 flex items-center justify-center shrink-0 shadow-sm">
                           <span className="font-black text-base uppercase">ml</span>
                         </div>
@@ -374,7 +374,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                           <button
                             type="button"
                             onClick={() => setPadField({ sizeId: size.id, field: 'price_regular' })}
-                            className="h-20 rounded-[22px] bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-600 hover:border-primary/60 flex items-center justify-between px-4 transition-all active:scale-[0.98] shadow-sm"
+                            className="h-20 rounded-[22px] bg-slate-50 hover:bg-white dark:bg-slate-900 border-2 border-slate-200 hover:border-primary/60 flex items-center justify-between px-4 transition-all active:scale-[0.98] shadow-sm"
                           >
                             <span className={`font-black text-2xl sm:text-3xl ${pricesData[size.id]?.price_regular ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-white/30'}`}>
                               {pricesData[size.id]?.price_regular || '—'}
@@ -388,7 +388,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                           <button
                             type="button"
                             onClick={() => setPadField({ sizeId: size.id, field: 'price_vip' })}
-                            className="h-20 rounded-[22px] bg-white dark:bg-slate-900 border-2 border-primary/40 dark:border-primary/60 hover:border-primary flex items-center justify-between px-4 transition-all active:scale-[0.98] shadow-sm"
+                            className="h-20 rounded-[22px] bg-slate-50 hover:bg-white dark:bg-slate-900 border-2 border-primary/40 dark:border-primary/60 hover:border-primary flex items-center justify-between px-4 transition-all active:scale-[0.98] shadow-sm"
                           >
                             <span className={`font-black text-2xl sm:text-3xl ${pricesData[size.id]?.price_vip ? 'text-primary' : 'text-slate-300 dark:text-white/30'}`}>
                               {pricesData[size.id]?.price_vip || '—'}
@@ -403,7 +403,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3.5 pt-6 border-t border-black/5 dark:border-white/5">
+            <div className="flex flex-col sm:flex-row gap-3.5 pt-6 border-t border-slate-200/80 dark:border-white/10">
               <button
                 onClick={submitPrices}
                 className="flex-1 h-18 sm:h-20 rounded-[24px] bg-emerald-600 text-white font-black text-xl sm:text-2xl hover:bg-emerald-500 transition-all flex items-center justify-center gap-3 shadow-xl shadow-emerald-600/25 active:scale-95"
@@ -412,7 +412,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
               </button>
               <button
                 onClick={closePricesDrawer}
-                className="sm:w-48 h-18 sm:h-20 rounded-[22px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-black/10 transition-all flex items-center justify-center active:scale-95 border border-black/5 dark:border-white/5"
+                className="sm:w-48 h-18 sm:h-20 rounded-[22px] bg-slate-200/70 dark:bg-white/10 text-slate-700 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-slate-300/80 transition-all flex items-center justify-center active:scale-95 border border-slate-300/60 dark:border-white/5"
               >
                 إلغاء
               </button>

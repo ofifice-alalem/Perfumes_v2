@@ -4,7 +4,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -1446,7 +1446,25 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         });
     }
 
-    const createForm = useForm({ ...emptyForm });
+    const getInitialDefaultCategory = () => {
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('default_product_category_id') : null;
+        if (savedId) {
+            const found = categories.find(c => String(c.id) === savedId);
+            if (found) return found;
+        }
+        return categories.find(c => c.name.includes('زيت')) || categories[0];
+    };
+
+    const [defaultCatId, setDefaultCatId] = useState<string>(() => {
+        return typeof window !== 'undefined' ? (localStorage.getItem('default_product_category_id') || '') : '';
+    });
+
+    const initialDefCat = getInitialDefaultCategory();
+    const createForm = useForm({
+        ...emptyForm,
+        category_id: initialDefCat ? String(initialDefCat.id) : '',
+        selling_type: initialDefCat ? resolveSellingType(initialDefCat) : 'tier_based',
+    });
     const editForm   = useForm({ ...emptyForm });
 
     const createCat = categories.find(c => c.id === Number(createForm.data.category_id));
@@ -1454,6 +1472,29 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     const createIsOriginal = createCat?.unit === 'ml' && createForm.data.selling_type === 'unit_priced' && !createCat?.is_operational;
     const editIsOriginal   = editCat?.unit === 'ml' && editForm.data.selling_type === 'unit_priced' && !editCat?.is_operational;
+
+    function handleSetDefaultCategory(catId: number) {
+        const idStr = String(catId);
+        localStorage.setItem('default_product_category_id', idStr);
+        setDefaultCatId(idStr);
+    }
+
+    function openCreateDrawer() {
+        setEditingId(null);
+        createForm.clearErrors();
+        const defCat = getInitialDefaultCategory();
+        if (defCat) {
+            createForm.setData({
+                ...emptyForm,
+                category_id: String(defCat.id),
+                selling_type: resolveSellingType(defCat),
+                price_tier_id: '',
+            });
+        } else {
+            createForm.reset();
+        }
+        setShowCreate(true);
+    }
 
     function onSelectCategory(form: typeof createForm, val: string) {
         const cat = categories.find(c => c.name === val);
@@ -1464,7 +1505,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     }
 
     function onSelectTier(form: typeof createForm, val: string) {
-        const tier = tiers.find(t => `تير ${t.name}` === val);
+        const tier = tiers.find(t => t.name === val);
         form.setData('price_tier_id', tier ? String(tier.id) : '');
     }
 
@@ -1493,7 +1534,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     function submitCreate() {
         createForm.post('/products', {
-            onSuccess: () => { createForm.reset(); setShowCreate(false); },
+            onSuccess: () => {
+                const defCat = getInitialDefaultCategory();
+                createForm.setData({
+                    ...emptyForm,
+                    category_id: defCat ? String(defCat.id) : '',
+                    selling_type: defCat ? resolveSellingType(defCat) : 'tier_based',
+                    price_tier_id: '',
+                });
+                setShowCreate(false);
+            },
         });
     }
 
@@ -1541,7 +1591,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     const tierDefaultValue = (form: typeof createForm) => {
         const t = tiers.find(t => String(t.id) === form.data.price_tier_id);
-        return t ? `تير ${t.name}` : '';
+        return t ? t.name : '';
     };
 
     // ── حقل QR في نموذج التعديل أو الإنشاء ──────────────────────────
@@ -1656,7 +1706,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
                             </button>
                         )}
-                        <button onClick={() => { setShowCreate(true); setEditingId(null); createForm.reset(); }}
+                        <button onClick={openCreateDrawer}
                             className="spatial-button flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 h-14 text-lg font-black rounded-[20px] active:scale-95 shadow-xl shadow-primary/30 shrink-0">
                             <Plus className="w-6 h-6" /> إضافة منتج
                         </button>
@@ -1737,23 +1787,68 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                             {/* اختيار التصنيف باللمس */}
                                             <div className="flex flex-col gap-2.5">
-                                                <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">التصنيف</label>
+                                                <div className="flex items-center justify-between">
+                                                    <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">التصنيف</label>
+                                                    {activeCat && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSetDefaultCategory(activeCat.id)}
+                                                            className={`text-xs font-black flex items-center gap-1.5 px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                                String(activeCat.id) === String(defaultCatId || initialDefCat?.id)
+                                                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                                                    : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:text-amber-600 hover:border-amber-400'
+                                                            }`}
+                                                            title="جعل هذا التصنيف هو الخيار التلقائي عند فتح نافذة إضافة منتج جديد"
+                                                        >
+                                                            <Star className={`w-3.5 h-3.5 ${String(activeCat.id) === String(defaultCatId || initialDefCat?.id) ? 'fill-amber-500 text-amber-500' : ''}`} />
+                                                            {String(activeCat.id) === String(defaultCatId || initialDefCat?.id)
+                                                                ? 'التصنيف الافتراضي للإضافة'
+                                                                : 'تعيين كافتراضي'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <div className="grid grid-cols-2 gap-3">
                                                     {categories.map(c => {
                                                         const selected = activeCat?.id === c.id;
+                                                        const isDefault = String(c.id) === String(defaultCatId || initialDefCat?.id);
                                                         return (
                                                             <button
                                                                 key={c.id}
                                                                 type="button"
                                                                 onClick={() => onSelectCategory(activeForm, c.name)}
-                                                                className={`flex flex-col items-start gap-1 p-4 rounded-[20px] border-2 transition-all active:scale-95 text-right ${
+                                                                className={`relative flex flex-col items-start gap-1 p-4 rounded-[20px] border-2 transition-all active:scale-95 text-right ${
                                                                     selected
                                                                         ? 'bg-primary/15 border-primary text-primary font-black shadow-md scale-[1.02]'
                                                                         : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500 font-bold'
                                                                 }`}
                                                             >
-                                                                <span className="text-base sm:text-lg font-black">{c.name}</span>
-                                                                <span className="text-xs sm:text-sm font-bold opacity-75">الوحدة: {unitLabels[c.unit]}</span>
+                                                                <div className="flex items-center justify-between w-full">
+                                                                    <span className="text-base sm:text-lg font-black">{c.name}</span>
+                                                                    <div
+                                                                        role="button"
+                                                                        tabIndex={0}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleSetDefaultCategory(c.id);
+                                                                        }}
+                                                                        className={`p-1.5 rounded-lg transition-all ${
+                                                                            isDefault
+                                                                                ? 'text-amber-500 bg-amber-500/20'
+                                                                                : 'text-slate-300 dark:text-slate-600 hover:text-amber-500 hover:bg-amber-500/10'
+                                                                        }`}
+                                                                        title={isDefault ? 'هذا هو التصنيف الافتراضي' : 'اضغط لتعيين هذا التصنيف كافتراضي'}
+                                                                    >
+                                                                        <Star className={`w-4 h-4 ${isDefault ? 'fill-amber-500 text-amber-500' : ''}`} />
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center justify-between w-full mt-0.5">
+                                                                    <span className="text-xs sm:text-sm font-bold opacity-75">الوحدة: {unitLabels[c.unit]}</span>
+                                                                    {isDefault && (
+                                                                        <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 bg-amber-400/20 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                                                                            افتراضي
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </button>
                                                         );
                                                     })}
@@ -1793,7 +1888,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                             : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold'
                                                                     }`}
                                                                 >
-                                                                    تير {t.name}
+                                                                    {t.name}
                                                                 </button>
                                                             );
                                                         })}
@@ -2289,7 +2384,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <td className="px-5 py-5 font-black text-slate-800 dark:text-slate-200 text-base whitespace-nowrap">{product.category.name}</td>
                                                 <td className="px-5 py-5 whitespace-nowrap">
                                                     {product.selling_type === 'tier_based' ? (
-                                                        <span className="inline-flex items-center px-4 py-1.5 rounded-[12px] bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-base border border-primary/25">تير {product.price_tier?.name}</span>
+                                                        <span className="inline-flex items-center px-4 py-1.5 rounded-[12px] bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-base border border-primary/25">{product.price_tier?.name}</span>
                                                     ) : product.product_price ? (
                                                         <div className="flex items-center gap-2">
                                                             <span className="px-3 py-1.5 rounded-[10px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-base sm:text-lg">{fmt(product.product_price.price_per_unit_vip)}</span>
@@ -2388,7 +2483,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <div className="flex items-center gap-3 flex-wrap mt-2">
                                                     <span className="text-base font-black text-slate-700 dark:text-slate-200">{product.category.name}</span>
                                                     {product.selling_type === 'tier_based' && (
-                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 border border-primary/25">تير {product.price_tier?.name}</span>
+                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 border border-primary/25">{product.price_tier?.name}</span>
                                                     )}
                                                     {product.category.is_operational && (
                                                         <span className="text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600">تشغيلي</span>
