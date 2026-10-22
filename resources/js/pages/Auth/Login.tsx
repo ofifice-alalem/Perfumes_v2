@@ -6,10 +6,10 @@ export default function Login() {
     const { data, setData, post, processing, errors } = useForm({
         username: '',
         password: '',
+        remember: false,
     });
 
     const [showPassword, setShowPassword] = useState(false);
-    const [remember, setRemember] = useState(false);
 
     useEffect(() => {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -96,14 +96,14 @@ export default function Login() {
 
                         {/* Remember */}
                         <label className="flex items-center gap-2.5 cursor-pointer w-fit px-1">
-                            <div className="relative flex items-center justify-center w-4.5 h-4.5 w-5 h-5 rounded-[5px] border border-white/20 bg-white/5 hover:bg-white/10 transition-colors shrink-0">
+                            <div className="relative flex items-center justify-center w-5 h-5 rounded-[5px] border border-white/20 bg-white/5 hover:bg-white/10 transition-colors shrink-0">
                                 <input
                                     type="checkbox"
-                                    checked={remember}
-                                    onChange={e => setRemember(e.target.checked)}
+                                    checked={data.remember}
+                                    onChange={e => setData('remember', e.target.checked)}
                                     className="absolute opacity-0 w-full h-full cursor-pointer"
                                 />
-                                {remember && (
+                                {data.remember && (
                                     <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                     </svg>

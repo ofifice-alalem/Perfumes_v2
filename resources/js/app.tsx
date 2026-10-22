@@ -1,6 +1,16 @@
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
+
+// اعتراض انتهاء صلاحية الجلسة أو الرمز الأمني (HTTP 419 / 401)
+// وإجراء إعادة تحميل كاملة للمتصفح لتجديد الرموز الأمنية وملفات تعريف الارتباط
+router.on('invalid', (event) => {
+  const status = event.detail.response?.status;
+  if (status === 419 || status === 401) {
+    event.preventDefault();
+    window.location.href = '/login';
+  }
+});
 
 createInertiaApp({
   resolve: (name) => {

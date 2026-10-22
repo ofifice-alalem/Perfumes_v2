@@ -24,4 +24,25 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {
             return redirect()->route('invoices.create');
         });
+
+        // 1. معالجة انتهاء صلاحية رمز الأمان (CSRF Token Mismatch - HTTP 419)
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            if ($request->header('X-Inertia')) {
+                return \Inertia\Inertia::location(route('login'));
+            }
+
+            return redirect()->route('login');
+        });
+
+        // 2. معالجة انتهاء صلاحية الجلسة عند عدم النشاط (Unauthenticated - HTTP 401)
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->header('X-Inertia')) {
+                return \Inertia\Inertia::location(route('login'));
+            }
+
+            return redirect()->route('login');
+        });
     })->create();
