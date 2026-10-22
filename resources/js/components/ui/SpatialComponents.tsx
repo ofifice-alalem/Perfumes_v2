@@ -361,7 +361,13 @@ export function ModernSelect({
     else { setSearch(''); setShowKeyboard(false); }
   }, [isOpen]);
 
-  const filtered = normalized.filter((o) => o.label.toLowerCase().includes(search.toLowerCase()) || (o.searchKey && o.searchKey.toLowerCase().includes(search.toLowerCase())));
+  const filtered = normalized.filter((o) => {
+    const s = search.toLowerCase().trim();
+    if (!s) return true;
+    const l = o.label.toLowerCase();
+    const sk = o.searchKey ? o.searchKey.toLowerCase().trim() : '';
+    return l.includes(s) || (sk && (sk === s || sk.includes(s) || s.includes(sk)));
+  });
 
   const optionsList = (size: 'sm' | 'lg') => (
     <ul className={`overflow-y-auto p-2.5 ${size === 'sm' ? 'max-h-[520px] sm:max-h-[600px]' : 'flex-1'}`}>
@@ -431,12 +437,29 @@ export function ModernSelect({
             className="w-full rounded-[18px] pr-12 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-16 sm:h-20 text-base sm:text-lg"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
-                if (e.key === 'Enter' && allowFreeText && search) {
-                    setSelected(search);
-                    onSelect?.(search);
-                    setIsOpen(false);
-                    setSearch('');
-                    setShowKeyboard(false);
+                if (e.key === 'Enter') {
+                    if (allowFreeText && search) {
+                        setSelected(search);
+                        onSelect?.(search);
+                        setIsOpen(false);
+                        setSearch('');
+                        setShowKeyboard(false);
+                    } else if (filtered.length > 0) {
+                        const s = search.toLowerCase().trim();
+                        const topMatch = filtered.find(o => {
+                            const sk = o.searchKey ? o.searchKey.toLowerCase().trim() : '';
+                            const l = o.label.toLowerCase().trim();
+                            return (sk && (sk === s || s.includes(sk) || sk.includes(s))) || l === s;
+                        }) || filtered[0];
+
+                        if (topMatch) {
+                            setSelected(topMatch.label);
+                            onSelect?.(topMatch.label);
+                            setIsOpen(false);
+                            setSearch('');
+                            setShowKeyboard(false);
+                        }
+                    }
                 }
             }}
           />

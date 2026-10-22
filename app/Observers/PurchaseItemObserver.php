@@ -11,6 +11,7 @@ class PurchaseItemObserver
     {
         // stock += quantity
         Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
 
         $this->syncPurchase($item);
         $this->syncSupplier($item);
@@ -22,6 +23,7 @@ class PurchaseItemObserver
         $diff = $item->quantity - $item->getOriginal('quantity');
         if ($diff != 0) {
             Product::where('id', $item->product_id)->increment('stock', $diff);
+            \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
         }
 
         $this->syncPurchase($item);
@@ -32,6 +34,7 @@ class PurchaseItemObserver
     {
         // stock -= quantity
         Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
 
         $this->syncPurchase($item);
         $this->syncSupplier($item);

@@ -94,6 +94,8 @@ class PurchaseController extends Controller
             return $purchase;
         });
 
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
+
         return redirect()->route('purchases.show', $purchase->id)
             ->with('success', 'تم إنشاء فاتورة الشراء بنجاح');
     }
@@ -158,6 +160,8 @@ class PurchaseController extends Controller
             }
         });
 
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
+
         return redirect()->route('purchases.index')->with('success', 'تم إلغاء الفاتورة بنجاح');
     }
 
@@ -186,6 +190,8 @@ class PurchaseController extends Controller
                 PurchaseItemObserver::recalculateSupplier($purchase->supplier_id);
             }
         });
+
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
 
         return redirect()->route('purchases.show', $id)->with('success', 'تم استعادة الفاتورة بنجاح');
     }

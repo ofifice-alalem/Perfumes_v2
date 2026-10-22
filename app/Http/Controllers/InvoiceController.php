@@ -53,10 +53,28 @@ class InvoiceController extends Controller
         ]);
     }
 
+    public function refreshCatalog(): \Illuminate\Http\JsonResponse
+    {
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
+        \Illuminate\Support\Facades\Cache::forget('pos_sizes_list');
+        \Illuminate\Support\Facades\Cache::forget('pos_payment_methods_list');
+
+        $catalog = $this->getCatalogWithLiveStock();
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'تم تحديث قائمة المنتجات والمخزون بنجاح',
+            'count'    => count($catalog),
+            'products' => $catalog,
+        ]);
+    }
+
     protected function getCatalogWithLiveStock(): array
     {
-        $catalog = \Illuminate\Support\Facades\Cache::remember('pos_products_catalog_base', 86400, function () {
-            return Product::with([
+        $catalog = \Illuminate\Support\Facades\Cache::get('pos_products_catalog_base');
+
+        if (empty($catalog)) {
+            $catalog = Product::with([
                 'category:id,name,unit,is_operational',
                 'priceTier:id,name',
                 'priceTier.tierPrices:id,tier_id,size_id,price_regular,price_vip',
@@ -68,7 +86,11 @@ class InvoiceController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'category_id', 'price_tier_id', 'selling_type', 'qrcode'])
             ->toArray();
-        });
+
+            if (!empty($catalog)) {
+                \Illuminate\Support\Facades\Cache::put('pos_products_catalog_base', $catalog, 86400);
+            }
+        }
 
         $liveStocks = Product::pluck('stock', 'id');
         foreach ($catalog as &$p) {

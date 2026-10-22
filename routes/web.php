@@ -199,6 +199,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show', 'destroy']);
 
         // Invoices
+        Route::post('invoices/refresh-catalog', [InvoiceController::class, 'refreshCatalog'])->name('invoices.refresh-catalog');
         Route::resource('invoices', InvoiceController::class)->except(['edit']);
         Route::get('invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
         Route::post('invoices/{id}/restore', [InvoiceController::class, 'restore'])->name('invoices.restore');

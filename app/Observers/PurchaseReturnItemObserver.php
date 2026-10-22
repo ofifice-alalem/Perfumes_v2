@@ -11,6 +11,7 @@ class PurchaseReturnItemObserver
     {
         // stock -= quantity (returning goods reduces stock)
         Product::where('id', $item->product_id)->decrement('stock', $item->quantity);
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
 
         $this->syncReturn($item);
         $this->syncSupplier($item);
@@ -20,6 +21,7 @@ class PurchaseReturnItemObserver
     {
         // stock += quantity (cancelling a return restores stock)
         Product::where('id', $item->product_id)->increment('stock', $item->quantity);
+        \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
 
         $this->syncReturn($item);
         $this->syncSupplier($item);

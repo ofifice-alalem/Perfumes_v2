@@ -35,6 +35,14 @@ interface PaymentEntry {
     amount:            string;
 }
 
+function toAsciiDigits(str: string | number | null | undefined): string {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+        .trim();
+}
+
 export default function PurchasesCreate({ suppliers, products, paymentMethods, flash }: Props) {
     const [supplierId,          setSupplierId]          = useState('1');
     const [notes,               setNotes]               = useState('');
@@ -102,19 +110,29 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
             if (e.ctrlKey || e.altKey || e.metaKey) return;
             
             const now = Date.now();
-            if (now - lastTime > 100) {
+            if (now - lastTime > 150) {
                 buffer = '';
             }
             lastTime = now;
 
             if (e.key === 'Enter') {
-                if (buffer.length > 3) {
-                    const scanned = products.find(p => p.qrcode && p.qrcode.toLowerCase() === buffer.toLowerCase());
+                const cleanBuffer = toAsciiDigits(buffer).toLowerCase();
+                if (cleanBuffer.length > 3) {
+                    const scanned = products.find(p => {
+                        if (!p.qrcode) return false;
+                        const cleanQr = toAsciiDigits(p.qrcode).toLowerCase();
+                        return cleanQr === cleanBuffer ||
+                               cleanBuffer.includes(cleanQr) ||
+                               cleanQr.includes(cleanBuffer);
+                    });
                     if (scanned) {
                         e.preventDefault();
+                        e.stopPropagation();
                         setSelProduct(String(scanned.id));
-                        setSelQty(''); setSelTotalPrice('');
+                        setSelQty('1');
+                        setSelTotalPrice('');
                         setProductKey(k => k + 1);
+                        setActiveTab('products');
                     }
                 }
                 buffer = '';
@@ -288,16 +306,33 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                             <Package className="w-4 h-4 text-primary" />
                             <span className="text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة منتج للفاتورة</span>
                         </div>
-                        <div className="w-full">
-                            <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
-                                options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
-                                defaultValue={selectedProduct?.name ?? ""}
-                                onSelect={val => {
-                                    const p = products.find(p => p.name === val);
-                                    setSelProduct(p ? String(p.id) : '');
-                                    setSelQty(''); setSelTotalPrice('');
-                                }}
-                            />
+                        <div className="flex items-center gap-2 w-full">
+                            <div className="flex-1 min-w-0">
+                                <ModernSelect key={productKey} label="" placeholder="اختر المنتج أو امسح الباركود / QR..."
+                                    options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
+                                    defaultValue={selectedProduct?.name ?? ""}
+                                    onSelect={val => {
+                                        const p = products.find(p => p.name === val);
+                                        setSelProduct(p ? String(p.id) : '');
+                                        setSelQty('1'); setSelTotalPrice('');
+                                    }}
+                                />
+                            </div>
+                            {selectedProduct && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelProduct('');
+                                        setSelQty('');
+                                        setSelTotalPrice('');
+                                        setProductKey(k => k + 1);
+                                    }}
+                                    title="إلغاء الاختيار وتفريغ الحقول"
+                                    className="h-16 sm:h-20 w-16 sm:w-20 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+                                >
+                                    <X className="w-6 h-6 stroke-[2.5]" />
+                                </button>
+                            )}
                         </div>
 
                         {selectedProduct && (
@@ -534,15 +569,34 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
                                 <div className="flex flex-col gap-2.5">
                                     <div>
                                         <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest mb-1.5 block">المنتج</label>
-                                        <ModernSelect key={productKey} label="" placeholder="اختر المنتج..."
-                                            options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
-                                            defaultValue={selectedProduct?.name ?? ""}
-                                            onSelect={val => {
-                                                const p = products.find(p => p.name === val);
-                                                setSelProduct(p ? String(p.id) : '');
-                                                setSelQty(''); setSelTotalPrice('');
-                                            }}
-                                        />
+                                        <div className="flex items-center gap-2 w-full">
+                                            <div className="flex-1 min-w-0">
+                                                <ModernSelect key={productKey} label="" placeholder="اختر المنتج أو امسح الباركود / QR..."
+                                                    options={products.map(p => ({ label: p.name, badge: p.category.name, meta: `مخزون: ${p.stock}`, searchKey: p.qrcode ?? undefined }))}
+                                                    defaultValue={selectedProduct?.name ?? ""}
+                                                    onSelect={val => {
+                                                        const p = products.find(p => p.name === val);
+                                                        setSelProduct(p ? String(p.id) : '');
+                                                        setSelQty('1'); setSelTotalPrice('');
+                                                    }}
+                                                />
+                                            </div>
+                                            {selectedProduct && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelProduct('');
+                                                        setSelQty('');
+                                                        setSelTotalPrice('');
+                                                        setProductKey(k => k + 1);
+                                                    }}
+                                                    title="إلغاء الاختيار وتفريغ الحقول"
+                                                    className="h-12 w-12 rounded-[14px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+                                                >
+                                                    <X className="w-5 h-5 stroke-[2.5]" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {selectedProduct && (

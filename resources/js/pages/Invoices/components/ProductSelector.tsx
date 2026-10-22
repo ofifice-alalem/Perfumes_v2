@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, X, AlertCircle } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw } from 'lucide-react';
 
 export interface Category { id: number; name: string; unit: string; }
 export interface ProductPrice {
@@ -41,6 +41,8 @@ export interface ProductSelectorProps {
     getCartConsumed: (productId: number) => number;
     onAddToCart: (item: CartItem) => void;
     openPad: (title: string, initial: string, cb: (v: string) => void, max?: number) => void;
+    onRefreshCatalog?: () => void;
+    isRefreshing?: boolean;
 }
 
 function fmt(n: number) {
@@ -109,6 +111,8 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     getCartConsumed,
     onAddToCart,
     openPad,
+    onRefreshCatalog,
+    isRefreshing = false,
 }) => {
     const isVip = customerType === 'vip';
 
@@ -310,6 +314,33 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
         resetSelection();
     };
+
+    if (products.length === 0) {
+        return (
+            <div className="p-6 rounded-[24px] bg-amber-500/10 border-2 border-amber-500/25 flex flex-col items-center justify-center text-center gap-3">
+                <AlertCircle className="w-10 h-10 text-amber-500" />
+                <div className="flex flex-col gap-1">
+                    <span className="font-black text-slate-800 dark:text-white text-base">
+                        لا توجد منتجات متوفرة حالياً في القائمة
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-white/60">
+                        إذا قمت للتو بشراء منتجات أو إضافة مخزون جديد، اضغط على زر التحديث لمزامنة المخزون فوراً.
+                    </span>
+                </div>
+                {onRefreshCatalog && (
+                    <button
+                        type="button"
+                        onClick={onRefreshCatalog}
+                        disabled={isRefreshing}
+                        className="mt-2 px-5 py-3 rounded-[16px] bg-primary text-white font-black text-sm flex items-center gap-2 shadow-lg hover:bg-primary/90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span>تحديث ومزامنة المنتجات الآن</span>
+                    </button>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-2.5 sm:gap-3">

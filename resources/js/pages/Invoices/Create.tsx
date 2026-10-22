@@ -204,6 +204,39 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         setProductsList(products);
     }, [products]);
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const refreshProductsCatalog = async () => {
+        setIsRefreshing(true);
+        try {
+            const token = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+                || (window as any).csrfToken || '';
+            const res = await fetch('/invoices/refresh-catalog', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.products)) {
+                setProductsList(data.products);
+                setProductSelectorKey(k => k + 1);
+                setToastMessage(`تم تحديث قائمة المنتجات والمخزون بنجاح (${data.products.length} منتج متوفر)`);
+                setTimeout(() => setToastMessage(null), 4000);
+            } else {
+                router.reload({ only: ['products'] });
+            }
+        } catch (e) {
+            console.error('Failed to refresh catalog:', e);
+            router.reload({ only: ['products'] });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
     // Server-Authoritative Delta Stock Sync: Update only sold items when server responds with updated_stocks
     useEffect(() => {
         if (flash?.updated_stocks && typeof flash.updated_stocks === 'object') {
@@ -901,6 +934,21 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <span className="font-black text-slate-800 dark:text-white text-xs sm:text-sm truncate">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
+                                {/* Refresh / Sync Products Catalog Button */}
+                                <button
+                                    type="button"
+                                    onClick={refreshProductsCatalog}
+                                    disabled={isRefreshing}
+                                    className="h-10 sm:h-12 px-3 sm:px-4 rounded-[14px] sm:rounded-[18px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/20 text-slate-700 dark:text-white/80 font-bold flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                                    title="تحديث قائمة المنتجات ومزامنة المخزون اللحظي"
+                                >
+                                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-primary ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <span className="text-xs sm:text-sm font-black hidden md:inline">تحديث المنتجات</span>
+                                    <span className="text-[10px] sm:text-xs font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                                        {productsList.length}
+                                    </span>
+                                </button>
+
                                 {/* Hold invoices touchscreen square button */}
                                 {!isEditMode && (
                                     <button
@@ -934,6 +982,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 getCartConsumed={getCartConsumed}
                                 onAddToCart={handleAddToCart}
                                 openPad={openPad}
+                                onRefreshCatalog={refreshProductsCatalog}
+                                isRefreshing={isRefreshing}
                             />
                         </div>
 
@@ -1022,7 +1072,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-2.5 sm:py-3">
                             <Cart
                                 cart={cart}
-                                products={products}
+                                products={productsList}
                                 sizes={sizes}
                                 paymentMethods={paymentMethods}
                                 payments={payments}
@@ -1078,6 +1128,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             </Link>
                             <span className="font-black text-slate-800 dark:text-white text-xs">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
                             <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={refreshProductsCatalog}
+                                    disabled={isRefreshing}
+                                    className="h-10 px-2.5 rounded-[12px] bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-slate-700 dark:text-white/80 font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                                    title="تحديث المنتجات والمخزون"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 text-primary ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <span className="text-[11px] font-black">{productsList.length}</span>
+                                </button>
+
                                 {!isEditMode && (
                                     <button onClick={() => setShowHoldList(!showHoldList)}
                                         className="relative w-14 h-14 rounded-[18px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 border-2 border-amber-500/50 text-amber-800 dark:text-amber-200 font-black flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 shadow-md shrink-0 cursor-pointer"
@@ -1187,6 +1248,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         getCartConsumed={getCartConsumed}
                                         onAddToCart={handleAddToCart}
                                         openPad={openPad}
+                                        onRefreshCatalog={refreshProductsCatalog}
+                                        isRefreshing={isRefreshing}
                                     />
                                 </div>
 
@@ -1194,7 +1257,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <div className="flex-1 overflow-y-auto px-3 py-3">
                                     <Cart
                                         cart={cart}
-                                        products={products}
+                                        products={productsList}
                                         sizes={sizes}
                                         paymentMethods={paymentMethods}
                                         payments={payments}

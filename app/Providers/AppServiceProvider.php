@@ -66,12 +66,24 @@ class AppServiceProvider extends ServiceProvider
         $clearPosCatalog = fn() => \Illuminate\Support\Facades\Cache::forget('pos_products_catalog_base');
         \App\Models\Product::saved($clearPosCatalog);
         \App\Models\Product::deleted($clearPosCatalog);
+        \App\Models\ProductPrice::saved($clearPosCatalog);
+        \App\Models\ProductPrice::deleted($clearPosCatalog);
+        \App\Models\OriginalPerfumeDetail::saved($clearPosCatalog);
+        \App\Models\OriginalPerfumeDetail::deleted($clearPosCatalog);
         \App\Models\Category::saved($clearPosCatalog);
         \App\Models\Category::deleted($clearPosCatalog);
         \App\Models\PriceTier::saved($clearPosCatalog);
         \App\Models\PriceTier::deleted($clearPosCatalog);
         \App\Models\TierPrice::saved($clearPosCatalog);
         \App\Models\TierPrice::deleted($clearPosCatalog);
+        \App\Models\Purchase::saved($clearPosCatalog);
+        \App\Models\Purchase::deleted($clearPosCatalog);
+        \App\Models\PurchaseItem::saved($clearPosCatalog);
+        \App\Models\PurchaseItem::deleted($clearPosCatalog);
+        \App\Models\PurchaseReturnItem::saved($clearPosCatalog);
+        \App\Models\PurchaseReturnItem::deleted($clearPosCatalog);
+        \App\Models\WasteItem::saved($clearPosCatalog);
+        \App\Models\WasteItem::deleted($clearPosCatalog);
 
         $clearSizes = fn() => \Illuminate\Support\Facades\Cache::forget('pos_sizes_list');
         \App\Models\Size::saved($clearSizes);
