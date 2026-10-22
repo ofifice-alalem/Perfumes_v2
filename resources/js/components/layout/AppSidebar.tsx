@@ -4,7 +4,8 @@ import {
   LayoutDashboard, ShoppingCart, Package, Users, Truck,
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
-  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive, BookOpen, Settings
+  PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive, BookOpen, Settings,
+  Sparkles
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -24,6 +25,12 @@ interface NavItem {
   href: string;
   roles?: string[];
 }
+
+const simpleModeItems: NavItem[] = [
+  { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
+  { icon: <Truck className="w-5 h-5" />, label: 'المشتريات', href: '/purchases' },
+  { icon: <ShoppingCart className="w-5 h-5" />, label: 'الفواتير', href: '/invoices' },
+];
 
 const navSections: NavSection[] = [
   {
@@ -96,6 +103,25 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
   };
 
   const isSuperAdmin = userRoles.includes('super-admin');
+  const canToggleSimpleMode = userRoles.includes('admin') || userRoles.includes('super-admin');
+
+  // Simple Mode state persisted in localStorage
+  const [isSimpleMode, setIsSimpleMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('perfumes_sidebar_simple_mode') === 'true';
+    }
+    return false;
+  });
+
+  const toggleSimpleMode = () => {
+    setIsSimpleMode(prev => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('perfumes_sidebar_simple_mode', String(next));
+      }
+      return next;
+    });
+  };
 
   // Scroll active link into view
   useEffect(() => {
@@ -138,7 +164,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
       {/* User Info */}
       {isOpen && (
-        <div className="px-5 mb-6">
+        <div className="px-5 mb-4">
           <div className="flex flex-col px-4 py-3 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8">
             <span className="font-black text-slate-800 dark:text-white text-sm truncate">
               {(props.auth?.user?.name as string) ?? ''}
@@ -154,67 +180,153 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         </div>
       )}
 
+      {/* Simple Mode Toggle Card (Available for admin & super-admin) */}
+      {canToggleSimpleMode && (
+        <div className={`px-4 mb-4 ${!isOpen ? 'flex justify-center' : ''}`}>
+          {isOpen ? (
+            <button
+              type="button"
+              onClick={toggleSimpleMode}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-[18px] border transition-all duration-300 group ${
+                isSimpleMode
+                  ? 'bg-primary/10 border-primary/30 text-primary shadow-sm shadow-primary/10'
+                  : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-600 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                  isSimpleMode
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-black/5 dark:bg-white/10 text-slate-500 dark:text-white/50 group-hover:text-primary'
+                }`}>
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col text-right">
+                  <span className="text-xs font-black leading-tight">الوضع المبسط</span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-white/40">
+                    {isSimpleMode ? '3 روابط أساسية' : 'القائمة الكاملة'}
+                  </span>
+                </div>
+              </div>
+
+              {/* VisionOS style toggle switch */}
+              <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${
+                isSimpleMode ? 'bg-primary justify-end' : 'bg-slate-300 dark:bg-white/20 justify-start'
+              }`}>
+                <div className="w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300" />
+              </div>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleSimpleMode}
+              title={isSimpleMode ? 'الوضع المبسط (مفعل)' : 'الوضع المبسط (معطل)'}
+              className={`w-12 h-12 rounded-[16px] flex items-center justify-center relative transition-all duration-300 ${
+                isSimpleMode
+                  ? 'bg-primary text-white shadow-md shadow-primary/25'
+                  : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              {isSimpleMode && (
+                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-primary" />
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 flex flex-col gap-2 w-full px-4 overflow-y-auto custom-scroll pb-14">
-        {/* الرئيسية — super-admin فقط */}
-        {isSuperAdmin && (
-          <Link href="/"
-            prefetch
-            className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-          >
-            <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
-              <LayoutDashboard className="w-5 h-5" />
-            </div>
-            {isOpen && (
-              <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${url === '/' ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-                الرئيسية
-              </span>
-            )}
-          </Link>
-        )}
-
-        {isSuperAdmin && <div className="h-px bg-black/10 dark:bg-white/10 my-2 mx-3" />}
-
-        {/* الأقسام */}
-        {navSections.filter(s => canAccess(s.roles)).map((section) => (
-          <div key={section.title} className="mb-2">
-            {/* عنوان القسم */}
-            {isOpen && (
-              <button
-                onClick={() => toggleSection(section.title)}
-                className="flex items-center justify-between w-full px-4 py-2 text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest hover:text-slate-600 dark:hover:text-white/50 transition-colors"
-              >
-                <span>{section.title}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSections[section.title] ? 'rotate-180' : ''}`} />
-              </button>
-            )}
-
-            {/* عناصر القسم */}
-            {(isOpen ? expandedSections[section.title] : true) && (
-              <div className="flex flex-col gap-1">
-                {section.items.filter(item => canAccess(item.roles)).map((item) => {
-                  const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
-                  return (
-                    <Link key={item.href} href={item.href}
-                      prefetch
-                      id={isActive ? 'active-nav-link' : undefined}
-                      className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                    >
-                      <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
-                        {item.icon}
-                      </div>
-                      {isOpen && (
-                        <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-                          {item.label}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+        {canToggleSimpleMode && isSimpleMode ? (
+          /* Simple Mode: 3 links only */
+          <div className="flex flex-col gap-1.5 animate-in fade-in duration-300">
+            {simpleModeItems.map((item) => {
+              const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch
+                  id={isActive ? 'active-nav-link' : undefined}
+                  className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                >
+                  <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+                    {item.icon}
+                  </div>
+                  {isOpen && (
+                    <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
-        ))}
+        ) : (
+          /* Full Navigation */
+          <>
+            {/* الرئيسية — super-admin فقط */}
+            {isSuperAdmin && (
+              <Link href="/"
+                prefetch
+                className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+              >
+                <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+                  <LayoutDashboard className="w-5 h-5" />
+                </div>
+                {isOpen && (
+                  <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${url === '/' ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                    الرئيسية
+                  </span>
+                )}
+              </Link>
+            )}
+
+            {isSuperAdmin && <div className="h-px bg-black/10 dark:bg-white/10 my-2 mx-3" />}
+
+            {/* الأقسام */}
+            {navSections.filter(s => canAccess(s.roles)).map((section) => (
+              <div key={section.title} className="mb-2">
+                {/* عنوان القسم */}
+                {isOpen && (
+                  <button
+                    onClick={() => toggleSection(section.title)}
+                    className="flex items-center justify-between w-full px-4 py-2 text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest hover:text-slate-600 dark:hover:text-white/50 transition-colors"
+                  >
+                    <span>{section.title}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSections[section.title] ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
+
+                {/* عناصر القسم */}
+                {(isOpen ? expandedSections[section.title] : true) && (
+                  <div className="flex flex-col gap-1">
+                    {section.items.filter(item => canAccess(item.roles)).map((item) => {
+                      const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
+                      return (
+                        <Link key={item.href} href={item.href}
+                          prefetch
+                          id={isActive ? 'active-nav-link' : undefined}
+                          className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                        >
+                          <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+                            {item.icon}
+                          </div>
+                          {isOpen && (
+                            <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                              {item.label}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </>
+        )}
 
         <div className="h-px bg-black/20 dark:bg-white/20 my-3 mx-3" />
 
