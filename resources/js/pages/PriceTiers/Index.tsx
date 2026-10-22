@@ -16,12 +16,6 @@ interface Props {
   flash?: { success?: string; error?: string };
 }
 
-const tierColors: Record<string, string> = {
-  A: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500/30',
-  B: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-2 border-blue-500/30',
-  C: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-2 border-purple-500/30',
-};
-const defaultColor = 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-2 border-slate-500/30';
 
 function fmt(val: string | null | undefined): string {
   if (!val) return '—';
@@ -47,7 +41,7 @@ function DeleteTierModal({ tier, onClose }: { tier: Tier; onClose: () => void })
           </button>
         </div>
         <div className="flex flex-col gap-2">
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">حذف تير "{tier.name}"</h3>
+          <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">حذف "{tier.name}"</h3>
           <p className="text-base font-bold text-slate-500 dark:text-white/60 leading-relaxed">
             هل أنت متأكد من رغبتك في حذف هذا التير وجميع أسعاره؟ لا يمكن التراجع عن هذا الإجراء.
           </p>
@@ -185,12 +179,9 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
             <SpatialCard key={tier.id} title="" hideHeader className="overflow-hidden">
 
               {/* Tier Header */}
-              <div className="flex items-center gap-4 mb-6">
-                <div className={`w-20 h-20 rounded-[24px] flex items-center justify-center shrink-0 shadow-md ${tierColors[tier.name] ?? defaultColor}`}>
-                  <span className="font-black text-3xl sm:text-4xl">{tier.name}</span>
-                </div>
+              <div className="flex items-center justify-between gap-4 mb-6">
                 <div className="flex-1 min-w-0">
-                  <span className="font-black text-3xl sm:text-4xl text-slate-800 dark:text-white">تير {tier.name}</span>
+                  <h2 className="font-black text-3xl sm:text-4xl text-slate-800 dark:text-white tracking-tight">{tier.name}</h2>
                   {tier.description && <p className="text-base font-bold text-slate-400 dark:text-white/50 mt-1">{tier.description}</p>}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -282,7 +273,7 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
                   <Tags className="w-7 h-7 text-primary" />
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">
-                  {editingTier ? `تعديل تير "${editingTier.name}"` : 'إضافة تير جديد'}
+                  {editingTier ? `تعديل "${editingTier.name}"` : 'إضافة تير جديد'}
                 </h2>
               </div>
               <button onClick={closeDrawer} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10">
@@ -347,11 +338,11 @@ export default function PriceTiersIndex({ tiers, sizes, flash }: Props) {
 
             <div className="flex items-center justify-between pb-5 border-b border-black/5 dark:border-white/5">
               <div className="flex items-center gap-3.5">
-                <div className={`w-16 h-16 rounded-[22px] border-2 flex items-center justify-center shrink-0 shadow-sm ${tierColors[pricingTier.name] ?? defaultColor}`}>
-                  <span className="font-black text-2xl">{pricingTier.name}</span>
+                <div className="w-14 h-14 rounded-[20px] bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
+                  <Tags className="w-7 h-7 text-primary" />
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">
-                  أسعار تير {pricingTier.name} (بالدينار)
+                  أسعار {pricingTier.name} (بالدينار)
                 </h2>
               </div>
               <button onClick={closePricesDrawer} className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10">
