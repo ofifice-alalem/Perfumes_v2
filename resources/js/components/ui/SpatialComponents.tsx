@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { Link, router } from '@inertiajs/react';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 
+export * from '@/components/ui/DesignSystem';
+
 export function SpatialCard({
   title,
   icon,

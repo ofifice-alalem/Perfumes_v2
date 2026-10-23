@@ -57,8 +57,12 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
   };
 
   return (
-    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 lg:p-6 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent">
-      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none lg:rounded-[40px]">
+    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 lg:p-6 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent relative">
+      {/* Ambient Glass Backdrop Refraction Orbs */}
+      <div className="pointer-events-none fixed -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-amber-400/15 via-amber-500/5 to-transparent blur-[120px] dark:from-amber-400/10 dark:via-amber-500/5 dark:to-transparent z-0" />
+      <div className="pointer-events-none fixed -bottom-32 -left-32 w-[550px] h-[550px] rounded-full bg-gradient-to-tr from-sky-400/15 via-indigo-500/5 to-transparent blur-[130px] dark:from-sky-500/10 dark:via-blue-600/5 dark:to-transparent z-0" />
+
+      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none lg:rounded-[40px] z-10">
 
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[998] lg:hidden animate-in fade-in duration-300"
