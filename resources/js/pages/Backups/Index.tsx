@@ -18,7 +18,10 @@ import {
     ShieldCheck,
     Check,
     FileText,
-    Sparkles
+    Sparkles,
+    Search,
+    FileArchive,
+    CheckCircle2
 } from 'lucide-react';
 
 interface Backup {
@@ -436,280 +439,417 @@ export default function BackupsIndex({ backups, flash }: Props) {
     const [showCreate, setShowCreate]       = useState(false);
     const [showUpload, setShowUpload]       = useState(false);
     const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null);
+    const [searchQuery, setSearchQuery]     = useState('');
 
     const latestBackup = backups.length > 0 ? backups[0] : null;
+
+    // Filter backups based on search query
+    const filteredBackups = backups.filter(b => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        const filenameMatch = b.filename.toLowerCase().includes(q);
+        const noteMatch = (b.note || '').toLowerCase().includes(q);
+        const dateMatch = (b.date || '').toLowerCase().includes(q);
+        return filenameMatch || noteMatch || dateMatch;
+    });
 
     return (
         <AppShell pageTitle="النسخ الاحتياطية">
             <div className="flex flex-col gap-8 pb-32 lg:pb-0 dir-rtl">
 
-                {/* Top Banner & Main Actions */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-slate-100/80 dark:bg-slate-800/40 p-6 sm:p-8 rounded-[30px] border-2 border-slate-200/80 dark:border-slate-700/60 shadow-lg">
-                    <div className="flex items-center gap-5">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[26px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black shrink-0 shadow-md">
-                            <Database className="w-8 h-8 sm:w-10 sm:h-10" />
-                        </div>
-                        <div>
-                            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
-                                النسخ الاحتياطية والأمان
-                            </h1>
-                            <p className="text-base sm:text-lg font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                إدارة وإنشاء واستعادة النسخ الاحتياطية لقواعد البيانات أسبوعياً أو عند الحاجة
-                            </p>
-                        </div>
-                    </div>
+                {/* =========================================================
+                    ZONE 1: HERO COMMAND BANNER (رأس الصفحة التفاعلي)
+                    ========================================================= */}
+                <div className="relative overflow-hidden rounded-[32px] p-6 sm:p-8 lg:p-10 border-2 border-slate-200/90 dark:border-white/10 bg-gradient-to-br from-white/95 via-slate-50/85 to-blue-50/40 dark:from-slate-900/95 dark:via-slate-900/75 dark:to-blue-950/20 backdrop-blur-2xl shadow-xl">
+                    {/* Ambient Glow Orbs */}
+                    <div className="absolute -top-24 -left-24 w-80 h-80 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
+                    <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                    <div className="flex items-center gap-4 shrink-0">
-                        <button
-                            onClick={() => setShowUpload(true)}
-                            className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] border-2 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 font-black text-base sm:text-lg flex items-center justify-center gap-3 transition-all active:scale-95 shadow-md touch-manipulation cursor-pointer"
-                        >
-                            <Upload className="w-6 h-6" />
-                            <span>رفع نسخة (.zip)</span>
-                        </button>
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div className="flex items-start sm:items-center gap-5">
+                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[26px] bg-gradient-to-br from-primary/25 to-primary/10 text-primary border-2 border-primary/30 flex items-center justify-center font-black shrink-0 shadow-lg shadow-primary/10">
+                                <Database className="w-8 h-8 sm:w-10 sm:h-10" />
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-3 py-1 rounded-full bg-primary/15 border border-primary/30 text-primary text-xs font-black flex items-center gap-1.5 w-fit">
+                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                        نظام الحماية واستعادة الكوارث
+                                    </span>
+                                </div>
+                                <h1 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    إدارة النسخ الاحتياطية
+                                </h1>
+                                <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                                    توليد لقطات شاملة لقواعد البيانات والبيانات المحاسبية والمخزون، مع إمكانية التحميل والاستعادة الفورية بأعلى معايير الأمان.
+                                </p>
+                            </div>
+                        </div>
 
-                        <button
-                            onClick={() => setShowCreate(true)}
-                            className="spatial-button h-16 sm:h-18 px-8 sm:px-10 rounded-[22px] text-base sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl touch-manipulation cursor-pointer"
-                        >
-                            <Database className="w-6 h-6" />
-                            <span>إنشاء نسخة احتياطية</span>
-                        </button>
+                        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3.5 shrink-0">
+                            <button
+                                onClick={() => setShowUpload(true)}
+                                className="h-14 sm:h-16 px-5 sm:px-7 rounded-[20px] border-2 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 font-black text-sm sm:text-base flex items-center justify-center gap-2.5 transition-all active:scale-95 shadow-md touch-manipulation cursor-pointer"
+                            >
+                                <Upload className="w-5 h-5" />
+                                <span>رفع نسخة (.zip)</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowCreate(true)}
+                                className="spatial-button h-14 sm:h-16 px-6 sm:px-8 rounded-[20px] text-sm sm:text-base font-black flex items-center justify-center gap-2.5 active:scale-95 shadow-xl shadow-primary/25 touch-manipulation cursor-pointer"
+                            >
+                                <Sparkles className="w-5 h-5 text-amber-300" />
+                                <span>إنشاء نسخة احتياطية</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Flash Messages */}
                 {flash?.success && (
-                    <div className="p-5 rounded-[22px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-black text-lg flex items-center gap-3 shadow-md">
-                        <Check className="w-6 h-6 text-emerald-500 shrink-0" />
+                    <div className="p-5 rounded-[22px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-black text-lg flex items-center gap-3 shadow-md animate-in fade-in duration-300">
+                        <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
                         <span>{flash.success}</span>
                     </div>
                 )}
                 {flash?.error && (
-                    <div className="p-5 rounded-[22px] bg-red-500/15 border-2 border-red-500/30 text-red-700 dark:text-red-300 font-black text-lg flex items-center gap-3 shadow-md">
+                    <div className="p-5 rounded-[22px] bg-red-500/15 border-2 border-red-500/30 text-red-700 dark:text-red-300 font-black text-lg flex items-center gap-3 shadow-md animate-in fade-in duration-300">
                         <AlertTriangle className="w-6 h-6 text-red-500 shrink-0" />
                         <span>{flash.error}</span>
                     </div>
                 )}
 
-                {/* Analytics & Stats Bar */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <SpatialCard className="p-6">
+                {/* =========================================================
+                    ZONE 2: INSIGHTS & DIAGNOSTICS (المؤشرات الذكية)
+                    ========================================================= */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    {/* Total backups */}
+                    <SpatialCard className="p-5" hideHeader>
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-[20px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shrink-0">
-                                <HardDrive className="w-7 h-7" />
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-black text-slate-500 dark:text-slate-400">إجمالي النسخ المحفوظة</span>
-                                <span className="text-3xl font-black text-slate-900 dark:text-white mt-0.5">{backups.length} نسخة</span>
-                            </div>
-                        </div>
-                    </SpatialCard>
-
-                    <SpatialCard className="p-6">
-                        <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-[20px] bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
-                                <Clock className="w-7 h-7" />
+                            <div className="w-13 h-13 rounded-[18px] bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary shrink-0 shadow-sm">
+                                <HardDrive className="w-6 h-6" />
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <span className="text-sm font-black text-slate-500 dark:text-slate-400">أحدث نسخة احتياطية</span>
-                                <span className="text-lg font-black text-slate-900 dark:text-white mt-0.5 truncate">
-                                    {latestBackup ? fmtDate(latestBackup.date) : 'لا يوجد نسخ'}
+                                <span className="text-xs font-black text-slate-500 dark:text-slate-400">إجمالي النسخ المحفوظة</span>
+                                <span className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{backups.length} نسخة</span>
+                                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">في التخزين المحلي الآمن</span>
+                            </div>
+                        </div>
+                    </SpatialCard>
+
+                    {/* Latest backup */}
+                    <SpatialCard className="p-5" hideHeader>
+                        <div className="flex items-center gap-4">
+                            <div className="w-13 h-13 rounded-[18px] bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0 shadow-sm">
+                                <Clock className="w-6 h-6" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-black text-slate-500 dark:text-slate-400">أحدث نقطة استعادة</span>
+                                <span className="text-base font-black text-slate-900 dark:text-white mt-0.5 truncate">
+                                    {latestBackup ? fmtDate(latestBackup.date) : 'لا توجد نسخ بعد'}
+                                </span>
+                                <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                                    {latestBackup ? 'آخر لقطة بيانات مسجلة' : 'جاهز لأخذ أول لقطة'}
                                 </span>
                             </div>
                         </div>
                     </SpatialCard>
 
-                    <SpatialCard className="p-6">
+                    {/* Compression format */}
+                    <SpatialCard className="p-5" hideHeader>
                         <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0">
-                                <ShieldCheck className="w-7 h-7" />
+                            <div className="w-13 h-13 rounded-[18px] bg-blue-500/15 border-2 border-blue-500/30 flex items-center justify-center text-blue-500 shrink-0 shadow-sm">
+                                <FileArchive className="w-6 h-6" />
                             </div>
-                            <div className="flex flex-col">
-                                <span className="text-sm font-black text-slate-500 dark:text-slate-400">حالة نظام الأمان</span>
-                                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1.5">
-                                    <Sparkles className="w-4 h-4" /> نشط وجاهز
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-black text-slate-500 dark:text-slate-400">معيار الحفظ والضغط</span>
+                                <span className="text-base font-black text-slate-900 dark:text-white mt-0.5">أرشيف ZIP محكم</span>
+                                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">جداول SQL + الملاحظات</span>
+                            </div>
+                        </div>
+                    </SpatialCard>
+
+                    {/* System state */}
+                    <SpatialCard className="p-5" hideHeader>
+                        <div className="flex items-center gap-4">
+                            <div className="w-13 h-13 rounded-[18px] bg-emerald-500/15 border-2 border-emerald-500/30 flex items-center justify-center text-emerald-500 shrink-0 shadow-sm">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-black text-slate-500 dark:text-slate-400">محرك الاستعادة الذاتي</span>
+                                <span className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-0.5 flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    نشط وجاهز للتشغيل
                                 </span>
+                                <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">تأكيد أمان من خطوتين</span>
                             </div>
                         </div>
                     </SpatialCard>
                 </div>
 
-                {/* Backups List Table / Card Grid */}
+                {/* =========================================================
+                    ZONE 3: ARCHIVE CONTROLS & TABLE (سجل النسخ الاحتياطية)
+                    ========================================================= */}
                 <SpatialCard
-                    title={`سجل النسخ الاحتياطية (${backups.length})`}
+                    title="أرشيف النسخ الاحتياطية"
                     icon={<Database className="w-6 h-6 text-primary" />}
+                    action={
+                        <span className="px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-black">
+                            {filteredBackups.length} ملف
+                        </span>
+                    }
                 >
-                    {backups.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500 gap-4 text-center">
-                            <div className="w-24 h-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-5xl shadow-inner">
-                                🗄️
-                            </div>
-                            <span className="font-black text-2xl text-slate-700 dark:text-slate-300">لا توجد نسخ احتياطية مسجلة بعد</span>
-                            <p className="text-base font-bold text-slate-500 dark:text-slate-400 max-w-md">
-                                يمكنك إنشاء أول نسخة احتياطية بنقرة زر حفظاً لبيانات المبيعات والمستخدمين والمنتجات.
-                            </p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* Desktop & Tablet Table */}
-                            <div className="hidden md:block overflow-x-auto">
-                                <table className="w-full text-right border-collapse">
-                                    <thead>
-                                        <tr className="border-b-2 border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 text-sm font-black uppercase">
-                                            <th className="p-5 rounded-r-[18px]">اسم الملف</th>
-                                            <th className="p-5">تاريخ الإنشاء</th>
-                                            <th className="p-5">الحجم</th>
-                                            <th className="p-5">ملاحظة</th>
-                                            <th className="p-5 rounded-l-[18px] text-center">الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-bold">
-                                        {backups.map(backup => (
-                                            <tr
-                                                key={backup.filename}
-                                                className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group"
-                                            >
-                                                {/* Filename */}
-                                                <td className="p-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-[16px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0 shadow-sm">
-                                                            <Database className="w-6 h-6" />
-                                                        </div>
-                                                        <span className="font-black text-base text-slate-900 dark:text-white dir-ltr text-right break-all">
-                                                            {backup.filename}
-                                                        </span>
-                                                    </div>
-                                                </td>
+                    <div className="flex flex-col gap-6">
 
-                                                {/* Date */}
-                                                <td className="p-5 whitespace-nowrap">
-                                                    <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-sm">
+                        {/* Search Toolbar */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-100/70 dark:bg-white/[0.03] p-4 rounded-[22px] border border-slate-200/80 dark:border-white/10 backdrop-blur-xl">
+                            <div className="relative flex-1 max-w-md">
+                                <Search className="w-5 h-5 text-slate-400 dark:text-white/40 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="بحث باسم الملف أو التاريخ أو الملاحظة..."
+                                    className="spatial-input w-full h-12 pr-12 pl-10 rounded-[16px] text-sm font-bold bg-white/80 dark:bg-slate-900/60"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 cursor-pointer"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center justify-between sm:justify-end gap-3 text-xs sm:text-sm font-black">
+                                <span className="px-3.5 py-2 rounded-[14px] bg-slate-200/80 dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-300/80 dark:border-white/10">
+                                    عرض {filteredBackups.length} من أصل {backups.length} نسخة
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Table / Empty State */}
+                        {backups.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500 gap-4 text-center">
+                                <div className="w-24 h-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center text-5xl shadow-inner">
+                                    🗄️
+                                </div>
+                                <span className="font-black text-2xl text-slate-700 dark:text-slate-300">لا توجد نسخ احتياطية مسجلة بعد</span>
+                                <p className="text-base font-bold text-slate-500 dark:text-slate-400 max-w-md">
+                                    يمكنك إنشاء أول نسخة احتياطية بنقرة زر لحفظ كامل بيانات المنتجات والمبيعات والمخزون.
+                                </p>
+                            </div>
+                        ) : filteredBackups.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3 text-center">
+                                <Search className="w-12 h-12 text-slate-400" />
+                                <span className="font-black text-xl text-slate-700 dark:text-slate-300">لا توجد نتائج مطابقة لبحثك</span>
+                                <p className="text-sm font-bold text-slate-500">جرب البحث بكلمات أخرى أو أفرغ حقل البحث</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Desktop & Tablet Table */}
+                                <div className="hidden md:block overflow-x-auto">
+                                    <table className="w-full text-right border-collapse">
+                                        <thead>
+                                            <tr className="border-b-2 border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 text-sm font-black uppercase">
+                                                {/* Col 1: Filename */}
+                                                <th className="p-5 rounded-r-[20px] whitespace-nowrap">اسم الملف</th>
+
+                                                {/* Col 2: Date */}
+                                                <th className="p-5 whitespace-nowrap">تاريخ ووقت الإنشاء</th>
+
+                                                {/* Col 3: Size */}
+                                                <th className="p-5 whitespace-nowrap">حجم الملف</th>
+
+                                                {/* Col 4: Note */}
+                                                <th className="p-5">الملاحظات والبيان</th>
+
+                                                {/* Col 5: Actions - The Last Column */}
+                                                <th className="p-5 rounded-l-[20px] text-center whitespace-nowrap">خيارات التحكم</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y-2 divide-slate-100 dark:divide-slate-800/60 font-bold">
+                                            {filteredBackups.map(backup => (
+                                                <tr
+                                                    key={backup.filename}
+                                                    className="hover:bg-primary/5 dark:hover:bg-primary/10 transition-colors group align-middle"
+                                                >
+                                                    {/* 1. Filename */}
+                                                    <td className="p-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-11 h-11 rounded-[14px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0 shadow-sm">
+                                                                <Database className="w-5 h-5" />
+                                                            </div>
+                                                            <span className="font-black text-sm text-slate-900 dark:text-white dir-ltr text-right break-all">
+                                                                {backup.filename}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* 2. Date */}
+                                                    <td className="p-5 whitespace-nowrap">
+                                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-slate-200/80 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs font-mono">
+                                                            <Clock className="w-3.5 h-3.5 text-primary" />
+                                                            <span>{fmtDate(backup.date)}</span>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* 3. Size - Plain text, NOT badge */}
+                                                    <td className="p-5 whitespace-nowrap">
+                                                        <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">
+                                                            {backup.size}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* 4. Note - Full text completely visible */}
+                                                    <td className="p-5">
+                                                        {backup.note ? (
+                                                            <div className="min-w-[280px] max-w-xl p-3.5 rounded-[18px] bg-slate-100/90 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/10 text-slate-800 dark:text-slate-200 text-sm font-bold leading-relaxed break-words whitespace-pre-wrap shadow-sm">
+                                                                <div className="flex items-start gap-2">
+                                                                    <FileText className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                                                                    <span>{backup.note}</span>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-400 dark:text-white/30 text-xs font-bold italic">
+                                                                لا توجد ملاحظة مدونة
+                                                            </span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* 5. Actions - LAST COLUMN */}
+                                                    <td className="p-5 whitespace-nowrap">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {/* Download */}
+                                                            <a
+                                                                href={`/backups/download/${backup.filename}`}
+                                                                title="تحميل النسخة إلى جهازك"
+                                                                className="h-10 px-3.5 rounded-[14px] border-2 border-primary/30 bg-primary/10 hover:bg-primary hover:text-white text-primary font-black text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
+                                                            >
+                                                                <Download className="w-4 h-4" />
+                                                                <span>تحميل</span>
+                                                            </a>
+
+                                                            {/* Restore */}
+                                                            <button
+                                                                onClick={() => setRestoreTarget(backup)}
+                                                                title="استعادة هذه النسخة"
+                                                                className="h-10 px-3.5 rounded-[14px] border-2 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
+                                                            >
+                                                                <RotateCcw className="w-4 h-4" />
+                                                                <span>استعادة</span>
+                                                            </button>
+
+                                                            {/* Delete */}
+                                                            <DeleteModal
+                                                                title="حذف النسخة الاحتياطية"
+                                                                description={`هل أنت متأكد من حذف ملف النسخة الاحتياطية "${backup.filename}" نهائياً؟`}
+                                                                onConfirm={() => router.delete(`/backups/${backup.filename}`)}
+                                                                trigger={
+                                                                    <button
+                                                                        title="حذف الملف"
+                                                                        className="h-10 px-3.5 rounded-[14px] border-2 border-red-500/30 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-xs flex items-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                        <span>حذف</span>
+                                                                    </button>
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Cards View */}
+                                <div className="flex flex-col gap-4 md:hidden">
+                                    {filteredBackups.map(backup => (
+                                        <div
+                                            key={backup.filename}
+                                            className="rounded-[26px] border-2 border-slate-200/90 dark:border-white/10 bg-white/90 dark:bg-slate-900/90 p-5 flex flex-col gap-4 shadow-md backdrop-blur-xl"
+                                        >
+                                            {/* Header */}
+                                            <div className="flex items-center gap-3 border-b-2 border-slate-100 dark:border-white/10 pb-3">
+                                                <div className="w-12 h-12 rounded-[16px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+                                                    <Database className="w-6 h-6" />
+                                                </div>
+                                                <div className="flex flex-col min-w-0 flex-1">
+                                                    <span className="font-black text-slate-900 dark:text-white text-sm break-all dir-ltr text-right">
+                                                        {backup.filename}
+                                                    </span>
+                                                    <span className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5 flex items-center gap-1 font-mono">
+                                                        <Clock className="w-3.5 h-3.5 text-primary" />
                                                         {fmtDate(backup.date)}
                                                     </span>
-                                                </td>
+                                                </div>
+                                            </div>
 
-                                                {/* Size */}
-                                                <td className="p-5 whitespace-nowrap">
-                                                    <span className="font-black text-base text-slate-900 dark:text-slate-100">
-                                                        {backup.size}
-                                                    </span>
-                                                </td>
+                                            {/* Size */}
+                                            <div className="flex items-center justify-between text-sm font-bold bg-slate-50 dark:bg-white/[0.03] p-3 rounded-[16px] border border-slate-200/60 dark:border-white/5">
+                                                <span className="text-slate-500 dark:text-slate-400">حجم الملف:</span>
+                                                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                                                    {backup.size}
+                                                </span>
+                                            </div>
 
-                                                {/* Note */}
-                                                <td className="p-5 text-slate-500 dark:text-slate-400 font-bold text-sm max-w-xs truncate">
-                                                    {backup.note || '—'}
-                                                </td>
+                                            {/* Actions */}
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <a
+                                                    href={`/backups/download/${backup.filename}`}
+                                                    className="h-11 rounded-[14px] border-2 border-primary/40 bg-primary/10 hover:bg-primary hover:text-white text-primary font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                    <span>تحميل</span>
+                                                </a>
 
-                                                {/* Actions */}
-                                                <td className="p-5 whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-3">
-                                                        {/* Download Button */}
-                                                        <a
-                                                            href={`/backups/download/${backup.filename}`}
-                                                            className="h-12 px-4 rounded-[16px] border-2 border-primary/40 bg-primary/10 hover:bg-primary hover:text-white text-primary font-black text-sm flex items-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
-                                                        >
-                                                            <Download className="w-5 h-5" />
-                                                            <span>تحميل</span>
-                                                        </a>
+                                                <button
+                                                    onClick={() => setRestoreTarget(backup)}
+                                                    className="h-11 rounded-[14px] border-2 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
+                                                >
+                                                    <RotateCcw className="w-4 h-4" />
+                                                    <span>استعادة</span>
+                                                </button>
 
-                                                        {/* Restore Button */}
-                                                        <button
-                                                            onClick={() => setRestoreTarget(backup)}
-                                                            className="h-12 px-4 rounded-[16px] border-2 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-sm flex items-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
-                                                        >
-                                                            <RotateCcw className="w-5 h-5" />
-                                                            <span>استعادة</span>
+                                                <DeleteModal
+                                                    title="حذف النسخة الاحتياطية"
+                                                    description={`هل أنت متأكد من حذف ملف النسخة الاحتياطية "${backup.filename}" نهائياً؟`}
+                                                    onConfirm={() => router.delete(`/backups/${backup.filename}`)}
+                                                    wrapperClassName="w-full"
+                                                    trigger={
+                                                        <button className="w-full h-11 rounded-[14px] border-2 border-red-500/30 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-xs flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer">
+                                                            <Trash2 className="w-4 h-4" />
+                                                            <span>حذف</span>
                                                         </button>
-
-                                                        {/* Delete Modal Trigger */}
-                                                        <DeleteModal
-                                                            title={`حذف النسخة الاحتياطية`}
-                                                            description={`هل أنت متأكد من حذف ملف النسخة الاحتياطية "${backup.filename}" نهائياً؟`}
-                                                            onConfirm={() => router.delete(`/backups/${backup.filename}`)}
-                                                            trigger={
-                                                                <button className="h-12 px-4 rounded-[16px] border-2 border-red-500/30 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-sm flex items-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer">
-                                                                    <Trash2 className="w-5 h-5" />
-                                                                    <span>حذف</span>
-                                                                </button>
-                                                            }
-                                                        />
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Cards View */}
-                            <div className="flex flex-col gap-4 md:hidden">
-                                {backups.map(backup => (
-                                    <div
-                                        key={backup.filename}
-                                        className="rounded-[28px] border-2 border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-5 flex flex-col gap-4 shadow-md"
-                                    >
-                                        <div className="flex items-center gap-3 border-b-2 border-slate-100 dark:border-slate-800 pb-3">
-                                            <div className="w-12 h-12 rounded-[16px] bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
-                                                <Database className="w-6 h-6" />
+                                                    }
+                                                />
                                             </div>
-                                            <div className="flex flex-col min-w-0 flex-1">
-                                                <span className="font-black text-slate-900 dark:text-white text-base break-all dir-ltr text-right">
-                                                    {backup.filename}
-                                                </span>
-                                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5">
-                                                    {fmtDate(backup.date)}
-                                                </span>
-                                            </div>
+
+                                            {/* Note (Final section - Full Text completely visible) */}
+                                            {backup.note ? (
+                                                <div className="flex flex-col gap-1.5 p-3.5 rounded-[18px] bg-slate-100/90 dark:bg-white/[0.04] border border-slate-200/90 dark:border-white/10">
+                                                    <span className="text-xs font-black text-primary flex items-center gap-1.5">
+                                                        <FileText className="w-3.5 h-3.5" />
+                                                        ملاحظة النسخة:
+                                                    </span>
+                                                    <p className="font-bold text-slate-800 dark:text-slate-200 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                                                        {backup.note}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="text-xs font-bold text-slate-400 dark:text-white/30 italic px-2">
+                                                    لا توجد ملاحظة مدونة
+                                                </div>
+                                            )}
                                         </div>
-
-                                        <div className="flex items-center justify-between text-sm font-bold">
-                                            <span className="text-slate-500 dark:text-slate-400">حجم الملف:</span>
-                                            <span className="font-black text-slate-900 dark:text-white">{backup.size}</span>
-                                        </div>
-
-                                        {backup.note && (
-                                            <div className="flex items-center justify-between text-sm font-bold">
-                                                <span className="text-slate-500 dark:text-slate-400">ملاحظة:</span>
-                                                <span className="font-black text-slate-700 dark:text-slate-300 max-w-[200px] truncate">{backup.note}</span>
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center gap-2 pt-2 border-t-2 border-slate-100 dark:border-slate-800">
-                                            <a
-                                                href={`/backups/download/${backup.filename}`}
-                                                className="flex-1 h-12 rounded-[16px] border-2 border-primary/40 bg-primary/10 hover:bg-primary hover:text-white text-primary font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
-                                            >
-                                                <Download className="w-4 h-4" />
-                                                <span>تحميل</span>
-                                            </a>
-
-                                            <button
-                                                onClick={() => setRestoreTarget(backup)}
-                                                className="flex-1 h-12 rounded-[16px] border-2 border-amber-500/40 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
-                                            >
-                                                <RotateCcw className="w-4 h-4" />
-                                                <span>استعادة</span>
-                                            </button>
-
-                                            <DeleteModal
-                                                title={`حذف النسخة الاحتياطية`}
-                                                description={`هل أنت متأكد من حذف ملف النسخة الاحتياطية "${backup.filename}" نهائياً؟`}
-                                                onConfirm={() => router.delete(`/backups/${backup.filename}`)}
-                                                wrapperClassName="flex-1"
-                                                trigger={
-                                                    <button className="w-full h-12 rounded-[16px] border-2 border-red-500/30 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-sm flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer">
-                                                        <Trash2 className="w-4 h-4" />
-                                                        <span>حذف</span>
-                                                    </button>
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </SpatialCard>
 
             </div>
