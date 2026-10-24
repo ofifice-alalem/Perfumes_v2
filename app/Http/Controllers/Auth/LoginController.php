@@ -33,18 +33,11 @@ class LoginController extends Controller
         // 1. التحقق من بيانات الدخول
         $request->authenticate();
 
-        // 2. الحصول على المستخدم الموثق
-        $user = Auth::user();
-
-        // 3. مسح وإلغاء أي جلسة أو بيانات سابقة بالكامل لمنع أي تداخل (Clean State)
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        // 4. إعادة تسجيل دخول المستخدم بجلسة جديدة ونظيفة تماماً
-        Auth::login($user, $request->boolean('remember'));
+        // 2. تجديد معرّف الجلسة لمنع هجمات Session Fixation وتثبيت الجلسة
         $request->session()->regenerate();
+        $request->session()->forget('url.intended');
 
-        return redirect()->intended(route('invoices.create'));
+        return redirect()->route('invoices.create');
     }
 
     public function destroy(Request $request): Response

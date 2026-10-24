@@ -11,6 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'login',
+        ]);
         $middleware->web(append: [
             \App\Http\Middleware\CheckLicense::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
@@ -19,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
         ]);
+
+        \Illuminate\Auth\Middleware\RedirectIfAuthenticated::redirectUsing(fn () => route('invoices.create'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (\Spatie\Permission\Exceptions\UnauthorizedException $e, $request) {

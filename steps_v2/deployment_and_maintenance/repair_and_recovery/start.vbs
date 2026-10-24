@@ -17,5 +17,5 @@ For i = 1 To 40
     WScript.Sleep 500
 Next
 
-' 3. إطلاق المتصفح بوضع التطبيق والطباعة الصامتة على المنفذ 80 المباشر
-WshShell.Run """C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"" --kiosk-printing --app=http://tajori.store --start-fullscreen --user-data-dir=""C:\EdgeAppData""", 1, False
+' 3. إطلاق المتصفح بوضع التطبيق والطباعة الصامتة على المنفذ الآمن HTTPS
+WshShell.Run """C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"" --kiosk-printing --app=https://tajori.store --start-fullscreen --user-data-dir=""C:\EdgeAppData""", 1, False
