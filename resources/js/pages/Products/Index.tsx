@@ -4,7 +4,7 @@ import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star, FileSpreadsheet, Upload, Download, FileUp } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -1419,6 +1419,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const [generatingAll, setGeneratingAll] = useState(false);
     const [padConfig, setPadConfig] = useState<{ title: string; field: string; initial: string } | null>(null);
 
+    // حالة واستمارة استيراد Excel
+    const [showImportModal, setShowImportModal] = useState(false);
+    const importFileInputRef = useRef<HTMLInputElement>(null);
+    const importForm = useForm<{ file: File | null }>({
+        file: null,
+    });
+
     const hasActiveFilter = !!searchProdId || !!filterCat || lowStockOnly;
     const hasDraftFilter  = !!draftSearchProdId || !!draftCat || draftLowStockOnly;
 
@@ -1706,6 +1713,31 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
                             </button>
                         )}
+                        {/* زر تصدير Excel */}
+                        <a
+                            href="/products/export/excel"
+                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none"
+                            title="تصدير شيت إكسل كامل يشمل المنتجات والتصنيفات والأحجام والتيرات والأسعار"
+                        >
+                            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
+                            <span>تصدير Excel</span>
+                        </a>
+
+                        {/* زر استيراد Excel */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                importForm.reset();
+                                importForm.clearErrors();
+                                setShowImportModal(true);
+                            }}
+                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none"
+                            title="استيراد وتحديث البيانات من ملف إكسل"
+                        >
+                            <FileUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                            <span>استيراد Excel</span>
+                        </button>
+
                         <button onClick={openCreateDrawer}
                             className="spatial-button flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 h-14 text-lg font-black rounded-[20px] active:scale-95 shadow-xl shadow-primary/30 shrink-0">
                             <Plus className="w-6 h-6" /> إضافة منتج
@@ -2611,6 +2643,140 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     }}
                     onClose={() => setPadConfig(null)}
                 />
+            )}
+
+            {/* Modal استيراد ملف Excel */}
+            {showImportModal && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 dir-rtl">
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in cursor-pointer"
+                        onClick={() => !importForm.processing && setShowImportModal(false)}
+                    />
+                    <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-[28px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
+                        {/* Header */}
+                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                    <FileSpreadsheet className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">استيراد المنتجات من Excel</h3>
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">رفع شيت إكسل يتضمن المنتجات والتصنيفات والتيرات</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={importForm.processing}
+                                onClick={() => setShowImportModal(false)}
+                                className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-all disabled:opacity-50"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                if (!importForm.data.file) return;
+                                importForm.post('/products/import/excel', {
+                                    forceFormData: true,
+                                    preserveScroll: true,
+                                    onSuccess: () => {
+                                        setShowImportModal(false);
+                                        importForm.reset();
+                                    },
+                                });
+                            }}
+                            className="p-6 space-y-5"
+                        >
+                            {/* تعليمات وتنبيهات */}
+                            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs leading-relaxed space-y-1">
+                                <p className="font-black text-sm">💡 تعليمات الملف:</p>
+                                <p>• يُفضّل تصدير النسخة الحالية أولاً واستخدامها كقالب منظم.</p>
+                                <p>• يدعم الملف 4 أوراق عمل: المنتجات، التصنيفات، الأحجام، التيرات والأسعار.</p>
+                                <p>• عند استيراد منتجات أو تيرات موجودة مسبقاً، سيتم تحديث بياناتها تلقائياً.</p>
+                            </div>
+
+                            {/* منطقة اختيار الملف */}
+                            <div>
+                                <input
+                                    ref={importFileInputRef}
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        importForm.setData('file', file);
+                                    }}
+                                />
+
+                                <div
+                                    onClick={() => importFileInputRef.current?.click()}
+                                    className={`cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                                        importForm.data.file
+                                            ? 'border-emerald-500 bg-emerald-500/10'
+                                            : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 bg-slate-50 dark:bg-slate-800/40 hover:bg-amber-500/5'
+                                    }`}
+                                >
+                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 mb-3">
+                                        {importForm.data.file ? (
+                                            <FileSpreadsheet className="w-7 h-7 text-emerald-500" />
+                                        ) : (
+                                            <Upload className="w-7 h-7 text-amber-500" />
+                                        )}
+                                    </div>
+                                    {importForm.data.file ? (
+                                        <div className="space-y-1">
+                                            <p className="font-black text-sm text-emerald-700 dark:text-emerald-300 truncate max-w-xs mx-auto">
+                                                {importForm.data.file.name}
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                الحجم: {(importForm.data.file.size / 1024).toFixed(1)} ك.ب (اضغط للتغيير)
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1">
+                                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                                                انقر هنا لاختيار ملف Excel (.xlsx)
+                                            </p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                الحد الأقصى للحجم 20 ميغابايت
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {importForm.errors.file && (
+                                    <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                        {importForm.errors.file}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* أزرار الإجراء */}
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                                <button
+                                    type="button"
+                                    disabled={importForm.processing}
+                                    onClick={() => setShowImportModal(false)}
+                                    className="px-5 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-sm transition-all disabled:opacity-50"
+                                >
+                                    إلغاء
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!importForm.data.file || importForm.processing}
+                                    className="flex items-center gap-2 px-6 h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-sm shadow-lg shadow-amber-500/25 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    <span>{importForm.processing ? 'جاري الاستيراد والمعالجة...' : 'بدء الاستيراد'}</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>,
+                document.body
             )}
         </AppShell>
     );

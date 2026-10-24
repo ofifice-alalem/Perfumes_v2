@@ -80,4 +80,35 @@ class ProductController extends Controller
 
         return back()->with('success', 'تم حذف المنتج بنجاح');
     }
+
+    public function exportExcel()
+    {
+        $this->products->exportCatalogExcel();
+    }
+
+    public function importExcel(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:20480',
+        ], [
+            'file.required' => 'يرجى اختيار ملف Excel للرفع',
+            'file.mimes'    => 'يجب أن يكون الملف بصيغة xlsx أو xls',
+            'file.max'      => 'حجم الملف يجب ألا يتجاوز 20 ميغابايت',
+        ]);
+
+        try {
+            $stats = $this->products->importCatalogExcel($request->file('file'));
+            $msg = sprintf(
+                'تم استيراد البيانات بنجاح: %d منتج، %d تصنيف، %d حجم، %d تير، %d سعر تير.',
+                $stats['products'],
+                $stats['categories'],
+                $stats['sizes'],
+                $stats['tiers'],
+                $stats['tier_prices']
+            );
+            return back()->with('success', $msg);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'حدث خطأ أثناء استيراد الملف: ' . $e->getMessage());
+        }
+    }
 }
