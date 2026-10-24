@@ -1422,8 +1422,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     // حالة واستمارة استيراد Excel
     const [showImportModal, setShowImportModal] = useState(false);
     const importFileInputRef = useRef<HTMLInputElement>(null);
-    const importForm = useForm<{ file: File | null }>({
+    const importForm = useForm<{ file: File | null; import_mode: 'add_only' | 'wipe_and_replace' }>({
         file: null,
+        import_mode: 'add_only',
     });
 
     const hasActiveFilter = !!searchProdId || !!filterCat || lowStockOnly;
@@ -2652,7 +2653,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in cursor-pointer"
                         onClick={() => !importForm.processing && setShowImportModal(false)}
                     />
-                    <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-[28px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
+                    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-[28px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
                         {/* Header */}
                         <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                             <div className="flex items-center gap-3">
@@ -2660,8 +2661,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     <FileSpreadsheet className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">استيراد المنتجات من Excel</h3>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">رفع شيت إكسل يتضمن المنتجات والتصنيفات والتيرات</p>
+                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">استيراد البيانات من Excel</h3>
+                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">رفع شيت إكسل يتضمن المنتجات والتصنيفات والأحجام والتيرات</p>
                                 </div>
                             </div>
                             <button
@@ -2691,11 +2692,80 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             className="p-6 space-y-5"
                         >
                             {/* تعليمات وتنبيهات */}
-                            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs leading-relaxed space-y-1">
-                                <p className="font-black text-sm">💡 تعليمات الملف:</p>
-                                <p>• يُفضّل تصدير النسخة الحالية أولاً واستخدامها كقالب منظم.</p>
-                                <p>• يدعم الملف 4 أوراق عمل: المنتجات، التصنيفات، الأحجام، التيرات والأسعار.</p>
-                                <p>• عند استيراد منتجات أو تيرات موجودة مسبقاً، سيتم تحديث بياناتها تلقائياً.</p>
+                            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs leading-relaxed space-y-1">
+                                <p className="font-black text-sm">💡 تنبيه وتعليمات الاستيراد:</p>
+                                <p>• يُفضّل دائماً تصدير نسخة من المنتجات كإجراء احتياطي قبل الاستيراد.</p>
+                                <p>• حدد أدناه كيفية معالجة البيانات السابقة (التصنيفات، الأحجام، التيرات، المنتجات).</p>
+                            </div>
+
+                            {/* خيارات طريقة الاستيراد */}
+                            <div className="space-y-2.5">
+                                <label className="text-xs font-black text-slate-700 dark:text-slate-300">
+                                    طريقة معالجة البيانات:
+                                </label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Option 1: إضافة المنتجات الجديدة فقط */}
+                                    <div
+                                        onClick={() => importForm.setData('import_mode', 'add_only')}
+                                        className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex flex-col justify-between gap-3 ${
+                                            importForm.data.import_mode === 'add_only'
+                                                ? 'border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/10'
+                                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/40'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                                    importForm.data.import_mode === 'add_only'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                                                }`}>
+                                                    <Plus className="w-4 h-4 stroke-[3]" />
+                                                </div>
+                                                <span className="font-black text-sm text-slate-900 dark:text-white">
+                                                    إضافة الجديد فقط
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                                موصى به
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            تخطي البيانات والمنتجات المشتركة وإبقاء بياناتها كما هي، وإضافة البيانات الجديدة فقط الواردة في الملف.
+                                        </p>
+                                    </div>
+
+                                    {/* Option 2: مسح البيانات السابقة ثم وضع البيانات الجديدة */}
+                                    <div
+                                        onClick={() => importForm.setData('import_mode', 'wipe_and_replace')}
+                                        className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex flex-col justify-between gap-3 ${
+                                            importForm.data.import_mode === 'wipe_and_replace'
+                                                ? 'border-rose-500 bg-rose-500/10 shadow-md shadow-rose-500/10'
+                                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/40'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                                    importForm.data.import_mode === 'wipe_and_replace'
+                                                        ? 'bg-rose-500 text-white'
+                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                                                }`}>
+                                                    <Trash2 className="w-4 h-4" />
+                                                </div>
+                                                <span className="font-black text-sm text-slate-900 dark:text-white">
+                                                    مسح الكل واستبدال
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400">
+                                                حذف شامل
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            مسح كافة البيانات السابقة بالكامل (المنتجات، التصنيفات، الأحجام، التيرات والأسعار)، وتنزيل بيانات الملف كنسخة جديدة كلياً.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
                             {/* منطقة اختيار الملف */}
@@ -2767,12 +2837,27 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 <button
                                     type="submit"
                                     disabled={!importForm.data.file || importForm.processing}
-                                    className="flex items-center gap-2 px-6 h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-sm shadow-lg shadow-amber-500/25 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                                    className={`flex items-center gap-2 px-6 h-12 rounded-xl text-white font-black text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none ${
+                                        importForm.data.import_mode === 'wipe_and_replace'
+                                            ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/25'
+                                            : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25'
+                                    }`}
                                 >
-                                    <Upload className="w-4 h-4" />
-                                    <span>{importForm.processing ? 'جاري الاستيراد والمعالجة...' : 'بدء الاستيراد'}</span>
+                                    {importForm.data.import_mode === 'wipe_and_replace' ? (
+                                        <Trash2 className="w-4 h-4" />
+                                    ) : (
+                                        <Plus className="w-4 h-4 stroke-[3]" />
+                                    )}
+                                    <span>
+                                        {importForm.processing
+                                            ? 'جاري الاستيراد والمعالجة...'
+                                            : importForm.data.import_mode === 'wipe_and_replace'
+                                                ? 'مسح الكل وبدء الاستيراد'
+                                                : 'إضافة المنتجات الجديدة'}
+                                    </span>
                                 </button>
                             </div>
+
                         </form>
                     </div>
                 </div>,

@@ -434,16 +434,27 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                 'skipped'    => 0,
             ];
 
-            // في وضع مسح البيانات السابقة واستبدالها: مسح المنتجات الحالية بالكامل
+            // في وضع مسح البيانات السابقة واستبدالها: مسح كافة الجداول الحالية بالكامل (المنتجات، التيرات، الأسعار، الأحجام، التصنيفات)
             if ($mode === 'wipe_and_replace') {
                 $hasTransactions = \App\Models\InvoiceItem::exists() || \App\Models\PurchaseItem::exists();
                 if ($hasTransactions) {
-                    throw new \Exception('لا يمكن مسح المنتجات السابقة لوجود فواتير مبيعات أو مشتريات مسجلة مرتبطة بها. يمكنك استخدام خيار "إضافة المنتجات الجديدة فقط".');
+                    throw new \Exception('لا يمكن مسح البيانات السابقة لوجود فواتير مبيعات أو مشتريات مسجلة مرتبطة بها. يمكنك استخدام خيار "إضافة الجديد فقط".');
                 }
 
+                // 1. مسح المنتجات وتفاصيلها وأسعارها
                 \App\Models\OriginalPerfumeDetail::query()->delete();
                 \App\Models\ProductPrice::query()->delete();
                 \App\Models\Product::query()->delete();
+
+                // 2. مسح أسعار التيرات والتيرات
+                \App\Models\TierPrice::query()->delete();
+                \App\Models\PriceTier::query()->delete();
+
+                // 3. مسح الأحجام
+                \App\Models\Size::query()->delete();
+
+                // 4. مسح التصنيفات
+                \App\Models\Category::query()->delete();
             }
 
             // 1. استيراد التصنيفات إذا كانت الورقة موجودة
@@ -460,11 +471,24 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     $rawOp = trim($row[3] ?? 'لا');
                     $isOp = in_array($rawOp, ['نعم', 'true', '1', 'yes']);
 
-                    \App\Models\Category::updateOrCreate(
-                        ['name' => $name],
-                        ['unit' => $unit, 'is_operational' => $isOp]
-                    );
-                    $stats['categories']++;
+                    if ($mode === 'add_only') {
+                        $cat = \App\Models\Category::where('name', $name)->first();
+                        if (!$cat) {
+                            \App\Models\Category::create([
+                                'name' => $name,
+                                'unit' => $unit,
+                                'is_operational' => $isOp
+                            ]);
+                            $stats['categories']++;
+                        }
+                    } else {
+                        \App\Models\Category::create([
+                            'name' => $name,
+                            'unit' => $unit,
+                            'is_operational' => $isOp
+                        ]);
+                        $stats['categories']++;
+                    }
                 }
             }
 
@@ -481,11 +505,24 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     $rawUnit = strtolower(trim($row[3] ?? 'ml'));
                     $unit = in_array($rawUnit, ['ml', 'pcs', 'g']) ? $rawUnit : 'ml';
 
-                    \App\Models\Size::updateOrCreate(
-                        ['label' => $label],
-                        ['value' => $val > 0 ? $val : 1, 'unit' => $unit]
-                    );
-                    $stats['sizes']++;
+                    if ($mode === 'add_only') {
+                        $size = \App\Models\Size::where('label', $label)->first();
+                        if (!$size) {
+                            \App\Models\Size::create([
+                                'label' => $label,
+                                'value' => $val > 0 ? $val : 1,
+                                'unit'  => $unit
+                            ]);
+                            $stats['sizes']++;
+                        }
+                    } else {
+                        \App\Models\Size::create([
+                            'label' => $label,
+                            'value' => $val > 0 ? $val : 1,
+                            'unit'  => $unit
+                        ]);
+                        $stats['sizes']++;
+                    }
                 }
             }
 
@@ -509,28 +546,46 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     $regPrice = $hasReg ? (float)$row[4] : null;
                     $vipPrice = $hasVip ? (float)$row[5] : null;
 
-                    $tier = \App\Models\PriceTier::updateOrCreate(
-                        ['name' => $tierName],
-                        ['description' => $desc ?: null]
-                    );
-                    $stats['tiers']++;
+                    $tier = \App\Models\PriceTier::where('name', $tierName)->first();
+                    if (!$tier) {
+                        $tier = \App\Models\PriceTier::create([
+                            'name' => $tierName,
+                            'description' => $desc ?: null
+                        ]);
+                        $stats['tiers']++;
+                    }
 
                     // الحجم الذي له سعر (عادي أو VIP) يتم تسجيله، وما عدا ذلك يترك فارغاً بدون سعر
                     if (!empty($sizeLabel) && ($regPrice !== null || $vipPrice !== null)) {
                         $size = \App\Models\Size::where('label', $sizeLabel)->first();
                         if ($size) {
-                            \App\Models\TierPrice::updateOrCreate(
-                                ['tier_id' => $tier->id, 'size_id' => $size->id],
-                                [
-                                    'price_regular' => $regPrice ?? 0,
-                                    'price_vip'     => $vipPrice ?? 0,
-                                ]
-                            );
-                            $stats['tier_prices']++;
+                            $existingPrice = \App\Models\TierPrice::where('tier_id', $tier->id)
+                                ->where('size_id', $size->id)
+                                ->first();
+
+                            if ($mode === 'add_only' && $existingPrice) {
+                                // تخطي السعر الموجود مسبقاً
+                            } else {
+                                if ($existingPrice) {
+                                    $existingPrice->update([
+                                        'price_regular' => $regPrice ?? 0,
+                                        'price_vip'     => $vipPrice ?? 0,
+                                    ]);
+                                } else {
+                                    \App\Models\TierPrice::create([
+                                        'tier_id'       => $tier->id,
+                                        'size_id'       => $size->id,
+                                        'price_regular' => $regPrice ?? 0,
+                                        'price_vip'     => $vipPrice ?? 0,
+                                    ]);
+                                    $stats['tier_prices']++;
+                                }
+                            }
                         }
                     }
                 }
             }
+
 
             // 4. استيراد المنتجات (Sheet 'المنتجات' أو الورقة الأولى)
             $prodSheet = $spreadsheet->getSheetByName('المنتجات') ?: $spreadsheet->getSheet(0);

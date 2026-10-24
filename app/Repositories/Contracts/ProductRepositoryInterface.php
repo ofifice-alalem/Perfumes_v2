@@ -12,5 +12,5 @@ interface ProductRepositoryInterface extends Repository
     public function updateWithRelations(int $id, array $data);
     public function isUsed(int $id): bool;
     public function exportCatalogExcel(): void;
-    public function importCatalogExcel(\Illuminate\Http\UploadedFile $file): array;
+    public function importCatalogExcel(\Illuminate\Http\UploadedFile $file, string $mode = 'add_only'): array;
 }
