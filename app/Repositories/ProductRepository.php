@@ -417,21 +417,34 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         exit;
     }
 
-    public function importCatalogExcel(\Illuminate\Http\UploadedFile $file): array
+    public function importCatalogExcel(\Illuminate\Http\UploadedFile $file, string $mode = 'add_only'): array
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(300);
 
         $spreadsheet = IOFactory::load($file->getRealPath());
 
-        return DB::transaction(function () use ($spreadsheet) {
+        return DB::transaction(function () use ($spreadsheet, $mode) {
             $stats = [
                 'categories' => 0,
                 'sizes'      => 0,
                 'tiers'      => 0,
                 'tier_prices'=> 0,
                 'products'   => 0,
+                'skipped'    => 0,
             ];
+
+            // في وضع مسح البيانات السابقة واستبدالها: مسح المنتجات الحالية بالكامل
+            if ($mode === 'wipe_and_replace') {
+                $hasTransactions = \App\Models\InvoiceItem::exists() || \App\Models\PurchaseItem::exists();
+                if ($hasTransactions) {
+                    throw new \Exception('لا يمكن مسح المنتجات السابقة لوجود فواتير مبيعات أو مشتريات مسجلة مرتبطة بها. يمكنك استخدام خيار "إضافة المنتجات الجديدة فقط".');
+                }
+
+                \App\Models\OriginalPerfumeDetail::query()->delete();
+                \App\Models\ProductPrice::query()->delete();
+                \App\Models\Product::query()->delete();
+            }
 
             // 1. استيراد التصنيفات إذا كانت الورقة موجودة
             $catSheet = $spreadsheet->getSheetByName('التصنيفات');
@@ -580,13 +593,25 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                         $tierId = $tier->id;
                     }
 
-                    // Check if product exists by name
-                    $product = \App\Models\Product::where('name', $name)->first();
+                    // فحص وجود المنتج مسبقاً
+                    $existingProduct = \App\Models\Product::where('name', $name)->first();
+                    if ($mode === 'add_only' && $existingProduct) {
+                        $stats['skipped']++;
+                        continue; // تخطي المنتجات المشتركة تماماً، وإضافة المنتجات الجديدة فقط
+                    }
+
+                    $product = $existingProduct;
 
                     // التعامل الذكي مع QR: إذا تُرك فارغاً وكان المنتج موجوداً مسبقاً يحتفظ بكوده، وإن كان جديداً يُولّد له كود فريد
                     $finalQr = $qrcode;
                     if (empty($finalQr)) {
-                        $finalQr = $product ? $product->qrcode : (string)random_int(1000000000, 9999999999);
+                        if ($product && !empty($product->qrcode)) {
+                            $finalQr = $product->qrcode;
+                        } else {
+                            do {
+                                $finalQr = (string)random_int(1000000000, 9999999999);
+                            } while (\App\Models\Product::where('qrcode', $finalQr)->exists());
+                        }
                     }
 
                     $productData = [
