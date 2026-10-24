@@ -168,6 +168,7 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                 'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']],
             ],
             'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical' => Alignment::VERTICAL_CENTER,
             ],
         ];
@@ -225,6 +226,10 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
 
             $sheetProducts->fromArray($rowData, null, 'A' . $rowIdx);
             $sheetProducts->getStyle('A' . $rowIdx . ':' . $lastColProd . $rowIdx)->applyFromArray($dataRowStyle($bg));
+            
+            // محاذاة حقل المعرف (#) واسم المنتج ليبدأا من البداية (Start / Right في RTL)
+            $sheetProducts->getStyle('A' . $rowIdx . ':B' . $rowIdx)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            
             $sheetProducts->getRowDimension($rowIdx)->setRowHeight(22);
             $rowIdx++;
         }
@@ -552,15 +557,21 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                         $category = \App\Models\Category::first();
                     }
 
-                    // Resolve Selling Type
+                    // Resolve Selling Type (enum: tier_based, unit_priced)
                     $sellingType = 'unit_priced';
-                    if (str_contains($sellingTypeStr, 'حجم') || str_contains($sellingTypeStr, 'تير') || $sellingTypeStr === 'size_based' || (!empty($tierName) && $category && str_contains($category->name, 'زيت'))) {
-                        $sellingType = 'size_based';
+                    if (
+                        str_contains($sellingTypeStr, 'حجم') ||
+                        str_contains($sellingTypeStr, 'تير') ||
+                        $sellingTypeStr === 'tier_based' ||
+                        $sellingTypeStr === 'size_based' ||
+                        (!empty($tierName) && $category && str_contains($category->name, 'زيت'))
+                    ) {
+                        $sellingType = 'tier_based';
                     }
 
                     // Resolve Price Tier
                     $tierId = null;
-                    if ($sellingType === 'size_based' && !empty($tierName)) {
+                    if ($sellingType === 'tier_based' && !empty($tierName)) {
                         $tier = \App\Models\PriceTier::where('name', $tierName)->first();
                         if (!$tier) {
                             $tier = \App\Models\PriceTier::create(['name' => $tierName]);
@@ -572,9 +583,15 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     // Check if product exists by name
                     $product = \App\Models\Product::where('name', $name)->first();
 
+                    // التعامل الذكي مع QR: إذا تُرك فارغاً وكان المنتج موجوداً مسبقاً يحتفظ بكوده، وإن كان جديداً يُولّد له كود فريد
+                    $finalQr = $qrcode;
+                    if (empty($finalQr)) {
+                        $finalQr = $product ? $product->qrcode : (string)random_int(1000000000, 9999999999);
+                    }
+
                     $productData = [
                         'name'          => $name,
-                        'qrcode'        => $qrcode,
+                        'qrcode'        => $finalQr,
                         'category_id'   => $category->id,
                         'price_tier_id' => $tierId,
                         'selling_type'  => $sellingType,
