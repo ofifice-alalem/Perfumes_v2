@@ -298,47 +298,105 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         }
 
         // ═════════════════════════════════════════════════════════════════
-        // الورقة 4: التيرات والأسعار
+        // الورقة 4: التيرات والأسعار (جداول منفصلة لكل تير تشمل جميع الأحجام)
         // ═════════════════════════════════════════════════════════════════
         $sheetTiers = $spreadsheet->createSheet();
         $sheetTiers->setTitle('التيرات والأسعار');
         $sheetTiers->setRightToLeft(true);
 
-        $tierHeaders = ['#', 'اسم التير', 'الوصف', 'اسم الحجم', 'السعر العادي', 'سعر VIP'];
-        $lastColTier = chr(ord('A') + count($tierHeaders) - 1);
-        $sheetTiers->fromArray($tierHeaders, null, 'A1');
-        $sheetTiers->getStyle('A1:' . $lastColTier . '1')->applyFromArray($headerStyle);
-        $sheetTiers->getRowDimension(1)->setRowHeight(28);
+        $tierBannerStyle = [
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '0F172A'], // كحلي داكن فاخر
+            ],
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'F8FAFC'],
+                'size' => 13,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '334155']],
+            ],
+        ];
+
+        $subHeaderStyle = [
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E3A5F'],
+            ],
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 12,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '94A3B8']],
+            ],
+        ];
 
         $tiers = \App\Models\PriceTier::with('tierPrices.size')->orderBy('name')->get();
-        $rowIdx = 2;
-        $counter = 1;
+        $allSizes = \App\Models\Size::orderBy('value')->get();
+
+        $tierCols = ['#', 'اسم التير', 'الوصف', 'اسم الحجم', 'السعر العادي', 'سعر VIP'];
+        $lastColTier = chr(ord('A') + count($tierCols) - 1); // F
+
+        $rowIdx = 1;
+
         foreach ($tiers as $tier) {
-            if ($tier->tierPrices->isEmpty()) {
-                $bg = $counter % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-                $sheetTiers->fromArray([$counter, $tier->name, $tier->description ?? '', '', '', ''], null, 'A' . $rowIdx);
-                $sheetTiers->getStyle('A' . $rowIdx . ':' . $lastColTier . $rowIdx)->applyFromArray($dataRowStyle($bg));
+            // خريطة أسعار التير الحالية حسب size_id
+            $priceMap = [];
+            foreach ($tier->tierPrices as $tp) {
+                $priceMap[$tp->size_id] = $tp;
+            }
+
+            // 1. عنوان / بانر التير المدمج
+            $sheetTiers->mergeCells("A{$rowIdx}:{$lastColTier}{$rowIdx}");
+            $sheetTiers->setCellValue("A{$rowIdx}", "جدول أسعار تير: " . $tier->name . ($tier->description ? " (" . $tier->description . ")" : ''));
+            $sheetTiers->getStyle("A{$rowIdx}:{$lastColTier}{$rowIdx}")->applyFromArray($tierBannerStyle);
+            $sheetTiers->getRowDimension($rowIdx)->setRowHeight(30);
+            $rowIdx++;
+
+            // 2. رؤوس أعمدة جدول هذا التير
+            $sheetTiers->fromArray($tierCols, null, "A{$rowIdx}");
+            $sheetTiers->getStyle("A{$rowIdx}:{$lastColTier}{$rowIdx}")->applyFromArray($subHeaderStyle);
+            $sheetTiers->getRowDimension($rowIdx)->setRowHeight(26);
+            $rowIdx++;
+
+            // 3. صفوف كل الأحجام المسجلة في المنظومة
+            foreach ($allSizes as $sIdx => $size) {
+                $bg = $sIdx % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                $existingPrice = $priceMap[$size->id] ?? null;
+
+                $regVal = ($existingPrice && $existingPrice->price_regular !== null) ? (float)$existingPrice->price_regular : '';
+                $vipVal = ($existingPrice && $existingPrice->price_vip !== null) ? (float)$existingPrice->price_vip : '';
+
+                $rowData = [
+                    $sIdx + 1,
+                    $tier->name,
+                    $tier->description ?? '',
+                    $size->label,
+                    $regVal,
+                    $vipVal,
+                ];
+
+                $sheetTiers->fromArray($rowData, null, "A{$rowIdx}");
+                $sheetTiers->getStyle("A{$rowIdx}:{$lastColTier}{$rowIdx}")->applyFromArray($dataRowStyle($bg));
                 $sheetTiers->getRowDimension($rowIdx)->setRowHeight(22);
                 $rowIdx++;
-                $counter++;
-            } else {
-                foreach ($tier->tierPrices as $tp) {
-                    $bg = $counter % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-                    $sheetTiers->fromArray([
-                        $counter,
-                        $tier->name,
-                        $tier->description ?? '',
-                        $tp->size?->label ?? '',
-                        (float)$tp->price_regular,
-                        (float)$tp->price_vip,
-                    ], null, 'A' . $rowIdx);
-                    $sheetTiers->getStyle('A' . $rowIdx . ':' . $lastColTier . $rowIdx)->applyFromArray($dataRowStyle($bg));
-                    $sheetTiers->getRowDimension($rowIdx)->setRowHeight(22);
-                    $rowIdx++;
-                    $counter++;
-                }
             }
+
+            // سطر فارغ فاصل بين جداول التيرات لتسهيل القراءة والتنظيم
+            $rowIdx++;
         }
+
         foreach (range('A', $lastColTier) as $c) {
             $sheetTiers->getColumnDimension($c)->setAutoSize(true);
         }
@@ -413,19 +471,25 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                 }
             }
 
-            // 3. استيراد التيرات والأسعار إذا كانت الورقة موجودة
+            // 3. استيراد التيرات والأسعار إذا كانت الورقة موجودة (يدعم الجداول المنفصلة أو الجدول الموحد)
             $tierSheet = $spreadsheet->getSheetByName('التيرات والأسعار');
             if ($tierSheet) {
                 $rows = $tierSheet->toArray();
-                for ($i = 1; $i < count($rows); $i++) {
+                for ($i = 0; $i < count($rows); $i++) {
                     $row = $rows[$i];
                     $tierName = trim($row[1] ?? '');
-                    if (empty($tierName)) continue;
+
+                    // تجاهل الأسطر الفارغة، وأسطر العناوين الرئيسية أو عناوين الأعمدة
+                    if (empty($tierName) || $tierName === 'اسم التير' || str_starts_with($tierName, 'جدول أسعار تير')) {
+                        continue;
+                    }
 
                     $desc = trim($row[2] ?? '');
                     $sizeLabel = trim($row[3] ?? '');
-                    $regPrice = isset($row[4]) && $row[4] !== '' ? (float)$row[4] : null;
-                    $vipPrice = isset($row[5]) && $row[5] !== '' ? (float)$row[5] : null;
+                    $hasReg = isset($row[4]) && trim((string)$row[4]) !== '';
+                    $hasVip = isset($row[5]) && trim((string)$row[5]) !== '';
+                    $regPrice = $hasReg ? (float)$row[4] : null;
+                    $vipPrice = $hasVip ? (float)$row[5] : null;
 
                     $tier = \App\Models\PriceTier::updateOrCreate(
                         ['name' => $tierName],
@@ -433,6 +497,7 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     );
                     $stats['tiers']++;
 
+                    // الحجم الذي له سعر (عادي أو VIP) يتم تسجيله، وما عدا ذلك يترك فارغاً بدون سعر
                     if (!empty($sizeLabel) && ($regPrice !== null || $vipPrice !== null)) {
                         $size = \App\Models\Size::where('label', $sizeLabel)->first();
                         if ($size) {
