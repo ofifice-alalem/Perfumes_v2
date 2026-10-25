@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - النموذج 2: الياقوت الأزرق مع Overlay سينمائي | التاجوري & تقنية السحابة</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Noto+Kufi+Arabic:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        tajawal: ['Tajawal', 'sans-serif'],
+                        kufi: ['Noto Kufi Arabic', 'sans-serif'],
+                    },
+                    colors: {
+                        gold: '#E5D0A1',
+                        goldHover: '#d4b97b',
+                        taqniyaCyan: '#0ea5e9',
+                        taqniyaBlue: '#2563eb',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #030712;
+            overflow-x: hidden;
+        }
+        .kufi-font { font-family: 'Noto Kufi Arabic', sans-serif; }
+
+        .ambient-glow {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(130px);
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        .nav-pill {
+            position: fixed;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(10, 15, 30, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(16px);
+            border-radius: 9999px;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen flex flex-col justify-between selection:bg-taqniyaCyan selection:text-white">
+
+    <!-- Prototype Nav Switcher -->
+    <div class="nav-pill text-xs font-bold">
+        <span class="text-white/60">نماذج التصميم:</span>
+        <a href="index1.html" class="px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/80">النموذج 1 (الذهبي + Overlay)</a>
+        <a href="index2.html" class="px-3.5 py-1 rounded-full bg-taqniyaCyan text-white font-black shadow-md shadow-taqniyaCyan/30">النموذج 2 (الياقوتي + Overlay)</a>
+        <a href="index3.html" class="px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/80">النموذج 3 (الكلاسيكي + Overlay)</a>
+        <a href="index4.html" class="px-3.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white/80">النموذج 4 (عرض كامل Full Width)</a>
+        <a href="index.html" class="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/15 text-gold text-[11px]" title="لوحة المقارنة"><i class="fa-solid fa-table-cells-large"></i> المقارنة</a>
+    </div>
+
+    <!-- Main Split Screen -->
+    <div class="flex-1 flex flex-col lg:flex-row min-h-screen relative overflow-hidden">
+
+        <!-- ══════════════ Left Side: Login Form ══════════════ -->
+        <div class="w-full lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-12 z-10 relative bg-[#030712]">
+            
+            <div class="ambient-glow w-[380px] h-[380px] bg-taqniyaBlue/20 top-10 left-10"></div>
+            <div class="ambient-glow w-[300px] h-[300px] bg-gold/10 bottom-24 right-10"></div>
+
+            <!-- Top Header -->
+            <div class="flex items-center justify-between text-xs text-white/40 font-bold">
+                <span class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-taqniyaCyan animate-pulse"></span>
+                    نظام نقاط البيع وإدارة العطور
+                </span>
+                <span class="border border-white/10 px-2.5 py-1 rounded-lg">الإصدار 2.5</span>
+            </div>
+
+            <!-- Middle: Form Card -->
+            <div class="w-full max-w-md mx-auto my-auto flex flex-col gap-6 py-4">
+                
+                <div class="flex flex-col items-center gap-1.5 text-center">
+                    <div class="w-36 h-36 sm:w-44 sm:h-44 relative group">
+                        <div class="absolute inset-0 bg-taqniyaCyan/15 rounded-full blur-xl group-hover:bg-taqniyaCyan/25 transition-all"></div>
+                        <img src="logo.jpg" alt="طيب التاجوري" class="w-full h-full object-contain mix-blend-screen relative z-10" />
+                    </div>
+                    <div class="-mt-3">
+                        <h1 class="text-xl sm:text-2xl font-black text-white tracking-wide">
+                            طيب التاجوري <span class="text-gold">للروائح والعطور</span>
+                        </h1>
+                        <p class="text-[11px] text-white/40 tracking-[0.25em] uppercase mt-1 font-bold">Taib Al Tajouri Perfumes</p>
+                    </div>
+                </div>
+
+                <form class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-bold text-white/80 pr-1">اسم المستخدم</label>
+                        <div class="relative">
+                            <input type="text" value="admin" 
+                                class="w-full h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white placeholder-white/20 focus:bg-white/[0.1] focus:border-taqniyaCyan focus:outline-none transition-all pr-11 pl-4 font-bold text-sm"
+                                placeholder="أدخل اسم المستخدم" />
+                            <i class="fa-regular fa-user absolute right-4 top-1/2 -translate-y-1/2 text-white/40 text-sm"></i>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-bold text-white/80 pr-1">كلمة المرور</label>
+                        <div class="relative">
+                            <input type="password" value="••••••••" 
+                                class="w-full h-12 rounded-xl bg-white/[0.06] border border-white/10 text-white placeholder-white/20 focus:bg-white/[0.1] focus:border-taqniyaCyan focus:outline-none transition-all pr-11 pl-11 font-bold text-sm"
+                                placeholder="••••••••" />
+                            <i class="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-white/40 text-sm"></i>
+                            <button type="button" class="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors">
+                                <i class="fa-regular fa-eye-slash text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-white/60 pt-0.5">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" checked class="w-4 h-4 rounded bg-white/10 border-white/20 accent-taqniyaCyan cursor-pointer">
+                            <span>تذكر الجلسة على هذا الجهاز</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" 
+                        class="w-full h-13 py-3.5 rounded-xl bg-gradient-to-r from-gold to-[#c8ab6b] hover:from-[#d4b97b] hover:to-gold text-[#05050A] font-black text-base transition-all shadow-lg shadow-gold/20 flex items-center justify-center gap-2.5 mt-2 active:scale-[0.99] cursor-pointer">
+                        <i class="fa-solid fa-arrow-right-to-bracket text-sm"></i>
+                        <span>تسجيل الدخول للمنظومة</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- ══════════════ Simple Corporate Footer (بدون حاوية / مع خط فاصل border-top بسيط ورقم الدعم) ══════════════ -->
+            <div class="pt-5 border-t border-white/10 mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                
+                <div class="flex items-center gap-2.5">
+                    <img src="taqniya-logo.png" alt="تقنية السحابة" class="w-7 h-7 object-contain" />
+                    <span class="text-white/70">
+                        تم التطوير والتشغيل بواسطة <strong class="text-taqniyaCyan font-bold">تقنية السحابة</strong>
+                    </span>
+                    <span class="text-white/20 hidden sm:inline">•</span>
+                    <a href="https://taqnniya.cloud/" target="_blank" class="text-white/40 hover:text-taqniyaCyan transition-colors hidden sm:inline font-mono">
+                        taqnniya.cloud
+                    </a>
+                </div>
+
+                <div class="flex items-center gap-2 text-white/80">
+                    <span class="text-white/40 text-[11px]">الدعم الفني:</span>
+                    <a href="tel:0921233218" class="font-mono font-bold text-white hover:text-taqniyaCyan flex items-center gap-1.5 transition-colors">
+                        <i class="fa-solid fa-phone text-taqniyaCyan text-[11px]"></i>
+                        <span class="dir-ltr">0921233218</span>
+                    </a>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ══════════════ Right Side: Sapphire Blue Perfume WITH Full Overlay & Frame ══════════════ -->
+        <div class="hidden lg:block lg:w-1/2 relative overflow-hidden group bg-slate-950">
+            
+            <img src="perfume-blue.jpg" alt="عطر فاخر ياقوتي" 
+                 class="absolute inset-0 w-full h-full object-cover transition-transform duration-[10s] group-hover:scale-105" />
+
+            <!-- Atmospheric dark overlays (الـ Overlays المطلوبة) -->
+            <div class="absolute inset-0 bg-gradient-to-l from-[#030712] via-[#030712]/35 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-[#030712] via-[#030712]/20 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-r from-[#030712]/40 via-transparent to-transparent"></div>
+
+            <!-- Sapphire Luxury Framed Border -->
+            <div class="absolute inset-8 border border-taqniyaCyan/20 rounded-3xl pointer-events-none"></div>
+
+            <!-- Soft artistic label in the corner -->
+            <div class="absolute bottom-12 right-12 z-10 text-right">
+                <span class="text-[11px] uppercase tracking-[0.25em] text-taqniyaCyan/80 font-bold block mb-1">Sapphire Nocturne</span>
+                <span class="text-sm font-black text-white/90">أناقة الياقوت وسحر العطور الهادئة</span>
+            </div>
+
+        </div>
+
+    </div>
+
+</body>
+</html>
