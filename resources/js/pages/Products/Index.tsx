@@ -21,6 +21,7 @@ interface Product {
     stock: string; min_stock: string;
     qrcode: string | null;
     category: Category; price_tier: PriceTier | null;
+    price_tier_id?: number | null;
     product_price: ProductPrice | null;
     original_perfume_detail: OriginalPerfumeDetail | null;
 }
@@ -1406,11 +1407,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     // الفلاتر المطبقة حالياً على قائمة الجدول الرئيسي
     const [filterCat, setFilterCat]       = useState<number | null>(null);
+    const [filterTier, setFilterTier]     = useState<number | null>(null);
     const [searchProdId, setSearchProdId] = useState<number | null>(null);
     const [lowStockOnly, setLowStockOnly] = useState(false);
 
     // الفلاتر المعلقة المؤقتة داخل الـ Drawer (قبل الضغط على عرض النتائج)
     const [draftCat, setDraftCat]               = useState<number | null>(null);
+    const [draftTier, setDraftTier]             = useState<number | null>(null);
     const [draftSearchProdId, setDraftSearchProdId] = useState<number | null>(null);
     const [draftLowStockOnly, setDraftLowStockOnly] = useState(false);
 
@@ -1427,8 +1430,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         import_mode: 'add_only',
     });
 
-    const hasActiveFilter = !!searchProdId || !!filterCat || lowStockOnly;
-    const hasDraftFilter  = !!draftSearchProdId || !!draftCat || draftLowStockOnly;
+    const hasActiveFilter = !!searchProdId || !!filterCat || !!filterTier || lowStockOnly;
+    const hasDraftFilter  = !!draftSearchProdId || !!draftCat || !!draftTier || draftLowStockOnly;
 
     // توليد QR لمنتج واحد
     function handleGenerate(p: Product) {
@@ -1438,19 +1441,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     // توليد جماعي لكل المنتجات التي لا تحتوي على QR
     function handleGenerateAll() {
-        const missing = products.filter(p => !p.qrcode);
-        if (missing.length === 0) return;
+        const missingCount = products.filter(p => !p.qrcode).length;
+        if (missingCount === 0) return;
         setGeneratingAll(true);
-        let remaining = missing.length;
-        missing.forEach(p => {
-            const newQr = generateQrCode();
-            router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, {
-                preserveScroll: true,
-                onFinish: () => {
-                    remaining--;
-                    if (remaining === 0) setGeneratingAll(false);
-                },
-            });
+        router.post('/products/generate-all-qrcodes', {}, {
+            preserveScroll: true,
+            onFinish: () => {
+                setGeneratingAll(false);
+            },
         });
     }
 
@@ -1571,6 +1569,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const filtered = products.filter(p => {
         if (searchProdId && p.id !== searchProdId) return false;
         if (filterCat && p.category.id !== filterCat) return false;
+        if (filterTier && (p.price_tier?.id !== filterTier && p.price_tier_id !== filterTier)) return false;
         if (lowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
         return true;
     });
@@ -1593,6 +1592,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const draftFiltered = products.filter(p => {
         if (draftSearchProdId && p.id !== draftSearchProdId) return false;
         if (draftCat && p.category.id !== draftCat) return false;
+        if (draftTier && (p.price_tier?.id !== draftTier && p.price_tier_id !== draftTier)) return false;
         if (draftLowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
         return true;
     });
@@ -1671,6 +1671,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <button
                             onClick={() => {
                                 setDraftCat(filterCat);
+                                setDraftTier(filterTier);
                                 setDraftSearchProdId(searchProdId);
                                 setDraftLowStockOnly(lowStockOnly);
                                 setFilterDrawerOpen(true);
@@ -1692,9 +1693,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 onClick={() => {
                                     setSearchProdId(null);
                                     setFilterCat(null);
+                                    setFilterTier(null);
                                     setLowStockOnly(false);
                                     setDraftSearchProdId(null);
                                     setDraftCat(null);
+                                    setDraftTier(null);
                                     setDraftLowStockOnly(false);
                                 }}
                                 className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base border-2 border-red-500/30 shrink-0 shadow-sm touch-manipulation select-none"
@@ -2245,7 +2248,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     </h4>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <button onClick={() => setDraftCat(null)}
+                                        <button onClick={() => { setDraftCat(null); setDraftTier(null); }}
                                             className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
                                                 !draftCat
                                                     ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
@@ -2260,7 +2263,12 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             const count = products.filter(p => p.category.id === cat.id).length;
                                             const active = draftCat === cat.id;
                                             return (
-                                                <button key={cat.id} onClick={() => setDraftCat(cat.id)}
+                                                <button key={cat.id} onClick={() => {
+                                                    setDraftCat(cat.id);
+                                                    if (!cat.name.includes('زيت')) {
+                                                        setDraftTier(null);
+                                                    }
+                                                }}
                                                     className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
                                                         active
                                                             ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
@@ -2275,6 +2283,78 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         })}
                                     </div>
                                 </div>
+
+                                {/* حاوية فرعية: اختيار فئة السعر (Tier) للعطور الزيتية */}
+                                {(() => {
+                                    const selectedDraftCat = categories.find(c => c.id === draftCat);
+                                    const isOilOrTierCat = !!selectedDraftCat && (
+                                        selectedDraftCat.name.includes('زيت') ||
+                                        products.some(p => p.category.id === draftCat && (p.price_tier !== null || p.price_tier_id !== null))
+                                    );
+                                    if (!isOilOrTierCat) return null;
+
+                                    return (
+                                        <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-violet-500/30 dark:border-violet-500/30 flex flex-col gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <h4 className="text-base sm:text-lg font-black flex items-center justify-between border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center text-lg shrink-0 border border-violet-500/30">💎</span>
+                                                    <span className="text-slate-900 dark:text-white tracking-wide">فئة السعر (Tier)</span>
+                                                </div>
+                                                {draftTier && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDraftTier(null)}
+                                                        className="text-xs font-black text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+                                                    >
+                                                        عرض كل التيرات
+                                                    </button>
+                                                )}
+                                            </h4>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setDraftTier(null)}
+                                                    className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                        !draftTier
+                                                            ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/30'
+                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                    }`}
+                                                >
+                                                    <span>جميع التيرات</span>
+                                                    <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
+                                                        !draftTier ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                    }`}>
+                                                        {products.filter(p => p.category.id === draftCat).length}
+                                                    </span>
+                                                </button>
+                                                {tiers.map(tier => {
+                                                    const count = products.filter(p => p.category.id === draftCat && (p.price_tier?.id === tier.id || p.price_tier_id === tier.id)).length;
+                                                    const active = draftTier === tier.id;
+                                                    return (
+                                                        <button
+                                                            key={tier.id}
+                                                            type="button"
+                                                            onClick={() => setDraftTier(tier.id)}
+                                                            className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                                active
+                                                                    ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/30'
+                                                                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                            }`}
+                                                        >
+                                                            <span className="truncate">{tier.name}</span>
+                                                            <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
+                                                                active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                            }`}>
+                                                                {count}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* حاوية 3: حالة المخزون والتنبيهات */}
                                 <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
@@ -2309,6 +2389,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 <button
                                     onClick={() => {
                                         setFilterCat(draftCat);
+                                        setFilterTier(draftTier);
                                         setSearchProdId(draftSearchProdId);
                                         setLowStockOnly(draftLowStockOnly);
                                         setFilterDrawerOpen(false);
@@ -2323,6 +2404,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         onClick={() => {
                                             setDraftSearchProdId(null);
                                             setDraftCat(null);
+                                            setDraftTier(null);
                                             setDraftLowStockOnly(false);
                                         }}
                                         className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-base sm:text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0 touch-manipulation cursor-pointer"
@@ -2353,7 +2435,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             {filterCat && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
                                     التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                </span>
+                            )}
+                            {filterTier && (
+                                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
+                                    التير: {tiers.find(t => t.id === filterTier)?.name}
+                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                             {lowStockOnly && (
@@ -2367,9 +2455,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             onClick={() => {
                                 setSearchProdId(null);
                                 setFilterCat(null);
+                                setFilterTier(null);
                                 setLowStockOnly(false);
                                 setDraftSearchProdId(null);
                                 setDraftCat(null);
+                                setDraftTier(null);
                                 setDraftLowStockOnly(false);
                             }}
                             className="text-xs font-black text-red-500 hover:underline shrink-0"

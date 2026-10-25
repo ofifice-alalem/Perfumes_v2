@@ -70,6 +70,18 @@ class ProductController extends Controller
         return back()->with('success', 'تم تحديث QR Code بنجاح');
     }
 
+    public function generateAllQrcodes()
+    {
+        $count = $this->products->generateMissingQrcodes();
+
+        if ($count === 0) {
+            return back()->with('info', 'جميع المنتجات لديها أكواد QR بالفعل.');
+        }
+
+        return back()->with('success', "تم توليد باركود لجميع المنتجات المتبقية بنجاح ({$count} منتج)");
+    }
+
+
     public function destroy(int $id)
     {
         if ($this->products->isUsed($id)) {

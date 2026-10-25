@@ -712,4 +712,21 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
             return $stats;
         });
     }
+
+    public function generateMissingQrcodes(): int
+    {
+        return DB::transaction(function () {
+            $products = $this->model->whereNull('qrcode')->orWhere('qrcode', '')->lockForUpdate()->get();
+            $count = 0;
+            foreach ($products as $product) {
+                do {
+                    $barcode = (string) mt_rand(1000000000, 9999999999);
+                } while ($this->model->where('qrcode', $barcode)->exists());
+
+                $product->update(['qrcode' => $barcode]);
+                $count++;
+            }
+            return $count;
+        });
+    }
 }
