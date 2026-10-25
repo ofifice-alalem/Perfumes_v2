@@ -29,6 +29,19 @@ export default function Login() {
             {/* Form Side */}
             <div className="relative w-full lg:w-1/2 flex flex-col justify-between items-center z-10 h-full overflow-hidden border-l border-white/10">
 
+                {/* Scoped CSS for autofill to prevent browser white/light background */}
+                <style>{`
+                    input:-webkit-autofill,
+                    input:-webkit-autofill:hover, 
+                    input:-webkit-autofill:focus, 
+                    input:-webkit-autofill:active {
+                        -webkit-box-shadow: 0 0 0 1000px #060B16 inset !important;
+                        -webkit-text-fill-color: #ffffff !important;
+                        transition: background-color 5000s ease-in-out 0s;
+                        caret-color: #38bdf8;
+                    }
+                `}</style>
+
                 {/* Ambient glow in background */}
                 <div className="absolute inset-0 pointer-events-none overflow-hidden">
                     <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] bg-sky-900/15 rounded-full blur-[110px]" />
@@ -43,32 +56,33 @@ export default function Login() {
                         className="w-full flex flex-col items-center"
                         style={{
                             maxWidth: 'clamp(320px, 30vw, 480px)',
-                            gap: 'clamp(10px, 2vh, 24px)',
+                            gap: 'clamp(10px, 2vh, 22px)',
                         }}
                     >
 
-                        {/* Store Logo */}
-                        <div className="flex flex-col items-center gap-1 text-center shrink-0">
+                        {/* Store Logo (Significantly enlarged per user request) */}
+                        <div className="flex flex-col items-center text-center shrink-0 w-full">
                             <div 
-                                className="relative group shrink-0"
+                                className="relative group shrink-0 flex items-center justify-center"
                                 style={{
-                                    width: 'clamp(68px, 12vh, 130px)',
-                                    height: 'clamp(68px, 12vh, 130px)',
+                                    width: 'clamp(190px, 28vh, 320px)',
+                                    aspectRatio: '960 / 686',
+                                    maxHeight: 'clamp(135px, 23vh, 225px)',
                                 }}
                             >
-                                <div className="absolute inset-0 bg-sky-500/10 rounded-full blur-xl group-hover:bg-sky-500/20 transition-all pointer-events-none" />
+                                <div className="absolute inset-0 bg-sky-500/15 rounded-full blur-3xl group-hover:bg-sky-500/25 transition-all pointer-events-none" />
                                 <img src="/images/logo.jpg" alt="طيب التاجوري" className="w-full h-full object-contain mix-blend-screen relative z-10" />
                             </div>
-                            <div className="text-center -mt-1">
+                            <div className="text-center -mt-3 sm:-mt-4">
                                 <h1 
                                     className="font-black text-white tracking-wide"
-                                    style={{ fontSize: 'clamp(1rem, 1.9vh, 1.55rem)', lineHeight: 1.25 }}
+                                    style={{ fontSize: 'clamp(1.15rem, 2.2vh, 1.75rem)', lineHeight: 1.25 }}
                                 >
                                     طيب التاجوري <span className="text-[#E5D0A1]">للروائح والعطور</span>
                                 </h1>
                                 <p 
                                     className="text-white/40 tracking-[0.2em] uppercase font-bold mt-0.5"
-                                    style={{ fontSize: 'clamp(0.6rem, 0.95vh, 0.75rem)' }}
+                                    style={{ fontSize: 'clamp(0.65rem, 1vh, 0.82rem)' }}
                                 >
                                     Taib Al Tajouri Perfumes
                                 </p>
@@ -90,10 +104,10 @@ export default function Login() {
                                         onChange={e => setData('username', e.target.value)}
                                         autoComplete="username"
                                         autoFocus
-                                        className="w-full rounded-[12px] bg-white/[0.06] border border-white/10 text-white placeholder-white/20 focus:bg-white/[0.09] focus:border-sky-400 focus:outline-none transition-all pr-11 pl-4 font-bold"
+                                        className="w-full rounded-[12px] bg-[#060B16]/80 hover:bg-[#080E1E] focus:bg-[#070D1B] border border-white/12 hover:border-sky-400/40 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/25 focus:shadow-[0_0_20px_rgba(56,189,248,0.25)] text-white placeholder-white/20 transition-all pr-11 pl-4 font-bold"
                                         style={{
-                                            height: 'clamp(38px, 4.8vh, 50px)',
-                                            fontSize: 'clamp(0.8rem, 1.35vh, 0.95rem)',
+                                            height: 'clamp(44px, 5.4vh, 54px)',
+                                            fontSize: 'clamp(0.82rem, 1.35vh, 0.95rem)',
                                         }}
                                         placeholder="أدخل اسم المستخدم"
                                     />
@@ -116,10 +130,10 @@ export default function Login() {
                                         value={data.password}
                                         onChange={e => setData('password', e.target.value)}
                                         autoComplete="current-password"
-                                        className="w-full rounded-[12px] bg-white/[0.06] border border-white/10 text-white placeholder-white/20 focus:bg-white/[0.09] focus:border-sky-400 focus:outline-none transition-all pr-11 pl-11 font-bold"
+                                        className="w-full rounded-[12px] bg-[#060B16]/80 hover:bg-[#080E1E] focus:bg-[#070D1B] border border-white/12 hover:border-sky-400/40 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/25 focus:shadow-[0_0_20px_rgba(56,189,248,0.25)] text-white placeholder-white/20 transition-all pr-11 pl-11 font-bold"
                                         style={{
-                                            height: 'clamp(38px, 4.8vh, 50px)',
-                                            fontSize: 'clamp(0.8rem, 1.35vh, 0.95rem)',
+                                            height: 'clamp(44px, 5.4vh, 54px)',
+                                            fontSize: 'clamp(0.82rem, 1.35vh, 0.95rem)',
                                         }}
                                         placeholder="••••••••"
                                     />
@@ -171,7 +185,7 @@ export default function Login() {
                                 disabled={processing}
                                 className="w-full rounded-[12px] bg-[#E5D0A1] hover:bg-[#d4b97b] disabled:opacity-50 disabled:cursor-not-allowed text-[#05050A] font-black transition-all shadow-lg shadow-black/30 flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
                                 style={{
-                                    height: 'clamp(40px, 5vh, 52px)',
+                                    height: 'clamp(44px, 5.4vh, 54px)',
                                     fontSize: 'clamp(0.82rem, 1.4vh, 0.98rem)',
                                 }}
                             >
@@ -186,48 +200,49 @@ export default function Login() {
                 {/* ══════════════ Simple Corporate Footer (Taqniya Cloud Signature) ══════════════ */}
                 {/* Full-width divider border across the entire half section */}
                 <div 
-                    className="w-full border-t border-white/15 px-6 sm:px-8 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-2.5 relative z-10 shrink-0 bg-[#030712]/40 backdrop-blur-sm"
+                    className="w-full border-t border-white/15 px-6 sm:px-8 lg:px-12 flex flex-col sm:flex-row items-center justify-between gap-3.5 relative z-10 shrink-0 bg-[#030712]/50 backdrop-blur-sm"
                     style={{
-                        paddingTop: 'clamp(8px, 1.4vh, 16px)',
-                        paddingBottom: 'clamp(8px, 1.4vh, 16px)',
-                        fontSize: 'clamp(0.68rem, 1.15vh, 0.85rem)',
+                        paddingTop: 'clamp(12px, 2vh, 20px)',
+                        paddingBottom: 'clamp(12px, 2vh, 20px)',
+                        fontSize: 'clamp(0.85rem, 1.5vh, 1.05rem)',
                     }}
                 >
                     
                     {/* Developer Company info */}
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-3">
                         <img 
                             src="/images/taqniya-logo.png" 
                             alt="تقنية السحابة" 
                             className="object-contain shrink-0" 
                             style={{
-                                width: 'clamp(20px, 2.6vh, 30px)',
-                                height: 'clamp(20px, 2.6vh, 30px)',
+                                width: 'clamp(32px, 4.2vh, 46px)',
+                                height: 'clamp(32px, 4.2vh, 46px)',
                             }}
                         />
-                        <span className="text-white/80">
-                            تم التطوير والتشغيل بواسطة <strong className="text-sky-400 font-bold">تقنية السحابة</strong>
+                        <span className="text-white/85">
+                            تم التطوير والتشغيل بواسطة <strong className="text-sky-400 font-black">تقنية السحابة</strong>
                         </span>
                         <span className="text-white/25 hidden sm:inline">•</span>
                         <a 
                             href="https://taqnniya.cloud/" 
                             target="_blank" 
                             rel="noreferrer" 
-                            className="text-white/50 hover:text-sky-400 transition-colors hidden sm:inline font-mono"
+                            className="text-white/50 hover:text-sky-400 transition-colors hidden sm:inline font-mono font-medium"
                         >
                             taqnniya.cloud
                         </a>
                     </div>
 
                     {/* Support Contact Phone (0921233218) */}
-                    <div className="flex items-center gap-2 text-white/90">
-                        <span className="text-white/50 text-[11px] sm:text-xs">الدعم الفني:</span>
+                    <div className="flex items-center gap-2.5 text-white/90">
+                        <span className="text-white/60 text-xs sm:text-sm font-semibold">الدعم الفني:</span>
                         <a 
                             href="tel:0921233218" 
-                            className="font-mono font-bold text-white hover:text-sky-400 flex items-center gap-1.5 transition-colors"
+                            className="font-mono font-black text-white hover:text-sky-400 flex items-center gap-2 transition-colors tracking-wide"
                             title="الاتصال بالدعم الفني"
+                            style={{ fontSize: 'clamp(0.9rem, 1.6vh, 1.15rem)' }}
                         >
-                            <Phone style={{ width: 'clamp(13px, 1.4vh, 16px)', height: 'clamp(13px, 1.4vh, 16px)' }} className="text-sky-400" />
+                            <Phone style={{ width: 'clamp(16px, 2.2vh, 22px)', height: 'clamp(16px, 2.2vh, 22px)' }} className="text-sky-400" />
                             <span dir="ltr">0921233218</span>
                         </a>
                     </div>
@@ -253,12 +268,6 @@ export default function Login() {
 
                 {/* Sapphire Luxury Framed Border */}
                 <div className="absolute inset-8 border border-sky-400/20 rounded-3xl pointer-events-none" />
-
-                {/* Subtle Luxury Corner Label */}
-                <div className="absolute bottom-12 right-12 z-10 text-right">
-                    <span className="text-[11px] uppercase tracking-[0.25em] text-sky-400/80 font-bold block mb-1">Sapphire Nocturne</span>
-                    <span className="text-sm font-black text-white/90">أناقة الياقوت وسحر العطور الهادئة</span>
-                </div>
 
             </div>
 
