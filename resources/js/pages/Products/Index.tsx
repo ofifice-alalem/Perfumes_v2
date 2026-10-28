@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect, ModernMultiSelect, Pagination, normalizeSearchText } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect, Pagination, normalizeSearchText, matchesSearchText } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star, FileSpreadsheet, Upload, Download, FileUp } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
@@ -1588,10 +1588,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             if (!isNaN(Number(trimmed)) && Number(trimmed) > 0 && p.id === Number(trimmed)) {
                 return true;
             }
-            const normKw = normalizeSearchText(trimmed);
-            const normName = normalizeSearchText(p.name);
-            const qr = p.qrcode ? p.qrcode.toLowerCase() : '';
-            return normName.includes(normKw) || qr.includes(trimmed.toLowerCase());
+            const extraKey = p.qrcode ? `${p.qrcode} ${p.id}` : String(p.id);
+            return matchesSearchText(trimmed, p.name, extraKey);
         });
     };
 
