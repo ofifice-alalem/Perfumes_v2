@@ -1539,6 +1539,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     }
 
     function submitCreate() {
+        const trimmed = createForm.data.name?.trim() || '';
+        const exists = products.some(p => p.name.trim().toLowerCase() === trimmed.toLowerCase());
+        if (exists) {
+            createForm.setError('name', 'اسم المنتج موجود مسبقاً في المنظومة، لا يمكن تكرار نفس الاسم.');
+            return;
+        }
+
         createForm.post('/products', {
             onSuccess: () => {
                 const defCat = getInitialDefaultCategory();
@@ -1554,6 +1561,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     }
 
     function submitEdit(id: number) {
+        const trimmed = editForm.data.name?.trim() || '';
+        const exists = products.some(p => p.name.trim().toLowerCase() === trimmed.toLowerCase() && p.id !== id);
+        if (exists) {
+            editForm.setError('name', 'اسم المنتج موجود مسبقاً لمنتج آخر، يرجى اختيار اسم غير مكرر.');
+            return;
+        }
+
         editForm.put(`/products/${id}`, {
             onSuccess: () => cancelEdit(),
         });
@@ -1656,6 +1670,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const activeForm = editingId !== null ? editForm : createForm;
     const activeCat  = editingId !== null ? editCat : createCat;
     const activeIsOriginal = editingId !== null ? editIsOriginal : createIsOriginal;
+
+    const isDuplicateName = !!activeForm.data.name?.trim() && products.some(p => 
+        p.name.trim().toLowerCase() === activeForm.data.name.trim().toLowerCase() && 
+        (editingId === null || p.id !== editingId)
+    );
 
     return (
         <AppShell title="إدارة المنتجات">
@@ -1816,8 +1835,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     value={activeForm.data.name}
                                                     onChange={e => activeForm.setData('name', e.target.value)}
                                                     placeholder="مثال: Sauvage Elixir..."
-                                                    className="spatial-input h-14 rounded-[18px] px-5 text-lg font-bold border-2"
+                                                    className={`spatial-input h-14 rounded-[18px] px-5 text-lg font-bold border-2 transition-all ${
+                                                        isDuplicateName ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5' : ''
+                                                    }`}
                                                 />
+                                                {isDuplicateName && (
+                                                    <p className="text-sm text-amber-600 dark:text-amber-400 font-black flex items-center gap-1.5 animate-in fade-in duration-200">
+                                                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                                                        هذا الاسم مسجل مسبقاً في المنظومة. يرجى اختيار اسم فريد.
+                                                    </p>
+                                                )}
                                                 {activeForm.errors.name && <p className="text-sm text-red-500 font-black">{activeForm.errors.name}</p>}
                                             </div>
 
@@ -2154,8 +2181,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4">
                                 <button
                                     onClick={editingId !== null ? () => submitEdit(editingId) : submitCreate}
-                                    disabled={editingId !== null ? editForm.processing : createForm.processing}
-                                    className="flex-1 spatial-button h-16 rounded-[22px] text-lg font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30"
+                                    disabled={(editingId !== null ? editForm.processing : createForm.processing) || isDuplicateName}
+                                    className="flex-1 spatial-button h-16 rounded-[22px] text-lg font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Check className="w-6 h-6" />
                                     {editingId !== null ? 'تحديث بيانات المنتج' : 'إضافة المنتج إلى النظام'}

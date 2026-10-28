@@ -25,6 +25,14 @@ class ProductController extends Controller
 
     public function store(ProductRequest $request)
     {
+        $name = trim($request->name);
+        $conflict = Product::where('name', $name)->first();
+        if ($conflict) {
+            return back()->withErrors([
+                'name' => 'اسم المنتج "' . $conflict->name . '" موجود مسبقاً في المنظومة، لا يمكن تكرار نفس الاسم.',
+            ])->withInput();
+        }
+
         $this->products->createWithRelations($request->validated());
 
         return back()->with('success', 'تم إضافة المنتج بنجاح');
@@ -32,6 +40,14 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, int $id)
     {
+        $name = trim($request->name);
+        $conflictName = Product::where('name', $name)->where('id', '!=', $id)->first();
+        if ($conflictName) {
+            return back()->withErrors([
+                'name' => 'اسم المنتج "' . $conflictName->name . '" موجود مسبقاً لمنتج آخر، يرجى اختيار اسم غير مكرر.',
+            ])->withInput();
+        }
+
         // التحقق من تفرد QR عند وجوده
         if (!empty($request->qrcode)) {
             $conflict = Product::where('qrcode', $request->qrcode)

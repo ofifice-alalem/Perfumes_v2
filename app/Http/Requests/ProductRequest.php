@@ -2,16 +2,37 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ProductRequest extends FormRequest
 {
     public function authorize(): bool { return true; }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('name') && is_string($this->name)) {
+            $this->merge([
+                'name' => trim(preg_replace('/\s+/u', ' ', $this->name)),
+            ]);
+        }
+    }
+
     public function rules(): array
     {
+        $productId = $this->route('product') ?? $this->route('id') ?? $this->id;
+        if ($productId instanceof Product) {
+            $productId = $productId->id;
+        }
+
         return [
-            'name'                   => 'required|string|max:255',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('products', 'name')->ignore($productId),
+            ],
             'qrcode'                 => 'nullable|string|max:100',
             'category_id'            => 'required|exists:categories,id',
             'selling_type'           => 'required|in:tier_based,unit_priced',
@@ -48,6 +69,7 @@ class ProductRequest extends FormRequest
     {
         return [
             'name.required'              => 'اسم المنتج مطلوب',
+            'name.unique'                => 'اسم المنتج موجود مسبقاً في المنظومة، يرجى اختيار اسم مختلف أو تعديل الصنف القائم',
             'category_id.required'       => 'التصنيف مطلوب',
             'category_id.exists'         => 'التصنيف غير موجود',
             'selling_type.required'      => 'نوع البيع مطلوب',
@@ -55,3 +77,4 @@ class ProductRequest extends FormRequest
         ];
     }
 }
+
