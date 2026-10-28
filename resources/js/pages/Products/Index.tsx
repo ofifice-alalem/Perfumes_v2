@@ -2218,15 +2218,21 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 <ModernSelect
                                                     label=""
                                                     placeholder="ابحث بالاسم أو كود QR..."
+                                                    value={draftSearchProdId ? (products.find(p => p.id === draftSearchProdId)?.name ?? '') : ''}
                                                     options={products.map(p => ({
                                                         label: p.name,
                                                         badge: p.category.name,
                                                         meta: fmt(p.stock),
-                                                        searchKey: p.qrcode ?? undefined
+                                                        searchKey: p.qrcode ? `${p.qrcode} ${p.id}` : String(p.id)
                                                     }))}
                                                     onSelect={val => {
+                                                        if (!val) {
+                                                            setDraftSearchProdId(null);
+                                                            return;
+                                                        }
                                                         const prod = products.find(p => p.name === val);
                                                         if (prod) setDraftSearchProdId(prod.id);
+                                                        else setDraftSearchProdId(null);
                                                     }}
                                                 />
                                             </div>
