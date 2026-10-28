@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, ModernMultiSelect, Pagination, normalizeSearchText } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star, FileSpreadsheet, Upload, Download, FileUp } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
@@ -1406,16 +1406,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const [editingId, setEditingId]   = useState<number | null>(null);
 
     // الفلاتر المطبقة حالياً على قائمة الجدول الرئيسي
-    const [filterCat, setFilterCat]       = useState<number | null>(null);
-    const [filterTier, setFilterTier]     = useState<number | null>(null);
-    const [searchProdId, setSearchProdId] = useState<number | null>(null);
-    const [lowStockOnly, setLowStockOnly] = useState(false);
+    const [filterCat, setFilterCat]             = useState<number | null>(null);
+    const [filterTier, setFilterTier]           = useState<number | null>(null);
+    const [searchKeywords, setSearchKeywords]   = useState<string[]>([]);
+    const [lowStockOnly, setLowStockOnly]       = useState(false);
 
     // الفلاتر المعلقة المؤقتة داخل الـ Drawer (قبل الضغط على عرض النتائج)
-    const [draftCat, setDraftCat]               = useState<number | null>(null);
-    const [draftTier, setDraftTier]             = useState<number | null>(null);
-    const [draftSearchProdId, setDraftSearchProdId] = useState<number | null>(null);
-    const [draftLowStockOnly, setDraftLowStockOnly] = useState(false);
+    const [draftCat, setDraftCat]                     = useState<number | null>(null);
+    const [draftTier, setDraftTier]                   = useState<number | null>(null);
+    const [draftSearchKeywords, setDraftSearchKeywords] = useState<string[]>([]);
+    const [draftLowStockOnly, setDraftLowStockOnly]   = useState(false);
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [qrProduct, setQrProduct]   = useState<Product | null>(null);
@@ -1430,8 +1430,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         import_mode: 'add_only',
     });
 
-    const hasActiveFilter = !!searchProdId || !!filterCat || !!filterTier || lowStockOnly;
-    const hasDraftFilter  = !!draftSearchProdId || !!draftCat || !!draftTier || draftLowStockOnly;
+    const hasActiveFilter = searchKeywords.length > 0 || !!filterCat || !!filterTier || lowStockOnly;
+    const hasDraftFilter  = draftSearchKeywords.length > 0 || !!draftCat || !!draftTier || draftLowStockOnly;
 
     // توليد QR لمنتج واحد
     function handleGenerate(p: Product) {
@@ -1580,8 +1580,23 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 20;
 
+    const matchesSearchKeywords = (p: Product, kws: string[]) => {
+        if (!kws || kws.length === 0) return true;
+        return kws.some(kw => {
+            const trimmed = kw.trim();
+            if (!trimmed) return false;
+            if (!isNaN(Number(trimmed)) && Number(trimmed) > 0 && p.id === Number(trimmed)) {
+                return true;
+            }
+            const normKw = normalizeSearchText(trimmed);
+            const normName = normalizeSearchText(p.name);
+            const qr = p.qrcode ? p.qrcode.toLowerCase() : '';
+            return normName.includes(normKw) || qr.includes(trimmed.toLowerCase());
+        });
+    };
+
     const filtered = products.filter(p => {
-        if (searchProdId && p.id !== searchProdId) return false;
+        if (!matchesSearchKeywords(p, searchKeywords)) return false;
         if (filterCat && p.category.id !== filterCat) return false;
         if (filterTier && (p.price_tier?.id !== filterTier && p.price_tier_id !== filterTier)) return false;
         if (lowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
@@ -1604,7 +1619,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     ];
 
     const draftFiltered = products.filter(p => {
-        if (draftSearchProdId && p.id !== draftSearchProdId) return false;
+        if (!matchesSearchKeywords(p, draftSearchKeywords)) return false;
         if (draftCat && p.category.id !== draftCat) return false;
         if (draftTier && (p.price_tier?.id !== draftTier && p.price_tier_id !== draftTier)) return false;
         if (draftLowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
@@ -1691,7 +1706,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             onClick={() => {
                                 setDraftCat(filterCat);
                                 setDraftTier(filterTier);
-                                setDraftSearchProdId(searchProdId);
+                                setDraftSearchKeywords([...searchKeywords]);
                                 setDraftLowStockOnly(lowStockOnly);
                                 setFilterDrawerOpen(true);
                             }}
@@ -1710,11 +1725,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         {hasActiveFilter && (
                             <button
                                 onClick={() => {
-                                    setSearchProdId(null);
+                                    setSearchKeywords([]);
                                     setFilterCat(null);
                                     setFilterTier(null);
                                     setLowStockOnly(false);
-                                    setDraftSearchProdId(null);
+                                    setDraftSearchKeywords([]);
                                     setDraftCat(null);
                                     setDraftTier(null);
                                     setDraftLowStockOnly(false);
@@ -2239,37 +2254,42 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     </h4>
                                     
                                     <div className="flex flex-col gap-3">
-                                        <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">بحث بالاسم أو كود QR</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="flex-1">
-                                                <ModernSelect
-                                                    label=""
-                                                    placeholder="ابحث بالاسم أو كود QR..."
-                                                    value={draftSearchProdId ? (products.find(p => p.id === draftSearchProdId)?.name ?? '') : ''}
-                                                    options={products.map(p => ({
-                                                        label: p.name,
-                                                        badge: p.category.name,
-                                                        meta: fmt(p.stock),
-                                                        searchKey: p.qrcode ? `${p.qrcode} ${p.id}` : String(p.id)
-                                                    }))}
-                                                    onSelect={val => {
-                                                        if (!val) {
-                                                            setDraftSearchProdId(null);
-                                                            return;
-                                                        }
-                                                        const prod = products.find(p => p.name === val);
-                                                        if (prod) setDraftSearchProdId(prod.id);
-                                                        else setDraftSearchProdId(null);
-                                                    }}
-                                                />
-                                            </div>
-                                            {draftSearchProdId && (
-                                                <button onClick={() => setDraftSearchProdId(null)}
-                                                    className="flex items-center gap-2 px-4 h-14 rounded-[18px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-sm shrink-0 border-2 border-red-500/30 select-none touch-manipulation cursor-pointer">
-                                                    <X className="w-4 h-4" /> إلغاء البحث
-                                                </button>
+                                        <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">
+                                            البحث بالمنتج (اختيار متعدد / كلمات مفتاحية / كود QR)
+                                        </label>
+                                        <div className="flex flex-col gap-3">
+                                            <ModernMultiSelect
+                                                label=""
+                                                placeholder="اختر منتجات أو اكتب كلمة مثل «لويس» أو كود QR..."
+                                                values={draftSearchKeywords}
+                                                options={products.map(p => ({
+                                                    value: String(p.id),
+                                                    label: p.name,
+                                                    badge: p.category.name,
+                                                    meta: fmt(p.stock),
+                                                    searchKey: p.qrcode ? `${p.name} ${p.qrcode} ${p.id}` : `${p.name} ${p.id}`
+                                                }))}
+                                                onSelect={setDraftSearchKeywords}
+                                                allowFreeText={true}
+                                            />
+                                            {draftSearchKeywords.length > 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                        تم تحديد {draftSearchKeywords.length} عنصر للبحث
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDraftSearchKeywords([])}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all font-black text-xs border border-red-500/30 cursor-pointer"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" /> مسح محددات البحث
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
+                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 select-none">
+                                            💡 يمكنك النقر على العطور لاختيار أكثر من منتج (Checkboxes)، أو كتابة أي كلمة مثل "لويس" والضغط على إضافة للبحث عن كل المنتجات المطابقة.
+                                        </p>
                                     </div>
                                 </div>
 
@@ -2423,7 +2443,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     onClick={() => {
                                         setFilterCat(draftCat);
                                         setFilterTier(draftTier);
-                                        setSearchProdId(draftSearchProdId);
+                                        setSearchKeywords([...draftSearchKeywords]);
                                         setLowStockOnly(draftLowStockOnly);
                                         setFilterDrawerOpen(false);
                                     }}
@@ -2435,7 +2455,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 {hasDraftFilter && (
                                     <button
                                         onClick={() => {
-                                            setDraftSearchProdId(null);
+                                            setDraftSearchKeywords([]);
                                             setDraftCat(null);
                                             setDraftTier(null);
                                             setDraftLowStockOnly(false);
@@ -2459,43 +2479,58 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                 <SlidersHorizontal className="w-4 h-4 text-primary" /> الفلاتر المفعلة:
                             </span>
-                            {searchProdId && (
-                                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-                                    بحث: {products.find(p => p.id === searchProdId)?.name}
-                                    <button onClick={() => { setSearchProdId(null); setDraftSearchProdId(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
-                                </span>
-                            )}
+                            {searchKeywords.map((kw) => {
+                                const prod = !isNaN(Number(kw)) ? products.find(p => p.id === Number(kw)) : null;
+                                const displayText = prod ? prod.name : `بحث: "${kw}"`;
+                                return (
+                                    <span key={kw} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                                        <span>{displayText}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const updated = searchKeywords.filter(k => k !== kw);
+                                                setSearchKeywords(updated);
+                                                setDraftSearchKeywords(updated);
+                                            }}
+                                            className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
+                                            title="إزالة هذا البحث"
+                                        >
+                                            <X className="w-3.5 h-3.5 hover:text-red-500" />
+                                        </button>
+                                    </span>
+                                );
+                            })}
                             {filterCat && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
                                     التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                             {filterTier && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
                                     التير: {tiers.find(t => t.id === filterTier)?.name}
-                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                             {lowStockOnly && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                                     أوشكت على النفاد
-                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }}><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
                                 </span>
                             )}
                         </div>
                         <button
                             onClick={() => {
-                                setSearchProdId(null);
+                                setSearchKeywords([]);
                                 setFilterCat(null);
                                 setFilterTier(null);
                                 setLowStockOnly(false);
-                                setDraftSearchProdId(null);
+                                setDraftSearchKeywords([]);
                                 setDraftCat(null);
                                 setDraftTier(null);
                                 setDraftLowStockOnly(false);
                             }}
-                            className="text-xs font-black text-red-500 hover:underline shrink-0"
+                            className="text-xs font-black text-red-500 hover:underline shrink-0 cursor-pointer"
                         >
                             إلغاء الكل
                         </button>

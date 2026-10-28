@@ -305,7 +305,7 @@ export function DraggableOnScreenKeyboard({
   );
 }
 
-function normalizeSearchText(str: string): string {
+export function normalizeSearchText(str: string): string {
   return str
     .toLowerCase()
     .trim()
@@ -619,6 +619,7 @@ export function ModernMultiSelect({
   placeholder = 'اختر...',
   onSelect,
   defaultValues = [],
+  values,
   allowFreeText = false,
   enableVirtualKeyboard = true,
 }: {
@@ -628,11 +629,12 @@ export function ModernMultiSelect({
   placeholder?: string;
   onSelect?: (values: string[]) => void;
   defaultValues?: string[];
+  values?: string[];
   allowFreeText?: boolean;
   enableVirtualKeyboard?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<string[]>(defaultValues);
+  const [selected, setSelected] = useState<string[]>(values !== undefined ? values : defaultValues);
   const [search, setSearch] = useState('');
   const [showKeyboard, setShowKeyboard] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -640,6 +642,12 @@ export function ModernMultiSelect({
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (values !== undefined) {
+      setSelected(values);
+    }
+  }, [values]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -761,6 +769,15 @@ export function ModernMultiSelect({
             translate="no"
             className="notranslate w-full rounded-[16px] pr-12 pl-4 bg-black/5 dark:bg-white/5 border border-transparent focus:border-primary/30 font-bold text-slate-700 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/30 outline-none transition-all h-14 sm:h-16 text-base sm:text-lg"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (showFreeTextOption && search.trim()) {
+                  toggleOption(search.trim());
+                  setSearch('');
+                }
+              }
+            }}
           />
         </div>
         {enableVirtualKeyboard && (
