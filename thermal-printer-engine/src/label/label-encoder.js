@@ -52,7 +52,7 @@ function encodeCanvasToTspl(canvas, options = {}) {
         `BITMAP 0,0,${widthBytes},${height},0,`
     );
 
-    const footer = Buffer.from(`\r\nPRINT ${copies},1\r\n`);
+    const footer = Buffer.from(`\r\nPRINT ${copies}\r\n`);
 
     return Buffer.concat([header, bitmapData, footer]);
 }

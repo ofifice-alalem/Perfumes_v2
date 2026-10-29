@@ -540,7 +540,7 @@ class NodeThermalPrinterController extends Controller
 
             if ($isDaemonActive) {
                 try {
-                    $response = Http::connectTimeout(1.0)->timeout(3.0)->post('http://127.0.0.1:9124/print-label', [
+                    $response = Http::connectTimeout(1.5)->timeout(8.0)->post('http://127.0.0.1:9124/print-label', [
                         'printerName' => $printerName,
                         'label'       => $labelData,
                     ]);
@@ -555,6 +555,14 @@ class NodeThermalPrinterController extends Controller
                     }
                 } catch (\Throwable $e) {
                     Log::warning("printLabelDirect HTTP dispatch: " . $e->getMessage());
+                    // في حال كان الخطأ بسبب انتهاء مهلة الاستجابة بعد الإرسال، نمنع إعادة الطباعة عبر CLI منعاً للتكرار
+                    if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
+                        return response()->json([
+                            'success'     => true,
+                            'message'     => 'تم إرسال ملصق الباركود إلى الطابعة ' . $printerName,
+                            'printerUsed' => $printerName,
+                        ]);
+                    }
                 }
             }
 

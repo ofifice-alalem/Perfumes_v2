@@ -405,7 +405,7 @@ export function matchesSearchText(query: string, target: string, extraSearchKey?
     if (qTokenNoAl !== qToken && fullTarget.includes(qTokenNoAl)) return true;
 
     return tTokensExpanded.some(tToken => {
-      if (tToken.includes(qToken) || qToken.includes(tToken)) return true;
+      if (tToken.includes(qToken)) return true;
       if (qTokenNoAl !== qToken && tToken.includes(qTokenNoAl)) return true;
 
       const minLen = Math.min(qToken.length, tToken.length);

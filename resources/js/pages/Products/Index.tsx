@@ -1585,10 +1585,22 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         return kws.some(kw => {
             const trimmed = kw.trim();
             if (!trimmed) return false;
-            if (!isNaN(Number(trimmed)) && Number(trimmed) > 0 && p.id === Number(trimmed)) {
+
+            // 1. إذا كان العنصر معرف صنف محدد تم اختياره من القائمة
+            if (!isNaN(Number(trimmed))) {
+                const numId = Number(trimmed);
+                if (products.some(prod => prod.id === numId)) {
+                    return p.id === numId;
+                }
+            }
+
+            // 2. إذا كان كود QR أو باركود مطابق تماماً
+            if (p.qrcode && p.qrcode.toLowerCase() === trimmed.toLowerCase()) {
                 return true;
             }
-            const extraKey = p.qrcode ? `${p.qrcode} ${p.id}` : String(p.id);
+
+            // 3. البحث النصي باسم المنتج
+            const extraKey = p.qrcode ? `${p.qrcode}` : '';
             return matchesSearchText(trimmed, p.name, extraKey);
         });
     };
