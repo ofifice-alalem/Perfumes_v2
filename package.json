@@ -48,6 +48,7 @@
             "createDesktopShortcut": false,
             "createStartMenuShortcut": true,
             "shortcutName": "منظومة السحابة",
+            "runAfterFinish": false,
             "include": "electron/installer.nsh"
         }
     },

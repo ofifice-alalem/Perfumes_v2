@@ -231,6 +231,15 @@ class SetupWizardController extends Controller
             $this->appendDomainToHostsFile($domain);
             $this->ensureSslAndVhosts($domain);
 
+            // 7. حفظ التكوين المشترك لتطبيق سطح المكتب ليقرأه الكاشير والمبيعات مباشرة
+            $this->saveSharedDesktopConfig([
+                'domain'          => $domain,
+                'app_url'         => "https://{$domain}",
+                'store_name'      => $storeName,
+                'setup_completed' => true,
+                'role'            => 'master',
+            ]);
+
             return response()->json([
                 'success'  => true,
                 'message'  => "تم إعداد وتهيئة منظومة السحابة لمتجر «{$storeName}» بنجاح!",
@@ -273,6 +282,15 @@ class SetupWizardController extends Controller
             if (filter_var($serverHost, FILTER_VALIDATE_IP)) {
                 $this->appendDomainToHostsFile($domain, $serverHost);
             }
+
+            // حفظ التكوين المشترك لتطبيق سطح المكتب ليقرأه الكاشير مباشرة
+            $this->saveSharedDesktopConfig([
+                'domain'          => $domain,
+                'master_host'     => $serverHost,
+                'app_url'         => 'http://' . ($domain ?: $serverHost),
+                'setup_completed' => true,
+                'role'            => 'client',
+            ]);
 
             return response()->json([
                 'success'  => true,
@@ -437,6 +455,24 @@ EOT;
         }
 
         file_put_contents($envPath, $content);
+    }
+
+    /**
+     * حفظ التكوين المشترك لنظام سطح المكتب (Electron)
+     */
+    private function saveSharedDesktopConfig(array $data): void
+    {
+        try {
+            $userAppData = getenv('APPDATA') ?: 'C:\\Users\\Default\\AppData\\Roaming';
+            $sharedDir = $userAppData . '\\TaqniyaCloudShared';
+            if (!is_dir($sharedDir)) {
+                @mkdir($sharedDir, 0777, true);
+            }
+            $configPath = $sharedDir . '\\app_config.json';
+            @file_put_contents($configPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        } catch (\Throwable $e) {
+            Log::warning('Failed to save shared desktop config: ' . $e->getMessage());
+        }
     }
 }
 

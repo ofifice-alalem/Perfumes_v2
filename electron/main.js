@@ -187,7 +187,23 @@ function readEnvConfig() {
     masterHost: '',
     setupCompleted: false, // افتراضياً غير مكتمل للأجهزة والنسخ الجديدة
     appName: 'منظومة السحابة — المبيعات',
+    domain: '',
   };
+
+  // 🟢 1. قراءة التكوين المشترك المحفوظ من أداة الإعدادات
+  const sharedConfigPath = path.join(app.getPath('appData'), 'TaqniyaCloudShared', 'app_config.json');
+  if (fs.existsSync(sharedConfigPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(sharedConfigPath, 'utf8'));
+      if (parsed.app_url) config.appUrl = parsed.app_url;
+      if (parsed.master_host) config.masterHost = parsed.master_host;
+      if (parsed.domain) config.domain = parsed.domain;
+      if (parsed.store_name) config.appName = `${parsed.store_name} — منظومة السحابة`;
+      if (parsed.setup_completed) config.setupCompleted = true;
+    } catch (e) {
+      console.warn('Could not read shared desktop config:', e.message);
+    }
+  }
 
   for (const envPath of possiblePaths) {
     if (fs.existsSync(envPath)) {
@@ -362,7 +378,11 @@ async function createMainWindow() {
     } else {
       const apacheActive = await probePort(80);
       if (apacheActive) {
-        const baseUrl = config.appUrl && !config.appUrl.includes('8181') ? config.appUrl : 'http://127.0.0.1';
+        // إذا كان هناك نطاق مخصص محفوظ في الإعدادات، نوجه إليه مباشرة
+        let baseUrl = 'http://127.0.0.1';
+        if (config.appUrl && !config.appUrl.includes('8181') && !config.appUrl.includes('localhost')) {
+          baseUrl = config.appUrl;
+        }
         targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
       } else {
         console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
