@@ -16,6 +16,15 @@ export function PdfExportButton({ href, excelHref, className, title = "تصدي�
     const batchSize = 500;
     const totalBatches = totalCount && totalCount > 0 ? Math.ceil(totalCount / batchSize) : 1;
 
+    const triggerDownload = (url: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', '');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleConfirm = () => {
         setIsOpen(false);
         let finalUrl = href;
@@ -24,7 +33,7 @@ export function PdfExportButton({ href, excelHref, className, title = "تصدي�
             const separator = href.includes('?') ? '&' : '?';
             finalUrl = `${href}${separator}offset=${offset}&limit=${batchSize}`;
         }
-        window.open(finalUrl, '_blank', 'noreferrer');
+        triggerDownload(finalUrl);
     };
 
     return (
@@ -119,16 +128,17 @@ export function PdfExportButton({ href, excelHref, className, title = "تصدي�
                             </button>
 
                             {excelHref && (
-                                <a
-                                    href={excelHref}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    onClick={() => setIsOpen(false)}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsOpen(false);
+                                        triggerDownload(excelHref);
+                                    }}
                                     className="flex-1 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
                                 >
                                     <FileSpreadsheet className="w-4 h-4" />
                                     <span>تصدير الإكسيل الشامل</span>
-                                </a>
+                                </button>
                             )}
                         </div>
                     </div>

@@ -183,27 +183,12 @@ function readEnvConfig() {
   }
 
   const config = {
-    appUrl: 'http://127.0.0.1:8181',
+    appUrl: '',
     masterHost: '',
     setupCompleted: false, // افتراضياً غير مكتمل للأجهزة والنسخ الجديدة
     appName: 'منظومة السحابة — المبيعات',
     domain: '',
   };
-
-  // 🟢 1. قراءة التكوين المشترك المحفوظ من أداة الإعدادات
-  const sharedConfigPath = path.join(app.getPath('appData'), 'TaqniyaCloudShared', 'app_config.json');
-  if (fs.existsSync(sharedConfigPath)) {
-    try {
-      const parsed = JSON.parse(fs.readFileSync(sharedConfigPath, 'utf8'));
-      if (parsed.app_url) config.appUrl = parsed.app_url;
-      if (parsed.master_host) config.masterHost = parsed.master_host;
-      if (parsed.domain) config.domain = parsed.domain;
-      if (parsed.store_name) config.appName = `${parsed.store_name} — منظومة السحابة`;
-      if (parsed.setup_completed) config.setupCompleted = true;
-    } catch (e) {
-      console.warn('Could not read shared desktop config:', e.message);
-    }
-  }
 
   for (const envPath of possiblePaths) {
     if (fs.existsSync(envPath)) {
@@ -228,6 +213,43 @@ function readEnvConfig() {
         console.warn('Could not read .env file from:', envPath, e.message);
       }
     }
+  }
+
+  // 🟢 2. قراءة التكوين المشترك المحفوظ من أداة الإعدادات (له الأولوية القصوى)
+  const sharedConfigPaths = [
+    path.join(process.env.ALLUSERSPROFILE || 'C:\\ProgramData', 'TaqniyaCloudShared', 'app_config.json'),
+    path.join(process.env.ProgramData || 'C:\\ProgramData', 'TaqniyaCloudShared', 'app_config.json'),
+    path.join(app.getPath('appData'), 'TaqniyaCloudShared', 'app_config.json'),
+  ];
+
+  for (const sharedPath of sharedConfigPaths) {
+    if (fs.existsSync(sharedPath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(sharedPath, 'utf8'));
+        if (parsed.app_url) config.appUrl = parsed.app_url;
+        if (parsed.master_host) config.masterHost = parsed.master_host;
+        if (parsed.domain) config.domain = parsed.domain;
+        if (parsed.store_name) config.appName = `${parsed.store_name} — منظومة السحابة`;
+        if (parsed.setup_completed !== undefined) config.setupCompleted = Boolean(parsed.setup_completed);
+        break;
+      } catch (e) {
+        console.warn('Could not read shared desktop config from:', sharedPath, e.message);
+      }
+    }
+  }
+
+  // 🟢 3. استخراج النطاق من appUrl إذا لم يكن محدداً بشكل صريح
+  if (!config.domain && config.appUrl) {
+    try {
+      const urlObj = new URL(config.appUrl);
+      if (!urlObj.hostname.includes('127.0.0.1') && !urlObj.hostname.includes('localhost')) {
+        config.domain = urlObj.hostname;
+      }
+    } catch (e) {}
+  }
+
+  if (!config.appUrl) {
+    config.appUrl = config.domain ? `https://${config.domain}` : 'http://127.0.0.1:8181';
   }
 
   return config;
@@ -360,10 +382,15 @@ async function createMainWindow() {
 
   let targetUrl = '';
 
+  const apachePort80 = await probePort(80);
+  const apachePort443 = await probePort(443);
+  const apacheActive = apachePort80 || apachePort443;
+
   if (isSettings) {
-    // ⚙️ نمط الإعدادات: التوجيه دائماً لمعالج الإعداد
-    const apacheActive = await probePort(80);
-    if (apacheActive) {
+    // ⚙️ نمط الإعدادات (Settings Mode)
+    if (config.domain && apacheActive) {
+      targetUrl = `https://${config.domain}/setup`;
+    } else if (apacheActive) {
       targetUrl = 'http://127.0.0.1/setup';
     } else {
       console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup...');
@@ -371,24 +398,17 @@ async function createMainWindow() {
       targetUrl = 'http://127.0.0.1:8181/setup';
     }
   } else {
-    // 🛒 نمط المبيعات اليومي (POS Mode) — التوجيه المباشر والدائم لواجهة فواتير المبيعات
+    // 🛒 نمط المبيعات اليومي (POS Mode) — التوجيه المباشر لواجهة فواتير المبيعات
     if (config.masterHost) {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
+    } else if (apacheActive) {
+      const baseUrl = config.domain ? `https://${config.domain}` : 'https://127.0.0.1';
+      targetUrl = `${baseUrl}/invoices/create`;
     } else {
-      const apacheActive = await probePort(80);
-      if (apacheActive) {
-        // إذا كان هناك نطاق مخصص محفوظ في الإعدادات، نوجه إليه مباشرة
-        let baseUrl = 'http://127.0.0.1';
-        if (config.appUrl && !config.appUrl.includes('8181') && !config.appUrl.includes('localhost')) {
-          baseUrl = config.appUrl;
-        }
-        targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
-      } else {
-        console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
-        await startInternalPhpServer(8181);
-        targetUrl = 'http://127.0.0.1:8181/invoices/create';
-      }
+      console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
+      await startInternalPhpServer(8181);
+      targetUrl = 'http://127.0.0.1:8181/invoices/create';
     }
   }
 
@@ -422,7 +442,42 @@ async function createMainWindow() {
     }
   });
 
+  // التقاط وتأكيد التنزيلات داخلياً مع جلسة سطح المكتب
+  mainWindow.webContents.session.on('will-download', (event, item) => {
+    console.log('[Taqniya Desktop] Native file download triggered:', item.getFilename());
+  });
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const parsedUrl = new URL(url);
+      const isInternalHost = 
+        parsedUrl.hostname === '127.0.0.1' || 
+        parsedUrl.hostname === 'localhost' || 
+        (config.domain && parsedUrl.hostname === config.domain) ||
+        (config.masterHost && parsedUrl.hostname.includes(config.masterHost));
+
+      const isDownload = 
+        url.includes('/pdf') || 
+        url.includes('excel=') || 
+        url.includes('.pdf') || 
+        url.includes('.xlsx') || 
+        url.includes('.csv');
+
+      if (isInternalHost) {
+        if (isDownload) {
+          // تنزيل ملفات التقارير والفواتير داخلياً بالاعتماد على جلسة المستخدم الحالية
+          mainWindow.webContents.downloadURL(url);
+          return { action: 'deny' };
+        }
+        // الروابط الداخلية تُفتح داخل نفس النافذة للحفاظ على استمرارية العمل
+        mainWindow.loadURL(url);
+        return { action: 'deny' };
+      }
+    } catch (e) {
+      console.warn('URL parsing error in window open handler:', e);
+    }
+
+    // الروابط الخارجية الحقيقية فقط تفتح في متصفح النظام
     if (url.startsWith('http:') || url.startsWith('https:')) {
       shell.openExternal(url);
     }
@@ -450,7 +505,9 @@ if (!gotTheLock) {
         typeof arg === 'string' && (arg.toLowerCase().includes('setting') || arg.toLowerCase().includes('--mode=settings'))
       );
       if (wantsSettings && !isSettingsMode) {
-        mainWindow.loadURL('http://127.0.0.1:8181/setup');
+        const conf = readEnvConfig();
+        const settingsUrl = conf.domain ? `https://${conf.domain}/setup` : 'http://127.0.0.1:8181/setup';
+        mainWindow.loadURL(settingsUrl);
       }
     }
   });

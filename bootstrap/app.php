@@ -14,7 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'login',
         ]);
-        $middleware->web(append: [
+        $middleware->web(prepend: [
+            \App\Http\Middleware\EnsureConfiguredDomain::class,
+        ], append: [
             \App\Http\Middleware\CheckLicense::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);

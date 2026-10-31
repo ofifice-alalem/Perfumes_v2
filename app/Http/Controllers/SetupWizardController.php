@@ -268,7 +268,7 @@ class SetupWizardController extends Controller
         ]);
 
         $serverHost = trim($request->input('server_host'));
-        $domain     = trim($request->input('domain') ?: 'tajori.store');
+        $domain     = trim($request->input('domain') ?: 'cloud-pos.local');
 
         try {
             // تحديث .env للجهاز الفرعي
@@ -336,16 +336,22 @@ class SetupWizardController extends Controller
         if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') return;
 
         $hostsPath = 'C:\\Windows\\System32\\drivers\\etc\\hosts';
-        if (!file_exists($hostsPath) || !is_writable($hostsPath)) {
-            return;
+        if (file_exists($hostsPath) && is_writable($hostsPath)) {
+            try {
+                $content = file_get_contents($hostsPath);
+                if (!str_contains($content, $domain)) {
+                    $entry = "\n{$targetIp}    {$domain}\n{$targetIp}    www.{$domain}\n";
+                    @file_put_contents($hostsPath, $content . $entry);
+                }
+                return;
+            } catch (\Throwable $e) {}
         }
 
+        // إذا لم يكن قابلاً للكتابة المباشرة (نقص الصلاحيات)، يتم تشغيل إضافة آمنة عبر PowerShell
         try {
-            $content = file_get_contents($hostsPath);
-            if (!str_contains($content, $domain)) {
-                $entry = "\n{$targetIp}    {$domain}\n{$targetIp}    www.{$domain}\n";
-                @file_put_contents($hostsPath, $content . $entry);
-            }
+            $psScript = "if (-not (Select-String -Path \$env:windir\\System32\\drivers\\etc\\hosts -Pattern '{$domain}')) { Add-Content -Path \$env:windir\\System32\\drivers\\etc\\hosts -Value \"`n{$targetIp}    {$domain}`n{$targetIp}    www.{$domain}\" }";
+            $cmd = "powershell -WindowStyle Hidden -Command \"Start-Process powershell -Verb RunAs -WindowStyle Hidden -ArgumentList '-Command {$psScript}'\"";
+            @shell_exec($cmd);
         } catch (\Throwable $e) {
             Log::warning('Hosts file update skipped: ' . $e->getMessage());
         }
@@ -419,6 +425,11 @@ Listen [::]:443
 </VirtualHost>
 EOT;
                 @file_put_contents($vhostsPath, $vhostConfig);
+
+                // إعادة تشغيل أباتشي لتفعيل الإعدادات فوراً
+                if (file_exists('C:\\Apache24\\bin\\httpd.exe')) {
+                    @shell_exec('C:\\Apache24\\bin\\httpd.exe -k restart');
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('SSL and Vhosts update skipped: ' . $e->getMessage());
@@ -458,18 +469,30 @@ EOT;
     }
 
     /**
-     * حفظ التكوين المشترك لنظام سطح المكتب (Electron)
+     * حفظ التكوين المشترك لنظام سطح المكتب (Electron) لجميع مستخدمي وبيئات ويندوز
      */
     private function saveSharedDesktopConfig(array $data): void
     {
         try {
-            $userAppData = getenv('APPDATA') ?: 'C:\\Users\\Default\\AppData\\Roaming';
-            $sharedDir = $userAppData . '\\TaqniyaCloudShared';
-            if (!is_dir($sharedDir)) {
-                @mkdir($sharedDir, 0777, true);
+            $jsonData = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+            // 1. الحفظ في مجلد ProgramData المشترك لجميع الحسابات والخدمات
+            $programData = getenv('ProgramData') ?: (getenv('ALLUSERSPROFILE') ?: 'C:\\ProgramData');
+            $sharedDir1 = $programData . '\\TaqniyaCloudShared';
+            if (!is_dir($sharedDir1)) {
+                @mkdir($sharedDir1, 0777, true);
             }
-            $configPath = $sharedDir . '\\app_config.json';
-            @file_put_contents($configPath, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            @file_put_contents($sharedDir1 . '\\app_config.json', $jsonData);
+
+            // 2. الحفظ في مجلد AppData للمستخدم الحالي
+            $userAppData = getenv('APPDATA');
+            if ($userAppData) {
+                $sharedDir2 = $userAppData . '\\TaqniyaCloudShared';
+                if (!is_dir($sharedDir2)) {
+                    @mkdir($sharedDir2, 0777, true);
+                }
+                @file_put_contents($sharedDir2 . '\\app_config.json', $jsonData);
+            }
         } catch (\Throwable $e) {
             Log::warning('Failed to save shared desktop config: ' . $e->getMessage());
         }
