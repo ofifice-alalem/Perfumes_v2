@@ -54,31 +54,43 @@ function probePort(port, host = '127.0.0.1', timeoutMs = 800) {
  * قراءة المتغيرات من ملف .env
  */
 function readEnvConfig() {
-  const envPath = path.join(__dirname, '../.env');
+  const possiblePaths = [
+    path.join(__dirname, '../.env'),
+    path.join(__dirname, '../../.env'),
+    path.join(process.resourcesPath, '.env'),
+    path.join(process.resourcesPath, 'app/.env'),
+    path.join(process.cwd(), '.env'),
+    'C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/.env',
+    path.join(app.getPath('userData'), '.env'),
+  ];
+
   const config = {
-    appUrl: 'http://tajori.store',
+    appUrl: 'https://alalem.com',
     masterHost: '',
-    setupCompleted: false,
-    appName: 'طيبة التاجوري — منظومة السحابة',
+    setupCompleted: true,
+    appName: 'منظومة السحابة — المبيعات',
   };
 
-  if (fs.existsSync(envPath)) {
-    try {
-      const content = fs.readFileSync(envPath, 'utf8');
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) continue;
-        const [key, ...values] = trimmed.split('=');
-        const val = values.join('=').replace(/^["']|["']$/g, '');
+  for (const envPath of possiblePaths) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, 'utf8');
+        const lines = content.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const [key, ...values] = trimmed.split('=');
+          const val = values.join('=').replace(/^["']|["']$/g, '');
 
-        if (key === 'APP_URL' && val) config.appUrl = val;
-        if (key === 'MASTER_SERVER_HOST' && val) config.masterHost = val;
-        if (key === 'APP_SETUP_COMPLETED' && (val === 'true' || val === '1')) config.setupCompleted = true;
-        if (key === 'APP_NAME' && val) config.appName = `${val} — منظومة السحابة`;
+          if (key === 'APP_URL' && val) config.appUrl = val;
+          if (key === 'MASTER_SERVER_HOST' && val) config.masterHost = val;
+          if (key === 'APP_SETUP_COMPLETED' && (val === 'false' || val === '0')) config.setupCompleted = false;
+          if (key === 'APP_NAME' && val) config.appName = `${val} — منظومة السحابة`;
+        }
+        break;
+      } catch (e) {
+        console.warn('Could not read .env file from:', envPath, e.message);
       }
-    } catch (e) {
-      console.warn('Could not read .env file:', e.message);
     }
   }
 
@@ -138,13 +150,8 @@ function resolveMode() {
   if (args.includes('--mode=settings') || args.includes('--settings')) {
     return 'settings';
   }
-  if (args.includes('--mode=pos') || args.includes('--pos')) {
-    return 'pos';
-  }
-
-  // إذا لم يحدد، نتحقق من اكتمال الإعداد في .env
-  const config = readEnvConfig();
-  return config.setupCompleted ? 'pos' : 'settings';
+  // الوضع الافتراضي لجميع مشغلات المنظومة هو المبيعات
+  return 'pos';
 }
 
 /**
@@ -161,13 +168,14 @@ async function createMainWindow() {
     : (config.appName || 'منظومة السحابة — المبيعات');
 
   mainWindow = new BrowserWindow({
-    width: isSettings ? 1100 : 1366,
-    height: isSettings ? 820 : 860,
+    width: 1440,
+    height: 900,
     minWidth: 1024,
     minHeight: 700,
     title: windowTitle,
     backgroundColor: '#020617', // slate-950
     autoHideMenuBar: true,
+    show: false,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
     webPreferences: {
       nodeIntegration: false,
@@ -176,6 +184,10 @@ async function createMainWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+
+  // تعظيم النافذة لملء كامل الشاشة فور الفتح
+  mainWindow.maximize();
+  mainWindow.show();
 
   Menu.setApplicationMenu(null);
   mainWindow.removeMenu();
@@ -208,12 +220,12 @@ async function createMainWindow() {
       targetUrl = 'http://127.0.0.1:8181/setup';
     }
   } else {
-    // نمط المبيعات اليومي (POS Mode)
+    // نمط المبيعات اليومي (POS Mode) — التوجيه المباشر لواجهة فواتير المبيعات
+    let baseUrl = config.appUrl || 'https://alalem.com';
     if (config.masterHost) {
-      targetUrl = config.masterHost.startsWith('http') ? config.masterHost : `http://${config.masterHost}`;
-    } else {
-      targetUrl = config.appUrl || 'http://tajori.store';
+      baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
     }
+    targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
   }
 
   console.log(`[Taqniya Desktop] Mode: [${mode}] — Loading: ${targetUrl}`);
@@ -269,6 +281,12 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
+  });
+
+  // قبول وتوثيق شهادات SSL المحلية دون إظهار تنبيهات أمنية
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    event.preventDefault();
+    callback(true);
   });
 
   app.whenReady().then(() => {
