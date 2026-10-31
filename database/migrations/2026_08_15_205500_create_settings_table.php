@@ -22,37 +22,37 @@ return new class extends Migration
         DB::table('settings')->insertOrIgnore([
             [
                 'key' => 'store_name',
-                'value' => 'تاجوري للعطور الفاخرة',
+                'value' => 'منظومة السحابة',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'key' => 'store_subname',
-                'value' => 'TAJORI PERFUMES & ESSENCES',
+                'value' => 'Taqniya Cloud POS',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'key' => 'store_details',
-                'value' => "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432",
+                'value' => '',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'key' => 'store_logo',
-                'value' => '/images/logo-black_white.png',
+                'value' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'key' => 'thank_you_message',
-                'value' => '✨ شكراً لزيارتكم! نتمنى لكم يوماً معطراً ✨',
+                'value' => '✨ شكراً لزيارتكم! نتشرف بخدمتكم دائماً ✨',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'key' => 'policy_notes',
-                'value' => "• البضاعة المباعة (العطور الأصلية والعبوات) تستبدل خلال 3 أيام بشرط وجود الفاتورة الأصلية وأن تكون بحالتها الأولى.\n• ⚠️ العطور التقسيم والزيوت العطرية المعبأة لا ترد ولا تستبدل لدواعي السلامة وصحة العامة.",
+                'value' => '• البضاعة المباعة تستبدل أو تسترجع وفقاً للشروط والأحكام الخاصة بالمتجر.',
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

@@ -79,8 +79,8 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
     };
 
     // بيانات المتجر والسيرفر
-    const [storeName, setStoreName] = useState(initialConfig.store_name || 'طيبة التاجوري');
-    const [domain, setDomain] = useState(initialConfig.domain || 'tajori.store');
+    const [storeName, setStoreName] = useState(initialConfig.store_name || 'منظومة السحابة');
+    const [domain, setDomain] = useState(initialConfig.domain || 'cloud-pos.local');
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -504,7 +504,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                                                         type="text"
                                                         value={domain}
                                                         onChange={e => setDomain(e.target.value)}
-                                                        placeholder="tajori.store"
+                                                        placeholder="cloud-pos.local"
                                                         className="spatial-input w-full h-13 px-4 rounded-[16px] font-bold text-sm font-mono"
                                                     />
                                                 </div>
@@ -673,7 +673,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                                         type="text"
                                         value={serverHost}
                                         onChange={e => setServerHost(e.target.value)}
-                                        placeholder="مثال: 192.168.1.15 أو tajori.store"
+                                        placeholder="مثال: 192.168.1.15 أو pos.local"
                                         className="spatial-input w-full h-15 px-5 rounded-[18px] font-bold text-base font-mono"
                                     />
 

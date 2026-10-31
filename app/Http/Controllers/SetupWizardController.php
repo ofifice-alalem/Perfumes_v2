@@ -49,7 +49,10 @@ class SetupWizardController extends Controller
     public function index(): Response
     {
         $localIP = $this->resolveLocalIP();
-        $configuredDomain = parse_url(env('APP_URL', 'http://tajori.store'), PHP_URL_HOST) ?: 'tajori.store';
+        $appUrl = env('APP_URL');
+        $configuredDomain = ($appUrl && !str_contains($appUrl, 'localhost') && !str_contains($appUrl, '127.0.0.1'))
+            ? parse_url($appUrl, PHP_URL_HOST)
+            : 'cloud-pos.local';
 
         return Inertia::render('Setup/Wizard', [
             'initialConfig' => [
@@ -57,7 +60,7 @@ class SetupWizardController extends Controller
                 'db_port'     => (int)env('DB_PORT', 3306),
                 'db_database' => env('DB_DATABASE', 'perfumes_v2'),
                 'db_username' => env('DB_USERNAME', 'root'),
-                'store_name'  => $this->settingRepo->get('store_name', 'طيبة التاجوري'),
+                'store_name'  => $this->settingRepo->get('store_name', env('APP_NAME', 'منظومة السحابة')),
                 'domain'      => $configuredDomain,
                 'server_ip'   => $localIP,
             ],
@@ -338,11 +341,12 @@ class SetupWizardController extends Controller
         $vhostsPath = 'C:\\Apache24\\conf\\extra\\httpd-vhosts.conf';
         $mkcertPath = 'C:\\Apache24\\bin\\mkcert.exe';
         $sslDir     = 'C:\\Apache24\\conf\\ssl';
+        $publicPath = str_replace('\\', '/', public_path());
 
         try {
             // 1. توليد شهادة SSL محلية موثوقة متعددة النطاقات إن وجد mkcert
             if (file_exists($mkcertPath) && is_dir($sslDir)) {
-                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\server.pem\" -key-file \"{$sslDir}\\server-key.pem\" \"{$domain}\" \"*.{$domain}\" \"tajori.store\" \"*.tajori.store\" \"alalem.store\" \"localhost\" \"127.0.0.1\" \"::1\"";
+                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\server.pem\" -key-file \"{$sslDir}\\server-key.pem\" \"{$domain}\" \"*.{$domain}\" \"localhost\" \"127.0.0.1\" \"::1\"";
                 @shell_exec($cmd);
             }
 
@@ -359,13 +363,7 @@ Listen [::]:443
     SSLSessionCacheTimeout 300
 </IfModule>
 
-<Directory "C:/Users/alale/OneDrive">
-    Options Indexes FollowSymLinks MultiViews
-    AllowOverride All
-    Require all granted
-</Directory>
-
-<Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2">
+<Directory "{$publicPath}">
     Options Indexes FollowSymLinks MultiViews
     AllowOverride All
     Require all granted
@@ -385,14 +383,14 @@ Listen [::]:443
 # 2. HTTPS (Port 443) - Secure Laravel Application
 <VirtualHost *:443>
     ServerName {$domain}
-    ServerAlias www.{$domain} alalem.com www.alalem.com alalem.store www.alalem.store tajori.store www.tajori.store localhost 127.0.0.1
-    DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
+    ServerAlias www.{$domain} localhost 127.0.0.1
+    DocumentRoot "{$publicPath}"
 
     SSLEngine on
     SSLCertificateFile "C:/Apache24/conf/ssl/server.pem"
     SSLCertificateKeyFile "C:/Apache24/conf/ssl/server-key.pem"
 
-    <Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public">
+    <Directory "{$publicPath}">
         Options Indexes FollowSymLinks MultiViews
         AllowOverride All
         Require all granted

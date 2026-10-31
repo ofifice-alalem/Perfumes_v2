@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell, nativeTheme, ipcMain } from 'electron';
+import { app, BrowserWindow, Menu, shell, nativeTheme } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -51,23 +51,102 @@ function probePort(port, host = '127.0.0.1', timeoutMs = 800) {
 }
 
 /**
- * قراءة المتغيرات من ملف .env
+ * تحديد النمط التشغيلي (Settings vs POS)
+ */
+function resolveMode() {
+  const args = process.argv;
+  for (const arg of args) {
+    if (typeof arg === 'string') {
+      const lower = arg.toLowerCase().trim();
+      if (lower === '--mode=settings' || lower === '--settings' || lower.includes('mode=settings')) {
+        return 'settings';
+      }
+    }
+  }
+  return 'pos';
+}
+
+const currentMode = resolveMode();
+const isSettingsMode = currentMode === 'settings';
+
+// عزل مجلد بيانات الجلسة لكل تطبيق حتى يكون لكل مشغل قفل نسخة واحدة مستقل
+try {
+  const customUserData = path.join(
+    app.getPath('appData'),
+    isSettingsMode ? 'TaqniyaCloudSettings' : 'TaqniyaCloudPOS'
+  );
+  app.setPath('userData', customUserData);
+} catch (e) {
+  console.warn('Could not set custom userData:', e.message);
+}
+
+/**
+ * استخراج مسار مجلد السيرفر الأساسي (Laravel Core)
+ */
+function getServerRootPath() {
+  const possiblePaths = [
+    path.join(process.resourcesPath, 'server'),
+    path.join(process.cwd(), 'resources/server'),
+    path.join(process.cwd(), 'server'),
+  ];
+  if (!app.isPackaged) {
+    possiblePaths.push(path.join(__dirname, '..'));
+  }
+  for (const p of possiblePaths) {
+    if (fs.existsSync(path.join(p, 'artisan'))) return p;
+  }
+  return process.cwd();
+}
+
+/**
+ * استخراج مسار مفسر PHP المحمول المدمج مع الحزمة
+ */
+function getPhpBinaryPath() {
+  const possiblePaths = [
+    path.join(process.resourcesPath, 'php/php.exe'),
+    path.join(process.cwd(), 'resources/php/php.exe'),
+  ];
+  if (!app.isPackaged) {
+    possiblePaths.push(path.join(__dirname, '../runtime/php/php.exe'));
+    possiblePaths.push('C:/php-8.4.24/php.exe');
+  }
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return 'php';
+}
+
+/**
+ * قراءة المتغيرات من ملف .env الخاص بالسيرفر المثبت
  */
 function readEnvConfig() {
+  const serverRoot = getServerRootPath();
+  const serverEnv = path.join(serverRoot, '.env');
+  const serverEnvExample = path.join(serverRoot, '.env.example');
+
+  // تهيئة .env تلقائياً من .env.example في أول تشغيل بعد التثبيت
+  if (!fs.existsSync(serverEnv) && fs.existsSync(serverEnvExample)) {
+    try {
+      fs.copyFileSync(serverEnvExample, serverEnv);
+    } catch (e) {
+      console.warn('Could not initialize .env from .env.example:', e.message);
+    }
+  }
+
   const possiblePaths = [
-    path.join(__dirname, '../.env'),
-    path.join(__dirname, '../../.env'),
-    path.join(process.resourcesPath, '.env'),
-    path.join(process.resourcesPath, 'app/.env'),
-    path.join(process.cwd(), '.env'),
-    'C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/.env',
+    serverEnv,
+    path.join(process.resourcesPath, 'server/.env'),
     path.join(app.getPath('userData'), '.env'),
   ];
 
+  if (!app.isPackaged) {
+    possiblePaths.push(path.join(__dirname, '../.env'));
+  }
+
   const config = {
-    appUrl: 'https://alalem.com',
+    appUrl: 'http://127.0.0.1:8181',
     masterHost: '',
-    setupCompleted: true,
+    setupCompleted: false, // افتراضياً غير مكتمل للأجهزة والنسخ الجديدة
     appName: 'منظومة السحابة — المبيعات',
   };
 
@@ -84,7 +163,9 @@ function readEnvConfig() {
 
           if (key === 'APP_URL' && val) config.appUrl = val;
           if (key === 'MASTER_SERVER_HOST' && val) config.masterHost = val;
-          if (key === 'APP_SETUP_COMPLETED' && (val === 'false' || val === '0')) config.setupCompleted = false;
+          if (key === 'APP_SETUP_COMPLETED') {
+            config.setupCompleted = (val === 'true' || val === '1');
+          }
           if (key === 'APP_NAME' && val) config.appName = `${val} — منظومة السحابة`;
         }
         break;
@@ -95,36 +176,6 @@ function readEnvConfig() {
   }
 
   return config;
-}
-
-/**
- * استخراج مسار مفسر PHP المحمول المدمج مع الحزمة
- */
-function getPhpBinaryPath() {
-  const possiblePaths = [
-    path.join(process.resourcesPath, 'php/php.exe'),
-    path.join(__dirname, '../runtime/php/php.exe'),
-    'C:/php-8.4.24/php.exe',
-  ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) return p;
-  }
-  return 'php';
-}
-
-/**
- * استخراج مسار مجلد السيرفر الأساسي (Laravel Core)
- */
-function getServerRootPath() {
-  const possiblePaths = [
-    path.join(process.resourcesPath, 'server'),
-    path.join(__dirname, '..'),
-    'C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2',
-  ];
-  for (const p of possiblePaths) {
-    if (fs.existsSync(path.join(p, 'artisan'))) return p;
-  }
-  return process.cwd();
 }
 
 /**
@@ -174,28 +225,16 @@ async function startInternalPhpServer(port = 8181) {
         if (active) {
           clearInterval(interval);
           resolve(true);
-        } else if (attempts > 16) {
+        } else if (attempts > 20) {
           clearInterval(interval);
           resolve(false);
         }
       }, 500);
     } catch (e) {
-      console.warn('Failed to start internal PHP server:', e.message);
+      console.error('Fatal spawning PHP:', e);
       resolve(false);
     }
   });
-}
-
-/**
- * تحديد النمط التشغيلي (Settings vs POS)
- */
-function resolveMode() {
-  const args = process.argv;
-  if (args.includes('--mode=settings') || args.includes('--settings')) {
-    return 'settings';
-  }
-  // الوضع الافتراضي لجميع مشغلات المنظومة هو المبيعات
-  return 'pos';
 }
 
 /**
@@ -203,10 +242,9 @@ function resolveMode() {
  */
 async function createMainWindow() {
   const config = readEnvConfig();
-  const mode = resolveMode();
+  const isSettings = isSettingsMode;
   const iconPath = path.join(__dirname, '../public/images/logo.png');
 
-  const isSettings = mode === 'settings';
   const windowTitle = isSettings 
     ? 'أداة إعدادات خادم السحابة — شركة تقنية السحابة' 
     : (config.appName || 'منظومة السحابة — المبيعات');
@@ -253,29 +291,36 @@ async function createMainWindow() {
   let targetUrl = '';
 
   if (isSettings) {
-    // فحص ما إذا كان Apache يعمل بالفعل على المنفذ 80
+    // ⚙️ نمط الإعدادات: التوجيه دائماً لمعالج الإعداد
     const apacheActive = await probePort(80);
     if (apacheActive) {
       targetUrl = 'http://127.0.0.1/setup';
     } else {
-      // تشغيل خادم محلي مؤقت لعرض المعالج
-      console.log('[Taqniya Desktop] Starting temporary internal setup server on port 8181...');
+      console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup...');
       await startInternalPhpServer(8181);
       targetUrl = 'http://127.0.0.1:8181/setup';
     }
   } else {
-    // نمط المبيعات اليومي (POS Mode) — التوجيه المباشر لواجهة فواتير المبيعات
-    if (config.masterHost) {
+    // 🛒 نمط المبيعات اليومي (POS Mode)
+    // إذا لم يكتمل الإعداد الأولي بعد، نوجه المستخدم لمعالج الإعداد تلقائياً
+    if (!config.setupCompleted) {
+      console.log('[Taqniya Desktop] First run detected (Setup not completed). Directing to /setup...');
+      const apacheActive = await probePort(80);
+      if (apacheActive) {
+        targetUrl = 'http://127.0.0.1/setup';
+      } else {
+        await startInternalPhpServer(8181);
+        targetUrl = 'http://127.0.0.1:8181/setup';
+      }
+    } else if (config.masterHost) {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
     } else {
-      // فحص ما إذا كان هناك خادم ويب خارجي (Apache) يعمل على المنفذ 80
       const apacheActive = await probePort(80);
       if (apacheActive) {
-        const baseUrl = config.appUrl || 'https://alalem.com';
+        const baseUrl = config.appUrl || 'http://127.0.0.1';
         targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
       } else {
-        // تشغيل خادم PHP المحمول المدمج تلقائياً على المنفذ 8181 ليعمل النظام دون الحاجة لتثبيت Apache
         console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
         await startInternalPhpServer(8181);
         targetUrl = 'http://127.0.0.1:8181/invoices/create';
@@ -283,7 +328,7 @@ async function createMainWindow() {
     }
   }
 
-  console.log(`[Taqniya Desktop] Mode: [${mode}] — Loading: ${targetUrl}`);
+  console.log(`[Taqniya Desktop] Mode: [${currentMode}] — Loading: ${targetUrl}`);
   mainWindow.loadURL(targetUrl);
 
   // اختصارات لوحة المفاتيح
@@ -325,16 +370,24 @@ async function createMainWindow() {
   });
 }
 
-// قفل النسخة الواحدة
+// قفل النسخة الواحدة لكل نمط مستقل
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
+  app.on('second-instance', (event, commandLine) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
+
+      // إذا حاول المستخدم فتح الإعدادات بينما نافذة المبيعات مفتوحة
+      const wantsSettings = commandLine.some(arg =>
+        typeof arg === 'string' && (arg.toLowerCase().includes('setting') || arg.toLowerCase().includes('--mode=settings'))
+      );
+      if (wantsSettings && !isSettingsMode) {
+        mainWindow.loadURL('http://127.0.0.1:8181/setup');
+      }
     }
   });
 

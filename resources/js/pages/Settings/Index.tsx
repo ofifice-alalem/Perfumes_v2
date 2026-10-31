@@ -89,7 +89,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
   // View state: 'grid' | 'receipt' | 'node_receipt' | 'label_printer'
   const [activeTab, setActiveTab] = useState<'grid' | 'receipt' | 'node_receipt' | 'label_printer'>('grid');
 
-  const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/logo-black_white.png');
+  const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/taqniya-logo.png');
 
   // أول منتج متوفر للتجربة
   const firstProd = products[0];
@@ -790,7 +790,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                       type="text"
                       value={data.store_subname}
                       onChange={e => setData('store_subname', e.target.value)}
-                      placeholder="مثال: TAJORI PERFUMES & ESSENCES"
+                      placeholder="مثال: TAQNIYA CLOUD POS"
                       className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                     {errors.store_subname && <span className="text-xs font-black text-rose-500">{errors.store_subname}</span>}
@@ -1274,7 +1274,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                       type="text"
                       value={data.store_subname}
                       onChange={e => setData('store_subname', e.target.value)}
-                      placeholder="مثال: TAJORI PERFUMES & ESSENCES"
+                      placeholder="مثال: TAQNIYA CLOUD POS"
                       className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                     {errors.store_subname && <span className="text-xs font-black text-rose-500">{errors.store_subname}</span>}
