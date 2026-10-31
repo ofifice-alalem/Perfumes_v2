@@ -22,6 +22,7 @@ thermal-printer-engine/assets/current_logo.*
 /public/build
 /public/hot
 /public/storage
+/dist
 /storage/*.key
 /storage/pail
 /vendor

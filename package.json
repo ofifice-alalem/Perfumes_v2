@@ -1,25 +1,30 @@
 {
-    "$schema": "https://www.schemastore.org/package.json",
+    "name": "taqniya-cloud-pos",
+    "version": "1.0.0",
+    "description": "منظومة السحابة المتكاملة لإدارة نقاط البيع والمتاجر — شركة تقنية السحابة",
+    "author": "شركة تقنية السحابة",
     "private": true,
     "type": "module",
+    "main": "electron/main.js",
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "desktop": "electron electron/main.js",
-        "desktop:pos": "electron electron/launcher-pos.js",
-        "desktop:settings": "electron electron/launcher-settings.js",
-        "build:exe": "electron-builder --win nsis"
+        "desktop": "npx electron electron/main.js",
+        "desktop:pos": "npx electron electron/launcher-pos.js",
+        "desktop:settings": "npx electron electron/launcher-settings.js",
+        "build:exe": "npx electron-builder --win nsis"
     },
     "build": {
         "appId": "com.taqniyacloud.pos",
         "productName": "منظومة السحابة",
+        "electronVersion": "33.2.0",
         "directories": {
             "output": "dist"
         },
         "files": [
             "electron/**/*",
             "public/build/**/*",
-            "public/images/**/*",
+            "public/images/logo.png",
             "package.json"
         ],
         "extraMetadata": {
@@ -41,7 +46,8 @@
             "allowToChangeInstallationDirectory": true,
             "createDesktopShortcut": true,
             "createStartMenuShortcut": true,
-            "shortcutName": "منظومة السحابة"
+            "shortcutName": "منظومة السحابة",
+            "include": "electron/installer.nsh"
         }
     },
     "devDependencies": {
@@ -50,6 +56,8 @@
         "autoprefixer": "^10.5.0",
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
+        "electron": "^33.2.0",
+        "electron-builder": "^26.18.0",
         "laravel-vite-plugin": "^3.0.1",
         "lucide-react": "^1.11.0",
         "postcss": "^8.5.12",

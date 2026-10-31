@@ -216,6 +216,17 @@ async function createMainWindow() {
       } else if (input.control && input.key.toLowerCase() === 'r') {
         mainWindow.reload();
         event.preventDefault();
+      } else if (input.control && (input.key === '=' || input.key === '+')) {
+        const currentZoom = mainWindow.webContents.getZoomFactor();
+        mainWindow.webContents.setZoomFactor(Math.min(currentZoom + 0.1, 2.0));
+        event.preventDefault();
+      } else if (input.control && input.key === '-') {
+        const currentZoom = mainWindow.webContents.getZoomFactor();
+        mainWindow.webContents.setZoomFactor(Math.max(currentZoom - 0.1, 0.5));
+        event.preventDefault();
+      } else if (input.control && input.key === '0') {
+        mainWindow.webContents.setZoomFactor(1.0);
+        event.preventDefault();
       }
     }
   });

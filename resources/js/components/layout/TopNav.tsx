@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Moon, Sun, Plus, LogOut, X, Check, Wallet } from 'lucide-react';
 import { Link, usePage } from '@inertiajs/react';
+import { ZoomControl } from '@/components/ui/ZoomControl';
 
 interface TopNavProps {
   isDark: boolean;
@@ -146,7 +147,9 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
           <span className="hidden sm:inline">فاتورة جديدة</span>
         </Link>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ZoomControl className="flex" />
+
           <button onClick={onToggleTheme} className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center transition-all hover:scale-105 active:scale-95 shrink-0">
             {isDark ? <Sun className="w-5 h-5 lg:w-6 lg:h-6 text-amber-400" /> : <Moon className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />}
           </button>

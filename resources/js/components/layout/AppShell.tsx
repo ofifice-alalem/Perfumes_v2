@@ -25,6 +25,12 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
     const useDark = saved === 'dark' || (!saved && prefersDark);
     applyTheme(useDark);
     setIsDark(useDark);
+
+    // تطبيق نسبة تبعيد وتكبير الشاشة المحفوظة (مثل 67%)
+    const savedZoom = localStorage.getItem('app_zoom_factor');
+    if (savedZoom) {
+      (document.body.style as any).zoom = `${savedZoom}%`;
+    }
   }, []);
 
   // Keep-alive heartbeat to prevent php artisan serve and DB from sleeping
