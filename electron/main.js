@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, shell, nativeTheme, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
@@ -276,6 +276,21 @@ async function startInternalPhpServer(port = 8181) {
   });
 }
 
+// استقبال طلب فتح تطبيق المبيعات في نافذة مستقلة من داخل نافذة الإعدادات
+ipcMain.on('open-pos-app', () => {
+  console.log('[Taqniya Desktop] Spawning standalone POS Cashier window from Settings...');
+  try {
+    const appExecutable = process.execPath;
+    const child = spawn(appExecutable, ['--mode=pos'], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+  } catch (e) {
+    console.error('[Taqniya Desktop] Failed to launch POS app:', e);
+  }
+});
+
 /**
  * إنشاء نافذة سطح المكتب
  */
@@ -340,24 +355,14 @@ async function createMainWindow() {
       targetUrl = 'http://127.0.0.1:8181/setup';
     }
   } else {
-    // 🛒 نمط المبيعات اليومي (POS Mode)
-    // إذا لم يكتمل الإعداد الأولي بعد، نوجه المستخدم لمعالج الإعداد تلقائياً
-    if (!config.setupCompleted) {
-      console.log('[Taqniya Desktop] First run detected (Setup not completed). Directing to /setup...');
-      const apacheActive = await probePort(80);
-      if (apacheActive) {
-        targetUrl = 'http://127.0.0.1/setup';
-      } else {
-        await startInternalPhpServer(8181);
-        targetUrl = 'http://127.0.0.1:8181/setup';
-      }
-    } else if (config.masterHost) {
+    // 🛒 نمط المبيعات اليومي (POS Mode) — التوجيه المباشر والدائم لواجهة فواتير المبيعات
+    if (config.masterHost) {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
     } else {
       const apacheActive = await probePort(80);
       if (apacheActive) {
-        const baseUrl = config.appUrl || 'http://127.0.0.1';
+        const baseUrl = config.appUrl && !config.appUrl.includes('8181') ? config.appUrl : 'http://127.0.0.1';
         targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
       } else {
         console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');

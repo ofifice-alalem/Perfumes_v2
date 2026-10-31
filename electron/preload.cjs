@@ -1,6 +1,13 @@
-const { contextBridge, webFrame } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  openPos: () => {
+    try {
+      ipcRenderer.send('open-pos-app');
+    } catch (e) {
+      console.warn('Failed to send open-pos-app IPC:', e);
+    }
+  },
   setZoomFactor: (factor) => {
     try {
       webFrame.setZoomFactor(factor);

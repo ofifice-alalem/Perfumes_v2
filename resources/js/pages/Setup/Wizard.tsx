@@ -125,6 +125,15 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
 
+    // فتح تطبيق شاشة المبيعات كبرنامج مستقل
+    function handleOpenPosApp() {
+        if ((window as any).electronAPI?.openPos) {
+            (window as any).electronAPI.openPos();
+        } else {
+            window.location.href = '/invoices/create';
+        }
+    }
+
     // فحص الاتصال بقاعدة البيانات
     async function testDbConnection() {
         setDbTesting(true);
@@ -314,14 +323,15 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                         </button>
 
                         {isConfigured && (
-                            <a
-                                href="/invoices/create"
+                            <button
+                                type="button"
+                                onClick={handleOpenPosApp}
                                 className="px-3.5 py-2 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-white border border-primary/30 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                title="فتح شاشة المبيعات ونقاط البيع"
+                                title="تشغيل وفتح تطبيق شاشة المبيعات في نافذة مستقلة"
                             >
                                 <span>شاشة المبيعات</span>
                                 <ArrowLeft className="w-3.5 h-3.5" />
-                            </a>
+                            </button>
                         )}
 
                         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
