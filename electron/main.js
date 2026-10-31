@@ -98,7 +98,37 @@ function readEnvConfig() {
 }
 
 /**
- * تشغيل خادم PHP مدمج صامت في الخلفية للتهيئة الأولية
+ * استخراج مسار مفسر PHP المحمول المدمج مع الحزمة
+ */
+function getPhpBinaryPath() {
+  const possiblePaths = [
+    path.join(process.resourcesPath, 'php/php.exe'),
+    path.join(__dirname, '../runtime/php/php.exe'),
+    'C:/php-8.4.24/php.exe',
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  return 'php';
+}
+
+/**
+ * استخراج مسار مجلد السيرفر الأساسي (Laravel Core)
+ */
+function getServerRootPath() {
+  const possiblePaths = [
+    path.join(process.resourcesPath, 'server'),
+    path.join(__dirname, '..'),
+    'C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2',
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(path.join(p, 'artisan'))) return p;
+  }
+  return process.cwd();
+}
+
+/**
+ * تشغيل خادم PHP مدمج صامت في الخلفية للتهيئة الأولية ونقاط البيع
  */
 async function startInternalPhpServer(port = 8181) {
   const isAlreadyActive = await probePort(port);
@@ -107,11 +137,25 @@ async function startInternalPhpServer(port = 8181) {
     return true;
   }
 
+  const phpBin = getPhpBinaryPath();
+  const serverRoot = getServerRootPath();
+
+  // نسخ .env.example إلى .env إذا لم يكن موجوداً
+  const serverEnv = path.join(serverRoot, '.env');
+  const serverEnvExample = path.join(serverRoot, '.env.example');
+  if (!fs.existsSync(serverEnv) && fs.existsSync(serverEnvExample)) {
+    try {
+      fs.copyFileSync(serverEnvExample, serverEnv);
+    } catch (e) {
+      console.warn('Could not copy .env.example:', e.message);
+    }
+  }
+
   return new Promise((resolve) => {
     try {
-      const projectRoot = path.join(__dirname, '..');
-      internalPhpProcess = spawn('php', ['artisan', 'serve', `--port=${port}`, '--host=127.0.0.1'], {
-        cwd: projectRoot,
+      console.log(`[Taqniya Desktop] Spawning portable PHP: ${phpBin} at ${serverRoot}`);
+      internalPhpProcess = spawn(phpBin, ['artisan', 'serve', `--port=${port}`, '--host=0.0.0.0'], {
+        cwd: serverRoot,
         detached: false,
         stdio: 'ignore',
         windowsHide: true,
@@ -130,7 +174,7 @@ async function startInternalPhpServer(port = 8181) {
         if (active) {
           clearInterval(interval);
           resolve(true);
-        } else if (attempts > 12) {
+        } else if (attempts > 16) {
           clearInterval(interval);
           resolve(false);
         }
@@ -221,11 +265,22 @@ async function createMainWindow() {
     }
   } else {
     // نمط المبيعات اليومي (POS Mode) — التوجيه المباشر لواجهة فواتير المبيعات
-    let baseUrl = config.appUrl || 'https://alalem.com';
     if (config.masterHost) {
-      baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
+      const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
+      targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
+    } else {
+      // فحص ما إذا كان هناك خادم ويب خارجي (Apache) يعمل على المنفذ 80
+      const apacheActive = await probePort(80);
+      if (apacheActive) {
+        const baseUrl = config.appUrl || 'https://alalem.com';
+        targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
+      } else {
+        // تشغيل خادم PHP المحمول المدمج تلقائياً على المنفذ 8181 ليعمل النظام دون الحاجة لتثبيت Apache
+        console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
+        await startInternalPhpServer(8181);
+        targetUrl = 'http://127.0.0.1:8181/invoices/create';
+      }
     }
-    targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
   }
 
   console.log(`[Taqniya Desktop] Mode: [${mode}] — Loading: ${targetUrl}`);

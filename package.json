@@ -18,6 +18,7 @@
         "appId": "com.taqniyacloud.pos",
         "productName": "منظومة السحابة",
         "electronVersion": "33.2.0",
+        "publish": null,
         "directories": {
             "output": "dist"
         },
@@ -26,6 +27,72 @@
             "public/build/**/*",
             "public/images/logo.png",
             "package.json"
+        ],
+        "extraResources": [
+            {
+                "from": "runtime/php",
+                "to": "php"
+            },
+            {
+                "from": "app",
+                "to": "server/app"
+            },
+            {
+                "from": "bootstrap",
+                "to": "server/bootstrap"
+            },
+            {
+                "from": "config",
+                "to": "server/config"
+            },
+            {
+                "from": "database",
+                "to": "server/database"
+            },
+            {
+                "from": "public",
+                "to": "server/public",
+                "filter": [
+                    "**/*",
+                    "!storage",
+                    "!storage/**",
+                    "!hot",
+                    "!images/receipt/*",
+                    "!images/logo_*"
+                ]
+            },
+            {
+                "from": "resources/views",
+                "to": "server/resources/views"
+            },
+            {
+                "from": "routes",
+                "to": "server/routes"
+            },
+            {
+                "from": "storage",
+                "to": "server/storage",
+                "filter": [
+                    "**/*",
+                    "!app/backups/**/*",
+                    "!framework/cache/data/**/*",
+                    "!framework/sessions/**/*",
+                    "!framework/views/**/*",
+                    "!logs/*"
+                ]
+            },
+            {
+                "from": "vendor",
+                "to": "server/vendor"
+            },
+            {
+                "from": "artisan",
+                "to": "server/artisan"
+            },
+            {
+                "from": ".env.example",
+                "to": "server/.env.example"
+            }
         ],
         "extraMetadata": {
             "main": "electron/main.js"
@@ -41,13 +108,15 @@
             ],
             "icon": "public/images/logo.png"
         },
+        "compression": "store",
         "nsis": {
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
-            "createDesktopShortcut": true,
+            "createDesktopShortcut": false,
             "createStartMenuShortcut": true,
             "shortcutName": "منظومة السحابة",
-            "include": "electron/installer.nsh"
+            "include": "electron/installer.nsh",
+            "differentialPackage": false
         }
     },
     "devDependencies": {

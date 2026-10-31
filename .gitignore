@@ -47,3 +47,6 @@ frankenphp-worker.php
 /public/images/logo_*
 /public/images/receipt/*
 !/public/images/receipt/.gitkeep
+
+# Portable runtime packaging
+/runtime/
