@@ -5,7 +5,44 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "desktop": "electron electron/main.js"
+        "desktop": "electron electron/main.js",
+        "desktop:pos": "electron electron/launcher-pos.js",
+        "desktop:settings": "electron electron/launcher-settings.js",
+        "build:exe": "electron-builder --win nsis"
+    },
+    "build": {
+        "appId": "com.taqniyacloud.pos",
+        "productName": "منظومة السحابة",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "electron/**/*",
+            "public/build/**/*",
+            "public/images/**/*",
+            "package.json"
+        ],
+        "extraMetadata": {
+            "main": "electron/main.js"
+        },
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ],
+            "icon": "public/images/logo.png"
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "منظومة السحابة"
+        }
     },
     "devDependencies": {
         "@types/react": "^19.2.14",

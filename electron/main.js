@@ -1,15 +1,54 @@
-import { app, BrowserWindow, Menu, shell, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, shell, nativeTheme, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import net from 'net';
+import { spawn } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let mainWindow = null;
+let internalPhpProcess = null;
 
-// ضبط الثيم الافتراضي لشريط العنوان لويندوز
+// ثيم ويندوز الداكن الافتراضي
 nativeTheme.themeSource = 'dark';
+
+/**
+ * فحص ما إذا كان منفذ معين يعمل ويستجيب للاتصال
+ */
+function probePort(port, host = '127.0.0.1', timeoutMs = 800) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let hasResolved = false;
+
+    socket.setTimeout(timeoutMs);
+
+    socket.on('connect', () => {
+      hasResolved = true;
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('timeout', () => {
+      if (!hasResolved) {
+        hasResolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+
+    socket.on('error', () => {
+      if (!hasResolved) {
+        hasResolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+
+    socket.connect(port, host);
+  });
+}
 
 /**
  * قراءة المتغيرات من ملف .env
@@ -20,7 +59,7 @@ function readEnvConfig() {
     appUrl: 'http://tajori.store',
     masterHost: '',
     setupCompleted: false,
-    appName: 'منظومة السحابة',
+    appName: 'طيبة التاجوري — منظومة السحابة',
   };
 
   if (fs.existsSync(envPath)) {
@@ -36,7 +75,7 @@ function readEnvConfig() {
         if (key === 'APP_URL' && val) config.appUrl = val;
         if (key === 'MASTER_SERVER_HOST' && val) config.masterHost = val;
         if (key === 'APP_SETUP_COMPLETED' && (val === 'true' || val === '1')) config.setupCompleted = true;
-        if (key === 'APP_NAME' && val) config.appName = val;
+        if (key === 'APP_NAME' && val) config.appName = `${val} — منظومة السحابة`;
       }
     } catch (e) {
       console.warn('Could not read .env file:', e.message);
@@ -47,35 +86,86 @@ function readEnvConfig() {
 }
 
 /**
- * تحديد الرابط الأولي لتحميله في النافذة
+ * تشغيل خادم PHP مدمج صامت في الخلفية للتهيئة الأولية
  */
-function resolveInitialUrl(config) {
-  // إذا كان جهاز كاشير فرعي وله مضيف محدد
-  if (config.masterHost) {
-    return config.masterHost.startsWith('http') ? config.masterHost : `http://${config.masterHost}`;
+async function startInternalPhpServer(port = 8181) {
+  const isAlreadyActive = await probePort(port);
+  if (isAlreadyActive) {
+    console.log(`[Taqniya Server] Port ${port} is already active.`);
+    return true;
   }
 
-  // إذا لم يكتمل الإعداد بعد، افتح معالج الإعداد مباشرة
-  if (!config.setupCompleted) {
-    return `${config.appUrl}/setup`;
-  }
+  return new Promise((resolve) => {
+    try {
+      const projectRoot = path.join(__dirname, '..');
+      internalPhpProcess = spawn('php', ['artisan', 'serve', `--port=${port}`, '--host=127.0.0.1'], {
+        cwd: projectRoot,
+        detached: false,
+        stdio: 'ignore',
+        windowsHide: true,
+      });
 
-  return config.appUrl;
+      internalPhpProcess.on('error', (err) => {
+        console.warn('Could not spawn background PHP process:', err.message);
+        resolve(false);
+      });
+
+      // انتظر حتى يصبح المنفذ جاهزاً
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        const active = await probePort(port);
+        if (active) {
+          clearInterval(interval);
+          resolve(true);
+        } else if (attempts > 12) {
+          clearInterval(interval);
+          resolve(false);
+        }
+      }, 500);
+    } catch (e) {
+      console.warn('Failed to start internal PHP server:', e.message);
+      resolve(false);
+    }
+  });
 }
 
 /**
- * إنشاء نافذة سطح المكتب الرئيسية
+ * تحديد النمط التشغيلي (Settings vs POS)
  */
-function createMainWindow() {
+function resolveMode() {
+  const args = process.argv;
+  if (args.includes('--mode=settings') || args.includes('--settings')) {
+    return 'settings';
+  }
+  if (args.includes('--mode=pos') || args.includes('--pos')) {
+    return 'pos';
+  }
+
+  // إذا لم يحدد، نتحقق من اكتمال الإعداد في .env
   const config = readEnvConfig();
+  return config.setupCompleted ? 'pos' : 'settings';
+}
+
+/**
+ * إنشاء نافذة سطح المكتب
+ */
+async function createMainWindow() {
+  const config = readEnvConfig();
+  const mode = resolveMode();
   const iconPath = path.join(__dirname, '../public/images/logo.png');
 
+  const isSettings = mode === 'settings';
+  const windowTitle = isSettings 
+    ? 'أداة إعدادات خادم السحابة — شركة تقنية السحابة' 
+    : (config.appName || 'منظومة السحابة — المبيعات');
+
   mainWindow = new BrowserWindow({
-    width: 1366,
-    height: 860,
+    width: isSettings ? 1100 : 1366,
+    height: isSettings ? 820 : 860,
     minWidth: 1024,
     minHeight: 700,
-    title: config.appName || 'منظومة السحابة — شركة تقنية السحابة',
+    title: windowTitle,
     backgroundColor: '#020617', // slate-950
     autoHideMenuBar: true,
     icon: fs.existsSync(iconPath) ? iconPath : undefined,
@@ -86,15 +176,35 @@ function createMainWindow() {
     },
   });
 
-  // إخفاء القوائم الكلاسيكية لويندوز لتجربة POS عصرية
   Menu.setApplicationMenu(null);
   mainWindow.removeMenu();
 
-  const targetUrl = resolveInitialUrl(config);
-  console.log(`[Taqniya Cloud Desktop] Loading: ${targetUrl}`);
+  let targetUrl = '';
+
+  if (isSettings) {
+    // فحص ما إذا كان Apache يعمل بالفعل على المنفذ 80
+    const apacheActive = await probePort(80);
+    if (apacheActive) {
+      targetUrl = 'http://127.0.0.1/setup';
+    } else {
+      // تشغيل خادم محلي مؤقت لعرض المعالج
+      console.log('[Taqniya Desktop] Starting temporary internal setup server on port 8181...');
+      await startInternalPhpServer(8181);
+      targetUrl = 'http://127.0.0.1:8181/setup';
+    }
+  } else {
+    // نمط المبيعات اليومي (POS Mode)
+    if (config.masterHost) {
+      targetUrl = config.masterHost.startsWith('http') ? config.masterHost : `http://${config.masterHost}`;
+    } else {
+      targetUrl = config.appUrl || 'http://tajori.store';
+    }
+  }
+
+  console.log(`[Taqniya Desktop] Mode: [${mode}] — Loading: ${targetUrl}`);
   mainWindow.loadURL(targetUrl);
 
-  // اختصارات لوحة المفاتيح الاحترافية
+  // اختصارات لوحة المفاتيح
   mainWindow.webContents.on('before-input-event', (event, input) => {
     if (input.type === 'keyDown') {
       if (input.key === 'F12') {
@@ -110,7 +220,6 @@ function createMainWindow() {
     }
   });
 
-  // فتح الروابط الخارجية في متصفح النظام بأمان
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http:') || url.startsWith('https:')) {
       shell.openExternal(url);
@@ -123,7 +232,7 @@ function createMainWindow() {
   });
 }
 
-// قفل النسخة الواحدة لمنع التكرار (Single Instance Lock)
+// قفل النسخة الواحدة
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
@@ -151,5 +260,12 @@ if (!gotTheLock) {
       app.quit();
     }
   });
-}
 
+  app.on('before-quit', () => {
+    if (internalPhpProcess) {
+      try {
+        internalPhpProcess.kill();
+      } catch (e) {}
+    }
+  });
+}
