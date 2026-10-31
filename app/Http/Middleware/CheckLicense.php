@@ -14,8 +14,8 @@ class CheckLicense
 
     public function handle(Request $request, Closure $next): Response
     {
-        // استثناء مسارات التفعيل وتسجيل الدخول من التحقق حتى لا يحدث إعادة توجيه لا نهائية
-        if ($request->is('license*') || $request->is('login') || $request->is('logout')) {
+        // استثناء مسارات التفعيل وتسجيل الدخول ومعالج الإعداد من التحقق حتى لا يحدث إعادة توجيه لا نهائية
+        if ($request->is('license*') || $request->is('login') || $request->is('logout') || $request->is('setup*')) {
             return $next($request);
         }
 
