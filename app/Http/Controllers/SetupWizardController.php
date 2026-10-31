@@ -231,7 +231,7 @@ class SetupWizardController extends Controller
             return response()->json([
                 'success'  => true,
                 'message'  => "تم إعداد وتهيئة منظومة السحابة لمتجر «{$storeName}» بنجاح!",
-                'redirect' => route('login'),
+                'redirect' => "https://{$domain}/login",
             ]);
         } catch (\Throwable $e) {
             Log::error('applyMaster setup error: ' . $e->getMessage(), [
@@ -376,7 +376,7 @@ Listen [::]:443
     ServerAlias *
     RewriteEngine On
     RewriteCond %{HTTPS} off
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=302,L]
 
     ErrorLog "logs/http-error.log"
     CustomLog "logs/http-access.log" combined

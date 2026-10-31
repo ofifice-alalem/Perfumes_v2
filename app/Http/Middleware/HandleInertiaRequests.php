@@ -38,6 +38,19 @@ class HandleInertiaRequests extends Middleware
                 3600,
                 fn() => \App\Models\PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()
             ),
+            'storeBranding' => (function() {
+                try {
+                    return [
+                        'name' => \App\Models\Setting::get('store_name', env('APP_NAME', 'منظومة السحابة')),
+                        'logo' => \App\Models\Setting::get('store_logo'),
+                    ];
+                } catch (\Throwable $e) {
+                    return [
+                        'name' => env('APP_NAME', 'منظومة السحابة'),
+                        'logo' => null,
+                    ];
+                }
+            })(),
         ];
     }
 }

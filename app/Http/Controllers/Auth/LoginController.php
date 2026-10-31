@@ -19,7 +19,17 @@ class LoginController extends Controller
             return redirect()->route('invoices.create');
         }
 
-        return Inertia::render('Auth/Login');
+        $storeName = 'منظومة السحابة';
+        $storeLogo = null;
+        try {
+            $storeName = \App\Models\Setting::get('store_name', env('APP_NAME', 'منظومة السحابة'));
+            $storeLogo = \App\Models\Setting::get('store_logo');
+        } catch (\Throwable $e) {}
+
+        return Inertia::render('Auth/Login', [
+            'storeName' => $storeName,
+            'storeLogo' => $storeLogo,
+        ]);
     }
 
     public function store(LoginRequest $request): Response

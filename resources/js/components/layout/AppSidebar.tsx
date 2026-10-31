@@ -149,12 +149,23 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
       {/* Logo & Toggle */}
       <div className={`flex items-center w-full mb-4 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
         {isOpen && (
-          <div className="flex items-center animate-in fade-in pl-2">
-            <img 
-              src="/images/uzba80.png" 
-              alt="طيب التاجوري" 
-              className="h-10 w-auto object-contain drop-shadow-sm"
-            />
+          <div className="flex items-center gap-2.5 animate-in fade-in pl-2 max-w-[170px]">
+            {(props as any)?.storeBranding?.logo ? (
+              <img 
+                src={(props as any).storeBranding.logo} 
+                alt={(props as any).storeBranding.name || 'شعار المتجر'} 
+                className="h-10 w-auto max-w-[120px] object-contain drop-shadow-sm rounded-lg"
+              />
+            ) : (
+              <div className="flex items-center gap-2 truncate">
+                <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span className="font-black text-slate-800 dark:text-white text-sm truncate">
+                  {(props as any)?.storeBranding?.name || 'منظومة السحابة'}
+                </span>
+              </div>
+            )}
           </div>
         )}
         <button onClick={onToggle} className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-slate-800 dark:hover:text-white transition-all focus:outline-none">

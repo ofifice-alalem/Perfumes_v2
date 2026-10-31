@@ -751,8 +751,8 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                                     <span className="text-slate-900 dark:text-white font-black">{storeName}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 dark:text-slate-400">الرابط المحلي:</span>
-                                    <span className="text-primary font-mono font-black">http://{domain}</span>
+                                    <span className="text-slate-500 dark:text-slate-400">الرابط المحلي الآمن:</span>
+                                    <span className="text-primary font-mono font-black">https://{domain}</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="text-slate-500 dark:text-slate-400">عنوان السيرفر (IP):</span>
@@ -761,7 +761,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                             </div>
 
                             <a
-                                href={completedInfo?.redirectUrl || '/login'}
+                                href={completedInfo?.redirectUrl || `https://${domain}/invoices/create`}
                                 className="inline-flex items-center justify-center gap-2.5 w-full max-w-md h-16 rounded-[22px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg transition-all shadow-xl shadow-emerald-600/30 cursor-pointer active:scale-[0.98]"
                             >
                                 <span>الدخول إلى منظومة المبيعات الآن</span>

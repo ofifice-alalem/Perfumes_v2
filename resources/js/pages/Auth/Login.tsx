@@ -1,8 +1,13 @@
 import { useForm } from '@inertiajs/react';
 import { FormEvent, useEffect, useState } from 'react';
-import { Lock, User, Eye, EyeOff, Phone } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Phone, Sparkles } from 'lucide-react';
 
-export default function Login() {
+interface LoginProps {
+    storeName?: string;
+    storeLogo?: string | null;
+}
+
+export default function Login({ storeName = 'منظومة السحابة', storeLogo }: LoginProps) {
     const { data, setData, post, processing, errors } = useForm({
         username: '',
         password: '',
@@ -60,31 +65,37 @@ export default function Login() {
                         }}
                     >
 
-                        {/* Store Logo (Significantly enlarged per user request) */}
+                        {/* Store Logo & Branding (Dynamic from store settings) */}
                         <div className="flex flex-col items-center text-center shrink-0 w-full">
                             <div 
-                                className="relative group shrink-0 flex items-center justify-center"
+                                className="relative group shrink-0 flex items-center justify-center mb-1.5"
                                 style={{
-                                    width: 'clamp(190px, 28vh, 320px)',
-                                    aspectRatio: '960 / 686',
-                                    maxHeight: 'clamp(135px, 23vh, 225px)',
+                                    width: 'clamp(140px, 20vh, 220px)',
+                                    aspectRatio: '1 / 1',
+                                    maxHeight: 'clamp(110px, 18vh, 170px)',
                                 }}
                             >
                                 <div className="absolute inset-0 bg-sky-500/15 rounded-full blur-3xl group-hover:bg-sky-500/25 transition-all pointer-events-none" />
-                                <img src="/images/logo.jpg" alt="طيب التاجوري" className="w-full h-full object-contain mix-blend-screen relative z-10" />
+                                {storeLogo ? (
+                                    <img src={storeLogo} alt={storeName} className="max-w-full max-h-full object-contain relative z-10 drop-shadow-md rounded-2xl" />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-[24px] bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-sky-500/25 relative z-10">
+                                        <Sparkles className="w-10 h-10" />
+                                    </div>
+                                )}
                             </div>
-                            <div className="text-center -mt-3 sm:-mt-4">
+                            <div className="text-center">
                                 <h1 
                                     className="font-black text-white tracking-wide"
                                     style={{ fontSize: 'clamp(1.15rem, 2.2vh, 1.75rem)', lineHeight: 1.25 }}
                                 >
-                                    طيب التاجوري <span className="text-[#E5D0A1]">للروائح والعطور</span>
+                                    {storeName}
                                 </h1>
                                 <p 
-                                    className="text-white/40 tracking-[0.2em] uppercase font-bold mt-0.5"
+                                    className="text-white/40 tracking-[0.15em] font-bold mt-1 text-xs"
                                     style={{ fontSize: 'clamp(0.65rem, 1vh, 0.82rem)' }}
                                 >
-                                    Taib Al Tajouri Perfumes
+                                    منظومة السحابة المتكاملة لإدارة المبيعات
                                 </p>
                             </div>
                         </div>
