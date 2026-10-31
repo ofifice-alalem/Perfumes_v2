@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import net from 'net';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -81,13 +81,47 @@ try {
 }
 
 /**
+ * فك حزمة السيرفر server_payload.zip تلقائياً إن وجدت
+ */
+function extractPayloadIfPresent() {
+  const possibleZipPaths = [
+    path.join(process.resourcesPath, 'server_payload.zip'),
+    path.join(path.dirname(process.execPath), 'server_payload.zip'),
+    path.join(process.cwd(), 'server_payload.zip'),
+  ];
+
+  for (const zipPath of possibleZipPaths) {
+    if (fs.existsSync(zipPath)) {
+      const targetDir = process.resourcesPath;
+      const artisanCheck = path.join(targetDir, 'server/artisan');
+      if (!fs.existsSync(artisanCheck)) {
+        console.log(`[Taqniya Desktop] Extracting server payload from ${zipPath} to ${targetDir}...`);
+        try {
+          execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { windowsHide: true, timeout: 30000 });
+          console.log('[Taqniya Desktop] Payload extracted successfully.');
+          return true;
+        } catch (e) {
+          console.warn('[Taqniya Desktop] Payload extraction error:', e.message);
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * استخراج مسار مجلد السيرفر الأساسي (Laravel Core)
  */
 function getServerRootPath() {
+  extractPayloadIfPresent();
+
   const possiblePaths = [
     path.join(process.resourcesPath, 'server'),
-    path.join(process.cwd(), 'resources/server'),
+    path.join(process.resourcesPath, 'server_payload/server'),
+    path.join(path.dirname(process.execPath), 'server'),
+    path.join(path.dirname(process.execPath), 'server_payload/server'),
     path.join(process.cwd(), 'server'),
+    path.join(process.cwd(), 'resources/server'),
   ];
   if (!app.isPackaged) {
     possiblePaths.push(path.join(__dirname, '..'));
@@ -99,12 +133,17 @@ function getServerRootPath() {
 }
 
 /**
- * استخراج مسار مفسر PHP المحمول المدمج مع الحزمة
+ * استخراج مسار مفسر PHP المحمول المدمج مع الحزمة أو النظام
  */
 function getPhpBinaryPath() {
   const possiblePaths = [
     path.join(process.resourcesPath, 'php/php.exe'),
-    path.join(process.cwd(), 'resources/php/php.exe'),
+    path.join(process.resourcesPath, 'server_payload/php/php.exe'),
+    path.join(path.dirname(process.execPath), 'php/php.exe'),
+    path.join(path.dirname(process.execPath), 'server_payload/php/php.exe'),
+    'C:/php-8.4.24/php.exe',
+    'C:/php/php.exe',
+    'C:/Apache24/bin/php.exe',
   ];
   if (!app.isPackaged) {
     possiblePaths.push(path.join(__dirname, '../runtime/php/php.exe'));
