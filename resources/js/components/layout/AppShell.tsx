@@ -29,7 +29,15 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
     // تطبيق نسبة تبعيد وتكبير الشاشة المحفوظة (مثل 67%)
     const savedZoom = localStorage.getItem('app_zoom_factor');
     if (savedZoom) {
-      (document.body.style as any).zoom = `${savedZoom}%`;
+      const zoomVal = Number(savedZoom);
+      if (!isNaN(zoomVal) && zoomVal >= 50 && zoomVal <= 150) {
+        if ((window as any).electronAPI?.setZoomFactor) {
+          (window as any).electronAPI.setZoomFactor(zoomVal / 100);
+          document.body.style.zoom = '';
+        } else {
+          (document.documentElement.style as any).zoom = `${zoomVal}%`;
+        }
+      }
     }
   }, []);
 
@@ -63,8 +71,8 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
   };
 
   return (
-    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 lg:p-6 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent">
-      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none lg:rounded-[40px]">
+    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 md:p-2 lg:p-3 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent">
+      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none md:rounded-[28px] lg:rounded-[36px]">
 
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[998] lg:hidden animate-in fade-in duration-300"

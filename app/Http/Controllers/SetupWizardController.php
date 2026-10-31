@@ -44,15 +44,12 @@ class SetupWizardController extends Controller
     }
 
     /**
-     * عرض واجهة معالج الإعداد الأولي (First-Run Setup Wizard)
+     * عرض واجهة معالج الإعداد الأولي وإعدادات الخادم (Setup & Server Settings Wizard)
      */
-    public function index(): Response|\Illuminate\Http\RedirectResponse
+    public function index(): Response
     {
-        if (self::isSetupCompleted()) {
-            return redirect()->route('login');
-        }
-
         $localIP = $this->resolveLocalIP();
+        $configuredDomain = parse_url(env('APP_URL', 'http://tajori.store'), PHP_URL_HOST) ?: 'tajori.store';
 
         return Inertia::render('Setup/Wizard', [
             'initialConfig' => [
@@ -61,7 +58,7 @@ class SetupWizardController extends Controller
                 'db_database' => env('DB_DATABASE', 'perfumes_v2'),
                 'db_username' => env('DB_USERNAME', 'root'),
                 'store_name'  => $this->settingRepo->get('store_name', 'طيبة التاجوري'),
-                'domain'      => 'tajori.store',
+                'domain'      => $configuredDomain,
                 'server_ip'   => $localIP,
             ],
             'companyInfo' => [
@@ -69,6 +66,7 @@ class SetupWizardController extends Controller
                 'brand'   => 'Taqniya Cloud',
                 'product' => 'منظومة السحابة المتكاملة',
             ],
+            'isConfigured' => self::isSetupCompleted(),
         ]);
     }
 
@@ -192,7 +190,7 @@ class SetupWizardController extends Controller
             // 1. تحديث متغيرات ملف البيئة .env
             $this->updateEnv([
                 'APP_NAME'            => $storeName,
-                'APP_URL'             => 'http://' . $domain,
+                'APP_URL'             => 'https://' . $domain,
                 'DB_HOST'             => $dbHost,
                 'DB_PORT'             => $dbPort,
                 'DB_DATABASE'         => $dbName,
@@ -226,8 +224,9 @@ class SetupWizardController extends Controller
                 $this->settingRepo->updateReceiptLogo($request->file('store_logo_file'));
             }
 
-            // 6. إضافة النطاق لملف Hosts لويندوز إن أمكن
+            // 6. إضافة النطاق لملف Hosts لويندوز وتجهيز شهادة SSL وخادم Apache
             $this->appendDomainToHostsFile($domain);
+            $this->ensureSslAndVhosts($domain);
 
             return response()->json([
                 'success'  => true,
@@ -328,6 +327,85 @@ class SetupWizardController extends Controller
             }
         } catch (\Throwable $e) {
             Log::warning('Hosts file update skipped: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * تجهيز شهادة الأمان SSL للنطاق وتحديث VirtualHosts لخادم Apache
+     */
+    private function ensureSslAndVhosts(string $domain): void
+    {
+        $vhostsPath = 'C:\\Apache24\\conf\\extra\\httpd-vhosts.conf';
+        $mkcertPath = 'C:\\Apache24\\bin\\mkcert.exe';
+        $sslDir     = 'C:\\Apache24\\conf\\ssl';
+
+        try {
+            // 1. توليد شهادة SSL محلية موثوقة متعددة النطاقات إن وجد mkcert
+            if (file_exists($mkcertPath) && is_dir($sslDir)) {
+                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\server.pem\" -key-file \"{$sslDir}\\server-key.pem\" \"{$domain}\" \"*.{$domain}\" \"tajori.store\" \"*.tajori.store\" \"alalem.store\" \"localhost\" \"127.0.0.1\" \"::1\"";
+                @shell_exec($cmd);
+            }
+
+            // 2. تحديث ملف vhosts لدعم التحويل التلقائي لنفس النطاق إلى HTTPS
+            if (file_exists($vhostsPath) && is_writable($vhostsPath)) {
+                $vhostConfig = <<<EOT
+# Virtual Hosts Configuration for Taqniya Cloud POS (Standard Ports 80 & 443)
+
+Listen 0.0.0.0:443
+Listen [::]:443
+
+<IfModule ssl_module>
+    SSLSessionCache "shmcb:logs/ssl_scache(512000)"
+    SSLSessionCacheTimeout 300
+</IfModule>
+
+<Directory "C:/Users/alale/OneDrive">
+    Options Indexes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+</Directory>
+
+<Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2">
+    Options Indexes FollowSymLinks MultiViews
+    AllowOverride All
+    Require all granted
+</Directory>
+
+# 1. HTTP (Port 80) - Dynamic Redirect to HTTPS for requested domain
+<VirtualHost *:80>
+    ServerAlias *
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    ErrorLog "logs/http-error.log"
+    CustomLog "logs/http-access.log" combined
+</VirtualHost>
+
+# 2. HTTPS (Port 443) - Secure Laravel Application
+<VirtualHost *:443>
+    ServerName {$domain}
+    ServerAlias www.{$domain} alalem.com www.alalem.com alalem.store www.alalem.store tajori.store www.tajori.store localhost 127.0.0.1
+    DocumentRoot "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public"
+
+    SSLEngine on
+    SSLCertificateFile "C:/Apache24/conf/ssl/server.pem"
+    SSLCertificateKeyFile "C:/Apache24/conf/ssl/server-key.pem"
+
+    <Directory "C:/Users/alale/OneDrive/Desktop/work/Perfumes_v2/public">
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog "logs/https-error.log"
+    CustomLog "logs/https-access.log" combined
+</VirtualHost>
+EOT;
+                @file_put_contents($vhostsPath, $vhostConfig);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('SSL and Vhosts update skipped: ' . $e->getMessage());
         }
     }
 

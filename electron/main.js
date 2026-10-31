@@ -173,11 +173,26 @@ async function createMainWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       spellcheck: false,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
 
   Menu.setApplicationMenu(null);
   mainWindow.removeMenu();
+
+  // تطبيق نسبة التبعيد والتقريب المحفوظة عند اكتمال تحميل الصفحة
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.executeJavaScript('localStorage.getItem("app_zoom_factor")')
+      .then((val) => {
+        if (val) {
+          const factor = Number(val) / 100;
+          if (!isNaN(factor) && factor >= 0.5 && factor <= 2.0) {
+            mainWindow.webContents.setZoomFactor(factor);
+          }
+        }
+      })
+      .catch(() => {});
+  });
 
   let targetUrl = '';
 

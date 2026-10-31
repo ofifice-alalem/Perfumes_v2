@@ -23,13 +23,14 @@ interface Props {
         brand: string;
         product: string;
     };
+    isConfigured?: boolean;
 }
 
 type DeviceRole = 'master' | 'client';
 type Step = 'role' | 'config' | 'installing' | 'completed';
 
-export default function SetupWizard({ initialConfig, companyInfo }: Props) {
-    const [step, setStep] = useState<Step>('role');
+export default function SetupWizard({ initialConfig, companyInfo, isConfigured = false }: Props) {
+    const [step, setStep] = useState<Step>(isConfigured ? 'config' : 'role');
     const [role, setRole] = useState<DeviceRole>('master');
 
     // ثيم النظام (Spatial UI Dark / Light Mode)
@@ -42,10 +43,18 @@ export default function SetupWizard({ initialConfig, companyInfo }: Props) {
         applyTheme(useDark);
         setIsDark(useDark);
 
-        // تطبيق الزوم المحفوظ
+        // تطبيق الزوم المحفوظ بنظام Electron الأصيل
         const savedZoom = localStorage.getItem('app_zoom_factor');
         if (savedZoom) {
-            (document.body.style as any).zoom = `${savedZoom}%`;
+            const zoomVal = Number(savedZoom);
+            if (!isNaN(zoomVal) && zoomVal >= 50 && zoomVal <= 150) {
+                if ((window as any).electronAPI?.setZoomFactor) {
+                    (window as any).electronAPI.setZoomFactor(zoomVal / 100);
+                    document.body.style.zoom = '';
+                } else {
+                    (document.documentElement.style as any).zoom = `${zoomVal}%`;
+                }
+            }
         }
     }, []);
 
@@ -303,6 +312,17 @@ export default function SetupWizard({ initialConfig, companyInfo }: Props) {
                         >
                             {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
                         </button>
+
+                        {isConfigured && (
+                            <a
+                                href="/invoices/create"
+                                className="px-3.5 py-2 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-white border border-primary/30 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                title="فتح شاشة المبيعات ونقاط البيع"
+                            >
+                                <span>شاشة المبيعات</span>
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                            </a>
+                        )}
 
                         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
                             <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
