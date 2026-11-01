@@ -181,6 +181,9 @@ class SetupWizardController extends Controller
             'store_logo_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:5120',
         ]);
 
+        @ini_set('max_execution_time', '300');
+        @set_time_limit(300);
+
         try {
             $storeName = trim($request->input('store_name'));
             $domain    = trim($request->input('domain'));
@@ -227,11 +230,7 @@ class SetupWizardController extends Controller
                 $this->settingRepo->updateReceiptLogo($request->file('store_logo_file'));
             }
 
-            // 6. إضافة النطاق لملف Hosts لويندوز وتجهيز شهادة SSL وخادم Apache
-            $this->appendDomainToHostsFile($domain);
-            $this->ensureSslAndVhosts($domain);
-
-            // 7. حفظ التكوين المشترك لتطبيق سطح المكتب ليقرأه الكاشير والمبيعات مباشرة
+            // 6. حفظ التكوين المشترك لتطبيق سطح المكتب ليقرأه الكاشير والمبيعات مباشرة
             $this->saveSharedDesktopConfig([
                 'domain'          => $domain,
                 'app_url'         => "https://{$domain}",
@@ -240,8 +239,15 @@ class SetupWizardController extends Controller
                 'role'            => 'master',
             ]);
 
-            // 8. إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ فور اكتمال الإعدادات
+            // 7. إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ فور اكتمال الإعدادات
             $this->createPosDesktopShortcut();
+
+            // 8. إضافة النطاق لملف Hosts لويندوز وتجهيز شهادة SSL وخادم Apache
+            $this->appendDomainToHostsFile($domain);
+            $this->ensureSslAndVhosts($domain);
+
+            // 9. جدولة إعادة تشغيل Apache في الخلفية دون مقاطعة استجابة العميل الحالية
+            $this->scheduleBackgroundApacheRestart();
 
             return response()->json([
                 'success'  => true,
@@ -376,7 +382,8 @@ class SetupWizardController extends Controller
         try {
             // 1. توليد شهادة SSL محلية موثوقة تغطي دائماً tajori.store وأي دومين إضافي
             if (file_exists($mkcertPath) && is_dir($sslDir)) {
-                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\tajori.store.pem\" -key-file \"{$sslDir}\\tajori.store-key.pem\" \"tajori.store\" \"*.tajori.store\" \"{$domain}\" \"*.{$domain}\" \"localhost\" \"127.0.0.1\" \"::1\"";
+                $caPrefix = is_dir('C:\\Apache24\\conf\\ssl\\ca') ? 'set CAROOT=C:\\Apache24\\conf\\ssl\\ca&& ' : '';
+                $cmd = "cmd /c \"{$caPrefix}\\\"{$mkcertPath}\\\" -cert-file \\\"{$sslDir}\\tajori.store.pem\\\" -key-file \\\"{$sslDir}\\tajori.store-key.pem\\\" \\\"tajori.store\\\" \\\"*.tajori.store\\\" \\\"{$domain}\\\" \\\"*.{$domain}\\\" localhost 127.0.0.1 ::1\"";
                 @shell_exec($cmd);
                 @copy("{$sslDir}\\tajori.store.pem", "{$sslDir}\\server.pem");
                 @copy("{$sslDir}\\tajori.store-key.pem", "{$sslDir}\\server-key.pem");
@@ -442,15 +449,6 @@ Listen [::]:443
 </VirtualHost>
 EOT;
                 @file_put_contents($vhostsPath, $vhostConfig);
-
-                // إعادة تشغيل أباتشي وتطبيق شهادات SSL الجديدة النظيفة فوراً
-                $restartScript = base_path('steps_v2/deployment_and_maintenance/server_setup/restart_apache.vbs');
-                if (file_exists($restartScript)) {
-                    @shell_exec("wscript //nologo \"{$restartScript}\"");
-                }
-                if (file_exists('C:\\Apache24\\bin\\httpd.exe')) {
-                    @shell_exec('C:\\Apache24\\bin\\httpd.exe -k restart -n "Apache2.4"');
-                }
             }
         } catch (\Throwable $e) {
             Log::warning('SSL and Vhosts update skipped: ' . $e->getMessage());
@@ -525,71 +523,76 @@ EOT;
     private function createPosDesktopShortcut(): void
     {
         try {
-            $possibleExePaths = [
-                getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\منظومة السحابة.exe',
-                getenv('ProgramFiles') . '\\منظومة السحابة\\منظومة السحابة.exe',
-                'C:\\Program Files\\منظومة السحابة\\منظومة السحابة.exe',
-                base_path('dist\\win-unpacked\\منظومة السحابة.exe'),
+            $possibleTemplatePaths = [
+                'C:\\Program Files\\taqniya-cloud-pos\\resources\\pos_shortcut_template.lnk',
+                'C:\\Program Files\\منظومة السحابة\\resources\\pos_shortcut_template.lnk',
+                getenv('LOCALAPPDATA') . '\\Programs\\taqniya-cloud-pos\\resources\\pos_shortcut_template.lnk',
+                getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\resources\\pos_shortcut_template.lnk',
+                base_path('resources\\pos_shortcut_template.lnk'),
+                'C:\\Users\\alale\\OneDrive\\Desktop\\work\\Perfumes_v2\\resources\\pos_shortcut_template.lnk',
+                'C:\\Users\\Public\\Desktop\\إعدادات خادم السحابة.lnk',
             ];
 
-            // استعلام مسار التثبيت المسجل في Registry أثناء تثبيت Setup
-            $regQuery = @shell_exec('reg query "HKCU\\Software\\TaqniyaCloud" /v InstallPath 2>nul');
-            if ($regQuery && preg_match('/InstallPath\s+REG_SZ\s+(.+)/i', $regQuery, $m)) {
-                $customPath = trim($m[1]) . '\\منظومة السحابة.exe';
-                array_unshift($possibleExePaths, $customPath);
-            }
-
-            $targetExe = null;
-            foreach ($possibleExePaths as $p) {
-                if ($p && file_exists($p)) {
-                    $targetExe = $p;
+            $templateLnk = null;
+            foreach ($possibleTemplatePaths as $tp) {
+                if ($tp && file_exists($tp)) {
+                    $templateLnk = $tp;
                     break;
                 }
             }
 
-            if (!$targetExe) {
-                $targetExe = getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\منظومة السحابة.exe';
+            // تجميع كافة مسارات أسطح المكتب للمستخدمين والمشترك العام
+            $desktops = [
+                'C:\\Users\\Public\\Desktop',
+                getenv('PUBLIC') ? getenv('PUBLIC') . '\\Desktop' : 'C:\\Users\\Public\\Desktop',
+            ];
+
+            foreach (glob('C:\\Users\\*', GLOB_ONLYDIR) as $uDir) {
+                $bName = basename($uDir);
+                if (in_array(strtolower($bName), ['all users', 'default', 'default user', 'public'])) continue;
+                if (is_dir("{$uDir}\\OneDrive\\Desktop")) {
+                    $desktops[] = "{$uDir}\\OneDrive\\Desktop";
+                }
+                if (is_dir("{$uDir}\\Desktop")) {
+                    $desktops[] = "{$uDir}\\Desktop";
+                }
             }
 
-            $workDir = dirname($targetExe);
-            $tempVbs = sys_get_temp_dir() . '\\create_pos_shortcut_' . uniqid() . '.vbs';
+            $desktops = array_unique(array_filter($desktops, 'is_dir'));
 
-            $vbsCode = <<<VBS
-Set WshShell = CreateObject("WScript.Shell")
-strDesktop = WshShell.SpecialFolders("Desktop")
-strPrograms = WshShell.SpecialFolders("Programs")
+            // مجلد البرامج في قائمة ابدأ لجميع المستخدمين
+            $smDir = (getenv('ProgramData') ?: 'C:\\ProgramData') . '\\Microsoft\\Windows\\Start Menu\\Programs\\منظومة السحابة';
+            if (!is_dir($smDir)) {
+                @mkdir($smDir, 0777, true);
+            }
 
-' 1. اختصار سطح المكتب
-Set oLink = WshShell.CreateShortcut(strDesktop & "\\منظومة السحابة.lnk")
-oLink.TargetPath = "{$targetExe}"
-oLink.Arguments = "--mode=pos"
-oLink.WorkingDirectory = "{$workDir}"
-oLink.WindowStyle = 1
-oLink.IconLocation = "{$targetExe},0"
-oLink.Description = "منظومة السحابة — المبيعات"
-oLink.Save
-
-' 2. اختصار قائمة ابدأ
-strAppDir = strPrograms & "\\منظومة السحابة"
-Set fso = CreateObject("Scripting.FileSystemObject")
-If Not fso.FolderExists(strAppDir) Then
-    fso.CreateFolder(strAppDir)
-End If
-Set oLinkSm = WshShell.CreateShortcut(strAppDir & "\\منظومة السحابة.lnk")
-oLinkSm.TargetPath = "{$targetExe}"
-oLinkSm.Arguments = "--mode=pos"
-oLinkSm.WorkingDirectory = "{$workDir}"
-oLinkSm.WindowStyle = 1
-oLinkSm.IconLocation = "{$targetExe},0"
-oLinkSm.Description = "منظومة السحابة — المبيعات"
-oLinkSm.Save
-VBS;
-
-            file_put_contents($tempVbs, $vbsCode);
-            @shell_exec("cscript //nologo \"{$tempVbs}\"");
-            @unlink($tempVbs);
+            if ($templateLnk) {
+                foreach ($desktops as $d) {
+                    @copy($templateLnk, "{$d}\\منظومة السحابة.lnk");
+                }
+                @copy($templateLnk, "{$smDir}\\منظومة السحابة.lnk");
+            }
         } catch (\Throwable $e) {
             Log::warning('Could not create POS desktop shortcut: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * إعادة تشغيل خدمة Apache2.4 في الخلفية دون قطع استجابة HTTP الحالية
+     */
+    private function scheduleBackgroundApacheRestart(): void
+    {
+        try {
+            $tempVbs = sys_get_temp_dir() . '\\delayed_restart_' . uniqid() . '.vbs';
+            $vbs = <<<VBS
+WScript.Sleep 1500
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run "cmd /c ""net stop Apache2.4 & net start Apache2.4""", 0, True
+VBS;
+            file_put_contents($tempVbs, $vbs);
+            @pclose(@popen("start /B wscript //nologo \"{$tempVbs}\"", "r"));
+        } catch (\Throwable $e) {
+            Log::warning('Delayed Apache restart failed: ' . $e->getMessage());
         }
     }
 }

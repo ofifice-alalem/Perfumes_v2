@@ -237,6 +237,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                         'Accept': 'application/json',
                     },
                     body: formData,
+                    signal: AbortSignal.timeout(180000),
                 });
 
                 const data = await res.json();
@@ -280,7 +281,11 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
     }
 
     return (
-        <div className="h-[100dvh] w-screen flex flex-col overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-500 font-sans select-none" dir="rtl">
+        <div 
+            className="h-[100dvh] w-screen flex flex-col overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-500 font-['Tajawal'] select-none" 
+            dir="rtl"
+            style={{ fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
+        >
             <Head title="أداة إعدادات خادم السحابة — شركة تقنية السحابة" />
 
             {/* Desktop Top Titlebar & HUD: شريط مكتبي عريض مستغل للمساحة */}

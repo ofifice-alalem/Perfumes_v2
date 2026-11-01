@@ -7,8 +7,13 @@
   CreateDirectory "$SMPROGRAMS\منظومة السحابة"
   CreateShortCut "$SMPROGRAMS\منظومة السحابة\إعدادات خادم السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=settings"
 
+  ; 2. إنشاء قالب أصلي لاختصار المبيعات داخل resources (يتم نسخه لسطح المكتب فور اكتمال الإعدادات)
+  CreateDirectory "$INSTDIR\resources"
+  CreateShortCut "$INSTDIR\resources\pos_shortcut_template.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=pos"
+
   ; حفظ مسار التثبيت الفعلي في السجل للوصول إليه عند توليد اختصار المبيعات لاحقاً
   WriteRegStr HKCU "Software\TaqniyaCloud" "InstallPath" "$INSTDIR"
+  WriteRegStr HKLM "Software\TaqniyaCloud" "InstallPath" "$INSTDIR"
 
   ; 🟢 الكشف التلقائي عن حزمة السيرفر بجانب المثبت في الفلاشة أو المجلد
   ; 1. في حال وجود مجلد server_payload
