@@ -240,6 +240,9 @@ class SetupWizardController extends Controller
                 'role'            => 'master',
             ]);
 
+            // 8. إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ فور اكتمال الإعدادات
+            $this->createPosDesktopShortcut();
+
             return response()->json([
                 'success'  => true,
                 'message'  => "تم إعداد وتهيئة منظومة السحابة لمتجر «{$storeName}» بنجاح!",
@@ -291,6 +294,9 @@ class SetupWizardController extends Controller
                 'setup_completed' => true,
                 'role'            => 'client',
             ]);
+
+            // إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ
+            $this->createPosDesktopShortcut();
 
             return response()->json([
                 'success'  => true,
@@ -395,11 +401,15 @@ Listen [::]:443
     Require all granted
 </Directory>
 
-# 1. HTTP (Port 80) - الموقع المباشر الفائق السرعة
+# 1. HTTP (Port 80) - إعادة التوجيه التلقائي الدائم إلى HTTPS
 <VirtualHost *:80>
     ServerName tajori.store
     ServerAlias www.tajori.store {$domain} www.{$domain} localhost 127.0.0.1
     DocumentRoot "{$publicPath}"
+
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
     <Directory "{$publicPath}">
         Options Indexes FollowSymLinks MultiViews
@@ -433,9 +443,13 @@ Listen [::]:443
 EOT;
                 @file_put_contents($vhostsPath, $vhostConfig);
 
-                // إعادة تشغيل أباتشي لتفعيل الإعدادات فوراً
+                // إعادة تشغيل أباتشي وتطبيق شهادات SSL الجديدة النظيفة فوراً
+                $restartScript = base_path('steps_v2/deployment_and_maintenance/server_setup/restart_apache.vbs');
+                if (file_exists($restartScript)) {
+                    @shell_exec("wscript //nologo \"{$restartScript}\"");
+                }
                 if (file_exists('C:\\Apache24\\bin\\httpd.exe')) {
-                    @shell_exec('C:\\Apache24\\bin\\httpd.exe -k restart');
+                    @shell_exec('C:\\Apache24\\bin\\httpd.exe -k restart -n "Apache2.4"');
                 }
             }
         } catch (\Throwable $e) {
@@ -502,6 +516,80 @@ EOT;
             }
         } catch (\Throwable $e) {
             Log::warning('Failed to save shared desktop config: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ بعد اكتمال الإعداد الأولي بنجاح
+     */
+    private function createPosDesktopShortcut(): void
+    {
+        try {
+            $possibleExePaths = [
+                getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\منظومة السحابة.exe',
+                getenv('ProgramFiles') . '\\منظومة السحابة\\منظومة السحابة.exe',
+                'C:\\Program Files\\منظومة السحابة\\منظومة السحابة.exe',
+                base_path('dist\\win-unpacked\\منظومة السحابة.exe'),
+            ];
+
+            // استعلام مسار التثبيت المسجل في Registry أثناء تثبيت Setup
+            $regQuery = @shell_exec('reg query "HKCU\\Software\\TaqniyaCloud" /v InstallPath 2>nul');
+            if ($regQuery && preg_match('/InstallPath\s+REG_SZ\s+(.+)/i', $regQuery, $m)) {
+                $customPath = trim($m[1]) . '\\منظومة السحابة.exe';
+                array_unshift($possibleExePaths, $customPath);
+            }
+
+            $targetExe = null;
+            foreach ($possibleExePaths as $p) {
+                if ($p && file_exists($p)) {
+                    $targetExe = $p;
+                    break;
+                }
+            }
+
+            if (!$targetExe) {
+                $targetExe = getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\منظومة السحابة.exe';
+            }
+
+            $workDir = dirname($targetExe);
+            $tempVbs = sys_get_temp_dir() . '\\create_pos_shortcut_' . uniqid() . '.vbs';
+
+            $vbsCode = <<<VBS
+Set WshShell = CreateObject("WScript.Shell")
+strDesktop = WshShell.SpecialFolders("Desktop")
+strPrograms = WshShell.SpecialFolders("Programs")
+
+' 1. اختصار سطح المكتب
+Set oLink = WshShell.CreateShortcut(strDesktop & "\\منظومة السحابة.lnk")
+oLink.TargetPath = "{$targetExe}"
+oLink.Arguments = "--mode=pos"
+oLink.WorkingDirectory = "{$workDir}"
+oLink.WindowStyle = 1
+oLink.IconLocation = "{$targetExe},0"
+oLink.Description = "منظومة السحابة — المبيعات"
+oLink.Save
+
+' 2. اختصار قائمة ابدأ
+strAppDir = strPrograms & "\\منظومة السحابة"
+Set fso = CreateObject("Scripting.FileSystemObject")
+If Not fso.FolderExists(strAppDir) Then
+    fso.CreateFolder(strAppDir)
+End If
+Set oLinkSm = WshShell.CreateShortcut(strAppDir & "\\منظومة السحابة.lnk")
+oLinkSm.TargetPath = "{$targetExe}"
+oLinkSm.Arguments = "--mode=pos"
+oLinkSm.WorkingDirectory = "{$workDir}"
+oLinkSm.WindowStyle = 1
+oLinkSm.IconLocation = "{$targetExe},0"
+oLinkSm.Description = "منظومة السحابة — المبيعات"
+oLinkSm.Save
+VBS;
+
+            file_put_contents($tempVbs, $vbsCode);
+            @shell_exec("cscript //nologo \"{$tempVbs}\"");
+            @unlink($tempVbs);
+        } catch (\Throwable $e) {
+            Log::warning('Could not create POS desktop shortcut: ' . $e->getMessage());
         }
     }
 }

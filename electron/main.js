@@ -314,19 +314,67 @@ async function startInternalPhpServer(port = 8181) {
   });
 }
 
+let posWindow = null;
+
+/**
+ * فتح نافذة المبيعات بشكل مستقل ومباشر
+ */
+function createPosWindow() {
+  if (posWindow && !posWindow.isDestroyed()) {
+    if (posWindow.isMinimized()) posWindow.restore();
+    posWindow.focus();
+    return posWindow;
+  }
+
+  const config = readEnvConfig();
+  const iconPath = path.join(__dirname, '../public/images/logo.png');
+  const hostDomain = config.domain || 'tajori.store';
+
+  posWindow = new BrowserWindow({
+    width: 1440,
+    height: 900,
+    minWidth: 1024,
+    minHeight: 700,
+    title: config.appName || 'منظومة السحابة — المبيعات',
+    backgroundColor: '#020617',
+    autoHideMenuBar: true,
+    show: false,
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      spellcheck: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+    },
+  });
+
+  posWindow.maximize();
+  posWindow.show();
+  Menu.setApplicationMenu(null);
+  posWindow.removeMenu();
+
+  let targetUrl = '';
+  if (config.masterHost) {
+    const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
+    targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
+  } else {
+    targetUrl = `https://${hostDomain}/invoices/create`;
+  }
+
+  console.log(`[Taqniya Desktop] Opening POS Window — Loading: ${targetUrl}`);
+  posWindow.loadURL(targetUrl);
+
+  posWindow.on('closed', () => {
+    posWindow = null;
+  });
+
+  return posWindow;
+}
+
 // استقبال طلب فتح تطبيق المبيعات في نافذة مستقلة من داخل نافذة الإعدادات
 ipcMain.on('open-pos-app', () => {
-  console.log('[Taqniya Desktop] Spawning standalone POS Cashier window from Settings...');
-  try {
-    const appExecutable = process.execPath;
-    const child = spawn(appExecutable, ['--mode=pos'], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
-  } catch (e) {
-    console.error('[Taqniya Desktop] Failed to launch POS app:', e);
-  }
+  console.log('[Taqniya Desktop] Opening standalone POS Cashier window from Settings...');
+  createPosWindow();
 });
 
 /**
@@ -386,10 +434,12 @@ async function createMainWindow() {
   const apachePort443 = await probePort(443);
   const apacheActive = apachePort80 || apachePort443;
 
+  const hostDomain = config.domain || 'tajori.store';
+
   if (isSettings) {
     // ⚙️ نمط الإعدادات (Settings Mode)
     if (apacheActive) {
-      targetUrl = 'https://tajori.store/setup';
+      targetUrl = `https://${hostDomain}/setup`;
     } else {
       console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup...');
       await startInternalPhpServer(8181);
@@ -401,7 +451,7 @@ async function createMainWindow() {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
     } else if (apacheActive) {
-      targetUrl = 'https://tajori.store/invoices/create';
+      targetUrl = `https://${hostDomain}/invoices/create`;
     } else {
       console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
       await startInternalPhpServer(8181);

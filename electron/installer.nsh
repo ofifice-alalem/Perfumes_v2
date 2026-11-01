@@ -2,11 +2,13 @@
 
 !macro customInstall
   SetOutPath "$INSTDIR"
-  CreateShortCut "$DESKTOP\منظومة السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=pos"
+  ; 1. في البداية: إنشاء اختصار أداة الإعدادات فقط (المبيعات تُنشأ ديناميكياً بعد اكتمال الإعدادات)
   CreateShortCut "$DESKTOP\إعدادات خادم السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=settings"
   CreateDirectory "$SMPROGRAMS\منظومة السحابة"
-  CreateShortCut "$SMPROGRAMS\منظومة السحابة\منظومة السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=pos"
   CreateShortCut "$SMPROGRAMS\منظومة السحابة\إعدادات خادم السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=settings"
+
+  ; حفظ مسار التثبيت الفعلي في السجل للوصول إليه عند توليد اختصار المبيعات لاحقاً
+  WriteRegStr HKCU "Software\TaqniyaCloud" "InstallPath" "$INSTDIR"
 
   ; 🟢 الكشف التلقائي عن حزمة السيرفر بجانب المثبت في الفلاشة أو المجلد
   ; 1. في حال وجود مجلد server_payload

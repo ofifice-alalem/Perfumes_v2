@@ -125,12 +125,12 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
         if (fileInputRef.current) fileInputRef.current.value = '';
     }
 
-    // فتح تطبيق شاشة المبيعات كبرنامج مستقل
+    // فتح تطبيق شاشة المبيعات كنافذة مستقلة
     function handleOpenPosApp() {
         if ((window as any).electronAPI?.openPos) {
             (window as any).electronAPI.openPos();
         } else {
-            window.location.href = '/invoices/create';
+            window.open('/invoices/create', '_blank');
         }
     }
 
