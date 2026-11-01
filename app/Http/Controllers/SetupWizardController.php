@@ -49,19 +49,29 @@ class SetupWizardController extends Controller
     public function index(): Response
     {
         $localIP = $this->resolveLocalIP();
+        $isCompleted = self::isSetupCompleted();
+
         $appUrl = env('APP_URL');
         $configuredDomain = ($appUrl && !str_contains($appUrl, 'localhost') && !str_contains($appUrl, '127.0.0.1'))
             ? parse_url($appUrl, PHP_URL_HOST)
-            : 'tajori.store';
+            : '';
+
+        // إذا كانت المنظومة لم تكتمل تهيئتها بعد، لا نفرض perfumes_v2 كاسم ثابت
+        $envDatabase = env('DB_DATABASE', '');
+        $initialDatabase = ($envDatabase === 'perfumes_v2' && !$isCompleted) ? '' : $envDatabase;
+
+        $storeName = $isCompleted 
+            ? $this->settingRepo->get('store_name', env('APP_NAME', '')) 
+            : (env('APP_NAME') && env('APP_NAME') !== 'Laravel' && env('APP_NAME') !== 'alharith.ly' ? env('APP_NAME') : '');
 
         return Inertia::render('Setup/Wizard', [
             'initialConfig' => [
                 'db_host'     => env('DB_HOST', '127.0.0.1'),
                 'db_port'     => (int)env('DB_PORT', 3306),
-                'db_database' => env('DB_DATABASE', 'perfumes_v2'),
+                'db_database' => $initialDatabase,
                 'db_username' => env('DB_USERNAME', 'root'),
-                'store_name'  => $this->settingRepo->get('store_name', env('APP_NAME', 'منظومة السحابة')),
-                'domain'      => $configuredDomain,
+                'store_name'  => $storeName,
+                'domain'      => $configuredDomain ?: '',
                 'server_ip'   => $localIP,
             ],
             'companyInfo' => [
@@ -69,7 +79,7 @@ class SetupWizardController extends Controller
                 'brand'   => 'Taqniya Cloud',
                 'product' => 'منظومة السحابة المتكاملة',
             ],
-            'isConfigured' => self::isSetupCompleted(),
+            'isConfigured' => $isCompleted,
         ]);
     }
 
