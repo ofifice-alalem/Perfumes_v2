@@ -372,9 +372,49 @@ async function startInternalPhpServer(port = 8181) {
 let posWindow = null;
 
 /**
+ * التحقق من تشغيل خادم Apache 2.4 وإرسال أمر التشغيل تلقائياً إذا كان متوقفاً
+ */
+async function ensureApacheRunning() {
+  let apacheActive = (await probePort(80)) || (await probePort(443));
+  if (apacheActive) {
+    return true;
+  }
+
+  console.log('[Taqniya Desktop] Apache is not running. Sending command to start Apache service...');
+
+  // 1. محاولة تشغيل خدمة ويندوز Apache2.4
+  try {
+    execSync('net start Apache2.4', { windowsHide: true, timeout: 5000 });
+  } catch (errService) {
+    // 2. إذا لم تكن الخدمة قيد التشغيل أو فشلت، محاولة التشغيل عبر أمر httpd المباشر
+    try {
+      const httpdPath = fs.existsSync('C:/Apache24/bin/httpd.exe')
+        ? 'C:\\Apache24\\bin\\httpd.exe'
+        : 'httpd.exe';
+      execSync(`"${httpdPath}" -k start`, { windowsHide: true, timeout: 5000 });
+    } catch (errDirect) {
+      console.warn('[Taqniya Desktop] Direct httpd start attempt message:', errDirect.message);
+    }
+  }
+
+  // 3. التحقق من استجابة الخادم خلال فترة وجيزة (حتى 3 ثوانٍ)
+  for (let i = 0; i < 6; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    apacheActive = (await probePort(80)) || (await probePort(443));
+    if (apacheActive) {
+      console.log('[Taqniya Desktop] Apache server is now active and responding!');
+      return true;
+    }
+  }
+
+  console.warn('[Taqniya Desktop] Apache server did not respond on port 80/443.');
+  return false;
+}
+
+/**
  * فتح نافذة المبيعات بشكل مستقل ومباشر
  */
-function createPosWindow() {
+async function createPosWindow() {
   if (posWindow && !posWindow.isDestroyed()) {
     if (posWindow.isMinimized()) posWindow.restore();
     posWindow.focus();
@@ -384,6 +424,12 @@ function createPosWindow() {
   const config = readEnvConfig();
   const iconPath = path.join(__dirname, '../public/images/logo.png');
   const hostDomain = config.domain || 'tajori.store';
+
+  // 🟢 التحقق من تشغيل خادم Apache وتشغيله تلقائياً إذا كان متوقفاً
+  let apacheActive = false;
+  if (!config.masterHost) {
+    apacheActive = await ensureApacheRunning();
+  }
 
   posWindow = new BrowserWindow({
     width: 1440,
@@ -412,8 +458,12 @@ function createPosWindow() {
   if (config.masterHost) {
     const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
     targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
-  } else {
+  } else if (apacheActive) {
     targetUrl = `https://${hostDomain}/invoices/create`;
+  } else {
+    console.log('[Taqniya Desktop] Fallback: Starting internal PHP server on 8181 for POS window...');
+    await startInternalPhpServer(8181);
+    targetUrl = 'http://127.0.0.1:8181/invoices/create';
   }
 
   console.log(`[Taqniya Desktop] Opening POS Window — Loading: ${targetUrl}`);
@@ -427,9 +477,9 @@ function createPosWindow() {
 }
 
 // استقبال طلب فتح تطبيق المبيعات في نافذة مستقلة من داخل نافذة الإعدادات
-ipcMain.on('open-pos-app', () => {
+ipcMain.on('open-pos-app', async () => {
   console.log('[Taqniya Desktop] Opening standalone POS Cashier window from Settings...');
-  createPosWindow();
+  await createPosWindow();
 });
 
 /**
@@ -485,14 +535,11 @@ async function createMainWindow() {
 
   let targetUrl = '';
 
-  const apachePort80 = await probePort(80);
-  const apachePort443 = await probePort(443);
-  const apacheActive = apachePort80 || apachePort443;
-
   const hostDomain = config.domain || 'tajori.store';
 
   if (isSettings) {
     // ⚙️ نمط الإعدادات (Settings Mode)
+    const apacheActive = (await probePort(80)) || (await probePort(443));
     if (apacheActive) {
       targetUrl = `https://${hostDomain}/setup`;
     } else {
@@ -501,16 +548,19 @@ async function createMainWindow() {
       targetUrl = 'http://127.0.0.1:8181/setup';
     }
   } else {
-    // 🛒 نمط المبيعات اليومي (POS Mode) — التوجيه المباشر لواجهة فواتير المبيعات
+    // 🛒 نمط المبيعات اليومي (POS Mode) — فحص خادم Apache وتشغيله تلقائياً إذا كان متوقفاً
     if (config.masterHost) {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
-    } else if (apacheActive) {
-      targetUrl = `https://${hostDomain}/invoices/create`;
     } else {
-      console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
-      await startInternalPhpServer(8181);
-      targetUrl = 'http://127.0.0.1:8181/invoices/create';
+      const apacheActive = await ensureApacheRunning();
+      if (apacheActive) {
+        targetUrl = `https://${hostDomain}/invoices/create`;
+      } else {
+        console.log('[Taqniya Desktop] Fallback: Starting portable PHP server on port 8181 for POS...');
+        await startInternalPhpServer(8181);
+        targetUrl = 'http://127.0.0.1:8181/invoices/create';
+      }
     }
   }
 
