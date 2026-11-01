@@ -46,8 +46,8 @@
             "oneClick": false,
             "allowToChangeInstallationDirectory": true,
             "createDesktopShortcut": false,
-            "createStartMenuShortcut": true,
-            "shortcutName": "منظومة السحابة",
+            "createStartMenuShortcut": false,
+            "shortcutName": "إعدادات خادم السحابة",
             "runAfterFinish": false,
             "include": "electron/installer.nsh"
         }

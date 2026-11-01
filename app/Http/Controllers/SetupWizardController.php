@@ -377,16 +377,29 @@ class SetupWizardController extends Controller
         $vhostsPath = 'C:\\Apache24\\conf\\extra\\httpd-vhosts.conf';
         $mkcertPath = 'C:\\Apache24\\bin\\mkcert.exe';
         $sslDir     = 'C:\\Apache24\\conf\\ssl';
+        $caDir      = 'C:\\Apache24\\conf\\ssl\\ca';
         $publicPath = str_replace('\\', '/', public_path());
 
         try {
-            // 1. توليد شهادة SSL محلية موثوقة تغطي دائماً tajori.store وأي دومين إضافي
-            if (file_exists($mkcertPath) && is_dir($sslDir)) {
-                $caPrefix = is_dir('C:\\Apache24\\conf\\ssl\\ca') ? 'set CAROOT=C:\\Apache24\\conf\\ssl\\ca&& ' : '';
-                $cmd = "cmd /c \"{$caPrefix}\\\"{$mkcertPath}\\\" -cert-file \\\"{$sslDir}\\tajori.store.pem\\\" -key-file \\\"{$sslDir}\\tajori.store-key.pem\\\" \\\"tajori.store\\\" \\\"*.tajori.store\\\" \\\"{$domain}\\\" \\\"*.{$domain}\\\" localhost 127.0.0.1 ::1\"";
-                @shell_exec($cmd);
-                @copy("{$sslDir}\\tajori.store.pem", "{$sslDir}\\server.pem");
-                @copy("{$sslDir}\\tajori.store-key.pem", "{$sslDir}\\server-key.pem");
+            // 1. توليد شهادة SSL محلية موثوقة تغطي دائماً tajori.store وأي دومين إضافي عبر PowerShell بدون أخطاء escaping
+            if (file_exists($mkcertPath)) {
+                if (!is_dir($sslDir)) {
+                    @mkdir($sslDir, 0777, true);
+                }
+
+                $certFile = "{$sslDir}\\tajori.store.pem";
+                $keyFile  = "{$sslDir}\\tajori.store-key.pem";
+
+                $psScript = "\$env:CAROOT = '{$caDir}'; "
+                          . "& '{$mkcertPath}' -install; "
+                          . "& '{$mkcertPath}' -cert-file '{$certFile}' -key-file '{$keyFile}' 'tajori.store' '*.tajori.store' '{$domain}' '*.{$domain}' 'localhost' '127.0.0.1' '::1'";
+
+                $psCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"{$psScript}\" 2>&1";
+                $output = @shell_exec($psCommand);
+                Log::info("mkcert generation output: " . ($output ?: 'empty'));
+
+                @copy($certFile, "{$sslDir}\\server.pem");
+                @copy($keyFile, "{$sslDir}\\server-key.pem");
             }
 
             // 2. تحديث ملف vhosts وفق المعايير المعتمدة في steps_v2/deployment_and_maintenance
@@ -518,30 +531,69 @@ EOT;
     }
 
     /**
+     * واجهة API مخصصة لإنشاء أو إعادة توليد اختصار المبيعات على سطح المكتب عند الطلب
+     */
+    public function createPosShortcutEndpoint(Request $request)
+    {
+        $domain = $request->input('domain');
+        $success = $this->createPosDesktopShortcut($domain);
+
+        return response()->json([
+            'success' => $success,
+            'message' => $success 
+                ? 'تم إنشاء اختصار منظومة المبيعات على سطح المكتب بنجاح!' 
+                : 'تعذر إنشاء الاختصار تلقائياً، تأكد من صلاحيات النظام.',
+        ]);
+    }
+
+    /**
      * إنشاء اختصار منظومة المبيعات على سطح المكتب وقائمة ابدأ بعد اكتمال الإعداد الأولي بنجاح
      */
-    private function createPosDesktopShortcut(): void
+    private function createPosDesktopShortcut(?string $customDomain = null): bool
     {
         try {
-            $possibleTemplatePaths = [
-                'C:\\Program Files\\taqniya-cloud-pos\\resources\\pos_shortcut_template.lnk',
-                'C:\\Program Files\\منظومة السحابة\\resources\\pos_shortcut_template.lnk',
-                getenv('LOCALAPPDATA') . '\\Programs\\taqniya-cloud-pos\\resources\\pos_shortcut_template.lnk',
-                getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\resources\\pos_shortcut_template.lnk',
-                base_path('resources\\pos_shortcut_template.lnk'),
-                'C:\\Users\\alale\\OneDrive\\Desktop\\work\\Perfumes_v2\\resources\\pos_shortcut_template.lnk',
-                'C:\\Users\\Public\\Desktop\\إعدادات خادم السحابة.lnk',
-            ];
+            $conf = json_decode(@file_get_contents('C:\\ProgramData\\TaqniyaCloudShared\\app_config.json') ?: '{}', true);
+            $domain = $customDomain ?: ($conf['domain'] ?? parse_url(env('APP_URL'), PHP_URL_HOST) ?? 'tajori.store');
+            $httpsUrl = "https://{$domain}/invoices/create";
 
-            $templateLnk = null;
-            foreach ($possibleTemplatePaths as $tp) {
-                if ($tp && file_exists($tp)) {
-                    $templateLnk = $tp;
-                    break;
+            // 1. البحث عن مسار تطبيق منظومة السحابة.exe الفعلي
+            $installPath = null;
+
+            // أ. فحص السجل (Registry) المكتوب بواسطة المثبت
+            $regCommands = [
+                'reg query "HKCU\Software\TaqniyaCloud" /v InstallPath',
+                'reg query "HKLM\Software\TaqniyaCloud" /v InstallPath',
+            ];
+            foreach ($regCommands as $rc) {
+                $out = @shell_exec($rc);
+                if ($out && preg_match('/InstallPath\s+REG_SZ\s+(.+)/i', trim($out), $m)) {
+                    $p = trim($m[1]);
+                    if (is_dir($p) && file_exists("{$p}\\منظومة السحابة.exe")) {
+                        $installPath = $p;
+                        break;
+                    }
                 }
             }
 
-            // تجميع كافة مسارات أسطح المكتب للمستخدمين والمشترك العام
+            // ب. فحص المسارات القياسية المعروفة
+            if (!$installPath) {
+                $possibleExePaths = [
+                    'C:\\Program Files\\منظومة السحابة\\منظومة السحابة.exe',
+                    'C:\\Program Files\\taqniya-cloud-pos\\منظومة السحابة.exe',
+                    getenv('LOCALAPPDATA') . '\\Programs\\منظومة السحابة\\منظومة السحابة.exe',
+                    getenv('LOCALAPPDATA') . '\\Programs\\taqniya-cloud-pos\\منظومة السحابة.exe',
+                    base_path('..\\منظومة السحابة.exe'),
+                    dirname(public_path()) . '\\منظومة السحابة.exe',
+                ];
+                foreach ($possibleExePaths as $pe) {
+                    if ($pe && file_exists($pe)) {
+                        $installPath = dirname($pe);
+                        break;
+                    }
+                }
+            }
+
+            // 2. تجميع كافة مسارات أسطح المكتب للمستخدمين والمشترك العام
             $desktops = [
                 'C:\\Users\\Public\\Desktop',
                 getenv('PUBLIC') ? getenv('PUBLIC') . '\\Desktop' : 'C:\\Users\\Public\\Desktop',
@@ -550,30 +602,59 @@ EOT;
             foreach (glob('C:\\Users\\*', GLOB_ONLYDIR) as $uDir) {
                 $bName = basename($uDir);
                 if (in_array(strtolower($bName), ['all users', 'default', 'default user', 'public'])) continue;
-                if (is_dir("{$uDir}\\OneDrive\\Desktop")) {
-                    $desktops[] = "{$uDir}\\OneDrive\\Desktop";
-                }
-                if (is_dir("{$uDir}\\Desktop")) {
-                    $desktops[] = "{$uDir}\\Desktop";
-                }
+                if (is_dir("{$uDir}\\OneDrive\\Desktop")) $desktops[] = "{$uDir}\\OneDrive\\Desktop";
+                if (is_dir("{$uDir}\\Desktop")) $desktops[] = "{$uDir}\\Desktop";
             }
-
             $desktops = array_unique(array_filter($desktops, 'is_dir'));
 
-            // مجلد البرامج في قائمة ابدأ لجميع المستخدمين
+            // مجلد البرامج في قائمة ابدأ
             $smDir = (getenv('ProgramData') ?: 'C:\\ProgramData') . '\\Microsoft\\Windows\\Start Menu\\Programs\\منظومة السحابة';
             if (!is_dir($smDir)) {
                 @mkdir($smDir, 0777, true);
             }
 
-            if ($templateLnk) {
-                foreach ($desktops as $d) {
-                    @copy($templateLnk, "{$d}\\منظومة السحابة.lnk");
-                }
-                @copy($templateLnk, "{$smDir}\\منظومة السحابة.lnk");
+            // 3. إنشاء الاختصارات ديناميكياً باستخدام PowerShell لتفادي مشاكل الحروف العربية في COM
+            $edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+            if (!file_exists($edgePath)) {
+                $edgePath = 'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe';
             }
+
+            $useExe = ($installPath && file_exists("{$installPath}\\منظومة السحابة.exe"));
+            $targetExe = $useExe ? "{$installPath}\\منظومة السحابة.exe" : $edgePath;
+            $targetArgs = $useExe ? '--mode=pos' : "--app={$httpsUrl} --kiosk-printing --start-fullscreen";
+            $workDir = $useExe ? $installPath : dirname($edgePath);
+
+            $psLines = [
+                '$ws = New-Object -ComObject WScript.Shell',
+                '$fso = New-Object -ComObject Scripting.FileSystemObject',
+                "\$file = \$fso.GetFile('{$targetExe}')",
+                '$shortExe = $file.ShortPath',
+            ];
+
+            $allTargets = $desktops;
+            $allTargets[] = $smDir;
+
+            foreach ($allTargets as $idx => $dir) {
+                $tmpLnk = "{$dir}\\TaqniyaPOS_tmp_{$idx}.lnk";
+                $finalLnk = "منظومة السحابة.lnk";
+                $psLines[] = "\$s = \$ws.CreateShortcut('{$tmpLnk}')";
+                $psLines[] = "\$s.TargetPath = \$shortExe";
+                $psLines[] = "\$s.Arguments = '{$targetArgs}'";
+                $psLines[] = "\$s.WorkingDirectory = '{$workDir}'";
+                $psLines[] = "\$s.Save()";
+                $psLines[] = "if (Test-Path '{$dir}\\{$finalLnk}') { Remove-Item -LiteralPath '{$dir}\\{$finalLnk}' -Force -ErrorAction SilentlyContinue }";
+                $psLines[] = "Rename-Item -LiteralPath '{$tmpLnk}' -NewName '{$finalLnk}' -Force -ErrorAction SilentlyContinue";
+            }
+
+            $psFile = sys_get_temp_dir() . '\\create_pos_shortcut_' . uniqid() . '.ps1';
+            file_put_contents($psFile, "\xEF\xBB\xBF" . implode("\r\n", $psLines));
+            @shell_exec("powershell.exe -NoProfile -ExecutionPolicy Bypass -File \"{$psFile}\"");
+            @unlink($psFile);
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Could not create POS desktop shortcut: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -585,9 +666,16 @@ EOT;
         try {
             $tempVbs = sys_get_temp_dir() . '\\delayed_restart_' . uniqid() . '.vbs';
             $vbs = <<<VBS
-WScript.Sleep 1500
+WScript.Sleep 1200
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run "cmd /c ""net stop Apache2.4 & net start Apache2.4""", 0, True
+' 1. إعادة التحميل السلس والآني لشارات SSL وملفات vhosts عبر httpd -k restart بدون الحاجة لصلاحيات Administrator
+Dim exitCode
+exitCode = WshShell.Run("cmd /c ""C:\Apache24\bin\httpd.exe -k restart""", 0, True)
+
+' 2. في حال كان السيرفر متوقفاً بالكامل يتم تشغيل الخدمة
+If exitCode <> 0 Then
+    WshShell.Run "cmd /c ""net start Apache2.4""", 0, True
+End If
 VBS;
             file_put_contents($tempVbs, $vbs);
             @pclose(@popen("start /B wscript //nologo \"{$tempVbs}\"", "r"));

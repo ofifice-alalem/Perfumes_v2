@@ -130,7 +130,34 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
         if ((window as any).electronAPI?.openPos) {
             (window as any).electronAPI.openPos();
         } else {
-            window.open('/invoices/create', '_blank');
+            window.open(`https://${domain}/invoices/create`, '_blank');
+        }
+    }
+
+    // إنشاء / تجديد اختصار منظومة المبيعات على سطح المكتب
+    const [shortcutStatus, setShortcutStatus] = useState<string | null>(null);
+    const [creatingShortcut, setCreatingShortcut] = useState(false);
+
+    async function handleCreateShortcut() {
+        setCreatingShortcut(true);
+        setShortcutStatus(null);
+        try {
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const res = await fetch('/setup/create-pos-shortcut', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ domain }),
+            });
+            const data = await res.json();
+            setShortcutStatus(data.message || 'تم إنشاء الاختصار بنجاح');
+        } catch (e: any) {
+            setShortcutStatus('تعذر إنشاء الاختصار: ' + e.message);
+        } finally {
+            setCreatingShortcut(false);
         }
     }
 
@@ -775,13 +802,37 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                                 </div>
                             </div>
 
-                            <a
-                                href={completedInfo?.redirectUrl || `https://${domain}/invoices/create`}
-                                className="inline-flex items-center justify-center gap-2.5 w-full max-w-md h-16 rounded-[22px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-lg transition-all shadow-xl shadow-emerald-600/30 cursor-pointer active:scale-[0.98]"
-                            >
-                                <span>الدخول إلى منظومة المبيعات الآن</span>
-                                <ArrowLeft className="w-5 h-5" />
-                            </a>
+                            <div className="flex flex-col gap-3.5 max-w-md mx-auto w-full">
+                                <a
+                                    href={completedInfo?.redirectUrl || `https://${domain}/invoices/create`}
+                                    onClick={(e) => {
+                                        if ((window as any).electronAPI?.openPos) {
+                                            e.preventDefault();
+                                            (window as any).electronAPI.openPos();
+                                        }
+                                    }}
+                                    className="inline-flex items-center justify-center gap-2.5 w-full h-15 rounded-[20px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base transition-all shadow-xl shadow-emerald-600/30 cursor-pointer active:scale-[0.98]"
+                                >
+                                    <span>الدخول إلى منظومة المبيعات الآن</span>
+                                    <ArrowLeft className="w-5 h-5" />
+                                </a>
+
+                                <button
+                                    type="button"
+                                    onClick={handleCreateShortcut}
+                                    disabled={creatingShortcut}
+                                    className="inline-flex items-center justify-center gap-2 w-full h-12 rounded-[18px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs border border-black/10 dark:border-white/10 transition-all cursor-pointer disabled:opacity-50"
+                                >
+                                    {creatingShortcut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4 text-primary" />}
+                                    <span>توليد / تجديد اختصار المبيعات على سطح المكتب (HTTPS)</span>
+                                </button>
+
+                                {shortcutStatus && (
+                                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs font-bold text-primary animate-in fade-in duration-200">
+                                        {shortcutStatus}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 

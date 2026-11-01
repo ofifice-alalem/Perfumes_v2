@@ -2,16 +2,19 @@
 
 !macro customInstall
   SetOutPath "$INSTDIR"
-  ; 1. في البداية: إنشاء اختصار أداة الإعدادات فقط (المبيعات تُنشأ ديناميكياً بعد اكتمال الإعدادات)
+
+  ; 1. تنظيف أي اختصارات مبيعات سابقة قد تكون موجودة قبل إتمام التهيئة
+  Delete "$DESKTOP\منظومة السحابة.lnk"
+  Delete "$DESKTOP\منظومة المبيعات.lnk"
+  Delete "$SMPROGRAMS\منظومة السحابة\منظومة السحابة.lnk"
+  Delete "$SMPROGRAMS\منظومة السحابة\منظومة المبيعات.lnk"
+
+  ; 2. في البداية: إنشاء اختصار أداة الإعدادات فقط (المبيعات تُنشأ ديناميكياً وحصرياً بعد اكتمال الإعدادات)
   CreateShortCut "$DESKTOP\إعدادات خادم السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=settings"
   CreateDirectory "$SMPROGRAMS\منظومة السحابة"
   CreateShortCut "$SMPROGRAMS\منظومة السحابة\إعدادات خادم السحابة.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=settings"
 
-  ; 2. إنشاء قالب أصلي لاختصار المبيعات داخل resources (يتم نسخه لسطح المكتب فور اكتمال الإعدادات)
-  CreateDirectory "$INSTDIR\resources"
-  CreateShortCut "$INSTDIR\resources\pos_shortcut_template.lnk" "$INSTDIR\منظومة السحابة.exe" "--mode=pos"
-
-  ; حفظ مسار التثبيت الفعلي في السجل للوصول إليه عند توليد اختصار المبيعات لاحقاً
+  ; 3. حفظ مسار التثبيت الفعلي في السجل للوصول إليه عند توليد اختصار المبيعات لاحقاً
   WriteRegStr HKCU "Software\TaqniyaCloud" "InstallPath" "$INSTDIR"
   WriteRegStr HKLM "Software\TaqniyaCloud" "InstallPath" "$INSTDIR"
 

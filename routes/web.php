@@ -37,6 +37,7 @@ Route::post('/setup/test-db', [SetupWizardController::class, 'testDatabase'])->n
 Route::post('/setup/test-host', [SetupWizardController::class, 'testHost'])->name('setup.test-host');
 Route::post('/setup/apply-master', [SetupWizardController::class, 'applyMaster'])->name('setup.apply-master');
 Route::post('/setup/apply-client', [SetupWizardController::class, 'applyClient'])->name('setup.apply-client');
+Route::post('/setup/create-pos-shortcut', [SetupWizardController::class, 'createPosShortcutEndpoint'])->name('setup.create-pos-shortcut');
 
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
