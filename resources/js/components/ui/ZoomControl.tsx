@@ -74,9 +74,9 @@ export function ZoomControl({ className = '', variant = 'default' }: ZoomControl
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
                     className="h-8 px-2.5 rounded-[3px] border border-slate-300 dark:border-[#2b3a4c] bg-slate-100 dark:bg-[#1e2632] hover:bg-slate-200 dark:hover:bg-[#283546] text-slate-700 dark:text-[#c6d4df] hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-mono font-bold"
-                    title="تعديل أبعاد وحجم الشاشة (Zoom)"
+                    title="أبعاد وحجم الشاشة (Zoom)"
                 >
-                    <Monitor className="w-3.5 h-3.5 text-[#1a9fff]" />
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-[#1a9fff]" />
                     <span>{currentZoom}%</span>
                 </button>
 

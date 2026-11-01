@@ -7,9 +7,10 @@ interface PdfExportButtonProps {
     className?: string;
     title?: string;
     totalCount?: number;
+    itemName?: string;
 }
 
-export function PdfExportButton({ href, excelHref, className, title = "تصدير PDF", totalCount }: PdfExportButtonProps) {
+export function PdfExportButton({ href, excelHref, className, title = "تصدير PDF", totalCount, itemName = "فاتورة" }: PdfExportButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedBatch, setSelectedBatch] = useState<number>(1);
 
@@ -74,9 +75,9 @@ export function PdfExportButton({ href, excelHref, className, title = "تصدي�
                             <div className="flex items-start gap-2">
                                 <Layers className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                                 <div>
-                                    <span className="font-black text-rose-700 dark:text-rose-300">نظام الدفعات (500 فاتورة لكل دفعة):</span>
+                                    <span className="font-black text-rose-700 dark:text-rose-300">نظام الدفعات (500 {itemName} لكل دفعة):</span>
                                     <br />
-                                    حفاظاً على أداء السيرفر وسرعة التنزيل وتفادي انقطاع الشبكة، يتم تصدير الـ PDF على دفعات بواقع <span className="font-black underline text-rose-600 dark:text-rose-400">500 فاتورة لكل دفعة</span> (مثلاً: الدفعات من 1 إلى 10 لإجمالي 5,000 فاتورة).
+                                    حفاظاً على أداء السيرفر وسرعة التنزيل وتفادي انقطاع الشبكة، يتم تصدير الـ PDF على دفعات بواقع <span className="font-black underline text-rose-600 dark:text-rose-400">500 {itemName} لكل دفعة</span> (مثلاً: الدفعات من 1 إلى {Math.max(totalBatches, 2)} لإجمالي السجلات).
                                 </div>
                             </div>
 

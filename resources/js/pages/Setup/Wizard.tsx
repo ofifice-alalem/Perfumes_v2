@@ -550,7 +550,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                     المرحلة 1: اختيار نمط الجهاز (Role Selection)
                    ══════════════════════════════════════════════════════════════ */}
                 {step === 'role' && (
-                    <div className="p-6 md:p-10 max-w-5xl mx-auto w-full my-auto flex flex-col pb-16 animate-in fade-in zoom-in-98 duration-200">
+                    <div className="p-6 md:p-10 max-w-5xl mx-auto w-full flex flex-col py-8 pb-24 animate-in fade-in zoom-in-98 duration-200">
                         <div className="mb-8 text-center md:text-right">
                             <span className="text-[11px] font-mono font-black text-[#1a9fff] uppercase tracking-widest bg-[#1a9fff]/10 px-2.5 py-1 rounded-[3px] border border-[#1a9fff]/20">
                                 HARDWARE NODE PROVISIONING

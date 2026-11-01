@@ -396,10 +396,10 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── PDF ─────────────────────────────────────────────────────────────────
 
-    public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): \Illuminate\Http\Response
+    public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(300);
 
         $arabic = new \ArPHP\I18N\Arabic();
         $g = fn(string $text) => $arabic->utf8Glyphs($text);
@@ -411,6 +411,12 @@ class ReportRepository implements ReportRepositoryInterface
             ->first();
 
         $data = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
+        $allMovements = $data['movements'] ?? [];
+        $totalMovements = count($allMovements);
+
+        $limitVal = ($limit && $limit > 0) ? $limit : 500;
+        $offsetVal = ($offset && $offset >= 0) ? $offset : 0;
+        $slicedMovements = array_slice($allMovements, $offsetVal, $limitVal);
 
         $isWhole = fn($n) => $n == floor($n);
         $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
@@ -424,6 +430,10 @@ class ReportRepository implements ReportRepositoryInterface
             'opening_balance' => 'رصيد افتتاحي',
         ];
 
+        $batchText = $totalMovements > $limitVal 
+            ? $g('الدفعة: ' . ($offsetVal + 1) . ' - ' . min($offsetVal + count($slicedMovements), $totalMovements) . ' من إجمالي ' . $totalMovements . ' حركة')
+            : null;
+
         $labels = [
             'title'               => $g('تقرير حركة المنتج'),
             'product_name'        => $g($product->name ?? ''),
@@ -433,10 +443,10 @@ class ReportRepository implements ReportRepositoryInterface
             'all_dates'           => $g('جميع التواريخ'),
             'opening_stock'       => $g('رصيد أول الفترة'),
             'closing_stock'       => $g('رصيد آخر الفترة'),
-            'movements_count'     => $g('عدد الحركات'),
+            'movements_count'     => $g('عدد حركات الدفعة'),
             'opening_val'         => $fmtN($data['opening_stock']),
             'closing_val'         => $fmtN($data['closing_stock']),
-            'movements_val'       => count($data['movements']),
+            'movements_val'       => count($slicedMovements),
             'filter_info'         => $g('معلومات التقرير'),
             'label_product'       => $g('المنتج'),
             'label_period'        => $g('الفترة'),
@@ -449,11 +459,13 @@ class ReportRepository implements ReportRepositoryInterface
             'col_price'           => $g('السعر'),
             'col_ref'             => $g('المرجع'),
             'col_balance'         => $g('الرصيد'),
+            'batch_info'          => $batchText,
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.product-movement-pdf', [
             'labels'     => $labels,
-            'movements'  => $data['movements'],
+            'movements'  => $slicedMovements,
+            'offset'     => $offsetVal,
             'typeLabels' => $typeLabels,
             'g'          => $g,
         ])
@@ -461,7 +473,8 @@ class ReportRepository implements ReportRepositoryInterface
         ->setOption('isHtml5ParserEnabled', true)
         ->setOption('isFontSubsettingEnabled', true);
 
-        return $pdf->stream('product-movement-' . now()->format('Y-m-d') . '.pdf');
+        $suffix = $batchText ? '-batch-' . (floor($offsetVal / $limitVal) + 1) : '';
+        return $pdf->stream('product-movement-' . now()->format('Y-m-d') . $suffix . '.pdf');
     }
 
     // ─── Stock Status ──────────────────────────────────────────────────────────

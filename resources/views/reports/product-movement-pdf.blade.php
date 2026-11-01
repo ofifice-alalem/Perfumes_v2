@@ -63,6 +63,9 @@
                 @else
                     <span>{{ $labels['all_dates'] }}</span>
                 @endif
+                @if(!empty($labels['batch_info']))
+                    &nbsp;|&nbsp;<span style="color: #0284c7; font-weight: bold;">{{ $labels['batch_info'] }}</span>
+                @endif
             </div>
         </div>
     </div>
@@ -102,6 +105,12 @@
             <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0f172a; border: none; border-right: 2px solid #0f172a; text-align: right;">{{ $labels['movement_type_label'] }}</td>
             <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $labels['label_type'] }}</td>
         </tr>
+        @if(!empty($labels['batch_info']))
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 12px 16px; font-size: 14px; font-weight: bold; color: #0284c7; border: none; border-right: 2px solid #0f172a; text-align: right;">{{ $labels['batch_info'] }}</td>
+            <td style="padding: 12px 16px; font-size: 11px; color: #64748b; border: none; text-align: left;">{{ $g('الدفعة المصدرة') }}</td>
+        </tr>
+        @endif
     </table>
 
     <table style="width: 80%; border-collapse: collapse; direction: rtl; margin: 12px auto 0; border: 2px solid #0f172a;">
@@ -171,7 +180,7 @@
             <td class="num {{ $isIn ? 'in' : 'out' }}">{{ ($isIn ? '+' : '-') . $fmtN($qty) }}</td>
             <td class="{{ $isIn ? 'in' : 'out' }}" style="direction:rtl; unicode-bidi:bidi-override;">{{ $g($typeLabels[$m['type']] ?? $m['type']) }}</td>
             <td>{{ \Carbon\Carbon::parse($m['date'])->format('Y-m-d') }}</td>
-            <td class="idx">{{ $i + 1 }}</td>
+            <td class="idx">{{ ($offset ?? 0) + $i + 1 }}</td>
         </tr>
         @endforeach
     </tbody>

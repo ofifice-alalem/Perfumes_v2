@@ -172,6 +172,8 @@ class ReportController extends Controller
             $request->input('date_from'),
             $request->input('date_to'),
             $request->input('type'),
+            $request->integer('limit') ?: 500,
+            $request->integer('offset') ?: 0
         );
     }
 
