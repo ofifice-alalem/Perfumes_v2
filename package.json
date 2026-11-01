@@ -12,7 +12,10 @@
         "desktop": "npx electron electron/main.js",
         "desktop:pos": "npx electron electron/launcher-pos.js",
         "desktop:settings": "npx electron electron/launcher-settings.js",
-        "build:exe": "npx electron-builder --win nsis"
+        "setup:runtime": "tar -xf runtime.7z -C .",
+        "pack:payload": "node scripts/pack-server-payload.js",
+        "build:exe": "npx electron-builder --win nsis",
+        "build:all": "npm run build && node scripts/pack-server-payload.js && npx electron-builder --win nsis"
     },
     "build": {
         "appId": "com.taqniyacloud.pos",

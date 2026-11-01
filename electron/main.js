@@ -81,6 +81,59 @@ try {
 }
 
 /**
+ * فحص وتثبيت خدمات النظام الأساسية (Apache24 و PHP 8.4) تلقائياً على نظام ويندوز للعميل الجديد
+ */
+function ensureSystemHostPrerequisites() {
+  try {
+    const resourcesDir = process.resourcesPath;
+    const possiblePhpSources = [
+      path.join(resourcesDir, 'php'),
+      path.join(resourcesDir, 'server_payload/php'),
+      path.join(path.dirname(process.execPath), 'php'),
+      path.join(path.dirname(process.execPath), 'server_payload/php'),
+    ];
+    const possibleApacheSources = [
+      path.join(resourcesDir, 'apache'),
+      path.join(resourcesDir, 'server_payload/apache'),
+      path.join(path.dirname(process.execPath), 'apache'),
+      path.join(path.dirname(process.execPath), 'server_payload/apache'),
+    ];
+
+    // 1. تثبيت PHP في C:\php-8.4.24 إن لم يكن موجوداً
+    if (!fs.existsSync('C:/php-8.4.24/php.exe')) {
+      for (const pSrc of possiblePhpSources) {
+        if (fs.existsSync(path.join(pSrc, 'php.exe'))) {
+          console.log(`[Taqniya Desktop] Deploying PHP runtime from ${pSrc} to C:\\php-8.4.24...`);
+          execSync(`robocopy "${pSrc}" "C:\\php-8.4.24" /E /XJ /R:1 /W:1 /MT:8 /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe', windowsHide: true });
+          break;
+        }
+      }
+    }
+
+    // 2. تثبيت Apache في C:\Apache24 وتسجيل الخدمة إن لم يكن موجوداً
+    if (!fs.existsSync('C:/Apache24/bin/httpd.exe')) {
+      for (const aSrc of possibleApacheSources) {
+        if (fs.existsSync(path.join(aSrc, 'bin/httpd.exe'))) {
+          console.log(`[Taqniya Desktop] Deploying Apache Server from ${aSrc} to C:\\Apache24...`);
+          execSync(`robocopy "${aSrc}" "C:\\Apache24" /E /XJ /R:1 /W:1 /MT:8 /XD logs /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe', windowsHide: true });
+          try {
+            execSync('cmd /c "C:\\Apache24\\bin\\httpd.exe -k install -n Apache2.4 & sc config Apache2.4 start= auto & net start Apache2.4"', { windowsHide: true });
+          } catch (e) {}
+          try {
+            if (fs.existsSync('C:/Apache24/bin/mkcert.exe')) {
+              execSync('cmd /c "C:\\Apache24\\bin\\mkcert.exe -install"', { windowsHide: true });
+            }
+          } catch (e) {}
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Taqniya Desktop] ensureSystemHostPrerequisites warning:', e.message);
+  }
+}
+
+/**
  * فك حزمة السيرفر server_payload.zip تلقائياً إن وجدت
  */
 function extractPayloadIfPresent() {
@@ -99,6 +152,7 @@ function extractPayloadIfPresent() {
         try {
           execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { windowsHide: true, timeout: 30000 });
           console.log('[Taqniya Desktop] Payload extracted successfully.');
+          ensureSystemHostPrerequisites();
           return true;
         } catch (e) {
           console.warn('[Taqniya Desktop] Payload extraction error:', e.message);
@@ -106,6 +160,7 @@ function extractPayloadIfPresent() {
       }
     }
   }
+  ensureSystemHostPrerequisites();
   return false;
 }
 
