@@ -21,6 +21,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     } catch (e) {
       return 1.0;
     }
+  },
+  // وظائف الاسترداد والتحكم بالخادم المحلي
+  startApache: () => ipcRenderer.invoke('start-apache-service'),
+  checkServer: () => ipcRenderer.invoke('check-server-status'),
+  retryLoad: (url) => {
+    try {
+      ipcRenderer.send('retry-load-url', url);
+    } catch (e) {
+      console.warn('Failed to send retry-load-url IPC:', e);
+    }
+  },
+  openSettings: () => {
+    try {
+      ipcRenderer.send('open-settings-app');
+    } catch (e) {
+      console.warn('Failed to send open-settings-app IPC:', e);
+    }
   }
 });
+
 

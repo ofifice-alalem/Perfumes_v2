@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خادم المنظومة متوقف — شركة تقنية السحابة</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: #0b0f15;
+      color: #c6d4df;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .container {
+      background: #121822;
+      border: 1px solid #233244;
+      border-radius: 4px;
+      max-width: 580px;
+      width: 100%;
+      padding: 36px 32px;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      position: relative;
+    }
+
+    .top-accent {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #d97706, #f59e0b, #ef4444);
+    }
+
+    .icon-wrapper {
+      width: 68px;
+      height: 68px;
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      color: #f59e0b;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 2px;
+      margin-bottom: 14px;
+      font-family: monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #8da2b5;
+      margin-bottom: 26px;
+    }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+      border-radius: 3px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease-in-out;
+    }
+
+    .btn-primary {
+      background: linear-gradient(to bottom, #75b022, #588a1b);
+      color: #ffffff;
+      border-top: 1px solid rgba(184, 232, 75, 0.6);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(to bottom, #8ed428, #68a420);
+    }
+
+    .btn-secondary {
+      background: #1e2632;
+      color: #c6d4df;
+      border: 1px solid #304154;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #2a3748;
+      color: #ffffff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .status-box {
+      margin-top: 18px;
+      padding: 10px 14px;
+      border-radius: 3px;
+      font-size: 12px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .status-box.info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(26, 159, 255, 0.1);
+      border: 1px solid rgba(26, 159, 255, 0.3);
+      color: #64b0ff;
+    }
+
+    .status-box.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    .status-box.success {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(100, 176, 255, 0.3);
+      border-top-color: #64b0ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer-note {
+      margin-top: 22px;
+      font-size: 11px;
+      color: #55697d;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="top-accent"></div>
+
+    <div class="icon-wrapper">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+      </svg>
+    </div>
+
+    <div class="badge">
+      <span class="badge-dot"></span>
+      <span>LOCAL APACHE SERVER OFFLINE</span>
+    </div>
+
+    <h1>خادم المنظومة المحلي متوقف حالياً</h1>
+    <p>
+      تعذر الاتصال بخادم Apache 2.4 المحلي (المنافذ 80 / 443 مغلقة). قد يكون الخادم متوقفاً عن العمل كخدمة نظام، أو تم إيقافه يدوياً.
+    </p>
+
+    <div class="actions">
+      <button id="btnStart" class="btn-primary" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span id="btnStartText">تشغيل خادم Apache الآن</span>
+      </button>
+
+      <button id="btnRetry" class="btn-secondary" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+        </svg>
+        <span>إعادة محاولة الاتصال</span>
+      </button>
+
+      <button id="btnSettings" class="btn-secondary" type="button" style="display: none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>فتح أداة إعدادات الخادم</span>
+      </button>
+    </div>
+
+    <div id="statusBox" class="status-box"></div>
+
+    <div class="footer-note">
+      شركة تقنية السحابة — نظام إدارة وتشغيل الخوادم المحلية
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetUrl = urlParams.get('target') || '';
+
+    const btnStart = document.getElementById('btnStart');
+    const btnStartText = document.getElementById('btnStartText');
+    const btnRetry = document.getElementById('btnRetry');
+    const btnSettings = document.getElementById('btnSettings');
+    const statusBox = document.getElementById('statusBox');
+
+    if (window.electronAPI && window.electronAPI.openSettings) {
+      btnSettings.style.display = 'flex';
+      btnSettings.addEventListener('click', () => {
+        window.electronAPI.openSettings();
+      });
+    }
+
+    function showStatus(type, html) {
+      statusBox.className = 'status-box ' + type;
+      statusBox.innerHTML = html;
+      statusBox.style.display = 'flex';
+    }
+
+    async function handleStart() {
+      btnStart.disabled = true;
+      btnRetry.disabled = true;
+      btnStartText.textContent = 'جاري إرسال أمر تشغيل السيرفر...';
+      showStatus('info', '<div class="spinner"></div><span>جاري تشغيل خادم Apache والتحقق من المنافذ...</span>');
+
+      try {
+        if (!window.electronAPI || !window.electronAPI.startApache) {
+          throw new Error('خاصية التحكم بالسيرفر غير متوفرة في بيئة المتصفح');
+        }
+
+        const res = await window.electronAPI.startApache();
+        if (res && res.success) {
+          showStatus('success', '<span>✅ تم تشغيل خادم Apache بنجاح! جاري الدخول للمنظومة...</span>');
+          setTimeout(() => {
+            if (window.electronAPI.retryLoad) {
+              window.electronAPI.retryLoad(targetUrl);
+            } else if (targetUrl) {
+              window.location.href = targetUrl;
+            } else {
+              window.location.reload();
+            }
+          }, 1200);
+        } else {
+          showStatus('error', '⚠️ تعذر بدء تشغيل السيرفر تلقائياً: ' + (res?.error || 'يرجى تشغيل التطبيق كمسؤول (Run as Administrator)'));
+          btnStart.disabled = false;
+          btnRetry.disabled = false;
+          btnStartText.textContent = 'إعادة محاولة تشغيل الخادم';
+        }
+      } catch (err) {
+        showStatus('error', '⚠️ خطأ: ' + err.message);
+        btnStart.disabled = false;
+        btnRetry.disabled = false;
+        btnStartText.textContent = 'تشغيل خادم Apache الآن';
+      }
+    }
+
+    async function handleRetry() {
+      btnRetry.disabled = true;
+      showStatus('info', '<div class="spinner"></div><span>جاري فحص استجابة الخادم...</span>');
+
+      if (window.electronAPI && window.electronAPI.checkServer) {
+        const isUp = await window.electronAPI.checkServer();
+        if (isUp) {
+          showStatus('success', '<span>✅ الخادم متصل الآن! جاري التحويل...</span>');
+          setTimeout(() => {
+            if (window.electronAPI.retryLoad) {
+              window.electronAPI.retryLoad(targetUrl);
+            } else {
+              window.location.reload();
+            }
+          }, 600);
+          return;
+        }
+      }
+
+      setTimeout(() => {
+        showStatus('error', '❌ الخادم ما زال متوقفاً. اضغط على «تشغيل خادم Apache الآن» أعلاه.');
+        btnRetry.disabled = false;
+      }, 1000);
+    }
+
+    btnStart.addEventListener('click', handleStart);
+    btnRetry.addEventListener('click', handleRetry);
+  </script>
+</body>
+</html>
+

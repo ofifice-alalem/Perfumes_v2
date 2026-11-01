@@ -17,7 +17,7 @@ nativeTheme.themeSource = 'dark';
 /**
  * فحص ما إذا كان منفذ معين يعمل ويستجيب للاتصال
  */
-function probePort(port, host = '127.0.0.1', timeoutMs = 800) {
+function probePort(port, host = '127.0.0.1', timeoutMs = 400) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     let hasResolved = false;
@@ -372,6 +372,73 @@ async function startInternalPhpServer(port = 8181) {
 let posWindow = null;
 
 /**
+ * بدء تشغيل خدمة Apache 2.4 مع طلب صلاحيات المسؤول UAC عند الحاجة
+ */
+async function startApacheServiceWithElevation() {
+  let apacheActive = (await probePort(80)) || (await probePort(443));
+  if (apacheActive) {
+    return { success: true };
+  }
+
+  // 1. محاولة التشغيل القياسي لخدمة ويندوز
+  let started = false;
+  try {
+    execSync('net start Apache2.4', { windowsHide: true, timeout: 5000 });
+    started = true;
+  } catch (errService) {
+    console.warn('[Taqniya Desktop] Standard net start failed (likely needs admin rights):', errService.message);
+  }
+
+  // 2. إذا لم تكن الخدمة تعمل أو تم رفض الوصول، استدعاء صلاحيات المسؤول عبر PowerShell
+  if (!started) {
+    try {
+      console.log('[Taqniya Desktop] Requesting UAC elevation to start Apache2.4 service...');
+      const psCmd = 'Start-Process cmd -ArgumentList "/c net start Apache2.4" -Verb RunAs -WindowStyle Hidden';
+      execSync(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "${psCmd}"`, {
+        windowsHide: true,
+        timeout: 10000,
+      });
+    } catch (errUac) {
+      console.warn('[Taqniya Desktop] Elevated start failed or was cancelled by user:', errUac.message);
+    }
+  }
+
+  // 3. التحقق من استجابة المنافذ 80 و 443 لمدة تصل إلى 8 ثوانٍ
+  for (let i = 0; i < 16; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    apacheActive = (await probePort(80)) || (await probePort(443));
+    if (apacheActive) {
+      console.log('[Taqniya Desktop] Apache service is now active and responding!');
+      return { success: true };
+    }
+  }
+
+  // 4. محاولة بديلة إضافية عبر httpd.exe المباشر
+  const httpdPath = fs.existsSync('C:/Apache24/bin/httpd.exe') ? 'C:\\Apache24\\bin\\httpd.exe' : '';
+  if (httpdPath) {
+    try {
+      console.log('[Taqniya Desktop] Attempting direct httpd service start via RunAs...');
+      const psDirectCmd = `Start-Process cmd -ArgumentList "/c ""${httpdPath}"" -k start" -Verb RunAs -WindowStyle Hidden`;
+      execSync(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "${psDirectCmd}"`, {
+        windowsHide: true,
+        timeout: 10000,
+      });
+
+      for (let i = 0; i < 8; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        apacheActive = (await probePort(80)) || (await probePort(443));
+        if (apacheActive) return { success: true };
+      }
+    } catch (e) {}
+  }
+
+  return {
+    success: false,
+    error: 'تعذر تشغيل خدمة Apache2.4. يرجى التأكد من الموافقة على طلب الصلاحيات كمسؤول أو تشغيل السيرفر من لوحة التحكم.',
+  };
+}
+
+/**
  * التحقق من تشغيل خادم Apache 2.4 وإرسال أمر التشغيل تلقائياً إذا كان متوقفاً
  */
 async function ensureApacheRunning() {
@@ -380,35 +447,164 @@ async function ensureApacheRunning() {
     return true;
   }
 
-  console.log('[Taqniya Desktop] Apache is not running. Sending command to start Apache service...');
+  console.log('[Taqniya Desktop] Apache is not running. Attempting auto-start with elevation fallback...');
+  const result = await startApacheServiceWithElevation();
+  return result.success;
+}
 
-  // 1. محاولة تشغيل خدمة ويندوز Apache2.4
-  try {
-    execSync('net start Apache2.4', { windowsHide: true, timeout: 5000 });
-  } catch (errService) {
-    // 2. إذا لم تكن الخدمة قيد التشغيل أو فشلت، محاولة التشغيل عبر أمر httpd المباشر
+/**
+ * إظهار صفحة الاسترداد الأنيقة عند توقف السيرفر لمنع ظهور شاشة سوداء نهائياً
+ */
+function showOfflineScreen(targetWindow, targetUrl = '') {
+  if (!targetWindow || targetWindow.isDestroyed()) return;
+
+  const offlineHtmlPath = path.join(__dirname, 'server-offline.html');
+  if (fs.existsSync(offlineHtmlPath)) {
     try {
-      const httpdPath = fs.existsSync('C:/Apache24/bin/httpd.exe')
-        ? 'C:\\Apache24\\bin\\httpd.exe'
-        : 'httpd.exe';
-      execSync(`"${httpdPath}" -k start`, { windowsHide: true, timeout: 5000 });
-    } catch (errDirect) {
-      console.warn('[Taqniya Desktop] Direct httpd start attempt message:', errDirect.message);
+      const searchParam = targetUrl ? `?target=${encodeURIComponent(targetUrl)}` : '';
+      targetWindow.loadFile(offlineHtmlPath, { search: searchParam });
+      return;
+    } catch (e) {
+      console.warn('[Taqniya Desktop] loadFile failed, fallback to direct HTML:', e.message);
     }
   }
 
-  // 3. التحقق من استجابة الخادم خلال فترة وجيزة (حتى 3 ثوانٍ)
-  for (let i = 0; i < 6; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    apacheActive = (await probePort(80)) || (await probePort(443));
-    if (apacheActive) {
-      console.log('[Taqniya Desktop] Apache server is now active and responding!');
-      return true;
-    }
-  }
+  // 🛡️ قالب الطوارئ المضمن مباشرة داخل main.js لضمان عدم ظهور شاشة سوداء تحت أي ظرف
+  const embeddedHtml = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>خادم المنظومة متوقف — شركة تقنية السحابة</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif; user-select: none; }
+    body { background-color: #0b0f15; color: #c6d4df; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; }
+    .container { background: #121822; border: 1px solid #233244; border-radius: 6px; max-width: 560px; width: 100%; padding: 36px 30px; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7); text-align: center; position: relative; }
+    .top-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #d97706, #f59e0b, #ef4444); }
+    .icon-wrapper { width: 64px; height: 64px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #f59e0b; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 11px; font-weight: 800; border-radius: 4px; margin-bottom: 12px; font-family: monospace; }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #ef4444; }
+    h1 { font-size: 21px; font-weight: 900; color: #ffffff; margin-bottom: 10px; }
+    p { font-size: 13px; line-height: 1.6; color: #8da2b5; margin-bottom: 24px; }
+    .actions { display: flex; flex-direction: column; gap: 10px; }
+    button { border: none; cursor: pointer; font-size: 13px; font-weight: 800; border-radius: 4px; padding: 12px 20px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.15s ease-in-out; }
+    .btn-primary { background: linear-gradient(to bottom, #75b022, #588a1b); color: #ffffff; border-top: 1px solid rgba(184, 232, 75, 0.6); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(to bottom, #8ed428, #68a420); }
+    .btn-secondary { background: #1e2632; color: #c6d4df; border: 1px solid #304154; }
+    .btn-secondary:hover:not(:disabled) { background: #2a3748; color: #ffffff; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status-box { margin-top: 16px; padding: 10px 14px; border-radius: 4px; font-size: 12px; font-weight: 700; display: none; align-items: center; justify-content: center; gap: 8px; }
+    .status-box.info { background: rgba(30, 41, 59, 0.9); border: 1px solid #334155; color: #94a3b8; }
+    .status-box.success { background: rgba(22, 101, 52, 0.3); border: 1px solid #16a34a; color: #4ade80; }
+    .status-box.error { background: rgba(153, 27, 27, 0.3); border: 1px solid #dc2626; color: #f87171; }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, 0.2); border-top-color: #ffffff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .footer-note { margin-top: 24px; font-size: 11px; color: #4b6178; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-accent"></div>
+    <div class="icon-wrapper">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+      </svg>
+    </div>
+    <div class="badge"><div class="badge-dot"></div><span>خادم المنظومة غير متصل (Apache Offline)</span></div>
+    <h1>تعذر الاتصال بخادم Apache المحلي</h1>
+    <p>يبدو أن خدمة الخادم المحلي متوقفة حالياً. اضغط على الزر أدناه لتشغيل الخادم تلقائياً أو إعادة المحاولة.</p>
+    <div class="actions">
+      <button id="btnStart" class="btn-primary" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span id="btnStartText">تشغيل خادم Apache الآن</span>
+      </button>
+      <button id="btnRetry" class="btn-secondary" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        <span>إعادة محاولة الاتصال</span>
+      </button>
+    </div>
+    <div id="statusBox" class="status-box"></div>
+    <div class="footer-note">شركة تقنية السحابة — نظام إدارة وتشغيل الخوادم المحلية</div>
+  </div>
+  <script>
+    const targetUrl = decodeURIComponent("${encodeURIComponent(targetUrl)}");
+    const btnStart = document.getElementById('btnStart');
+    const btnStartText = document.getElementById('btnStartText');
+    const btnRetry = document.getElementById('btnRetry');
+    const statusBox = document.getElementById('statusBox');
 
-  console.warn('[Taqniya Desktop] Apache server did not respond on port 80/443.');
-  return false;
+    function showStatus(type, html) {
+      statusBox.className = 'status-box ' + type;
+      statusBox.innerHTML = html;
+      statusBox.style.display = 'flex';
+    }
+
+    async function handleStart() {
+      btnStart.disabled = true;
+      btnRetry.disabled = true;
+      btnStartText.textContent = 'جاري إرسال أمر تشغيل السيرفر...';
+      showStatus('info', '<div class="spinner"></div><span>جاري تشغيل خادم Apache والتحقق من المنافذ...</span>');
+
+      try {
+        if (!window.electronAPI || !window.electronAPI.startApache) {
+          throw new Error('خاصية التحكم بالسيرفر غير متوفرة');
+        }
+        const res = await window.electronAPI.startApache();
+        if (res && res.success) {
+          showStatus('success', '<span>✅ تم تشغيل خادم Apache بنجاح! جاري الدخول...</span>');
+          setTimeout(() => {
+            if (window.electronAPI.retryLoad) window.electronAPI.retryLoad(targetUrl);
+            else if (targetUrl) window.location.href = targetUrl;
+            else window.location.reload();
+          }, 1000);
+        } else {
+          showStatus('error', '⚠️ تعذر التشغيل التلقائي: ' + (res?.error || 'يرجى تشغيل التطبيق كمسؤول'));
+          btnStart.disabled = false;
+          btnRetry.disabled = false;
+          btnStartText.textContent = 'إعادة محاولة تشغيل الخادم';
+        }
+      } catch (err) {
+        showStatus('error', '⚠️ خطأ: ' + err.message);
+        btnStart.disabled = false;
+        btnRetry.disabled = false;
+        btnStartText.textContent = 'تشغيل خادم Apache الآن';
+      }
+    }
+
+    async function handleRetry() {
+      btnRetry.disabled = true;
+      showStatus('info', '<div class="spinner"></div><span>جاري فحص استجابة الخادم...</span>');
+      if (window.electronAPI && window.electronAPI.checkServer) {
+        const isUp = await window.electronAPI.checkServer();
+        if (isUp) {
+          showStatus('success', '<span>✅ الخادم متصل الآن! جاري التحويل...</span>');
+          setTimeout(() => {
+            if (window.electronAPI.retryLoad) window.electronAPI.retryLoad(targetUrl);
+            else window.location.reload();
+          }, 600);
+          return;
+        }
+      }
+      setTimeout(() => {
+        showStatus('error', '❌ الخادم ما زال متوقفاً. اضغط على «تشغيل خادم Apache الآن» أعلاه.');
+        btnRetry.disabled = false;
+      }, 1000);
+    }
+
+    btnStart.addEventListener('click', handleStart);
+    btnRetry.addEventListener('click', handleRetry);
+  </script>
+</body>
+</html>`;
+
+  targetWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(embeddedHtml)}`);
 }
 
 /**
@@ -424,12 +620,6 @@ async function createPosWindow() {
   const config = readEnvConfig();
   const iconPath = path.join(__dirname, '../public/images/logo.png');
   const hostDomain = config.domain || 'tajori.store';
-
-  // 🟢 التحقق من تشغيل خادم Apache وتشغيله تلقائياً إذا كان متوقفاً
-  let apacheActive = false;
-  if (!config.masterHost) {
-    apacheActive = await ensureApacheRunning();
-  }
 
   posWindow = new BrowserWindow({
     width: 1440,
@@ -458,16 +648,30 @@ async function createPosWindow() {
   if (config.masterHost) {
     const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
     targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
-  } else if (apacheActive) {
-    targetUrl = `https://${hostDomain}/invoices/create`;
   } else {
-    console.log('[Taqniya Desktop] Fallback: Starting internal PHP server on 8181 for POS window...');
-    await startInternalPhpServer(8181);
-    targetUrl = 'http://127.0.0.1:8181/invoices/create';
+    targetUrl = `https://${hostDomain}/invoices/create`;
   }
 
-  console.log(`[Taqniya Desktop] Opening POS Window — Loading: ${targetUrl}`);
-  posWindow.loadURL(targetUrl);
+  // التقاط فشل الاتصال بالسيرفر لمنع أي شاشة سوداء
+  posWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3) return; // ERR_ABORTED
+    console.warn(`[Taqniya Desktop] POS load failed (${errorCode}: ${errorDescription}) on ${validatedURL}`);
+    showOfflineScreen(posWindow, targetUrl);
+  });
+
+  if (!config.masterHost) {
+    const apacheActive = (await probePort(80, '127.0.0.1', 300)) || (await probePort(443, '127.0.0.1', 300));
+    if (!apacheActive) {
+      console.log('[Taqniya Desktop] Local Apache is offline. Showing recovery UI immediately for POS...');
+      showOfflineScreen(posWindow, targetUrl);
+    } else {
+      console.log(`[Taqniya Desktop] Opening POS Window — Loading: ${targetUrl}`);
+      posWindow.loadURL(targetUrl);
+    }
+  } else {
+    console.log(`[Taqniya Desktop] Opening POS Window (Remote Master) — Loading: ${targetUrl}`);
+    posWindow.loadURL(targetUrl);
+  }
 
   posWindow.on('closed', () => {
     posWindow = null;
@@ -480,6 +684,48 @@ async function createPosWindow() {
 ipcMain.on('open-pos-app', async () => {
   console.log('[Taqniya Desktop] Opening standalone POS Cashier window from Settings...');
   await createPosWindow();
+});
+
+// تشغيل خدمة Apache مع رفع الصلاحيات
+ipcMain.handle('start-apache-service', async () => {
+  return await startApacheServiceWithElevation();
+});
+
+// فحص حالة السيرفر
+ipcMain.handle('check-server-status', async () => {
+  return (await probePort(80)) || (await probePort(443));
+});
+
+// إعادة محاولة تحميل الرابط المطلوب
+ipcMain.on('retry-load-url', (event, targetUrl) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  if (win && !win.isDestroyed()) {
+    if (targetUrl && targetUrl.startsWith('http')) {
+      win.loadURL(targetUrl);
+    } else {
+      const config = readEnvConfig();
+      const hostDomain = config.domain || 'tajori.store';
+      const fallbackUrl = isSettingsMode ? `https://${hostDomain}/setup` : `https://${hostDomain}/invoices/create`;
+      win.loadURL(fallbackUrl);
+    }
+  }
+});
+
+// فتح شاشة الإعدادات
+ipcMain.on('open-settings-app', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+  if (!win || win.isDestroyed()) return;
+
+  const config = readEnvConfig();
+  const hostDomain = config.domain || 'tajori.store';
+  const apacheActive = (await probePort(80)) || (await probePort(443));
+  if (apacheActive) {
+    win.loadURL(`https://${hostDomain}/setup`);
+  } else {
+    console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup wizard...');
+    await startInternalPhpServer(8181);
+    win.loadURL('http://127.0.0.1:8181/setup');
+  }
 });
 
 /**
@@ -533,39 +779,36 @@ async function createMainWindow() {
       .catch(() => {});
   });
 
-  let targetUrl = '';
+  // التقاط فشل الاتصال بالسيرفر لمنع أي شاشة سوداء نهائياً
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3) return; // ERR_ABORTED
+    console.warn(`[Taqniya Desktop] Main load failed (${errorCode}: ${errorDescription}) on ${validatedURL}`);
+    showOfflineScreen(mainWindow, targetUrl);
+  });
 
+  let targetUrl = '';
   const hostDomain = config.domain || 'tajori.store';
 
-  if (isSettings) {
-    // ⚙️ نمط الإعدادات (Settings Mode)
-    const apacheActive = (await probePort(80)) || (await probePort(443));
-    if (apacheActive) {
-      targetUrl = `https://${hostDomain}/setup`;
-    } else {
-      console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup...');
-      await startInternalPhpServer(8181);
-      targetUrl = 'http://127.0.0.1:8181/setup';
-    }
+  if (config.masterHost) {
+    const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
+    targetUrl = isSettings
+      ? (baseUrl.endsWith('/') ? `${baseUrl}setup` : `${baseUrl}/setup`)
+      : (baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`);
+    console.log(`[Taqniya Desktop] Mode: [${currentMode}] (Remote Master) — Loading: ${targetUrl}`);
+    mainWindow.loadURL(targetUrl);
   } else {
-    // 🛒 نمط المبيعات اليومي (POS Mode) — فحص خادم Apache وتشغيله تلقائياً إذا كان متوقفاً
-    if (config.masterHost) {
-      const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
-      targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
+    targetUrl = isSettings ? `https://${hostDomain}/setup` : `https://${hostDomain}/invoices/create`;
+
+    // 🟢 فحص فوري وسريع (خلال 300ms) لخادم Apache المحلي لمنع أي تأخير في إظهار الشاشة
+    const apacheActive = (await probePort(80, '127.0.0.1', 300)) || (await probePort(443, '127.0.0.1', 300));
+    if (!apacheActive) {
+      console.log(`[Taqniya Desktop] Local Apache is offline (${currentMode} mode). Showing recovery UI instantly...`);
+      showOfflineScreen(mainWindow, targetUrl);
     } else {
-      const apacheActive = await ensureApacheRunning();
-      if (apacheActive) {
-        targetUrl = `https://${hostDomain}/invoices/create`;
-      } else {
-        console.log('[Taqniya Desktop] Fallback: Starting portable PHP server on port 8181 for POS...');
-        await startInternalPhpServer(8181);
-        targetUrl = 'http://127.0.0.1:8181/invoices/create';
-      }
+      console.log(`[Taqniya Desktop] Mode: [${currentMode}] — Loading: ${targetUrl}`);
+      mainWindow.loadURL(targetUrl);
     }
   }
-
-  console.log(`[Taqniya Desktop] Mode: [${currentMode}] — Loading: ${targetUrl}`);
-  mainWindow.loadURL(targetUrl);
 
   // اختصارات لوحة المفاتيح
   mainWindow.webContents.on('before-input-event', (event, input) => {
