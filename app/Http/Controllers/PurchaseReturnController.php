@@ -31,7 +31,7 @@ class PurchaseReturnController extends Controller
             'returns'        => $this->returns->paginated(20),
             'suppliers'      => $this->suppliers->forSelectList(),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -54,7 +54,7 @@ class PurchaseReturnController extends Controller
         return Inertia::render('PurchaseReturns/Create', [
             'suppliers'        => $this->suppliers->forSelectList()->filter->is_active->values(),
             'products'         => $products,
-            'paymentMethods'   => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods'   => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'selected_supplier_id' => $supplierId,
         ]);
     }
@@ -136,7 +136,7 @@ class PurchaseReturnController extends Controller
     {
         return Inertia::render('PurchaseReturns/Show', [
             'return'         => $this->returns->findWithRelations($id),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

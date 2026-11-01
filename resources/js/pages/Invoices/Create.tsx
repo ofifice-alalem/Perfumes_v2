@@ -169,6 +169,7 @@ function getProductDisplayPrice(p: Product, isVip: boolean): string {
 
 export default function InvoicesCreate({ customers, products, sizes, paymentMethods, flash, editInvoice, recentInvoices = [] }: Props) {
     const isEditMode = !!editInvoice;
+    const activePaymentMethods = (paymentMethods || []).filter(m => (m as any).is_active === undefined || (m as any).is_active);
 
     // Build initial cart from invoice items when editing
     function buildInitialCart(): CartItem[] {
@@ -403,17 +404,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
     useEffect(() => {
         const loadDefaultPayment = () => {
             const saved = localStorage.getItem('defaultPaymentMethodId');
-            if (saved && paymentMethods.find(m => String(m.id) === saved)) {
+            if (saved && activePaymentMethods.find(m => String(m.id) === saved)) {
                 setDefaultPaymentMethodId(saved);
-            } else if (paymentMethods.length > 0) {
-                setDefaultPaymentMethodId(String(paymentMethods[0].id));
+            } else if (activePaymentMethods.length > 0) {
+                setDefaultPaymentMethodId(String(activePaymentMethods[0].id));
             }
         };
 
         loadDefaultPayment();
         window.addEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
         return () => window.removeEventListener('defaultPaymentMethodChanged', loadDefaultPayment);
-    }, [paymentMethods]);
+    }, [activePaymentMethods]);
 
     // ── Barcode Scanner Listener ─────────────────────────────────────────────
     useEffect(() => {
@@ -597,8 +598,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
             const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
 
             if (!paymentManuallySet) {
-                if (prev.length === 0 && paymentMethods.length > 0) {
-                    const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
+                if (prev.length === 0 && activePaymentMethods.length > 0) {
+                    const def = activePaymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || activePaymentMethods[0];
                     setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
                 } else if (payments.length === 1) {
                     setPayments(prevPay => [{ ...prevPay[0], amount: newTotal.toFixed(2) }]);
@@ -630,8 +631,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
 
                 if (!paymentManuallySet) {
-                    if (prev.length === 0 && paymentMethods.length > 0) {
-                        const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
+                    if (prev.length === 0 && activePaymentMethods.length > 0) {
+                        const def = activePaymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || activePaymentMethods[0];
                         setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
                     } else if (payments.length === 1) {
                         setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
@@ -676,8 +677,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 }
                 const newTotal = newCart.reduce((s, i) => s + i.line_total, 0);
                 if (!paymentManuallySet) {
-                    if (prev.length === 0 && paymentMethods.length > 0) {
-                        const def = paymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || paymentMethods[0];
+                    if (prev.length === 0 && activePaymentMethods.length > 0) {
+                        const def = activePaymentMethods.find(m => String(m.id) === defaultPaymentMethodId) || activePaymentMethods[0];
                         setPayments([{ payment_method_id: String(def.id), method_name: def.name, amount: newTotal.toFixed(2) }]);
                     } else if (payments.length === 1) {
                         setPayments(prev => [{ ...prev[0], amount: newTotal.toFixed(2) }]);
@@ -1047,7 +1048,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">الدين السابق: {originalDebt.toFixed(2)}</span>
                                     </div>
                                     <button onClick={() => {
-                                        const m = paymentMethods[0];
+                                        const m = activePaymentMethods[0];
                                         if (!m) return;
                                         setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
                                     }} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 h-9 sm:h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0 active:scale-95">
@@ -1074,7 +1075,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 cart={cart}
                                 products={productsList}
                                 sizes={sizes}
-                                paymentMethods={paymentMethods}
+                                paymentMethods={activePaymentMethods}
                                 payments={payments}
                                 paymentManuallySet={paymentManuallySet}
                                 setCart={setCart}
@@ -1178,7 +1179,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     <span className="text-xs font-bold text-red-600 dark:text-red-400 truncate">دين: {originalDebt.toFixed(2)}</span>
                                 </div>
                                 <button onClick={() => {
-                                    const m = paymentMethods[0];
+                                    const m = activePaymentMethods[0];
                                     if (!m) return;
                                     setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
                                     setActiveTab('payment');
@@ -1259,7 +1260,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         cart={cart}
                                         products={productsList}
                                         sizes={sizes}
-                                        paymentMethods={paymentMethods}
+                                        paymentMethods={activePaymentMethods}
                                         payments={payments}
                                         paymentManuallySet={paymentManuallySet}
                                         setCart={setCart}
@@ -1311,7 +1312,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             <div className="flex flex-col gap-2.5">
                                                 <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة دفعة</label>
                                                 <div className="grid grid-cols-2 gap-2">
-                                                    {paymentMethods.map(m => (
+                                                    {activePaymentMethods.map(m => (
                                                         <button key={m.id}
                                                             onClick={() => handleSelectPaymentMethod(String(m.id))}
                                                             className={`h-16 rounded-[14px] font-bold text-sm transition-all border-2 ${selMethod === String(m.id)
@@ -1563,7 +1564,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 cart={cart}
                 payments={payments}
                 debtPayment={debtPayment}
-                paymentMethods={paymentMethods}
+                paymentMethods={activePaymentMethods}
                 customerId={customerId}
                 selectedCustomer={selectedCustomer}
                 originalDebt={originalDebt}

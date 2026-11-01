@@ -26,7 +26,7 @@ class InvoiceReturnController extends Controller
             'returns'        => $this->returns->paginated(30),
             'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -89,7 +89,7 @@ class InvoiceReturnController extends Controller
                     ] : null,
                 ]),
             'sizes' => \App\Models\Size::orderBy('value')->get(['id', 'label', 'value']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'selected_customer_id' => (int) $customerId,
             'selected_invoice_id'  => $invoiceId ? (int) $invoiceId : null,
             'invoice_items'        => $invoiceItems,
@@ -167,7 +167,7 @@ class InvoiceReturnController extends Controller
     {
         return Inertia::render('InvoiceReturns/Show', [
             'return'         => $this->returns->findWithRelations($id),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

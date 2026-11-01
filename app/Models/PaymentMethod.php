@@ -17,6 +17,18 @@ class PaymentMethod extends Model implements Auditable
         'is_active' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function () {
+            \Illuminate\Support\Facades\Cache::forget('pos_payment_methods_list');
+            \Illuminate\Support\Facades\Cache::forget('global_payment_methods_list');
+        });
+        static::deleted(function () {
+            \Illuminate\Support\Facades\Cache::forget('pos_payment_methods_list');
+            \Illuminate\Support\Facades\Cache::forget('global_payment_methods_list');
+        });
+    }
+
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);

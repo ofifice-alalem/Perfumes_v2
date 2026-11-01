@@ -52,7 +52,7 @@
 <div id="page-header">
     <div class="ph-tbl">
         <div class="ph-l">
-            <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 40px; max-width: 80px;">
+            <img src="{{ $reportLogo ?? public_path('images/taqniya-logo.png') }}" style="max-height: 40px; max-width: 80px;">
         </div>
         <div class="ph-r">
             <div class="ph-title">{{ $labels['title'] }}</div>
@@ -70,7 +70,7 @@
 {{-- Cover Page --}}
 <div style="page-break-after: always; padding: 20px 40px; text-align: center;">
     <div style="margin-bottom: 20px;">
-        <img src="{{ public_path('images/logo.jpg') }}" style="max-height: 300px; max-width: 550px;">
+        <img src="{{ $reportLogo ?? public_path('images/taqniya-logo.png') }}" style="max-height: 300px; max-width: 550px;">
     </div>
     <div style="border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px;">
         <div style="font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 8px;">{{ $labels['title'] }}</div>

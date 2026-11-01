@@ -25,7 +25,7 @@ class SupplierPaymentController extends Controller
         return Inertia::render('SupplierPayments/Index', [
             'payments'       => $this->payments->paginated(20),
             'suppliers'      => $this->suppliers->forSelectList(),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'products'       => \App\Models\Product::orderBy('name')->get(['id', 'name']),
         ]);
     }

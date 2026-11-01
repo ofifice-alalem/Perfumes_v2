@@ -36,7 +36,7 @@ class HandleInertiaRequests extends Middleware
             'globalPaymentMethods' => \Illuminate\Support\Facades\Cache::remember(
                 'global_payment_methods_list',
                 3600,
-                fn() => \App\Models\PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()
+                fn() => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()
             ),
             'storeBranding' => (function() {
                 try {

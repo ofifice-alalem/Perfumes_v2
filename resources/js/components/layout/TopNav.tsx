@@ -22,19 +22,26 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
   const [defaultPaymentId, setDefaultPaymentId] = useState<string>('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('defaultPaymentMethodId');
-    if (saved && globalPaymentMethods.find((m: any) => String(m.id) === saved)) {
-      setDefaultPaymentId(saved);
-    } else if (globalPaymentMethods.length > 0) {
-      setDefaultPaymentId(String(globalPaymentMethods[0].id));
-    }
+    const syncDefault = () => {
+      const saved = localStorage.getItem('defaultPaymentMethodId');
+      if (saved && globalPaymentMethods.find((m: any) => String(m.id) === saved)) {
+        setDefaultPaymentId(saved);
+      } else if (globalPaymentMethods.length > 0) {
+        setDefaultPaymentId(String(globalPaymentMethods[0].id));
+      } else {
+        setDefaultPaymentId('');
+      }
+    };
+
+    syncDefault();
+
+    window.addEventListener('defaultPaymentMethodChanged', syncDefault);
+    return () => window.removeEventListener('defaultPaymentMethodChanged', syncDefault);
   }, [globalPaymentMethods]);
 
   useEffect(() => {
     if (defaultPaymentId) {
       localStorage.setItem('defaultPaymentMethodId', defaultPaymentId);
-      // Dispatch a custom event so other components can know about the change
-      window.dispatchEvent(new Event('defaultPaymentMethodChanged'));
     }
   }, [defaultPaymentId]);
 

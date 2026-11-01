@@ -95,5 +95,39 @@ class AppServiceProvider extends ServiceProvider
         };
         \App\Models\PaymentMethod::saved($clearPaymentMethods);
         \App\Models\PaymentMethod::deleted($clearPaymentMethods);
+
+        // ─── Reports Dynamic Branding (Logo & Store Name) ─────────────────────
+        \Illuminate\Support\Facades\View::composer('reports.*', function ($view) {
+            $logoSetting = \App\Models\Setting::get('store_logo');
+            $storeName = \App\Models\Setting::get('store_name', env('APP_NAME', 'منظومة السحابة'));
+
+            $resolvedLogo = null;
+            if ($logoSetting) {
+                if (str_starts_with($logoSetting, 'data:')) {
+                    $resolvedLogo = $logoSetting;
+                } else {
+                    $cleanPath = ltrim(parse_url($logoSetting, PHP_URL_PATH) ?: $logoSetting, '/');
+                    $fullPath = public_path($cleanPath);
+                    if (file_exists($fullPath)) {
+                        $resolvedLogo = $fullPath;
+                    }
+                }
+            }
+
+            if (!$resolvedLogo) {
+                if (file_exists(public_path('images/taqniya-logo.png'))) {
+                    $resolvedLogo = public_path('images/taqniya-logo.png');
+                } elseif (file_exists(public_path('images/logo.png'))) {
+                    $resolvedLogo = public_path('images/logo.png');
+                } else {
+                    $resolvedLogo = public_path('images/logo.jpg');
+                }
+            }
+
+            $view->with([
+                'reportLogo'      => $resolvedLogo,
+                'reportStoreName' => $storeName,
+            ]);
+        });
     }
 }

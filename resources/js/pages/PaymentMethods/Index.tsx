@@ -67,6 +67,34 @@ export default function PaymentMethodsIndex({ paymentMethods, flash }: Props) {
     const createForm = useForm({ ...emptyForm });
     const editForm   = useForm({ name: '', is_active: true });
 
+    const [defaultPaymentId, setDefaultPaymentId] = useState<string>('');
+
+    useEffect(() => {
+        const syncDefault = () => {
+            const saved = localStorage.getItem('defaultPaymentMethodId');
+            const activeMethods = paymentMethods.filter(m => m.is_active);
+            if (saved && activeMethods.find(m => String(m.id) === saved)) {
+                setDefaultPaymentId(saved);
+            } else if (activeMethods.length > 0) {
+                const firstId = String(activeMethods[0].id);
+                setDefaultPaymentId(firstId);
+                localStorage.setItem('defaultPaymentMethodId', firstId);
+                window.dispatchEvent(new Event('defaultPaymentMethodChanged'));
+            }
+        };
+
+        syncDefault();
+        window.addEventListener('defaultPaymentMethodChanged', syncDefault);
+        return () => window.removeEventListener('defaultPaymentMethodChanged', syncDefault);
+    }, [paymentMethods]);
+
+    function handleSetDefault(id: number) {
+        const idStr = String(id);
+        setDefaultPaymentId(idStr);
+        localStorage.setItem('defaultPaymentMethodId', idStr);
+        window.dispatchEvent(new Event('defaultPaymentMethodChanged'));
+    }
+
     const activeCount   = paymentMethods.filter(m => m.is_active).length;
     const inactiveCount = paymentMethods.filter(m => !m.is_active).length;
 
@@ -108,6 +136,13 @@ export default function PaymentMethodsIndex({ paymentMethods, flash }: Props) {
     }
 
     function toggleStatus(pm: PaymentMethod) {
+        if (pm.is_active && defaultPaymentId === String(pm.id)) {
+            const nextActive = paymentMethods.find(m => m.id !== pm.id && m.is_active);
+            if (nextActive) {
+                localStorage.setItem('defaultPaymentMethodId', String(nextActive.id));
+                window.dispatchEvent(new Event('defaultPaymentMethodChanged'));
+            }
+        }
         router.put(`/payment-methods/${pm.id}`, {
             name: pm.name,
             is_active: !pm.is_active,
@@ -429,6 +464,29 @@ export default function PaymentMethodsIndex({ paymentMethods, flash }: Props) {
                                                 <span className={`w-2.5 h-2.5 rounded-full ${method.is_active ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
                                                 <span>{method.is_active ? 'نشطة' : 'موقوفة'}</span>
                                             </button>
+                                        </div>
+
+                                        {/* Default Payment Indicator & Setter */}
+                                        <div className="flex items-center justify-between pt-1">
+                                            {defaultPaymentId === String(method.id) ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-[12px] bg-primary/15 text-primary border border-primary/30 text-xs font-black shadow-sm">
+                                                    <Check className="w-4 h-4 stroke-[3]" />
+                                                    <span>وسيلة الدفع الافتراضية حالياً</span>
+                                                </div>
+                                            ) : method.is_active ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleSetDefault(method.id)}
+                                                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary-light transition-colors cursor-pointer py-1 px-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:border-primary/40 bg-white/60 dark:bg-slate-900/40"
+                                                >
+                                                    <Wallet className="w-3.5 h-3.5 text-primary" />
+                                                    <span>تعيين كوسيلة دفع افتراضية</span>
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                                                    غير متاحة للاختيار (موقوفة)
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Actions Row */}

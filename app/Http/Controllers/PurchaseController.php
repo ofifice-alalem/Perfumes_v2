@@ -29,7 +29,7 @@ class PurchaseController extends Controller
             'purchases'      => $this->purchases->paginated(30),
             'suppliers'      => $this->suppliers->forSelectList(),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -38,7 +38,7 @@ class PurchaseController extends Controller
         return Inertia::render('Purchases/Create', [
             'suppliers'      => $this->suppliers->forSelectList()->filter->is_active->values(),
             'products'       => Product::with('category')->orderBy('name')->get(['id', 'name', 'stock', 'category_id', 'qrcode']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -104,7 +104,7 @@ class PurchaseController extends Controller
     {
         return Inertia::render('Purchases/Show', [
             'purchase'       => $this->purchases->findWithRelations($id),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 

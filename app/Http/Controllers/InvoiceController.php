@@ -38,7 +38,7 @@ class InvoiceController extends Controller
             'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
             'users'          => User::orderBy('name')->get(['id', 'name']),
             'products'       => Product::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -48,7 +48,7 @@ class InvoiceController extends Controller
             'customers'      => fn() => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
             'products'       => fn() => $this->getCatalogWithLiveStock(),
             'sizes'          => fn() => \Illuminate\Support\Facades\Cache::remember('pos_sizes_list', 86400, fn() => Size::orderBy('label')->get(['id', 'label', 'value', 'unit'])->toArray()),
-            'paymentMethods' => fn() => \Illuminate\Support\Facades\Cache::remember('pos_payment_methods_list', 86400, fn() => PaymentMethod::orderBy('name')->get(['id', 'name'])->toArray()),
+            'paymentMethods' => fn() => \Illuminate\Support\Facades\Cache::remember('pos_payment_methods_list', 86400, fn() => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()),
             'recentInvoices' => fn() => $this->getFormattedRecentInvoices(),
         ]);
     }
@@ -165,7 +165,7 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Show', [
             'invoice'        => $this->invoices->findWithRelations($id),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -178,7 +178,7 @@ class InvoiceController extends Controller
                 ->whereHas('category', fn($q) => $q->where('is_operational', false))
                 ->orderBy('name')->get(),
             'sizes'          => Size::orderBy('label')->get(['id', 'label', 'value', 'unit']),
-            'paymentMethods' => PaymentMethod::orderBy('name')->get(['id', 'name']),
+            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
