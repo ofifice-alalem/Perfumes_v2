@@ -52,7 +52,7 @@ class SetupWizardController extends Controller
         $appUrl = env('APP_URL');
         $configuredDomain = ($appUrl && !str_contains($appUrl, 'localhost') && !str_contains($appUrl, '127.0.0.1'))
             ? parse_url($appUrl, PHP_URL_HOST)
-            : 'cloud-pos.local';
+            : 'tajori.store';
 
         return Inertia::render('Setup/Wizard', [
             'initialConfig' => [
@@ -368,16 +368,18 @@ class SetupWizardController extends Controller
         $publicPath = str_replace('\\', '/', public_path());
 
         try {
-            // 1. توليد شهادة SSL محلية موثوقة متعددة النطاقات إن وجد mkcert
+            // 1. توليد شهادة SSL محلية موثوقة تغطي دائماً tajori.store وأي دومين إضافي
             if (file_exists($mkcertPath) && is_dir($sslDir)) {
-                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\server.pem\" -key-file \"{$sslDir}\\server-key.pem\" \"{$domain}\" \"*.{$domain}\" \"localhost\" \"127.0.0.1\" \"::1\"";
+                $cmd = "\"{$mkcertPath}\" -cert-file \"{$sslDir}\\tajori.store.pem\" -key-file \"{$sslDir}\\tajori.store-key.pem\" \"tajori.store\" \"*.tajori.store\" \"{$domain}\" \"*.{$domain}\" \"localhost\" \"127.0.0.1\" \"::1\"";
                 @shell_exec($cmd);
+                @copy("{$sslDir}\\tajori.store.pem", "{$sslDir}\\server.pem");
+                @copy("{$sslDir}\\tajori.store-key.pem", "{$sslDir}\\server-key.pem");
             }
 
-            // 2. تحديث ملف vhosts لدعم التحويل التلقائي لنفس النطاق إلى HTTPS
+            // 2. تحديث ملف vhosts وفق المعايير المعتمدة في steps_v2/deployment_and_maintenance
             if (file_exists($vhostsPath) && is_writable($vhostsPath)) {
                 $vhostConfig = <<<EOT
-# Virtual Hosts Configuration for Taqniya Cloud POS (Standard Ports 80 & 443)
+# Virtual Hosts Configuration for Perfumes_v2 / Tajori Store (Standard Ports 80 & 443)
 
 Listen 0.0.0.0:443
 Listen [::]:443
@@ -393,26 +395,11 @@ Listen [::]:443
     Require all granted
 </Directory>
 
-# 1. HTTP (Port 80) - Dynamic Redirect to HTTPS for requested domain
+# 1. HTTP (Port 80) - الموقع المباشر الفائق السرعة
 <VirtualHost *:80>
-    ServerAlias *
-    RewriteEngine On
-    RewriteCond %{HTTPS} off
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=302,L]
-
-    ErrorLog "logs/http-error.log"
-    CustomLog "logs/http-access.log" combined
-</VirtualHost>
-
-# 2. HTTPS (Port 443) - Secure Laravel Application
-<VirtualHost *:443>
-    ServerName {$domain}
-    ServerAlias www.{$domain} localhost 127.0.0.1
+    ServerName tajori.store
+    ServerAlias www.tajori.store {$domain} www.{$domain} localhost 127.0.0.1
     DocumentRoot "{$publicPath}"
-
-    SSLEngine on
-    SSLCertificateFile "C:/Apache24/conf/ssl/server.pem"
-    SSLCertificateKeyFile "C:/Apache24/conf/ssl/server-key.pem"
 
     <Directory "{$publicPath}">
         Options Indexes FollowSymLinks MultiViews
@@ -420,8 +407,28 @@ Listen [::]:443
         Require all granted
     </Directory>
 
-    ErrorLog "logs/https-error.log"
-    CustomLog "logs/https-access.log" combined
+    ErrorLog "logs/tajori.store-http-error.log"
+    CustomLog "logs/tajori.store-http-access.log" combined
+</VirtualHost>
+
+# 2. HTTPS (Port 443) - الموقع الآمن
+<VirtualHost *:443>
+    ServerName tajori.store
+    ServerAlias www.tajori.store {$domain} www.{$domain} localhost 127.0.0.1
+    DocumentRoot "{$publicPath}"
+
+    SSLEngine on
+    SSLCertificateFile "C:/Apache24/conf/ssl/tajori.store.pem"
+    SSLCertificateKeyFile "C:/Apache24/conf/ssl/tajori.store-key.pem"
+
+    <Directory "{$publicPath}">
+        Options Indexes FollowSymLinks MultiViews
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog "logs/tajori.store-error.log"
+    CustomLog "logs/tajori.store-access.log" combined
 </VirtualHost>
 EOT;
                 @file_put_contents($vhostsPath, $vhostConfig);

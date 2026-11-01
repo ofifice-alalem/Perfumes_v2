@@ -34,15 +34,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // ─── Enforce App URL & Scheme for Custom Local Domains ────────────────
-        $appUrl = config('app.url');
-        if (!empty($appUrl) && !str_contains($appUrl, 'localhost') && !str_contains($appUrl, '127.0.0.1')) {
-            \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
-            if (str_starts_with($appUrl, 'https://')) {
-                \Illuminate\Support\Facades\URL::forceScheme('https');
-            }
-        }
-
         // ─── Period ID auto-fill ──────────────────────────────────────────────
         $periodModels = [
             Invoice::class, InvoiceItem::class,

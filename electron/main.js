@@ -388,10 +388,8 @@ async function createMainWindow() {
 
   if (isSettings) {
     // ⚙️ نمط الإعدادات (Settings Mode)
-    if (config.domain && apacheActive) {
-      targetUrl = `https://${config.domain}/setup`;
-    } else if (apacheActive) {
-      targetUrl = 'http://127.0.0.1/setup';
+    if (apacheActive) {
+      targetUrl = 'https://tajori.store/setup';
     } else {
       console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for setup...');
       await startInternalPhpServer(8181);
@@ -403,8 +401,7 @@ async function createMainWindow() {
       const baseUrl = config.masterHost.startsWith('http') ? config.masterHost : `https://${config.masterHost}`;
       targetUrl = baseUrl.endsWith('/') ? `${baseUrl}invoices/create` : `${baseUrl}/invoices/create`;
     } else if (apacheActive) {
-      const baseUrl = config.domain ? `https://${config.domain}` : 'https://127.0.0.1';
-      targetUrl = `${baseUrl}/invoices/create`;
+      targetUrl = 'https://tajori.store/invoices/create';
     } else {
       console.log('[Taqniya Desktop] Starting portable PHP server on port 8181 for POS...');
       await startInternalPhpServer(8181);
