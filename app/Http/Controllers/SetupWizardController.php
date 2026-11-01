@@ -247,6 +247,9 @@ class SetupWizardController extends Controller
             // 9. جدولة إعادة تشغيل Apache في الخلفية دون مقاطعة استجابة العميل الحالية
             $this->scheduleBackgroundApacheRestart();
 
+            // 10. تسجيل مسارات PHP و Apache في متغيرات بيئة النظام (System PATH) تلقائياً
+            $this->registerSystemPath();
+
             return response()->json([
                 'success'  => true,
                 'message'  => "تم إعداد وتهيئة منظومة السحابة لمتجر «{$storeName}» بنجاح!",
@@ -679,6 +682,23 @@ VBS;
             @pclose(@popen("start /B wscript //nologo \"{$tempVbs}\"", "r"));
         } catch (\Throwable $e) {
             Log::warning('Delayed Apache restart failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * تسجيل مسارات PHP 8.4 و Apache 2.4 في متغير بيئة النظام (System PATH) بويندوز
+     */
+    private function registerSystemPath(): void
+    {
+        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+            return;
+        }
+
+        try {
+            $cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand JABwACAAPQAgAFsARQBuAHYAaQByAG8AbgBtAGUAbgB0AF0AOgA6AEcAZQB0AEUAbgB2AGkAcgBvAG4AbQBlAG4AdABWAGEAcgBpAGEAYgBsAGUAKAAnAFAAYQB0AGgAJwAsACAAJwBNAGEAYwBoAGkAbgBlACcAKQAKAGkAZgAgACgAJABwACAALQBuAG8AdABsAGkAawBlACAAJwAqAEMAOgBcAHAAaABwAC0AOAAuADQALgAyADQAKgAnACkAIAB7ACAAJABwACAAKwA9ACAAJwA7AEMAOgBcAHAAaABwAC0AOAAuADQALgAyADQAJwAgAH0ACgBpAGYAIAAoACQAcAAgAC0AbgBvAHQAbABpAGsAZQAgACcAKgBDADoAXABBAHAAYQBjAGgAZQAyADQAXABiAGkAbgAqACcAKQAgAHsAIAAkAHAAIAArAD0AIAAnADsAQwA6AFwAQQBwAGEAYwBoAGUAMgA0AFwAYgBpAG4AJwAgAH0ACgBbAEUAbgB2AGkAcgBvAG4AbQBlAG4AdABdADoAOgBTAGUAdABFAG4AdgBpAHIAbwBuAG0AZQBuAHQAVgBhAHIAaQBhAGIAbABlACgAJwBQAGEAdABoACcALAAgACQAcAAsACAAJwBNAGEAYwBoAGkAbgBlACcAKQA=';
+            @pclose(@popen("start /B " . $cmd, "r"));
+        } catch (\Throwable $e) {
+            Log::warning('Could not register System PATH: ' . $e->getMessage());
         }
     }
 }
