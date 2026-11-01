@@ -4,7 +4,9 @@ import {
     Server, Monitor, Database, Globe, CheckCircle2, 
     AlertCircle, Loader2, Upload, Wifi, ArrowRight, 
     ArrowLeft, Store, Sparkles, X, ShieldCheck,
-    Sun, Moon, RefreshCw, Cpu, Layers
+    Sun, Moon, RefreshCw, Cpu, Layers, Play,
+    Check, Terminal, HardDrive, Key, Lock, ExternalLink,
+    Sliders, Radio, Activity, Copy
 } from 'lucide-react';
 import { ZoomControl } from '@/components/ui/ZoomControl';
 
@@ -28,12 +30,14 @@ interface Props {
 
 type DeviceRole = 'master' | 'client';
 type Step = 'role' | 'config' | 'installing' | 'completed';
+type ConfigTab = 'store' | 'database' | 'network';
 
 export default function SetupWizard({ initialConfig, companyInfo, isConfigured = false }: Props) {
     const [step, setStep] = useState<Step>(isConfigured ? 'config' : 'role');
     const [role, setRole] = useState<DeviceRole>('master');
+    const [activeTab, setActiveTab] = useState<ConfigTab>('store');
 
-    // ثيم النظام (Spatial UI Dark / Light Mode)
+    // ثيم النظام (Dark Desktop Client by default)
     const [isDark, setIsDark] = useState(true);
 
     useEffect(() => {
@@ -107,6 +111,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
     const [installError, setInstallError] = useState<string | null>(null);
     const [installProgressText, setInstallProgressText] = useState('جاري بدء التهيئة...');
     const [completedInfo, setCompletedInfo] = useState<{ redirectUrl: string } | null>(null);
+    const [copiedIp, setCopiedIp] = useState(false);
 
     // معالجة اختيار الشعار
     function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -158,6 +163,15 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
             setShortcutStatus('تعذر إنشاء الاختصار: ' + e.message);
         } finally {
             setCreatingShortcut(false);
+        }
+    }
+
+    // نسخ عنوان IP
+    function handleCopyIp() {
+        if (navigator.clipboard && initialConfig.server_ip) {
+            navigator.clipboard.writeText(initialConfig.server_ip);
+            setCopiedIp(true);
+            setTimeout(() => setCopiedIp(false), 2000);
         }
     }
 
@@ -241,7 +255,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
 
         try {
             if (role === 'master') {
-                setInstallProgressText('جاري إعداد بيئة الخادم وتحديث المتغيرات...');
+                setInstallProgressText('جاري إعداد بيئة الخادم وتحديث المتغيرات (.env)...');
                 const formData = new FormData();
                 formData.append('store_name', storeName);
                 formData.append('domain', domain);
@@ -255,7 +269,7 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                     formData.append('store_logo_file', logoFile);
                 }
 
-                setInstallProgressText('جاري ترحيل الجداول وتجهيز قاعدة البيانات المركزية (Migrations & Seeders)...');
+                setInstallProgressText('ترحيل الجداول وهيكلة قاعدة البيانات المركزية (MySQL Migrations & Seeders)...');
 
                 const res = await fetch('/setup/apply-master', {
                     method: 'POST',
@@ -272,11 +286,11 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
                     throw new Error(data.message || 'فشلت عملية التثبيت');
                 }
 
-                setInstallProgressText('اكتمل التثبيت والتهيئة بنجاح!');
-                setCompletedInfo({ redirectUrl: data.redirect || '/login' });
+                setInstallProgressText('توليد شهادة SSL الموثوقة وإعادة تشغيل Apache في الخلفية...');
+                setCompletedInfo({ redirectUrl: data.redirect || `https://${domain}/invoices/create` });
                 setStep('completed');
             } else {
-                setInstallProgressText('جاري ربط شاشة الكاشير بالسيرفر الرئيسي...');
+                setInstallProgressText('جاري ربط شاشة الكاشير بالسيرفر الرئيسي وتكوين الاتصال الشبكي...');
 
                 const res = await fetch('/setup/apply-client', {
                     method: 'POST',
@@ -309,543 +323,841 @@ export default function SetupWizard({ initialConfig, companyInfo, isConfigured =
 
     return (
         <div 
-            className="h-[100dvh] w-screen flex flex-col overflow-hidden text-slate-800 dark:text-slate-100 transition-colors duration-500 font-['Tajawal'] select-none" 
+            className="h-screen w-screen flex flex-col overflow-hidden bg-[#0a0e14] text-[#c5cdd8] font-['Tajawal'] select-none border border-[#1b2635]" 
             dir="rtl"
             style={{ fontFamily: "'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}
         >
             <Head title="أداة إعدادات خادم السحابة — شركة تقنية السحابة" />
 
-            {/* Desktop Top Titlebar & HUD: شريط مكتبي عريض مستغل للمساحة */}
-            <header className="px-6 py-3.5 border-b border-black/10 dark:border-white/10 backdrop-blur-2xl bg-white/60 dark:bg-black/40 z-20 shrink-0">
-                <div className="w-full flex items-center justify-between gap-4">
-                    
-                    {/* الجانب الأيمن: هوية شركة تقنية السحابة ونوع الأداة */}
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 rounded-[16px] bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/25 shrink-0">
-                            <Sparkles className="w-6 h-6" />
+            {/* 🎮 Steam Desktop Client Header / Control Strip */}
+            <header className="h-14 px-5 bg-gradient-to-b from-[#17202d] to-[#121822] border-b border-[#243347] flex items-center justify-between shrink-0 z-30 shadow-md">
+                
+                {/* الجانب الأيمن: شعار التقنية واسم التطبيق المكتبي */}
+                <div className="flex items-center gap-3.5">
+                    <img 
+                        src="/images/taqniya-logo.png" 
+                        alt="شركة تقنية السحابة" 
+                        className="h-9 w-auto object-contain filter drop-shadow-[0_2px_10px_rgba(26,159,255,0.4)]"
+                    />
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-black tracking-wide text-white uppercase flex items-center gap-1.5">
+                                <span>شركة تقنية السحابة</span>
+                                <span className="text-[#1a9fff] font-mono text-[11px] font-bold">WORKSTATION</span>
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-[#1e2c3d] text-[#63aeff] border border-[#2d425c] tracking-wider uppercase">
+                                SERVER SETUP v3.0
+                            </span>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-base md:text-lg font-black tracking-wide text-slate-900 dark:text-white">
-                                    {companyInfo.name}
-                                </h1>
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-primary/10 text-primary border border-primary/20">
-                                    لوحة تحكم الخادم والإعدادات
-                                </span>
-                            </div>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                {companyInfo.product} — الجيل المكتبي المستقل v3.0
-                            </p>
-                        </div>
+                        <span className="text-[11px] font-bold text-[#718296] leading-none">
+                            منظومة السحابة المتكاملة — نظام إدارة الخوادم وقواعد البيانات
+                        </span>
                     </div>
+                </div>
 
-                    {/* الجانب الأيسر: أداة التحكم بحجم وزووم الشاشة + الثيم + حالة النسخة */}
-                    <div className="flex items-center gap-3">
-                        {/* أداة تبعيد وتقريب الشاشة لتناسب شاشات الكاشير الصغيرة */}
-                        <ZoomControl />
-
-                        {/* زر تبديل الثيم الفاتح / الداكن */}
+                {/* المنتصف: ألسنة التنقل المكتبية بنمط Steam Tabs */}
+                <div className="hidden md:flex items-center gap-1 bg-[#0d1219] p-1 rounded-lg border border-[#1f2b3b]">
+                    <button
+                        type="button"
+                        onClick={() => setStep('role')}
+                        className={`px-3.5 py-1 rounded text-xs font-black transition-all cursor-pointer ${
+                            step === 'role'
+                                ? 'bg-[#1a9fff] text-white shadow-[0_0_12px_rgba(26,159,255,0.5)]'
+                                : 'text-[#8495a8] hover:text-white hover:bg-[#16202c]'
+                        }`}
+                    >
+                        1. دور النظام (Role)
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setStep('config')}
+                        className={`px-3.5 py-1 rounded text-xs font-black transition-all cursor-pointer ${
+                            step === 'config'
+                                ? 'bg-[#1a9fff] text-white shadow-[0_0_12px_rgba(26,159,255,0.5)]'
+                                : 'text-[#8495a8] hover:text-white hover:bg-[#16202c]'
+                        }`}
+                    >
+                        2. إعدادات الخادم (Config)
+                    </button>
+                    {isConfigured && (
                         <button
                             type="button"
-                            onClick={toggleTheme}
-                            className="spatial-icon-btn cursor-pointer"
-                            title={isDark ? 'التبديل إلى الوضع النهاري' : 'التبديل إلى الوضع الليلي'}
+                            onClick={() => setStep('completed')}
+                            className={`px-3.5 py-1 rounded text-xs font-black transition-all cursor-pointer ${
+                                step === 'completed'
+                                    ? 'bg-[#1a9fff] text-white shadow-[0_0_12px_rgba(26,159,255,0.5)]'
+                                    : 'text-[#8495a8] hover:text-white hover:bg-[#16202c]'
+                            }`}
                         >
-                            {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
+                            3. التشغيل السريع (Launcher)
                         </button>
+                    )}
+                </div>
 
-                        {isConfigured && (
-                            <button
-                                type="button"
-                                onClick={handleOpenPosApp}
-                                className="px-3.5 py-2 rounded-xl bg-primary/15 hover:bg-primary text-primary hover:text-white border border-primary/30 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-                                title="تشغيل وفتح تطبيق شاشة المبيعات في نافذة مستقلة"
-                            >
-                                <span>شاشة المبيعات</span>
-                                <ArrowLeft className="w-3.5 h-3.5" />
-                            </button>
-                        )}
+                {/* الجانب الأيسر: أدوات التحكم المكتبي (Zoom, Theme, Status) */}
+                <div className="flex items-center gap-2.5">
+                    <ZoomControl />
 
-                        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300">
-                            <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                            <span>Enterprise Edition</span>
-                        </div>
+                    <button
+                        type="button"
+                        onClick={toggleTheme}
+                        className="w-9 h-9 rounded bg-[#16202c] hover:bg-[#1f2d3e] text-[#8ea0b4] hover:text-white border border-[#253549] flex items-center justify-center transition-all cursor-pointer"
+                        title={isDark ? 'التبديل إلى الوضع النهاري' : 'التبديل إلى الوضع الليلي'}
+                    >
+                        {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-300" />}
+                    </button>
+
+                    {isConfigured && (
+                        <button
+                            type="button"
+                            onClick={handleOpenPosApp}
+                            className="px-3 h-9 rounded bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/40 text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            title="تشغيل شاشة المبيعات والكاشير مباشرة"
+                        >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>شاشة المبيعات</span>
+                        </button>
+                    )}
+
+                    <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#121923] border border-[#213043] text-[11px] font-bold text-[#8fa1b5]">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>خادم محلي: جاهز</span>
                     </div>
                 </div>
             </header>
 
-            {/* Desktop Full-Width Workspace: استغلال كامل المساحة العرضية لنظام سطح المكتب */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col justify-center items-center custom-scroll">
-                <div className="w-full max-w-[1400px] h-full flex flex-col justify-center">
+            {/* 🖥️ Steam Desktop Client Main Workstation Body */}
+            <main className="flex-1 overflow-hidden flex flex-col bg-[#0b0f15]">
 
-                    {/* المرحلة 1: تحديد دور الجهاز */}
-                    {step === 'role' && (
-                        <div className="spatial-card p-8 md:p-12 shadow-2xl animate-in fade-in zoom-in-95 duration-300 my-auto">
-                            <div className="text-center max-w-2xl mx-auto mb-10">
-                                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black bg-primary/10 text-primary border border-primary/20 mb-3">
-                                    <Cpu className="w-4 h-4" /> الخطوة 1 من 2: تهيئة دور النظام
-                                </span>
-                                <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-white">
-                                    تحديد دور هذا الجهاز في منظومة المبيعات
-                                </h2>
-                                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
-                                    اختر نمط تشغيل هذا الحاسوب. يمكنك تعيينه كخادم رئيسي يحمل قاعدة البيانات المركزية، أو كشاشة كاشير فرعية سريعة متصلة بالشبكة.
-                                </p>
-                            </div>
+                {/* 🔴 حالة الخطأ إن وجدت */}
+                {installError && (
+                    <div className="mx-6 mt-4 p-3.5 rounded bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-xs font-bold text-rose-400 animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                            <span>{installError}</span>
+                        </div>
+                        <button 
+                            onClick={() => setInstallError(null)}
+                            className="p-1 hover:bg-rose-500/20 rounded cursor-pointer"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                                {/* كرت السيرفر الرئيسي */}
-                                <div
-                                    onClick={() => setRole('master')}
-                                    className={`p-8 rounded-[28px] border-2 cursor-pointer transition-all duration-300 flex flex-col justify-between ${
-                                        role === 'master'
-                                            ? 'bg-primary/10 dark:bg-primary/20 border-primary shadow-2xl shadow-primary/25 ring-2 ring-primary/40'
-                                            : 'border-black/10 dark:border-white/10 hover:border-primary/40 bg-black/[0.02] dark:bg-white/[0.03]'
-                                    }`}
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center ${
-                                                role === 'master' ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                                            }`}>
-                                                <Server className="w-8 h-8" />
-                                            </div>
-                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/25">
-                                                خادم رئيسي (Server)
-                                            </span>
-                                        </div>
+                {/* ══════════════════════════════════════════════════════════════
+                    المرحلة 1: اختيار نمط الجهاز (Role Selection - Steam Grid Style)
+                   ══════════════════════════════════════════════════════════════ */}
+                {step === 'role' && (
+                    <div className="flex-1 p-6 md:p-8 flex flex-col justify-center max-w-5xl mx-auto w-full animate-in fade-in zoom-in-98 duration-200">
+                        <div className="mb-8 text-center md:text-right">
+                            <span className="text-[11px] font-mono font-black text-[#1a9fff] uppercase tracking-widest bg-[#1a9fff]/10 px-2.5 py-1 rounded border border-[#1a9fff]/20">
+                                HARDWARE NODE PROVISIONING
+                            </span>
+                            <h2 className="text-2xl sm:text-3xl font-black text-white mt-2">
+                                تحديد دور هذا الحاسوب في منظومة السحابة
+                            </h2>
+                            <p className="text-xs sm:text-sm font-bold text-[#7d8f9f] mt-1">
+                                اختر كيفية تهيئة وتشغيل هذه المحطة لتوزيع المهام وقواعد البيانات بكفاءة عبر الشبكة المحلية.
+                            </p>
+                        </div>
 
-                                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">الجهاز الرئيسي (Master Node)</h3>
-                                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                                            يحمل قاعدة البيانات المركزية (MySQL SSoT)، خادم الويب، ويدير الربط ومزامنة الفواتير بين جميع فروع وأجهزة المحل والهواتف.
-                                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+                            
+                            {/* كرت السيرفر الرئيسي */}
+                            <div 
+                                onClick={() => setRole('master')}
+                                className={`p-6 rounded-lg border-2 cursor-pointer transition-all flex flex-col justify-between relative overflow-hidden ${
+                                    role === 'master'
+                                        ? 'bg-[#15202e] border-[#1a9fff] shadow-[0_0_25px_rgba(26,159,255,0.25)] ring-1 ring-[#1a9fff]'
+                                        : 'bg-[#10161f] border-[#1e2a3a] hover:border-[#2d3e54] hover:bg-[#131b26]'
+                                }`}
+                            >
+                                {role === 'master' && (
+                                    <div className="absolute top-0 right-0 bg-[#1a9fff] text-white text-[10px] font-black px-3 py-0.5 rounded-bl uppercase tracking-wider">
+                                        المحدد حالياً
                                     </div>
-                                    <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between text-xs font-black text-primary">
-                                        <span>يشمل ضبط Apache و MySQL والـ SSL تلقائياً</span>
-                                        <ArrowLeft className="w-4 h-4" />
+                                )}
+                                <div>
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div className="w-14 h-14 rounded-lg bg-[#0d131b] border border-[#24354b] flex items-center justify-center text-[#1a9fff] shadow-inner">
+                                            <Server className="w-7 h-7" />
+                                        </div>
+                                        <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-[#1a9fff]/10 text-[#6cb5ff] border border-[#1a9fff]/25">
+                                            MASTER SERVER NODE
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-white mb-1.5">السيرفر الرئيسي المركزي (Master)</h3>
+                                    <p className="text-xs font-bold text-[#8395a7] leading-relaxed mb-4">
+                                        يحتوي على قاعدة بيانات MySQL المركزية، خادم الويب Apache 2.4، ويتحكم بشهادات التشفير SSL وإصدار الفواتير، ويعمل كخادم ومحطة مبيعات في آن واحد.
+                                    </p>
+                                    <div className="space-y-1.5 text-[11px] font-bold text-[#9fb3c8]">
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span>توليد وتحديث شهادات SSL عبر mkcert تلقائياً</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span>إنشاء جداول MySQL ومطعم البيانات (Seeders)</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span>مشاركة الفواتير والتقارير عبر شبكة المحل (LAN)</span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {/* كرت الكاشير الفرعي */}
-                                <div
-                                    onClick={() => setRole('client')}
-                                    className={`p-8 rounded-[28px] border-2 cursor-pointer transition-all duration-300 flex flex-col justify-between ${
-                                        role === 'client'
-                                            ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500 shadow-2xl shadow-purple-500/25 ring-2 ring-purple-500/40'
-                                            : 'border-black/10 dark:border-white/10 hover:border-purple-500/40 bg-black/[0.02] dark:bg-white/[0.03]'
-                                    }`}
-                                >
-                                    <div>
-                                        <div className="flex items-center justify-between mb-6">
-                                            <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center ${
-                                                role === 'client' ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30' : 'bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-300'
-                                            }`}>
-                                                <Monitor className="w-8 h-8" />
-                                            </div>
-                                            <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/25">
-                                                نقطة بيع (Cashier)
-                                            </span>
-                                        </div>
-
-                                        <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">شاشة كاشير فرعية (Terminal Node)</h3>
-                                        <p className="text-sm font-bold text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
-                                            نقطة بيع سريعة تعمل دون الحاجة لأي خوادم محلية، تتصل مباشرة بالسيرفر الرئيسي عبر الشبكة المحلية (LAN / Wi-Fi).
-                                        </p>
-                                    </div>
-                                    <div className="pt-4 border-t border-black/10 dark:border-white/10 flex items-center justify-between text-xs font-black text-purple-600 dark:text-purple-400">
-                                        <span>تثبيت وتشغيل فوري في 3 ثوانٍ</span>
-                                        <ArrowLeft className="w-4 h-4" />
-                                    </div>
+                                <div className="mt-6 pt-4 border-t border-[#1e2b3b] flex items-center justify-between text-xs font-bold text-[#1a9fff]">
+                                    <span>تهيئة الخادم والخدمات الملحقة</span>
+                                    <ArrowLeft className="w-4 h-4" />
                                 </div>
                             </div>
 
+                            {/* كرت الكاشير الفرعي */}
+                            <div 
+                                onClick={() => setRole('client')}
+                                className={`p-6 rounded-lg border-2 cursor-pointer transition-all flex flex-col justify-between relative overflow-hidden ${
+                                    role === 'client'
+                                        ? 'bg-[#1b1c2b] border-purple-500 shadow-[0_0_25px_rgba(168,85,247,0.25)] ring-1 ring-purple-500'
+                                        : 'bg-[#10161f] border-[#1e2a3a] hover:border-[#2d3e54] hover:bg-[#131b26]'
+                                }`}
+                            >
+                                {role === 'client' && (
+                                    <div className="absolute top-0 right-0 bg-purple-600 text-white text-[10px] font-black px-3 py-0.5 rounded-bl uppercase tracking-wider">
+                                        المحدد حالياً
+                                    </div>
+                                )}
+                                <div>
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div className="w-14 h-14 rounded-lg bg-[#0d131b] border border-[#24354b] flex items-center justify-center text-purple-400 shadow-inner">
+                                            <Monitor className="w-7 h-7" />
+                                        </div>
+                                        <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-purple-500/10 text-purple-300 border border-purple-500/25">
+                                            CASHIER TERMINAL NODE
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-white mb-1.5">شاشة كاشير فرعية (Terminal)</h3>
+                                    <p className="text-xs font-bold text-[#8395a7] leading-relaxed mb-4">
+                                        محطة بيع سريعة مخصصة للكاشير. لا تتطلب خوادم محلية أو قواعد بيانات، وتتصل مباشرة بالسيرفر الرئيسي عبر الشبكة الداخلية.
+                                    </p>
+                                    <div className="space-y-1.5 text-[11px] font-bold text-[#9fb3c8]">
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-purple-400" />
+                                            <span>بدون أي متطلبات تخزين أو خوادم محلية</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-purple-400" />
+                                            <span>إقلاع فوري وتوفير كامل لموارد الجهاز</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Check className="w-3.5 h-3.5 text-purple-400" />
+                                            <span>مزامنة لحظية مع السيرفر الرئيسي</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="mt-6 pt-4 border-t border-[#1e2b3b] flex items-center justify-between text-xs font-bold text-purple-400">
+                                    <span>ربط المحطة بالسيرفر</span>
+                                    <ArrowLeft className="w-4 h-4" />
+                                </div>
+                            </div>
+
+                        </div>
+
+                        {/* زر التقدم للخطوة التالية */}
+                        <div className="flex justify-end">
                             <button
                                 type="button"
                                 onClick={() => setStep('config')}
-                                className="w-full h-16 rounded-[22px] spatial-button text-lg font-black flex items-center justify-center gap-3 transition-all shadow-xl shadow-primary/30 cursor-pointer active:scale-[0.98]"
+                                className="px-8 h-12 rounded bg-gradient-to-r from-[#1999ff] to-[#0f67c2] hover:from-[#2eacff] hover:to-[#1778dc] text-white font-black text-sm transition-all shadow-[0_4px_14px_rgba(26,159,255,0.4)] flex items-center gap-2 cursor-pointer active:scale-[0.99]"
                             >
-                                <span>متابعة إعداد النظام والبيانات</span>
-                                <ArrowLeft className="w-5 h-5" />
+                                <span>متابعة إعداد النظام</span>
+                                <ArrowLeft className="w-4 h-4" />
                             </button>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                    {/* المرحلة 2: نموذج الإعدادات المكتبي ذو العمودين (Desktop 2-Column Split Workspace) */}
-                    {step === 'config' && (
-                        <div className="spatial-card p-6 md:p-8 lg:p-10 shadow-2xl animate-in fade-in zoom-in-95 duration-300 flex flex-col justify-between my-auto">
-                            
-                            {/* شريط الإشعار أو الخطأ */}
-                            {installError && (
-                                <div className="mb-6 p-4 rounded-[18px] bg-red-500/15 border border-red-500/30 flex items-center gap-3 text-red-600 dark:text-red-400 font-bold text-sm">
-                                    <AlertCircle className="w-5 h-5 shrink-0" />
-                                    <span>{installError}</span>
-                                </div>
-                            )}
-
-                            {/* الترويسة الداخلية للنموذج */}
-                            <div className="border-b border-black/10 dark:border-white/10 pb-4 mb-6 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                                        {role === 'master' ? <Server className="w-5 h-5" /> : <Monitor className="w-5 h-5 text-purple-600" />}
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white">
-                                            {role === 'master' ? 'تهيئة الخادم الرئيسي وإعدادات المنظومة' : 'ربط شاشة الكاشير بالسيرفر الرئيسي'}
-                                        </h2>
-                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                            {role === 'master' 
-                                                ? 'قم بضبط هوية المتجر والاتصال بقاعدة بيانات MySQL المركزية' 
-                                                : 'حدد عنوان السيرفر الرئيسي على الشبكة وافحص الاتصال به'}
-                                        </p>
-                                    </div>
+                {/* ══════════════════════════════════════════════════════════════
+                    المرحلة 2: لوحة الإعدادات الشاملة (Steam Workstation Layout)
+                   ══════════════════════════════════════════════════════════════ */}
+                {step === 'config' && (
+                    <div className="flex-1 flex overflow-hidden">
+                        
+                        {/* 🕹️ الشريط الجانبي الأيمن: أدوات المراقبة والتنقل (Steam Control Rail) */}
+                        <aside className="w-80 bg-[#0e141c] border-l border-[#1f2b3b] p-5 flex flex-col justify-between shrink-0 overflow-y-auto">
+                            <div>
+                                <div className="mb-6">
+                                    <span className="text-[10px] font-mono font-black text-[#56718d] uppercase tracking-wider block mb-1">
+                                        SYSTEM WORKBENCH
+                                    </span>
+                                    <h3 className="text-base font-black text-white">إعدادات الخادم المركزي</h3>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setStep('role')}
-                                    className="px-4 py-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-xs font-bold text-primary transition-all cursor-pointer"
-                                >
-                                    تغيير نوع الجهاز
-                                </button>
+                                {/* قائمة الأقسام */}
+                                <div className="space-y-1.5 mb-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('store')}
+                                        className={`w-full p-3 rounded text-right flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                                            activeTab === 'store'
+                                                ? 'bg-[#182332] text-[#1a9fff] border-r-4 border-[#1a9fff]'
+                                                : 'text-[#8293a4] hover:bg-[#131b26] hover:text-white'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <Store className="w-4 h-4" />
+                                            <span>هوية المتجر والشعار</span>
+                                        </div>
+                                        <Check className="w-3.5 h-3.5 opacity-60" />
+                                    </button>
+
+                                    {role === 'master' ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('database')}
+                                            className={`w-full p-3 rounded text-right flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                                                activeTab === 'database'
+                                                    ? 'bg-[#182332] text-[#1a9fff] border-r-4 border-[#1a9fff]'
+                                                    : 'text-[#8293a4] hover:bg-[#131b26] hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <Database className="w-4 h-4" />
+                                                <span>قاعدة البيانات (MySQL)</span>
+                                            </div>
+                                            <Check className="w-3.5 h-3.5 opacity-60" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveTab('network')}
+                                            className={`w-full p-3 rounded text-right flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                                                activeTab === 'network'
+                                                    ? 'bg-[#182332] text-purple-400 border-r-4 border-purple-500'
+                                                    : 'text-[#8293a4] hover:bg-[#131b26] hover:text-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2.5">
+                                                <Wifi className="w-4 h-4" />
+                                                <span>الاتصال بالسيرفر الرئيسي</span>
+                                            </div>
+                                            <Check className="w-3.5 h-3.5 opacity-60" />
+                                        </button>
+                                    )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('network')}
+                                        className={`w-full p-3 rounded text-right flex items-center justify-between text-xs font-bold transition-all cursor-pointer ${
+                                            activeTab === 'network'
+                                                ? 'bg-[#182332] text-[#1a9fff] border-r-4 border-[#1a9fff]'
+                                                : 'text-[#8293a4] hover:bg-[#131b26] hover:text-white'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2.5">
+                                            <Globe className="w-4 h-4" />
+                                            <span>النطاق وشهادة SSL</span>
+                                        </div>
+                                        <Check className="w-3.5 h-3.5 opacity-60" />
+                                    </button>
+                                </div>
+
+                                {/* بطاقة الحالة والشبكة (Server Telemetry Box) */}
+                                <div className="p-3.5 rounded bg-[#131923] border border-[#213144] space-y-2.5 text-[11px] font-mono">
+                                    <div className="flex items-center justify-between text-[#7d90a4]">
+                                        <span>SERVER IP</span>
+                                        <div className="flex items-center gap-1.5 text-white font-bold">
+                                            <span>{initialConfig.server_ip}</span>
+                                            <button 
+                                                type="button"
+                                                onClick={handleCopyIp}
+                                                className="p-1 hover:bg-[#1f2b3b] rounded cursor-pointer text-[#62aaff]"
+                                                title="نسخ عنوان IP"
+                                            >
+                                                {copiedIp ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-[#7d90a4]">
+                                        <span>APACHE ENGINE</span>
+                                        <span className="text-emerald-400 font-bold">PORT 80 / 443</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-[#7d90a4]">
+                                        <span>SECURITY</span>
+                                        <span className="text-[#6cb5ff] font-bold">mkcert Multi-SAN</span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-[#7d90a4]">
+                                        <span>MODE</span>
+                                        <span className="text-white font-bold uppercase">{role}</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* محتوى الإعدادات: شاشة منقسمة لعمودين متجاورين للاستفادة من عرض سطح المكتب */}
-                            {role === 'master' ? (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    
-                                    {/* العمود الأيمن: هوية متجر العميل وشعاره */}
-                                    <div className="p-6 rounded-[24px] border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex flex-col justify-between gap-5">
-                                        <div>
-                                            <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2.5 mb-1">
-                                                <Store className="w-5 h-5 text-primary" />
-                                                <span>بيانات المتجر والنشاط التجاري (Store Profile)</span>
-                                            </h4>
-                                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4">
-                                                هذه البيانات هي التي ستظهر على الفواتير، الإيصالات وشاشات الكاشير.
-                                            </p>
+                            {/* زر الرجوع لاختيار الدور */}
+                            <button
+                                type="button"
+                                onClick={() => setStep('role')}
+                                className="w-full h-10 rounded bg-[#141b24] hover:bg-[#1c2635] text-[#8697a8] hover:text-white border border-[#223043] text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-4"
+                            >
+                                <ArrowRight className="w-3.5 h-3.5" />
+                                <span>تغيير دور الجهاز</span>
+                            </button>
+                        </aside>
 
-                                            <div className="flex flex-col gap-4">
-                                                <div>
-                                                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
-                                                        اسم المتجر / النشاط التجاري
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={storeName}
-                                                        onChange={e => setStoreName(e.target.value)}
-                                                        placeholder="مثال: طيبة التاجوري"
-                                                        className="spatial-input w-full h-13 px-4 rounded-[16px] font-bold text-sm"
-                                                    />
-                                                </div>
+                        {/* 🛠️ مساحة العمل الرئيسية (Workbench Canvas) */}
+                        <div className="flex-1 p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
+                            
+                            <div className="max-w-4xl w-full mx-auto space-y-6">
 
-                                                <div>
-                                                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1.5">
-                                                        النطاق المحلي المخصص (Local Domain)
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={domain}
-                                                        onChange={e => setDomain(e.target.value)}
-                                                        placeholder="cloud-pos.local"
-                                                        className="spatial-input w-full h-13 px-4 rounded-[16px] font-bold text-sm font-mono"
-                                                    />
-                                                </div>
+                                {/* 1. بيانات المتجر والشعار */}
+                                {activeTab === 'store' && (
+                                    <div className="p-6 rounded-lg bg-[#111721] border border-[#212f42] shadow-sm animate-in fade-in duration-150">
+                                        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#1f2d3f]">
+                                            <div className="w-10 h-10 rounded bg-[#162232] border border-[#273a52] flex items-center justify-center text-[#1a9fff]">
+                                                <Store className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-black text-white">بيانات المتجر والنشاط التجاري</h3>
+                                                <p className="text-xs font-bold text-[#718497]">
+                                                    هذه البيانات ستظهر على فواتير المبيعات، الإيصالات الحرارية، وشاشات الكاشير.
+                                                </p>
                                             </div>
                                         </div>
 
-                                        {/* رفع ومعاينة شعار المتجر */}
-                                        <div className="pt-4 border-t border-black/10 dark:border-white/10">
-                                            <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">
+                                                    اسم المتجر / النشاط التجاري
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={storeName}
+                                                    onChange={(e) => setStoreName(e.target.value)}
+                                                    placeholder="مثال: متجر السحابة للعطور"
+                                                    className="w-full h-11 px-3.5 rounded bg-[#090d13] border border-[#233348] text-white font-bold text-sm focus:outline-none focus:border-[#1a9fff] focus:ring-1 focus:ring-[#1a9fff]"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">
+                                                    النطاق المحلي المخصص (Local Domain)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={domain}
+                                                    onChange={(e) => setDomain(e.target.value)}
+                                                    placeholder="مثال: tajori.store أو cloud.local"
+                                                    className="w-full h-11 px-3.5 rounded bg-[#090d13] border border-[#233348] text-[#1a9fff] font-mono font-bold text-sm focus:outline-none focus:border-[#1a9fff] focus:ring-1 focus:ring-[#1a9fff]"
+                                                />
+                                                <span className="text-[10px] text-[#6b7d90] mt-1 block">
+                                                    سيتم ربطه محلياً مع شهادة SSL وتوجيهه إلى 127.0.0.1 تلقائياً
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* رفع الشعار */}
+                                        <div>
+                                            <label className="block text-xs font-bold text-[#8fa2b6] mb-2">
                                                 شعار المتجر (Store Logo)
                                             </label>
-                                            <div className="flex items-center gap-4">
-                                                {logoPreview ? (
-                                                    <div className="relative w-24 h-24 rounded-[20px] bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 p-2 flex items-center justify-center shrink-0 shadow-sm">
-                                                        <img src={logoPreview} alt="Logo" className="max-w-full max-h-full object-contain rounded-xl" />
-                                                        <button
-                                                            type="button"
-                                                            onClick={removeLogo}
-                                                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs shadow-md cursor-pointer hover:scale-105 transition-all"
-                                                        >
-                                                            <X className="w-3.5 h-3.5" />
-                                                        </button>
+                                            <input
+                                                ref={fileInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleLogoChange}
+                                                className="hidden"
+                                            />
+
+                                            {logoPreview ? (
+                                                <div className="flex items-center gap-4 p-3 rounded bg-[#0a0e14] border border-[#24354b]">
+                                                    <img 
+                                                        src={logoPreview} 
+                                                        alt="Logo Preview" 
+                                                        className="w-16 h-16 object-contain rounded bg-white/5 p-1 border border-white/10"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <span className="text-xs font-bold text-white block">تم تحديد الشعار بنجاح</span>
+                                                        <span className="text-[11px] text-[#6e8093]">سيتم طباعته على الإيصالات وعرضه في شاشة الدخول</span>
                                                     </div>
-                                                ) : (
-                                                    <div
-                                                        onClick={() => fileInputRef.current?.click()}
-                                                        className="h-24 flex-1 rounded-[20px] border-2 border-dashed border-black/15 dark:border-white/20 hover:border-primary bg-black/[0.02] dark:bg-white/[0.03] flex flex-col items-center justify-center cursor-pointer transition-colors p-3 text-center"
+                                                    <button
+                                                        type="button"
+                                                        onClick={removeLogo}
+                                                        className="px-3 py-1.5 rounded bg-rose-500/15 hover:bg-rose-500 text-rose-400 hover:text-white text-xs font-bold transition-all cursor-pointer"
                                                     >
-                                                        <Upload className="w-6 h-6 text-slate-400 mb-1.5" />
-                                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                                            انقر لرفع شعار العميل (PNG / JPG / WEBP)
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                        إزالة الشعار
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="border-2 border-dashed border-[#27384e] hover:border-[#1a9fff] p-6 rounded-lg text-center cursor-pointer bg-[#0c1219] hover:bg-[#0f1722] transition-all group"
+                                                >
+                                                    <Upload className="w-8 h-8 text-[#51677f] group-hover:text-[#1a9fff] mx-auto mb-2 transition-colors" />
+                                                    <span className="text-xs font-bold text-[#8598ac] group-hover:text-white block">
+                                                        انقر هنا لاختيار شعار المتجر (PNG / JPG / WEBP)
+                                                    </span>
+                                                    <span className="text-[10px] text-[#55697d] block mt-1">
+                                                        الحد الأقصى للحجم 5 ميجابايت — يفضل خلفية شفافة
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 2. إعدادات قاعدة البيانات المركزية (MySQL) */}
+                                {activeTab === 'database' && role === 'master' && (
+                                    <div className="p-6 rounded-lg bg-[#111721] border border-[#212f42] shadow-sm animate-in fade-in duration-150">
+                                        <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#1f2d3f]">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded bg-[#162232] border border-[#273a52] flex items-center justify-center text-[#1a9fff]">
+                                                    <Database className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base font-black text-white">قاعدة البيانات المركزية (MySQL)</h3>
+                                                    <p className="text-xs font-bold text-[#718497]">
+                                                        اتصال قاعدة البيانات المعتمدة لحفظ المعاملات، المنتجات، والفواتير.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={testDbConnection}
+                                                disabled={dbTesting}
+                                                className="px-4 h-9 rounded bg-[#152334] hover:bg-[#1a9fff] text-[#55a7ff] hover:text-white border border-[#253e5e] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                {dbTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />}
+                                                <span>فحص الاتصال</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">اسم المضيف (Host)</label>
                                                 <input
-                                                    type="file"
-                                                    ref={fileInputRef}
-                                                    onChange={handleLogoChange}
-                                                    accept="image/*"
-                                                    className="hidden"
+                                                    type="text"
+                                                    value={dbHost}
+                                                    onChange={(e) => setDbHost(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded bg-[#090d13] border border-[#233348] text-white font-mono text-sm focus:outline-none focus:border-[#1a9fff]"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">المنفذ (Port)</label>
+                                                <input
+                                                    type="text"
+                                                    value={dbPort}
+                                                    onChange={(e) => setDbPort(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded bg-[#090d13] border border-[#233348] text-white font-mono text-sm focus:outline-none focus:border-[#1a9fff]"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">اسم قاعدة البيانات (Database)</label>
+                                                <input
+                                                    type="text"
+                                                    value={dbDatabase}
+                                                    onChange={(e) => setDbDatabase(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded bg-[#090d13] border border-[#233348] text-white font-mono text-sm focus:outline-none focus:border-[#1a9fff]"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">اسم المستخدم (User)</label>
+                                                <input
+                                                    type="text"
+                                                    value={dbUsername}
+                                                    onChange={(e) => setDbUsername(e.target.value)}
+                                                    className="w-full h-10 px-3 rounded bg-[#090d13] border border-[#233348] text-white font-mono text-sm focus:outline-none focus:border-[#1a9fff]"
+                                                />
+                                            </div>
+
+                                            <div className="md:col-span-2">
+                                                <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">كلمة المرور (Password)</label>
+                                                <input
+                                                    type="password"
+                                                    value={dbPassword}
+                                                    onChange={(e) => setDbPassword(e.target.value)}
+                                                    placeholder="اتركها فارغة إذا لم تكن محددة في root"
+                                                    className="w-full h-10 px-3 rounded bg-[#090d13] border border-[#233348] text-white font-mono text-sm focus:outline-none focus:border-[#1a9fff]"
                                                 />
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* العمود الأيسر: إعدادات MySQL وفحص الاتصال */}
-                                    <div className="p-6 rounded-[24px] border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex flex-col justify-between gap-5">
-                                        <div>
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h4 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2.5">
-                                                    <Database className="w-5 h-5 text-emerald-500" />
-                                                    <span>قاعدة البيانات المركزية (MySQL)</span>
-                                                </h4>
-
-                                                {/* زر فحص الاتصال التفاعلي */}
-                                                <button
-                                                    type="button"
-                                                    onClick={testDbConnection}
-                                                    disabled={dbTesting}
-                                                    className="px-4 py-2 rounded-[14px] bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-xs font-black transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
-                                                >
-                                                    {dbTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wifi className="w-3.5 h-3.5" />}
-                                                    <span>فحص الاتصال</span>
-                                                </button>
+                                        {/* نتيجة فحص الاتصال */}
+                                        {dbTestResult && (
+                                            <div className={`p-3 rounded text-xs font-bold flex items-center gap-2 ${
+                                                dbTestResult.success 
+                                                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
+                                                    : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                                            }`}>
+                                                {dbTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                                                <span>{dbTestResult.message}</span>
                                             </div>
-
-                                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-4">
-                                                بيانات الاتصال بقاعدة البيانات التي تم تجهيزها عبر MySQL Workbench.
-                                            </p>
-
-                                            {/* إشعار نتيجة فحص الاتصال */}
-                                            {dbTestResult && (
-                                                <div className={`p-3.5 mb-4 rounded-[16px] border text-xs font-bold flex items-center gap-2.5 ${
-                                                    dbTestResult.success
-                                                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                                        : 'bg-red-500/15 border-red-500/30 text-red-600 dark:text-red-400'
-                                                }`}>
-                                                    {dbTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                                                    <span>{dbTestResult.message}</span>
-                                                </div>
-                                            )}
-
-                                            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
-                                                <div>
-                                                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">اسم المضيف (Host)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={dbHost}
-                                                        onChange={e => setDbHost(e.target.value)}
-                                                        className="spatial-input w-full h-12 px-3 rounded-[14px] font-bold text-sm font-mono"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">المنفذ (Port)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={dbPort}
-                                                        onChange={e => setDbPort(e.target.value)}
-                                                        className="spatial-input w-full h-12 px-3 rounded-[14px] font-bold text-sm font-mono"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col gap-3.5">
-                                                <div>
-                                                    <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">اسم قاعدة البيانات (Database Name)</label>
-                                                    <input
-                                                        type="text"
-                                                        value={dbDatabase}
-                                                        onChange={e => setDbDatabase(e.target.value)}
-                                                        className="spatial-input w-full h-12 px-3 rounded-[14px] font-bold text-sm font-mono"
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-3.5">
-                                                    <div>
-                                                        <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">اسم المستخدم (User)</label>
-                                                        <input
-                                                            type="text"
-                                                            value={dbUsername}
-                                                            onChange={e => setDbUsername(e.target.value)}
-                                                            className="spatial-input w-full h-12 px-3 rounded-[14px] font-bold text-sm font-mono"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-black text-slate-700 dark:text-slate-300 mb-1">كلمة المرور (Password)</label>
-                                                        <input
-                                                            type="password"
-                                                            value={dbPassword}
-                                                            onChange={e => setDbPassword(e.target.value)}
-                                                            placeholder="اختياري"
-                                                            className="spatial-input w-full h-12 px-3 rounded-[14px] font-bold text-sm font-mono"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <p className="text-[11px] font-bold text-slate-400">
-                                            💡 إذا لم تكن قاعدة البيانات موجودة، سيقوم المعالج بإنشائها وتجهيز جداولها تلقائياً.
-                                        </p>
-                                    </div>
-
-                                </div>
-                            ) : (
-                                /* نموذج شاشة الكاشير الفرعية (Client Terminal) */
-                                <div className="p-8 rounded-[24px] border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex flex-col gap-6 max-w-2xl mx-auto w-full">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h4 className="text-lg font-black text-slate-900 dark:text-white">عنوان السيرفر الرئيسي في المحل</h4>
-                                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">أدخل عنوان الـ IP أو الدومين المخصص للسيرفر الأساسي</p>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={testHostConnection}
-                                            disabled={hostTesting}
-                                            className="px-4 py-2.5 rounded-[14px] bg-purple-500/15 hover:bg-purple-500/25 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-xs font-black transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
-                                        >
-                                            {hostTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
-                                            <span>فحص الاتصال بالسيرفر</span>
-                                        </button>
-                                    </div>
-
-                                    <input
-                                        type="text"
-                                        value={serverHost}
-                                        onChange={e => setServerHost(e.target.value)}
-                                        placeholder="مثال: 192.168.1.15 أو pos.local"
-                                        className="spatial-input w-full h-15 px-5 rounded-[18px] font-bold text-base font-mono"
-                                    />
-
-                                    {hostTestResult && (
-                                        <div className={`p-4 rounded-[16px] border text-xs font-bold flex items-center gap-2.5 ${
-                                            hostTestResult.success
-                                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                                : 'bg-red-500/15 border-red-500/30 text-red-600 dark:text-red-400'
-                                        }`}>
-                                            {hostTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                                            <span>{hostTestResult.message}</span>
-                                        </div>
-                                    )}
-
-                                    <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs font-bold text-purple-700 dark:text-purple-300">
-                                        ⚡ جهاز الكاشير لا يتطلب أي خوادم أو قواعد بيانات محلية، سيتم ربطه بالسيرفر المركزي مباشرة.
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* شريط الإجراءات المكتبي السفلي (Desktop Bottom Action Dock) */}
-                            <div className="flex items-center justify-between gap-4 mt-8 pt-5 border-t border-black/10 dark:border-white/10">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep('role')}
-                                    className="px-6 h-14 rounded-[18px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-sm transition-all cursor-pointer"
-                                >
-                                    رجوع
-                                </button>
-
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={handleStartInstall}
-                                        className="px-10 h-14 rounded-[18px] spatial-button text-base font-black transition-all shadow-xl shadow-primary/30 flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.98]"
-                                    >
-                                        <Sparkles className="w-5 h-5" />
-                                        <span>بدء التثبيت والتفعيل الشامل للمنظومة</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                        </div>
-                    )}
-
-                    {/* المرحلة 3: شاشة جاري التثبيت في الخلفية */}
-                    {step === 'installing' && (
-                        <div className="spatial-card p-12 text-center shadow-2xl animate-in fade-in zoom-in-95 duration-300 max-w-xl mx-auto my-auto w-full">
-                            <div className="w-20 h-20 rounded-full bg-primary/15 border-2 border-primary/30 flex items-center justify-center text-primary mx-auto mb-6 shadow-lg shadow-primary/20">
-                                <Loader2 className="w-10 h-10 animate-spin" />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">جاري تهيئة منظومة السحابة...</h2>
-                            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-                                {installProgressText}
-                            </p>
-                            <span className="text-xs font-bold text-slate-400">يرجى الانتظار، يتم تجهيز خادم Apache وقواعد البيانات تلقائياً...</span>
-                        </div>
-                    )}
-
-                    {/* المرحلة 4: شاشة اكتمال التثبيت بنجاح */}
-                    {step === 'completed' && (
-                        <div className="spatial-card p-10 md:p-14 text-center shadow-2xl animate-in zoom-in-95 duration-300 max-w-2xl mx-auto my-auto w-full">
-                            <div className="w-22 h-22 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-500 mx-auto mb-6 shadow-xl shadow-emerald-500/25">
-                                <CheckCircle2 className="w-12 h-12" />
-                            </div>
-
-                            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mb-2">تم التثبيت والتهيئة بنجاح!</h2>
-                            <p className="text-sm font-bold text-slate-600 dark:text-slate-400 max-w-lg mx-auto mb-8">
-                                تم إعداد وتشغيل المنظومة بنجاح لمتجر «{storeName}». يمكنك الآن الدخول فوراً وبدء عمليات البيع والكاشير.
-                            </p>
-
-                            <div className="p-6 rounded-[22px] border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] max-w-md mx-auto mb-8 text-right flex flex-col gap-3 text-xs font-bold">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 dark:text-slate-400">اسم المتجر:</span>
-                                    <span className="text-slate-900 dark:text-white font-black">{storeName}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 dark:text-slate-400">الرابط المحلي الآمن:</span>
-                                    <span className="text-primary font-mono font-black">https://{domain}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-slate-500 dark:text-slate-400">عنوان السيرفر (IP):</span>
-                                    <span className="text-emerald-600 dark:text-emerald-400 font-mono font-black">{initialConfig.server_ip}</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3.5 max-w-md mx-auto w-full">
-                                <a
-                                    href={completedInfo?.redirectUrl || `https://${domain}/invoices/create`}
-                                    onClick={(e) => {
-                                        if ((window as any).electronAPI?.openPos) {
-                                            e.preventDefault();
-                                            (window as any).electronAPI.openPos();
-                                        }
-                                    }}
-                                    className="inline-flex items-center justify-center gap-2.5 w-full h-15 rounded-[20px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base transition-all shadow-xl shadow-emerald-600/30 cursor-pointer active:scale-[0.98]"
-                                >
-                                    <span>الدخول إلى منظومة المبيعات الآن</span>
-                                    <ArrowLeft className="w-5 h-5" />
-                                </a>
-
-                                <button
-                                    type="button"
-                                    onClick={handleCreateShortcut}
-                                    disabled={creatingShortcut}
-                                    className="inline-flex items-center justify-center gap-2 w-full h-12 rounded-[18px] bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-bold text-xs border border-black/10 dark:border-white/10 transition-all cursor-pointer disabled:opacity-50"
-                                >
-                                    {creatingShortcut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4 text-primary" />}
-                                    <span>توليد / تجديد اختصار المبيعات على سطح المكتب (HTTPS)</span>
-                                </button>
-
-                                {shortcutStatus && (
-                                    <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 text-xs font-bold text-primary animate-in fade-in duration-200">
-                                        {shortcutStatus}
+                                        )}
                                     </div>
                                 )}
+
+                                {/* 3. ربط الجهاز الفرعي بالسيرفر الرئيسي (Client Mode) */}
+                                {role === 'client' && (
+                                    <div className="p-6 rounded-lg bg-[#111721] border border-[#212f42] shadow-sm animate-in fade-in duration-150">
+                                        <div className="flex items-center justify-between mb-5 pb-3 border-b border-[#1f2d3f]">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded bg-[#162232] border border-[#273a52] flex items-center justify-center text-purple-400">
+                                                    <Wifi className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-base font-black text-white">ربط محطة الكاشير بالسيرفر الرئيسي</h3>
+                                                    <p className="text-xs font-bold text-[#718497]">
+                                                        أدخل عنوان الـ IP الخاص بالسيرفر الرئيسي على نفس شبكة المودم أو الـ Wi-Fi.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={testHostConnection}
+                                                disabled={hostTesting}
+                                                className="px-4 h-9 rounded bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                            >
+                                                {hostTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />}
+                                                <span>فحص الاتصال</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-bold text-[#8fa2b6] mb-1.5">
+                                                عنوان السيرفر الرئيسي (Master Server IP)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={serverHost}
+                                                onChange={(e) => setServerHost(e.target.value)}
+                                                placeholder="مثال: 192.168.1.100 أو tajori.store"
+                                                className="w-full h-11 px-3.5 rounded bg-[#090d13] border border-[#233348] text-purple-400 font-mono font-bold text-sm focus:outline-none focus:border-purple-500"
+                                            />
+                                        </div>
+
+                                        {hostTestResult && (
+                                            <div className={`p-3 rounded text-xs font-bold flex items-center gap-2 ${
+                                                hostTestResult.success 
+                                                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
+                                                    : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                                            }`}>
+                                                {hostTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                                                <span>{hostTestResult.message}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 4. النطاق والأمان وشهادات SSL */}
+                                {activeTab === 'network' && (
+                                    <div className="p-6 rounded-lg bg-[#111721] border border-[#212f42] shadow-sm animate-in fade-in duration-150">
+                                        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#1f2d3f]">
+                                            <div className="w-10 h-10 rounded bg-[#162232] border border-[#273a52] flex items-center justify-center text-[#1a9fff]">
+                                                <Globe className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-black text-white">إعدادات النطاق المحلي وشهادة الأمان SSL</h3>
+                                                <p className="text-xs font-bold text-[#718497]">
+                                                    تشغيل النظام تحت بروتوكول HTTPS المشفر الصامت وفق معايير Steps Version 2.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 text-xs font-bold text-[#9fb3c8]">
+                                            <div className="p-3.5 rounded bg-[#090e15] border border-[#1f2e41] flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Lock className="w-4 h-4 text-emerald-400" />
+                                                    <span>محرك شهادات الأمان (mkcert Engine)</span>
+                                                </div>
+                                                <span className="text-emerald-400 font-mono font-bold">C:\Apache24\conf\ssl</span>
+                                            </div>
+
+                                            <div className="p-3.5 rounded bg-[#090e15] border border-[#1f2e41] flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Terminal className="w-4 h-4 text-[#1a9fff]" />
+                                                    <span>ملف أسماء النطاقات المحلية (Windows Hosts)</span>
+                                                </div>
+                                                <span className="text-[#6cb5ff] font-mono font-bold">C:\Windows\System32\drivers\etc\hosts</span>
+                                            </div>
+
+                                            <div className="p-3.5 rounded bg-[#090e15] border border-[#1f2e41] flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <HardDrive className="w-4 h-4 text-amber-400" />
+                                                    <span>إعادة التوجيه التلقائي (VirtualHosts)</span>
+                                                </div>
+                                                <span className="text-amber-300 font-mono font-bold">Port 80 (HTTP) &rarr; Port 443 (HTTPS)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                            </div>
+
+                            {/* 🎮 Steam Bottom Action Bar (Install / Provision Button) */}
+                            <div className="mt-8 pt-5 border-t border-[#1e2a3a] flex items-center justify-between max-w-4xl w-full mx-auto">
+                                <div className="flex items-center gap-2 text-xs font-bold text-[#718296]">
+                                    <span className="w-2 h-2 rounded-full bg-[#1a9fff] animate-ping" />
+                                    <span>جاهز لحفظ الإعدادات وبناء قاعدة البيانات</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleStartInstall}
+                                    className="px-8 h-13 rounded bg-gradient-to-r from-[#21a457] to-[#168142] hover:from-[#27be65] hover:to-[#1b9a4e] text-white font-black text-sm transition-all shadow-[0_4px_16px_rgba(33,164,87,0.4)] flex items-center gap-2.5 cursor-pointer active:scale-[0.99] border-t border-emerald-400/30"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    <span>تثبيت وتهيئة المنظومة بالكامل (Deploy & Run)</span>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                )}
+
+                {/* ══════════════════════════════════════════════════════════════
+                    المرحلة 3: شاشة جاري التثبيت (Steam Game Installing Style)
+                   ══════════════════════════════════════════════════════════════ */}
+                {step === 'installing' && (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full animate-in fade-in zoom-in-98 duration-200">
+                        <div className="w-20 h-20 rounded-xl bg-[#121a24] border border-[#25364c] flex items-center justify-center text-[#1a9fff] mb-6 shadow-2xl shadow-[#1a9fff]/20 relative">
+                            <Loader2 className="w-10 h-10 animate-spin" />
+                            <div className="absolute inset-0 rounded-xl bg-[#1a9fff]/10 animate-pulse" />
+                        </div>
+
+                        <span className="text-[10px] font-mono font-black text-[#1a9fff] uppercase tracking-widest bg-[#1a9fff]/10 px-3 py-1 rounded border border-[#1a9fff]/20 mb-3">
+                            INSTALLING TAQNIYA CLOUD WORKSTATION
+                        </span>
+
+                        <h2 className="text-2xl font-black text-white mb-2">جاري تهيئة منظومة السحابة...</h2>
+                        <p className="text-xs sm:text-sm font-bold text-[#8fa1b5] text-center mb-6 leading-relaxed">
+                            {installProgressText}
+                        </p>
+
+                        {/* شريط التحميل بنمط Steam المضيء */}
+                        <div className="w-full h-3 rounded-full bg-[#0c1219] border border-[#213042] overflow-hidden p-0.5 mb-6">
+                            <div className="h-full rounded-full bg-gradient-to-r from-[#1a9fff] via-cyan-400 to-[#1a9fff] animate-pulse w-full" />
+                        </div>
+
+                        {/* صندوق المحطة الطرفية (Installer Terminal Box) */}
+                        <div className="w-full p-4 rounded bg-[#070b0f] border border-[#1c2735] text-[11px] font-mono text-[#6c8299] space-y-1.5 shadow-inner text-right">
+                            <div className="text-emerald-400 flex items-center gap-1.5">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>[OK] Apache 2.4 & PHP 8.4 runtime active</span>
+                            </div>
+                            <div className="text-emerald-400 flex items-center gap-1.5">
+                                <Check className="w-3.5 h-3.5" />
+                                <span>[OK] mkcert Root CA validated in system store</span>
+                            </div>
+                            <div className="text-[#64b0ff] flex items-center gap-1.5 animate-pulse">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <span>[PROCESSING] Executing MySQL Migrations & Desktop Shortcuts...</span>
                             </div>
                         </div>
-                    )}
+                    </div>
+                )}
 
-                </div>
+                {/* ══════════════════════════════════════════════════════════════
+                    المرحلة 4: شاشة اكتمال التثبيت (Steam Ready to Launch Hero)
+                   ══════════════════════════════════════════════════════════════ */}
+                {step === 'completed' && (
+                    <div className="flex-1 p-6 md:p-10 flex flex-col items-center justify-center max-w-2xl mx-auto w-full animate-in fade-in zoom-in-98 duration-200">
+                        
+                        {/* شعار النجاح المكتبي */}
+                        <div className="w-18 h-18 rounded-2xl bg-emerald-500/15 border-2 border-emerald-500/40 flex items-center justify-center text-emerald-400 mb-5 shadow-2xl shadow-emerald-500/20">
+                            <CheckCircle2 className="w-10 h-10" />
+                        </div>
+
+                        <span className="text-[11px] font-mono font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-3 py-1 rounded border border-emerald-500/25 mb-2">
+                            SETUP COMPLETED & VERIFIED
+                        </span>
+
+                        <h2 className="text-2xl sm:text-3xl font-black text-white mb-2 text-center">
+                            تم التثبيت والتهيئة بنجاح!
+                        </h2>
+                        <p className="text-xs sm:text-sm font-bold text-[#8698ab] text-center max-w-md mb-6 leading-relaxed">
+                            تم إعداد وتشغيل المنظومة بنجاح لمتجر «{storeName}». النظام جاهز الآن للتشغيل المباشر والعمليات اليومية.
+                        </p>
+
+                        {/* بطاقة المواصفات والشبكة */}
+                        <div className="w-full p-4 rounded-lg bg-[#0e141d] border border-[#213042] space-y-2.5 text-xs font-mono mb-6 shadow-inner">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[#6c8096]">STORE NAME</span>
+                                <span className="text-white font-bold">{storeName}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[#6c8096]">HTTPS DOMAIN</span>
+                                <a 
+                                    href={`https://${domain}/invoices/create`}
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="text-[#1a9fff] hover:underline font-bold flex items-center gap-1"
+                                >
+                                    <span>https://{domain}</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </a>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[#6c8096]">SERVER IP</span>
+                                <span className="text-emerald-400 font-bold">{initialConfig.server_ip}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[#6c8096]">SSL SECURITY</span>
+                                <span className="text-emerald-400 font-bold">Trusted (mkcert Active)</span>
+                            </div>
+                        </div>
+
+                        {/* 🎮 BIG STEAM PLAY BUTTON & ACTIONS */}
+                        <div className="w-full space-y-3">
+                            <button
+                                type="button"
+                                onClick={handleOpenPosApp}
+                                className="w-full h-14 rounded-lg bg-gradient-to-r from-[#21a457] to-[#168142] hover:from-[#27be65] hover:to-[#1b9a4e] text-white font-black text-base transition-all shadow-[0_4px_20px_rgba(33,164,87,0.45)] flex items-center justify-center gap-2.5 cursor-pointer active:scale-[0.99] border-t border-emerald-400/30"
+                            >
+                                <Play className="w-5 h-5 fill-current" />
+                                <span>تشغيل منظومة المبيعات والكاشير الآن (PLAY POS)</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleCreateShortcut}
+                                disabled={creatingShortcut}
+                                className="w-full h-11 rounded bg-[#131b26] hover:bg-[#1b2635] text-[#93a7bc] hover:text-white border border-[#233346] text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            >
+                                {creatingShortcut ? <Loader2 className="w-4 h-4 animate-spin" /> : <Monitor className="w-4 h-4 text-[#1a9fff]" />}
+                                <span>توليد / تجديد اختصار المبيعات على سطح المكتب (HTTPS)</span>
+                            </button>
+
+                            {shortcutStatus && (
+                                <div className="p-3 rounded bg-[#1a9fff]/10 border border-[#1a9fff]/20 text-xs font-bold text-[#6cb5ff] text-center animate-in fade-in duration-150">
+                                    {shortcutStatus}
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                )}
+
             </main>
 
-            {/* Desktop Bottom Status Bar: شريط الحالة المكتبي السفلي */}
-            <footer className="px-6 py-2.5 border-t border-black/10 dark:border-white/10 backdrop-blur-xl bg-white/40 dark:bg-black/30 flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
-                <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span>خادم السحابة: متصل وجاهز</span>
+            {/* 🕹️ Steam Desktop Client Status Dock (Footer) */}
+            <footer className="h-8 px-5 bg-[#0b0f15] border-t border-[#1b2533] flex items-center justify-between text-[11px] font-bold text-[#55697d] shrink-0">
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[#8ba0b5]">خادم السحابة: متصل وجاهز للعمل</span>
+                    </div>
+                    <span className="text-[#2b3a4c]">|</span>
+                    <span className="font-mono">BUILD 2026.11.01</span>
                 </div>
-                <span>جميع الحقوق محفوظة © {new Date().getFullYear()} — {companyInfo.name}</span>
+                <div>
+                    <span>جميع الحقوق محفوظة © {new Date().getFullYear()} — {companyInfo.name}</span>
+                </div>
             </footer>
         </div>
     );
