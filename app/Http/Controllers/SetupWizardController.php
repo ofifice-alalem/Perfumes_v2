@@ -51,27 +51,15 @@ class SetupWizardController extends Controller
         $localIP = $this->resolveLocalIP();
         $isCompleted = self::isSetupCompleted();
 
-        $appUrl = env('APP_URL');
-        $configuredDomain = ($appUrl && !str_contains($appUrl, 'localhost') && !str_contains($appUrl, '127.0.0.1'))
-            ? parse_url($appUrl, PHP_URL_HOST)
-            : '';
-
-        // إذا كانت المنظومة لم تكتمل تهيئتها بعد، لا نفرض perfumes_v2 كاسم ثابت
-        $envDatabase = env('DB_DATABASE', '');
-        $initialDatabase = ($envDatabase === 'perfumes_v2' && !$isCompleted) ? '' : $envDatabase;
-
-        $storeName = $isCompleted 
-            ? $this->settingRepo->get('store_name', env('APP_NAME', '')) 
-            : (env('APP_NAME') && env('APP_NAME') !== 'Laravel' && env('APP_NAME') !== 'alharith.ly' ? env('APP_NAME') : '');
-
+        // إبقاء قيم المتجر والنطاق وقاعدة البيانات محايدة تماماً وفارغة للمستخدم
         return Inertia::render('Setup/Wizard', [
             'initialConfig' => [
-                'db_host'     => env('DB_HOST', '127.0.0.1'),
-                'db_port'     => (int)env('DB_PORT', 3306),
-                'db_database' => $initialDatabase,
-                'db_username' => env('DB_USERNAME', 'root'),
-                'store_name'  => $storeName,
-                'domain'      => $configuredDomain ?: '',
+                'db_host'     => '127.0.0.1',
+                'db_port'     => 3306,
+                'db_database' => '',
+                'db_username' => 'root',
+                'store_name'  => '',
+                'domain'      => '',
                 'server_ip'   => $localIP,
             ],
             'companyInfo' => [

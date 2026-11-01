@@ -5,9 +5,10 @@ const ZOOM_STEPS = [50, 60, 67, 75, 80, 90, 100, 110, 125];
 
 interface ZoomControlProps {
     className?: string;
+    variant?: 'default' | 'desktop';
 }
 
-export function ZoomControl({ className = '' }: ZoomControlProps) {
+export function ZoomControl({ className = '', variant = 'default' }: ZoomControlProps) {
     const [currentZoom, setCurrentZoom] = useState<number>(100);
     const [isOpen, setIsOpen] = useState(false);
     const popoverRef = useRef<HTMLDivElement>(null);
@@ -64,6 +65,88 @@ export function ZoomControl({ className = '' }: ZoomControlProps) {
         applyZoom(val);
         setCurrentZoom(val);
         setIsOpen(false);
+    }
+
+    if (variant === 'desktop') {
+        return (
+            <div className={`relative ${className}`} ref={popoverRef}>
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="h-8 px-2.5 rounded-[3px] border border-slate-300 dark:border-[#2b3a4c] bg-slate-100 dark:bg-[#1e2632] hover:bg-slate-200 dark:hover:bg-[#283546] text-slate-700 dark:text-[#c6d4df] hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-mono font-bold"
+                    title="تعديل أبعاد وحجم الشاشة (Zoom)"
+                >
+                    <Monitor className="w-3.5 h-3.5 text-[#1a9fff]" />
+                    <span>{currentZoom}%</span>
+                </button>
+
+                {isOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-60 rounded-[3px] bg-white dark:bg-[#171d25] border border-slate-300 dark:border-[#2a3848] p-3 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 text-right select-none">
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-[#243243]">
+                            <div className="flex items-center gap-1.5">
+                                <SlidersHorizontal className="w-3.5 h-3.5 text-[#1a9fff]" />
+                                <span className="text-xs font-black text-slate-800 dark:text-white">أبعاد وحجم الشاشة</span>
+                            </div>
+                            <span className="px-1.5 py-0.5 rounded-[2px] text-[10px] font-mono font-bold bg-[#1a9fff]/15 text-[#1a9fff]">
+                                {currentZoom}%
+                            </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1 mb-2.5">
+                            {[
+                                { val: 100, label: '100% — الحجم القياسي', desc: 'مناسب للشاشات الكبيرة والمكتبية' },
+                                { val: 80,  label: '80% — حجم متوازن', desc: 'توسيع مناسب للمساحة' },
+                                { val: 67,  label: '67% — شاشات الكاشير', desc: 'شاشات نقاط البيع المدمجة' },
+                            ].map(opt => {
+                                const isSelected = currentZoom === opt.val;
+                                return (
+                                    <button
+                                        key={opt.val}
+                                        type="button"
+                                        onClick={() => setPreset(opt.val)}
+                                        className={`w-full p-2 rounded-[2px] text-right transition-all flex items-center justify-between cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-[#1a9fff] text-white font-black'
+                                                : 'hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300 font-bold'
+                                        }`}
+                                    >
+                                        <div>
+                                            <div className="text-xs">{opt.label}</div>
+                                            <div className={`text-[10px] ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                                                {opt.desc}
+                                            </div>
+                                        </div>
+                                        {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-200 dark:border-[#243243] flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-400">تحكم دقيق:</span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={zoomOut}
+                                    className="w-7 h-7 rounded-[2px] border border-slate-300 dark:border-[#2b3a4c] bg-slate-100 dark:bg-[#1e2632] hover:bg-slate-200 dark:hover:bg-[#283546] flex items-center justify-center text-slate-700 dark:text-slate-300 cursor-pointer active:scale-95"
+                                    title="تصغير"
+                                >
+                                    <ZoomOut className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={zoomIn}
+                                    className="w-7 h-7 rounded-[2px] border border-slate-300 dark:border-[#2b3a4c] bg-slate-100 dark:bg-[#1e2632] hover:bg-slate-200 dark:hover:bg-[#283546] flex items-center justify-center text-slate-700 dark:text-slate-300 cursor-pointer active:scale-95"
+                                    title="تكبير"
+                                >
+                                    <ZoomIn className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
     }
 
     return (
