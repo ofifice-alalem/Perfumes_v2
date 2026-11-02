@@ -109,9 +109,19 @@ class ProductController extends Controller
         return back()->with('success', 'تم حذف المنتج بنجاح');
     }
 
-    public function exportExcel()
+    public function exportExcel(\Illuminate\Http\Request $request)
     {
-        $this->products->exportCatalogExcel();
+        $rawIds = $request->input('ids');
+        $productIds = null;
+        if (!empty($rawIds)) {
+            if (is_array($rawIds)) {
+                $productIds = array_map('intval', $rawIds);
+            } else {
+                $productIds = array_filter(array_map('intval', explode(',', (string)$rawIds)));
+            }
+        }
+
+        $this->products->exportCatalogExcel($productIds);
     }
 
     public function importExcel(\Illuminate\Http\Request $request)

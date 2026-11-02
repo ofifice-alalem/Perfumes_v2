@@ -1773,6 +1773,37 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         return true;
     });
 
+    // تصدير ملف Excel مع مراعاة الفلاتر النشطة (تصدير العناصر المفلترة فقط إن وجدت)
+    const handleExportExcel = () => {
+        if (filtered.length === 0) return;
+
+        if (hasActiveFilter && filtered.length < products.length) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/products/export/excel';
+            form.style.display = 'none';
+
+            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+
+            const idsInput = document.createElement('input');
+            idsInput.type = 'hidden';
+            idsInput.name = 'ids';
+            idsInput.value = filtered.map(p => p.id).join(',');
+            form.appendChild(idsInput);
+
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+        } else {
+            window.location.href = '/products/export/excel';
+        }
+    };
+
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
     const safeCurrentPage = Math.min(currentPage, totalPages);
     const paginatedProducts = filtered.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
@@ -1939,14 +1970,25 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         </button>
 
                         {/* زر تصدير Excel */}
-                        <a
-                            href="/products/export/excel"
-                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none"
-                            title="تصدير شيت إكسل كامل يشمل المنتجات والتصنيفات والأحجام والتيرات والأسعار"
+                        <button
+                            type="button"
+                            onClick={handleExportExcel}
+                            disabled={filtered.length === 0}
+                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
+                            title={
+                                hasActiveFilter && filtered.length < products.length
+                                    ? `تصدير شيت إكسل للمنتجات المفلترة حالياً (${filtered.length} منتج)`
+                                    : 'تصدير شيت إكسل كامل يشمل المنتجات والتصنيفات والأحجام والتيرات والأسعار'
+                            }
                         >
-                            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white" />
+                            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
                             <span>تصدير Excel</span>
-                        </a>
+                            {hasActiveFilter && filtered.length < products.length && (
+                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-emerald-700 transition-all">
+                                    {filtered.length}
+                                </span>
+                            )}
+                        </button>
 
                         {/* زر استيراد Excel */}
                         <button

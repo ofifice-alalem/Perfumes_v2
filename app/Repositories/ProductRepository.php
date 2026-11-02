@@ -132,7 +132,7 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         return $product->invoiceItems()->exists() || $product->purchaseItems()->exists();
     }
 
-    public function exportCatalogExcel(): void
+    public function exportCatalogExcel(?array $productIds = null): void
     {
         @ini_set('memory_limit', '512M');
         @set_time_limit(180);
@@ -201,7 +201,11 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         $sheetProducts->getStyle('A1:' . $lastColProd . '1')->applyFromArray($headerStyle);
         $sheetProducts->getRowDimension(1)->setRowHeight(28);
 
-        $products = $this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail'])->orderBy('name')->get();
+        $query = $this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail'])->orderBy('name');
+        if (!empty($productIds)) {
+            $query->whereIn('id', $productIds);
+        }
+        $products = $query->get();
 
         $rowIdx = 2;
         foreach ($products as $i => $p) {
@@ -409,7 +413,9 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         // Set active sheet to Products
         $spreadsheet->setActiveSheetIndex(0);
 
-        $filename = 'perfumes-catalog-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = (!empty($productIds) && count($productIds) < $this->model->count())
+            ? 'perfumes-filtered-' . count($productIds) . '-' . now()->format('Y-m-d') . '.xlsx'
+            : 'perfumes-catalog-' . now()->format('Y-m-d') . '.xlsx';
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="' . $filename . '"');
         header('Cache-Control: max-age=0');

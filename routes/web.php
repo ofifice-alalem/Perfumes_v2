@@ -105,7 +105,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('sizes', SizeController::class)->except(['create', 'edit', 'show']);
         Route::resource('price-tiers', PriceTierController::class)->except(['create', 'edit', 'show']);
         Route::put('price-tiers/{id}/prices', [PriceTierController::class, 'updatePrices'])->name('price-tiers.prices');
-        Route::get('products/export/excel', [ProductController::class, 'exportExcel'])->name('products.export.excel');
+        Route::match(['get', 'post'], 'products/export/excel', [ProductController::class, 'exportExcel'])->name('products.export.excel');
         Route::post('products/import/excel', [ProductController::class, 'importExcel'])->name('products.import.excel');
         Route::post('products/generate-all-qrcodes', [ProductController::class, 'generateAllQrcodes'])->name('products.generate-all-qrcodes');
         Route::resource('products', ProductController::class)->except(['create', 'edit', 'show']);
