@@ -15,7 +15,7 @@ function loadLabelData() {
         if (fs.existsSync(filePath)) {
             try {
                 const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                if (filePath.includes('temp') || path.basename(filePath).startsWith('label_')) {
+                if (filePath.includes('temp') || path.basename(filePath).startsWith('label_') || path.basename(filePath).startsWith('batch_labels_')) {
                     try { fs.unlinkSync(filePath); } catch (e) {}
                 }
                 return data;
@@ -52,26 +52,29 @@ async function main() {
         ? printerArg.replace('--printer=', '').replace(/^["']|["']$/g, '') 
         : (labelData.printerName || config.labelPrinter?.name || config.printer?.name || "XP-365B");
 
+    const labelsList = Array.isArray(labelData.labels) && labelData.labels.length > 0
+        ? labelData.labels
+        : [labelData];
+
     console.log(`Target Printer: "${printerName}"`);
-    console.log(`Dimensions: ${labelData.widthMm}x${labelData.heightMm} mm`);
-    console.log(`Product: ${labelData.productName}`);
+    console.log(`Labels Count: ${labelsList.length}`);
 
-    console.log("\n1. Rendering label to 203 DPI canvas with Tajawal font...");
-    const canvas = await renderLabelCanvas(labelData);
-
-    const protocol = labelData.protocol || 'tspl';
-    let rawBuffer;
-
-    if (protocol === 'escpos') {
-        console.log("2. Encoding image to ESC/POS raster format...");
-        rawBuffer = encodeCanvasToEscPos(canvas, labelData);
-    } else {
-        console.log("2. Encoding image to TSPL native label format with auto SIZE & GAP...");
-        rawBuffer = encodeCanvasToTspl(canvas, labelData);
+    console.log("\n1. Rendering label(s) to 203 DPI canvas with Tajawal font...");
+    const buffers = [];
+    for (let i = 0; i < labelsList.length; i++) {
+        const item = labelsList[i];
+        const canvas = await renderLabelCanvas(item);
+        const protocol = item.protocol || 'tspl';
+        if (protocol === 'escpos') {
+            buffers.push(encodeCanvasToEscPos(canvas, item));
+        } else {
+            buffers.push(encodeCanvasToTspl(canvas, item));
+        }
     }
 
-    console.log("3. Transmitting raw bytes to Windows printer spooler...");
-    const result = await printRawBuffer(printerName, rawBuffer);
+    console.log("2. Transmitting raw bytes to Windows printer spooler...");
+    const combinedBuffer = Buffer.concat(buffers);
+    const result = await printRawBuffer(printerName, combinedBuffer);
 
     console.log("----------------------------------------------");
     console.log(`✔ SUCCESS: ${result.message}`);

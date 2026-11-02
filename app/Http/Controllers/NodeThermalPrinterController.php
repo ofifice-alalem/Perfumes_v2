@@ -595,5 +595,130 @@ class NodeThermalPrinterController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Send direct batch print RAW job for multiple Barcode/QR labels via Node engine
+     */
+    public function printBatchLabelsDirect(Request $request)
+    {
+        try {
+            $defaultPrinter = $this->settingRepo->get('label_printer_name') ?: 'Xprinter XP-365B';
+            $printerName = $request->input('printer_name') ?: $defaultPrinter;
+            if ($printerName === 'XP-80') {
+                $printerName = $defaultPrinter;
+            }
+
+            $items = $request->input('items', []);
+            if (empty($items) || !is_array($items)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'لم يتم توفير قائمة المنتجات للطباعة الجماعية'
+                ], 400);
+            }
+
+            $widthMm       = (float)($request->input('width_mm') ?: $this->settingRepo->get('label_width_mm', 50));
+            $heightMm      = (float)($request->input('height_mm') ?: $this->settingRepo->get('label_height_mm', 25));
+            $rotation      = (int)($request->input('rotation') ?? $this->settingRepo->get('label_rotation', 0));
+            $offsetX       = (float)($request->input('offset_x') ?? 0);
+            $offsetY       = (float)($request->input('offset_y') ?? 0);
+            $tab           = $request->input('tab', 'ean13');
+            $showName      = $request->boolean('show_name', true);
+            $showPrice     = $request->boolean('show_price', true);
+            $showCodeText  = $request->boolean('show_code_text', true);
+            $qrSize        = (float)($request->input('qr_size') ?: $this->settingRepo->get('label_qr_size', 0));
+            $titleFontSize = (float)($request->input('title_font_size') ?: $this->settingRepo->get('label_title_font_size', 0));
+            $copies        = max(1, (int)$request->input('copies', 1));
+            $protocol      = $request->input('protocol', 'tspl');
+
+            $labels = [];
+            foreach ($items as $item) {
+                $labels[] = [
+                    'widthMm'       => $widthMm,
+                    'heightMm'      => $heightMm,
+                    'rotation'      => $rotation,
+                    'offsetX'       => $offsetX,
+                    'offsetY'       => $offsetY,
+                    'tab'           => $tab,
+                    'productName'   => $item['product_name'] ?? 'منتج',
+                    'price'         => $item['price'] ?? '',
+                    'code'          => (string)($item['code'] ?? '0000000000'),
+                    'showName'      => $showName,
+                    'showPrice'     => $showPrice,
+                    'showCodeText'  => $showCodeText,
+                    'qrSize'        => $qrSize,
+                    'titleFontSize' => $titleFontSize,
+                    'copies'        => $copies,
+                    'protocol'      => $protocol,
+                    'printerName'   => $printerName,
+                ];
+            }
+
+            // 1. Fast socket probe to check port 9124
+            $isDaemonActive = false;
+            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
+            if ($fp) {
+                $isDaemonActive = true;
+                fclose($fp);
+            }
+
+            if ($isDaemonActive) {
+                try {
+                    $response = Http::connectTimeout(2.0)->timeout(15.0)->post('http://127.0.0.1:9124/print-batch-labels', [
+                        'printerName' => $printerName,
+                        'labels'      => $labels,
+                    ]);
+                    if ($response->successful()) {
+                        $resData = $response->json();
+                        return response()->json([
+                            'success'     => true,
+                            'message'     => 'تم إرسال ' . count($labels) . ' ملصق بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
+                            'printerUsed' => $resData['printerUsed'] ?? $printerName,
+                            'durationMs'  => $resData['durationMs'] ?? null,
+                            'count'       => count($labels),
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("printBatchLabelsDirect HTTP dispatch: " . $e->getMessage());
+                    if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
+                        return response()->json([
+                            'success'     => true,
+                            'message'     => 'تم إرسال ' . count($labels) . ' ملصق إلى الطابعة ' . $printerName,
+                            'printerUsed' => $printerName,
+                            'count'       => count($labels),
+                        ]);
+                    }
+                }
+            }
+
+            // 2. Fallback CLI execution with temp json file
+            $enginePath = $this->getEnginePath();
+            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
+            if (!File::isDirectory($tempDir)) {
+                File::makeDirectory($tempDir, 0755, true);
+            }
+            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'batch_labels_' . time() . '_' . uniqid() . '.json';
+            File::put($tempFile, json_encode(['labels' => $labels, 'printerName' => $printerName], JSON_UNESCAPED_UNICODE));
+
+            $cmd = sprintf('cd /d "%s" && node print-label.js --file="%s" --printer="%s"', $enginePath, $tempFile, $printerName);
+            $output = shell_exec("cmd /c \"$cmd\"");
+
+            if (File::exists($tempFile)) {
+                @File::delete($tempFile);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إرسال ' . count($labels) . ' ملصق بنجاح إلى طابعة الباركود',
+                'log'     => $output,
+                'count'   => count($labels),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("NodeThermalPrinterController printBatchLabelsDirect error: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء الطباعة الجماعية: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
 

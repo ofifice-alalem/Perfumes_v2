@@ -61,7 +61,20 @@ function generateQrCode(): string {
 
 
 // ─── Modal عرض وطباعة ملصق المنتج (Thermal Label Printer Engine) ───
-interface QrModalProps { product: Product; onClose: () => void; }
+interface QrModalProps {
+    product?: Product | null;
+    productsList?: Product[];
+    onClose: () => void;
+}
+
+function getProductPrice(p: Product | null | undefined): string {
+    if (!p) return '';
+    return p.product_price?.full_bottle_regular && Number(p.product_price.full_bottle_regular) > 0
+        ? `${toAsciiDigits(Number(p.product_price.full_bottle_regular).toLocaleString('en-US'))} د.ل`
+        : p.product_price?.price_per_unit_regular && Number(p.product_price.price_per_unit_regular) > 0
+        ? `${toAsciiDigits(Number(p.product_price.price_per_unit_regular).toLocaleString('en-US'))} د.ل`
+        : '';
+}
 
 const PERFUME_SVG_B64 = "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`);
 
@@ -100,7 +113,13 @@ function toEan13(code: string): string {
     return base12 + checkDigit;
 }
 
-function QrModal({ product, onClose }: QrModalProps) {
+function QrModal({ product, productsList, onClose }: QrModalProps) {
+    const isBulk = Array.isArray(productsList) && productsList.length > 0;
+    const items = isBulk ? productsList : (product ? [product] : []);
+    const [previewIndex, setPreviewIndex] = useState<number>(0);
+
+    const activeProduct = items[previewIndex] || items[0];
+    const priceDisplay = getProductPrice(activeProduct);
     const [tab, setTab] = useState<'ean13' | 'serial' | 'classic'>(() => {
         const saved = localStorage.getItem('label_printer_tab');
         if (saved === 'classic' || saved === 'serial' || saved === 'ean13') return saved;
@@ -220,37 +239,76 @@ function QrModal({ product, onClose }: QrModalProps) {
         setPrintingNode(true);
         setNodePrintMsg(null);
         try {
-            const res = await fetch('/settings/node-printer/print-label', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
-                },
-                body: JSON.stringify({
-                    printer_name: selectedPrinter || 'Xprinter XP-365B',
-                    width_mm: widthMm,
-                    height_mm: heightMm,
-                    rotation: rotation,
-                    offset_x: offsetX,
-                    offset_y: offsetY,
-                    tab: tab,
-                    product_name: product.name,
-                    price: priceDisplay,
-                    code: product.qrcode || '0000000000',
-                    show_name: showName,
-                    show_price: showPrice,
-                    show_code_text: showCodeText,
-                    qr_size: activeQrSizeMm,
-                    title_font_size: activeTitleFontSizePt,
-                    copies: copies,
-                    protocol: 'tspl',
-                }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                setNodePrintMsg({ success: true, text: data.message || 'تم إرسال الملصق بنجاح إلى الطابعة!' });
+            if (isBulk) {
+                const payloadItems = items.map(p => ({
+                    product_name: p.name,
+                    price: getProductPrice(p),
+                    code: p.qrcode || '0000000000',
+                }));
+
+                const res = await fetch('/settings/node-printer/print-batch-labels', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    },
+                    body: JSON.stringify({
+                        printer_name: selectedPrinter || 'Xprinter XP-365B',
+                        width_mm: widthMm,
+                        height_mm: heightMm,
+                        rotation: rotation,
+                        offset_x: offsetX,
+                        offset_y: offsetY,
+                        tab: tab,
+                        show_name: showName,
+                        show_price: showPrice,
+                        show_code_text: showCodeText,
+                        qr_size: activeQrSizeMm,
+                        title_font_size: activeTitleFontSizePt,
+                        copies: copies,
+                        protocol: 'tspl',
+                        items: payloadItems,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setNodePrintMsg({ success: true, text: data.message || `تم إرسال ${items.length} ملصق بنجاح إلى الطابعة!` });
+                } else {
+                    setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة الجماعية' });
+                }
             } else {
-                setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة' });
+                const res = await fetch('/settings/node-printer/print-label', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                    },
+                    body: JSON.stringify({
+                        printer_name: selectedPrinter || 'Xprinter XP-365B',
+                        width_mm: widthMm,
+                        height_mm: heightMm,
+                        rotation: rotation,
+                        offset_x: offsetX,
+                        offset_y: offsetY,
+                        tab: tab,
+                        product_name: activeProduct.name,
+                        price: priceDisplay,
+                        code: activeProduct.qrcode || '0000000000',
+                        show_name: showName,
+                        show_price: showPrice,
+                        show_code_text: showCodeText,
+                        qr_size: activeQrSizeMm,
+                        title_font_size: activeTitleFontSizePt,
+                        copies: copies,
+                        protocol: 'tspl',
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setNodePrintMsg({ success: true, text: data.message || 'تم إرسال الملصق بنجاح إلى الطابعة!' });
+                } else {
+                    setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة' });
+                }
             }
         } catch (e: any) {
             setNodePrintMsg({ success: false, text: e?.message || 'تعذر الاتصال بمحرك الطباعة' });
@@ -300,13 +358,6 @@ function QrModal({ product, onClose }: QrModalProps) {
         localStorage.setItem('label_printer_offset_y', String(next));
     };
 
-    // استخراج السعر بصيغة 0123456789 حصراً
-    const priceDisplay = product.product_price?.full_bottle_regular && Number(product.product_price.full_bottle_regular) > 0
-        ? `${toAsciiDigits(Number(product.product_price.full_bottle_regular).toLocaleString('en-US'))} د.ل`
-        : product.product_price?.price_per_unit_regular && Number(product.product_price.price_per_unit_regular) > 0
-        ? `${toAsciiDigits(Number(product.product_price.price_per_unit_regular).toLocaleString('en-US'))} د.ل`
-        : '';
-
     function handlePrint() {
         const win = window.open('', '_blank', 'width=550,height=550');
         if (!win) return;
@@ -316,74 +367,81 @@ function QrModal({ product, onClose }: QrModalProps) {
         const innerW = isRotated ? heightMm : widthMm;
         const innerH = isRotated ? widthMm : heightMm;
 
-        // استخراج SVG مباشرة دون تكرار وسوم الـ svg مع إزالة الرقم الخارجي البارز على اليسار في EAN-13 ليطابق شاشة المعاينة تماماً
-        let graphicSvgHtml = '';
-        if (tab === 'classic') {
-            const qrSvgEl = document.querySelector('#label-modal-qr-preview svg') as SVGElement | null;
-            graphicSvgHtml = qrSvgEl ? qrSvgEl.outerHTML : '';
-        } else {
-            const barSvgEl = document.querySelector('#label-modal-bar-preview svg') as SVGElement | null;
-            if (barSvgEl) {
-                const cloned = barSvgEl.cloneNode(true) as SVGElement;
-                if (tab === 'ean13') {
-                    const firstText = cloned.querySelector('g:first-of-type text');
-                    if (firstText) {
-                        firstText.remove();
-                    }
-                }
-                graphicSvgHtml = cloned.outerHTML;
-            }
-        }
-
         // حساب المقاسات المناسبة حسب نوع الرمز بناءً على أبعاد الورقة
         const autoQrSizeForPrint = Math.max(8, Math.min(
             15,
             Math.round(Math.min((innerH - (showName ? 5.5 : 2)) * 0.65, innerW * 0.28) * 10) / 10
         ));
         const qrBoxSizeMm = qrSizeCustom !== null ? qrSizeCustom : autoQrSizeForPrint;
-        const isLongTitle = product.name && product.name.length > 18;
-        const titleAllocatedH = showName ? (isLongTitle ? 6.5 : 4) : 0;
-        const availableBarH = Math.max(7, innerH - titleAllocatedH - (showPrice ? 4 : 0) - 2);
 
-        const labelHtml = (tab === 'classic' ? `
-            <div class="label-page">
-                <div class="label-content classic-layout">
-                    ${showName ? `<div class="p-name full-width">${product.name}</div>` : ''}
+        const labelsHtml = items.map(p => {
+            const pPrice = getProductPrice(p);
+            let graphicSvgHtml = '';
+            if (tab === 'classic') {
+                const qrSvgEl = (document.querySelector(`#bulk-barcode-item-${p.id} svg`) as SVGElement | null)
+                    || (document.querySelector('#label-modal-qr-preview svg') as SVGElement | null);
+                graphicSvgHtml = qrSvgEl ? qrSvgEl.outerHTML : '';
+            } else {
+                const barSvgEl = (document.querySelector(`#bulk-barcode-item-${p.id} svg`) as SVGElement | null)
+                    || (document.querySelector('#label-modal-bar-preview svg') as SVGElement | null);
+                if (barSvgEl) {
+                    const cloned = barSvgEl.cloneNode(true) as SVGElement;
+                    if (tab === 'ean13') {
+                        const firstText = cloned.querySelector('g:first-of-type text');
+                        if (firstText) {
+                            firstText.remove();
+                        }
+                    }
+                    graphicSvgHtml = cloned.outerHTML;
+                }
+            }
 
-                    <div class="classic-body">
-                        <div class="info-side">
-                            ${showCodeText && product.qrcode ? `<div class="p-code">${product.qrcode}</div>` : ''}
-                            ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
-                        </div>
+            const isLongTitle = p.name && p.name.length > 18;
+            const titleAllocatedH = showName ? (isLongTitle ? 6.5 : 4) : 0;
+            const availableBarH = Math.max(7, innerH - titleAllocatedH - (showPrice ? 4 : 0) - 2);
 
-                        <div class="qr-side">
-                            <div class="graphic-wrap qr-wrap">
-                                ${graphicSvgHtml}
+            const singleHtml = (tab === 'classic' ? `
+                <div class="label-page">
+                    <div class="label-content classic-layout">
+                        ${showName ? `<div class="p-name full-width">${p.name}</div>` : ''}
+
+                        <div class="classic-body">
+                            <div class="info-side">
+                                ${showCodeText && p.qrcode ? `<div class="p-code">${p.qrcode}</div>` : ''}
+                                ${showPrice && pPrice ? `<div class="p-price">${pPrice}</div>` : ''}
+                            </div>
+
+                            <div class="qr-side">
+                                <div class="graphic-wrap qr-wrap">
+                                    ${graphicSvgHtml}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        ` : `
-            <div class="label-page">
-                <div class="label-content bar-layout">
-                    ${showName ? `<div class="p-name">${product.name}</div>` : ''}
+            ` : `
+                <div class="label-page">
+                    <div class="label-content bar-layout">
+                        ${showName ? `<div class="p-name">${p.name}</div>` : ''}
 
-                    <div class="graphic-wrap bar-wrap">
-                        ${graphicSvgHtml}
+                        <div class="graphic-wrap bar-wrap">
+                            ${graphicSvgHtml}
+                        </div>
+
+                        ${showPrice && pPrice ? `<div class="p-price">${pPrice}</div>` : ''}
                     </div>
-
-                    ${showPrice && priceDisplay ? `<div class="p-price">${priceDisplay}</div>` : ''}
                 </div>
-            </div>
-        `).trim();
+            `).trim();
+
+            return Array.from({ length: Math.max(1, copies) }).map(() => singleHtml).join('');
+        }).join('');
 
         win.document.write(`
             <!DOCTYPE html>
             <html dir="ltr">
             <head>
                 <meta charset="utf-8" />
-                <title>طباعة ملصق - ${product.name}</title>
+                <title>${isBulk ? `طباعة ملصقات جماعية (${items.length} منتج)` : `طباعة ملصق - ${activeProduct.name}`}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com">
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
@@ -611,7 +669,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                     };
                 </script>
             </head>
-            <body>${Array.from({ length: Math.max(1, copies) }).map(() => labelHtml).join('')}</body>
+            <body>${labelsHtml}</body>
             </html>
         `);
         win.document.close();
@@ -635,13 +693,23 @@ function QrModal({ product, onClose }: QrModalProps) {
                             <QrCode className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="font-black text-slate-900 dark:text-white text-base">طباعة ملصق الباركود والـ QR</h3>
+                            <h3 className="font-black text-slate-900 dark:text-white text-base">
+                                {isBulk ? 'طباعة جماعية لملصقات الباركود والـ QR' : 'طباعة ملصق الباركود والـ QR'}
+                            </h3>
                             <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-[320px]">{product.name}</span>
-                                {product.qrcode && (
-                                    <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                                        {product.qrcode}
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-[320px]">
+                                    {isBulk ? `طباعة دفعة واحدة لـ ${items.length} منتج في نتائج البحث` : activeProduct.name}
+                                </span>
+                                {isBulk ? (
+                                    <span className="font-mono text-[11px] font-black px-2 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/20">
+                                        {items.length} عنصر
                                     </span>
+                                ) : (
+                                    activeProduct.qrcode && (
+                                        <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                            {activeProduct.qrcode}
+                                        </span>
+                                    )
                                 )}
                             </div>
                         </div>
@@ -663,10 +731,10 @@ function QrModal({ product, onClose }: QrModalProps) {
                         <div className="md:col-span-5 flex flex-col gap-4">
                             {/* صندوق المعاينة الفضائي */}
                             <div className="flex flex-col items-center justify-center p-4 rounded-[24px] bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80">
-                                <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-between w-full">
+                                <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-2 flex items-center justify-between w-full">
                                     <span className="flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        معاينة الملصق المباشرة
+                                        {isBulk ? `معاينة نموذجية (${previewIndex + 1} من ${items.length})` : 'معاينة الملصق المباشرة'}
                                     </span>
                                     <div className="flex items-center gap-1">
                                         <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold border border-primary/20">
@@ -679,6 +747,41 @@ function QrModal({ product, onClose }: QrModalProps) {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* شريط التنقل بين المنتجات لمعاينة أي منتج في حالة الطباعة الجماعية */}
+                                {isBulk && items.length > 1 && (
+                                    <div className="flex items-center justify-between w-full px-1 mb-2.5 bg-white/70 dark:bg-slate-900/60 p-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
+                                        <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate max-w-[150px]" title={activeProduct.name}>
+                                            {activeProduct.name}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : items.length - 1))}
+                                                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-slate-200 dark:border-slate-600 transition-all active:scale-95"
+                                                title="معاينة المنتج السابق"
+                                            >
+                                                السابق
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewIndex(Math.floor(Math.random() * items.length))}
+                                                className="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-primary/20 transition-all active:scale-95"
+                                                title="اختيار منتج عشوائي للمعاينة"
+                                            >
+                                                عشوائي 🎲
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreviewIndex(prev => (prev < items.length - 1 ? prev + 1 : 0))}
+                                                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-slate-200 dark:border-slate-600 transition-all active:scale-95"
+                                                title="معاينة المنتج التالي"
+                                            >
+                                                التالي
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* الصندوق الأبيض الحقيقي للملصق */}
                                 <div
@@ -699,9 +802,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                                             <span
                                                 style={{ fontSize: `${activeTitleFontSizePt}pt`, lineHeight: 1.15 }}
                                                 className="font-sans font-black text-slate-900 line-clamp-2 break-words w-full text-center px-1"
-                                                title={product.name}
+                                                title={activeProduct.name}
                                             >
-                                                {product.name}
+                                                {activeProduct.name}
                                             </span>
                                         )}
 
@@ -709,9 +812,9 @@ function QrModal({ product, onClose }: QrModalProps) {
                                             <div className="flex items-center justify-center w-full gap-3 px-1 overflow-hidden" dir="rtl">
                                                 {/* جهة اليمين: الكود وتحته السعر */}
                                                 <div className="flex flex-col items-center justify-center text-center gap-0.5 overflow-hidden font-sans">
-                                                    {showCodeText && product.qrcode && (
+                                                    {showCodeText && activeProduct.qrcode && (
                                                         <span className="font-mono text-[11px] font-bold text-slate-700 tracking-wider text-center">
-                                                            {toAsciiDigits(product.qrcode)}
+                                                            {toAsciiDigits(activeProduct.qrcode)}
                                                         </span>
                                                     )}
                                                     {showPrice && priceDisplay && (
@@ -729,7 +832,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                         const logoSize = Math.max(8, Math.round(previewQrSize * 0.22));
                                                         return (
                                                             <QRCodeSVG
-                                                                value={toAsciiDigits(product.qrcode || '0000000000')}
+                                                                value={toAsciiDigits(activeProduct.qrcode || '0000000000')}
                                                                 size={previewQrSize}
                                                                 level="H"
                                                                 fgColor="#000000"
@@ -750,7 +853,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                     {tab === 'ean13' && (
                                                         <div id="label-modal-bar-preview" className="w-full flex items-center justify-center [&_g:first-of-type_text]:hidden">
                                                             <Barcode
-                                                                value={toEan13(product.qrcode || '0000000000')}
+                                                                value={toEan13(activeProduct.qrcode || '0000000000')}
                                                                 format="EAN13"
                                                                 width={1.85}
                                                                 height={34}
@@ -767,7 +870,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                                                     {tab === 'serial' && (
                                                          <div id="label-modal-bar-preview" className="w-full flex items-center justify-center">
                                                             <Barcode
-                                                                value={toAsciiDigits(product.qrcode || '0000000000')}
+                                                                value={toAsciiDigits(activeProduct.qrcode || '0000000000')}
                                                                 format="CODE128"
                                                                 width={1.75}
                                                                 height={34}
@@ -1380,7 +1483,7 @@ function QrModal({ product, onClose }: QrModalProps) {
                             className="flex-1 sm:flex-initial px-4 h-12 rounded-[16px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs active:scale-[0.98] transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
                             title="فتح نافذة طباعة المتصفح التقليدية"
                         >
-                            <span>طباعة المتصفح</span>
+                            <span>{isBulk ? `طباعة المتصفح (${items.length})` : 'طباعة المتصفح'}</span>
                         </button>
                         <button
                             type="button"
@@ -1389,10 +1492,66 @@ function QrModal({ product, onClose }: QrModalProps) {
                             className="flex-1 sm:flex-initial px-6 h-12 rounded-[16px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2.5 active:scale-[0.98] transition-all shadow-md shadow-emerald-600/25 cursor-pointer disabled:opacity-50 border border-emerald-500/30 whitespace-nowrap"
                         >
                             <Printer className="w-4 h-4 shrink-0" />
-                            <span>{printingNode ? 'جاري الإرسال للطابعة...' : `طباعة مباشرة (${copies})`}</span>
+                            <span>
+                                {printingNode 
+                                    ? 'جاري الإرسال للطابعة...' 
+                                    : isBulk 
+                                    ? `طباعة مباشرة (${items.length} ملصق)` 
+                                    : `طباعة مباشرة (${copies})`}
+                            </span>
                         </button>
                     </div>
                 </div>
+
+                {/* عناصر مخفية لتوليد باركود و QR كل منتجات الدفعة بدقة 100% لطباعة المتصفح */}
+                {isBulk && (
+                    <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }} aria-hidden="true">
+                        {items.map(p => (
+                            <div key={p.id} id={`bulk-barcode-item-${p.id}`}>
+                                {tab === 'classic' ? (
+                                    <QRCodeSVG
+                                        value={toAsciiDigits(p.qrcode || '0000000000')}
+                                        size={Math.max(30, Math.min(160, Math.round(activeQrSizeMm * (210 / widthMm))))}
+                                        level="H"
+                                        fgColor="#000000"
+                                        imageSettings={{
+                                            src: PERFUME_SVG_B64,
+                                            width: Math.max(8, Math.round(activeQrSizeMm * 0.22)),
+                                            height: Math.max(8, Math.round(activeQrSizeMm * 0.22)),
+                                            excavate: true,
+                                        }}
+                                    />
+                                ) : tab === 'ean13' ? (
+                                    <Barcode
+                                        value={toEan13(p.qrcode || '0000000000')}
+                                        format="EAN13"
+                                        width={1.85}
+                                        height={34}
+                                        displayValue={showCodeText}
+                                        textMargin={1}
+                                        fontSize={11}
+                                        font="monospace"
+                                        margin={0}
+                                        lineColor="#000000"
+                                    />
+                                ) : (
+                                    <Barcode
+                                        value={toAsciiDigits(p.qrcode || '0000000000')}
+                                        format="CODE128"
+                                        width={1.75}
+                                        height={34}
+                                        displayValue={showCodeText}
+                                        textMargin={1}
+                                        fontSize={11}
+                                        font="monospace"
+                                        margin={0}
+                                        lineColor="#000000"
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
             </div>
         </div>,
@@ -1419,6 +1578,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [qrProduct, setQrProduct]   = useState<Product | null>(null);
+    const [bulkPrintOpen, setBulkPrintOpen] = useState(false);
     const [generatingAll, setGeneratingAll] = useState(false);
     const [padConfig, setPadConfig] = useState<{ title: string; field: string; initial: string } | null>(null);
 
@@ -1761,6 +1921,23 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
                             </button>
                         )}
+                        {/* زر طباعة جماعية للنتائج المعروضة */}
+                        <button
+                            type="button"
+                            onClick={() => setBulkPrintOpen(true)}
+                            disabled={filtered.length === 0}
+                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-primary/15 border-2 border-primary/30 text-primary dark:text-primary-foreground hover:bg-primary hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
+                            title={filtered.length > 0 ? `طباعة جماعية لملصقات النتائج المعروضة (${filtered.length} منتج)` : 'لا توجد منتجات مطابقة لطباعتها'}
+                        >
+                            <Printer className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                            <span>طباعة جماعية</span>
+                            {filtered.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-primary/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-primary transition-all">
+                                    {filtered.length}
+                                </span>
+                            )}
+                        </button>
+
                         {/* زر تصدير Excel */}
                         <a
                             href="/products/export/excel"
@@ -2795,9 +2972,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
             </div>
 
-            {/* QR Modal */}
+            {/* QR Modal (منتج مفرد) */}
             {qrProduct && (
                 <QrModal product={qrProduct} onClose={() => setQrProduct(null)} />
+            )}
+
+            {/* QR Modal (طباعة جماعية لكل النتائج المفلترة) */}
+            {bulkPrintOpen && filtered.length > 0 && (
+                <QrModal productsList={filtered} onClose={() => setBulkPrintOpen(false)} />
             )}
 
             {/* NumberPad Modal للأرقام والأسعار اللمسية */}

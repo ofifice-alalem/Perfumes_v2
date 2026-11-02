@@ -172,7 +172,7 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    if (url.pathname === '/print-label' && req.method === 'POST') {
+    if ((url.pathname === '/print-label' || url.pathname === '/print-batch-labels') && req.method === 'POST') {
         let bodyStr = '';
         req.on('data', chunk => { bodyStr += chunk; });
         req.on('end', async () => {
@@ -185,29 +185,36 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 const printerName = payload.printerName || config.labelPrinter?.name || 'Xprinter XP-365B';
-                const labelData = payload.label || payload;
+                const labelsList = Array.isArray(payload.labels) && payload.labels.length > 0
+                    ? payload.labels
+                    : [payload.label || payload];
 
                 const { renderLabelCanvas } = require('./src/label/label-renderer');
                 const { encodeCanvasToTspl, encodeCanvasToEscPos } = require('./src/label/label-encoder');
 
-                const canvas = await renderLabelCanvas(labelData);
-                const protocol = labelData.protocol || 'tspl';
-                let rawBuffer;
-
-                if (protocol === 'escpos') {
-                    rawBuffer = encodeCanvasToEscPos(canvas, labelData);
-                } else {
-                    rawBuffer = encodeCanvasToTspl(canvas, labelData);
+                const buffers = [];
+                for (const item of labelsList) {
+                    const canvas = await renderLabelCanvas(item);
+                    const protocol = item.protocol || 'tspl';
+                    if (protocol === 'escpos') {
+                        buffers.push(encodeCanvasToEscPos(canvas, item));
+                    } else {
+                        buffers.push(encodeCanvasToTspl(canvas, item));
+                    }
                 }
 
+                const rawBuffer = Buffer.concat(buffers);
                 const result = await printRawBuffer(printerName, rawBuffer);
                 const durationMs = Date.now() - startTime;
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     success: true,
-                    message: result.message,
-                    printerUsed: result.printerUsed,
+                    message: labelsList.length > 1
+                        ? `تم إرسال ${labelsList.length} ملصق بنجاح إلى الطابعة`
+                        : (result.message || 'تم إرسال الملصق بنجاح إلى الطابعة'),
+                    printerUsed: result.printerUsed || printerName,
+                    count: labelsList.length,
                     durationMs
                 }));
             } catch (err) {

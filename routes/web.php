@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/node-printer/preview', [NodeThermalPrinterController::class, 'generatePreview'])->name('settings.node-printer.preview');
         Route::post('settings/node-printer/print', [NodeThermalPrinterController::class, 'printDirect'])->name('settings.node-printer.print');
         Route::post('settings/node-printer/print-label', [NodeThermalPrinterController::class, 'printLabelDirect'])->name('settings.node-printer.print-label');
+        Route::post('settings/node-printer/print-batch-labels', [NodeThermalPrinterController::class, 'printBatchLabelsDirect'])->name('settings.node-printer.print-batch-labels');
     });
 
         Route::resource('categories', CategoryController::class)->except(['create', 'edit', 'show']);
