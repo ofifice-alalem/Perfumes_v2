@@ -280,8 +280,20 @@
   .bg-brand {
     background-color: var(--brand-primary, #1a9fff) !important;
   }
+  .bg-brand-subtle {
+    background-color: rgba(26, 159, 255, 0.1) !important;
+  }
+  .dark .bg-brand-subtle {
+    background-color: rgba(26, 159, 255, 0.12) !important;
+  }
   .border-brand {
     border-color: var(--brand-primary, #1a9fff) !important;
+  }
+  .border-brand-subtle {
+    border-color: rgba(26, 159, 255, 0.25) !important;
+  }
+  .dark .border-brand-subtle {
+    border-color: rgba(26, 159, 255, 0.22) !important;
   }
   .text-brand-accent {
     color: var(--brand-accent, #00d2ff) !important;
