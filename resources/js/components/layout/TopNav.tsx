@@ -97,7 +97,7 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
       
       {/* الطرف الأيمن: عنوان الصفحة ووسم محطة العمل المكتبي */}
       <div className="flex items-center gap-2">
-        <span className="hidden sm:inline-block text-[10px] font-bold text-brand uppercase bg-[var(--brand-primary,#1a9fff)]/10 px-2 py-0.5 rounded-[4px] border border-[var(--brand-primary,#1a9fff)]/20">
+        <span className="hidden sm:inline-block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase bg-sky-500/10 px-2 py-0.5 rounded-[2px] border border-sky-500/30 dark:border-sky-500/25">
           محطة العمل
         </span>
         {pageTitle && (
@@ -141,7 +141,7 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
               {/* ترويسة المودال */}
               <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-[#1d2e44]">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-[3px] bg-[var(--brand-primary,#1a9fff)]/10 dark:bg-[#152336] border border-[var(--brand-primary,#1a9fff)]/20 dark:border-[#253a54] flex items-center justify-center text-brand shrink-0 shadow-inner">
+                  <div className="w-10 h-10 rounded-[2px] bg-sky-500/10 dark:bg-[#152336] border border-sky-500/30 dark:border-[#253a54] flex items-center justify-center text-brand shrink-0 shadow-inner">
                     <Wallet className="w-5 h-5" />
                   </div>
                   <div>

@@ -183,7 +183,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
             <span className="font-black text-slate-800 dark:text-white text-xs truncate">
               {(props.auth?.user?.name as string) ?? ''}
             </span>
-            <span className="text-[10px] font-mono font-bold text-brand uppercase bg-[var(--brand-primary,#1a9fff)]/10 px-1.5 py-0.5 rounded-none border border-[var(--brand-primary,#1a9fff)]/20">
+            <span className="text-[10px] font-mono font-bold text-sky-600 dark:text-sky-400 uppercase bg-sky-500/10 px-1.5 py-0.5 rounded-[2px] border border-sky-500/30 dark:border-sky-500/25">
               {userRoles[0] === 'super-admin' ? 'SUPER'
                 : userRoles[0] === 'admin'   ? 'ADMIN'
                 : userRoles[0] === 'saler'   ? 'SALER'
