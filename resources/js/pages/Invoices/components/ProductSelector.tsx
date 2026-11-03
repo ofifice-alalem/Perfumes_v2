@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, X, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw, ChevronDown, Search, Layers, Check } from 'lucide-react';
 
 export interface Category { id: number; name: string; unit: string; }
 export interface ProductPrice {
@@ -47,6 +46,16 @@ export interface ProductSelectorProps {
 
 function fmt(n: number) {
     return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function norm(s: string) {
+    return (s || '')
+        .toLowerCase()
+        .replace(/[\u064B-\u065F\u0670]/g, '')
+        .replace(/[إأآا]/g, 'ا')
+        .replace(/ى/g, 'ي')
+        .replace(/ة/g, 'ه')
+        .trim();
 }
 
 function getProductDisplayPrice(p: Product, isVip: boolean): string {
@@ -116,9 +125,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 }) => {
     const isVip = customerType === 'vip';
 
-    // State
-    const [resetKey, setResetKey] = useState(0);
-
     // Form Selections State
     const [selProduct, setSelProduct] = useState('');
     const [selSaleType, setSelSaleType] = useState('');
@@ -127,6 +133,34 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     const [selUnitPrice, setSelUnitPrice] = useState('');
     const [selMinPrice, setSelMinPrice] = useState(0);
     const [showSaleTypeModal, setShowSaleTypeModal] = useState(false);
+
+    // Product Search Dropdown State
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Click outside handler for product dropdown
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsDropdownOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Focus search input when dropdown opens
+    useEffect(() => {
+        if (isDropdownOpen) {
+            setTimeout(() => {
+                searchInputRef.current?.focus();
+            }, 50);
+        } else {
+            setSearchQuery('');
+        }
+    }, [isDropdownOpen]);
 
     // Barcode Scanner Listener
     useEffect(() => {
@@ -150,7 +184,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                         setSelProduct(String(scanned.id));
                         setSelSaleType(''); setSelSize(''); setSelQty('1');
                         setSelUnitPrice(''); setSelMinPrice(0);
-                        setResetKey(k => k + 1);
+                        setIsDropdownOpen(false);
                     }
                 }
                 buffer = '';
@@ -175,6 +209,16 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     const availableStock = selectedProduct
         ? +selectedProduct.stock + editInvoiceQtyForProduct(selectedProduct.id) - getCartConsumed(selectedProduct.id)
         : 0;
+
+    // Filtered products list
+    const filteredProducts = products.filter(p => {
+        if (!searchQuery.trim()) return true;
+        const q = norm(searchQuery);
+        const nameMatch = norm(p.name).includes(q);
+        const catMatch = norm(p.category?.name || '').includes(q);
+        const qrMatch = p.qrcode && norm(p.qrcode).includes(q);
+        return nameMatch || catMatch || qrMatch;
+    });
 
     // Sale type options
     const saleTypeOptions = useCallback(() => {
@@ -277,7 +321,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
     const resetSelection = () => {
         setSelProduct(''); setSelSaleType(''); setSelSize(''); setSelQty('1');
-        setSelUnitPrice(''); setSelMinPrice(0); setResetKey(k => k + 1);
+        setSelUnitPrice(''); setSelMinPrice(0);
     };
 
     const handleAddToCart = () => {
@@ -317,13 +361,13 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
     if (products.length === 0) {
         return (
-            <div className="p-6 rounded-[24px] bg-amber-500/10 border-2 border-amber-500/25 flex flex-col items-center justify-center text-center gap-3">
-                <AlertCircle className="w-10 h-10 text-amber-500" />
+            <div className="p-6 rounded-[2px] bg-amber-500/10 border border-amber-500/25 flex flex-col items-center justify-center text-center gap-3">
+                <AlertCircle className="w-8 h-8 text-amber-500" />
                 <div className="flex flex-col gap-1">
-                    <span className="font-black text-slate-800 dark:text-white text-base">
+                    <span className="font-bold text-slate-800 dark:text-white text-sm">
                         لا توجد منتجات متوفرة حالياً في القائمة
                     </span>
-                    <span className="text-xs text-slate-500 dark:text-white/60">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
                         إذا قمت للتو بشراء منتجات أو إضافة مخزون جديد، اضغط على زر التحديث لمزامنة المخزون فوراً.
                     </span>
                 </div>
@@ -332,9 +376,9 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                         type="button"
                         onClick={onRefreshCatalog}
                         disabled={isRefreshing}
-                        className="mt-2 px-5 py-3 rounded-[16px] bg-primary text-white font-black text-sm flex items-center gap-2 shadow-lg hover:bg-primary/90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                        className="mt-2 px-4 py-2 rounded-[2px] bg-brand text-white font-bold text-xs flex items-center gap-2 hover:bg-brand/90 transition-colors cursor-pointer disabled:opacity-50"
                     >
-                        <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                         <span>تحديث ومزامنة المنتجات الآن</span>
                     </button>
                 )}
@@ -344,68 +388,180 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
     return (
         <div className="flex flex-col gap-2.5 sm:gap-3">
-            {/* Row 1: product + sale type + qty */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-end">
-                <div className="flex items-center gap-2 flex-1 min-w-full sm:min-w-[180px]">
-                    <div className="flex-1 min-w-0">
-                        <ModernSelect
-                            key={`p-${resetKey}`}
-                            label=""
-                            placeholder="اختر المنتج..."
-                            options={products.map(p => ({
-                                label: p.name,
-                                badge: p.category.name,
-                                price: getProductDisplayPrice(p, isVip),
-                                meta: `المخزون: ${p.stock}`,
-                                searchKey: p.qrcode ?? undefined,
-                            }))}
-                            defaultValue={selectedProduct?.name ?? ""}
-                            onSelect={val => {
-                                const p = products.find(pr => pr.name === val);
-                                setSelProduct(p ? String(p.id) : '');
-                                setSelSaleType(''); setSelSize(''); setSelQty('1');
-                            }}
-                        />
-                    </div>
-                    {selectedProduct && (
+            {/* Row 1: Workstation Searchable Product Selector + Sale Type + Qty */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-stretch sm:items-end">
+                
+                {/* Product Dropdown Container */}
+                <div className="flex items-center gap-1.5 flex-1 min-w-0" ref={dropdownRef}>
+                    <div className="flex-1 min-w-0 relative">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">
+                            اختر المنتج أو امسح الباركود
+                        </label>
                         <button
                             type="button"
-                            onClick={resetSelection}
-                            title="إلغاء الاختيار وتفريغ الحقول"
-                            className="h-16 sm:h-20 w-16 sm:w-20 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
+                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                            className={`h-11 sm:h-12 w-full px-3.5 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                                isDropdownOpen
+                                    ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
+                                    : selectedProduct
+                                        ? 'border-slate-300 dark:border-[#22354e] bg-white dark:bg-[#0c1421] text-slate-900 dark:text-white'
+                                        : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-400 hover:border-slate-300 dark:hover:border-[#283e58]'
+                            }`}
                         >
-                            <X className="w-6 h-6 stroke-[2.5]" />
+                            <span className="truncate">
+                                {selectedProduct ? selectedProduct.name : 'ابحث أو اختر المنتج...'}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0 mr-1.5">
+                                {selectedProduct && (
+                                    <span className="text-[11px] font-number font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-2 py-0.5 rounded-[2px]">
+                                        {getProductDisplayPrice(selectedProduct, isVip)}
+                                    </span>
+                                )}
+                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-brand' : ''}`} />
+                            </div>
                         </button>
+
+                        {/* Search Dropdown Menu */}
+                        {isDropdownOpen && (
+                            <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden animate-in fade-in duration-100 min-w-[280px]">
+                                {/* Search input inside dropdown */}
+                                <div className="p-2 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/80 dark:bg-[#09111c] flex items-center gap-2">
+                                    <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        placeholder="اكتب اسم المنتج أو الصنف أو امسح الباركود..."
+                                        className="w-full bg-transparent border-none text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && filteredProducts.length > 0) {
+                                                const p = filteredProducts[0];
+                                                setSelProduct(String(p.id));
+                                                setSelSaleType(''); setSelSize(''); setSelQty('1');
+                                                setSelUnitPrice(''); setSelMinPrice(0);
+                                                setIsDropdownOpen(false);
+                                            }
+                                        }}
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery('')}
+                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Results list */}
+                                <ul className="max-h-72 overflow-y-auto p-2 flex flex-col gap-1.5">
+                                    {filteredProducts.length === 0 ? (
+                                        <li className="px-4 py-4 text-center text-xs font-semibold text-slate-400">
+                                            لا توجد منتجات مطابقة للبحث
+                                        </li>
+                                    ) : (
+                                        filteredProducts.map(p => {
+                                            const isSelected = p.id === +selProduct;
+                                            const priceStr = getProductDisplayPrice(p, isVip);
+                                            return (
+                                                <li
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        setSelProduct(String(p.id));
+                                                        setSelSaleType(''); setSelSize(''); setSelQty('1');
+                                                        setSelUnitPrice(''); setSelMinPrice(0);
+                                                        setIsDropdownOpen(false);
+                                                    }}
+                                                    className={`px-3 py-2.5 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between transition-all border ${
+                                                        isSelected
+                                                            ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 dark:border-sky-500/25 shadow-2xs'
+                                                            : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#253952]'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                        <span className="text-xs sm:text-sm font-bold truncate text-slate-900 dark:text-white">
+                                                            {p.name}
+                                                        </span>
+                                                        {p.category?.name && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-[2px] bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                                                                {p.category.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0 mr-2">
+                                                        {priceStr && (
+                                                            <span className="text-xs font-number font-bold text-sky-600 dark:text-sky-400">
+                                                                {priceStr}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-[11px] font-number text-slate-400 dark:text-slate-500">
+                                                            المخزون: {p.stock}
+                                                        </span>
+                                                        {isSelected && <Check className="w-4 h-4 text-brand" />}
+                                                    </div>
+                                                </li>
+                                            );
+                                        })
+                                    )}
+                                </ul>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Quick reset button */}
+                    {selectedProduct && (
+                        <div className="flex flex-col justify-end">
+                            <button
+                                type="button"
+                                onClick={resetSelection}
+                                title="إلغاء الاختيار وتفريغ الحقول"
+                                className="h-11 sm:h-12 w-11 sm:w-12 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
                     )}
                 </div>
 
-                {/* sale type toggle for non-tier with multiple options */}
+                {/* Sale type button for non-tier with multiple options */}
                 {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
-                    <button
-                        type="button"
-                        onClick={() => setShowSaleTypeModal(true)}
-                        className="spatial-input h-16 sm:h-20 rounded-[22px] px-4 sm:px-5 text-base sm:text-lg font-black w-full sm:w-48 cursor-pointer hover:border-primary/40 border-2 transition-all flex items-center justify-between shadow-sm"
-                    >
-                        <span className="truncate">{saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}</span>
-                        <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                    <div className="flex flex-col gap-1 w-full sm:w-44 shrink-0">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                            نوع البيع
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => setShowSaleTypeModal(true)}
+                            className="h-11 sm:h-12 px-3.5 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] hover:border-brand text-xs sm:text-sm font-bold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer transition-colors"
+                        >
+                            <span className="truncate">
+                                {saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}
+                            </span>
+                            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0 mr-1" />
+                        </button>
+                    </div>
                 )}
 
-                {/* qty / count input */}
+                {/* Qty / Count input */}
                 {selectedProduct && (isTier || selSaleType) && (
-                    <button
-                        type="button"
-                        onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
-                        className="spatial-input h-16 sm:h-20 rounded-[22px] px-4 sm:px-6 text-xl sm:text-[24px] font-black w-full sm:w-32 text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm"
-                    >
-                        {selQty || '1'}
-                    </button>
+                    <div className="flex flex-col gap-1 w-full sm:w-28 shrink-0">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                            {needsQty ? 'الكمية' : 'العدد'}
+                        </label>
+                        <button
+                            type="button"
+                            onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
+                            className="h-11 sm:h-12 px-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-sm sm:text-base font-number font-black text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors"
+                        >
+                            {selQty || '1'}
+                        </button>
+                    </div>
                 )}
             </div>
 
-            {/* Row 2: sizes (if needed) */}
+            {/* Row 2: Sizes (if needed) */}
             {needsSize && selectedProduct && (
                 <div className="w-full">
                     <SizeSelect
@@ -421,19 +577,16 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
             {/* Row 3: Unit price field & add button */}
             {showPriceField && (
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3.5 sm:p-4 rounded-[22px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md">
-                    <div className="flex flex-1 items-center justify-between gap-3">
-                        <div className="flex flex-col gap-1 shrink-0">
-                            <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                    <div className="flex-1 flex flex-col gap-1">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
                                 سعر الوحدة
                             </span>
                             {selMinPrice > 0 && (
-                                <div className="inline-flex items-baseline gap-1.5 px-3 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30">
-                                    <span className="text-xs font-bold text-amber-800/80 dark:text-amber-200/80">حد أدنى:</span>
-                                    <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-300 tracking-tight">
-                                        {selMinPrice.toFixed(2)}
-                                    </span>
-                                    <span className="text-xs font-bold">د.ل</span>
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 text-[11px] font-number font-bold">
+                                    <span>حد أدنى:</span>
+                                    <span>{selMinPrice.toFixed(2)} د.ل</span>
                                 </div>
                             )}
                         </div>
@@ -444,24 +597,28 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                                 selUnitPrice,
                                 v => setSelUnitPrice(v),
                             )}
-                            className={`h-16 sm:h-20 rounded-[20px] px-5 sm:px-6 text-xl sm:text-[24px] font-black flex-1 text-center cursor-pointer transition-all border-2 spatial-input active:scale-95 shadow-sm ${
+                            className={`h-11 sm:h-12 rounded-[2px] px-4 font-number font-bold text-sm sm:text-base flex items-center justify-between cursor-pointer transition-colors border ${
                                 selUnitPrice && +selUnitPrice < selMinPrice
-                                    ? 'border-red-500/60 text-red-500 bg-red-500/5'
-                                    : 'hover:border-primary/40'
+                                    ? 'border-rose-500 text-rose-500 bg-rose-500/5'
+                                    : 'border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] text-slate-900 dark:text-white hover:border-brand'
                             }`}
                         >
-                            {selUnitPrice || '0.00'}
+                            <span>{selUnitPrice ? `${selUnitPrice} د.ل` : '0.00 د.ل'}</span>
+                            <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-1.5 py-0.5 rounded-[2px] font-sans font-bold">
+                                لوحة الأرقام
+                            </span>
                         </button>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+
+                    <div className="flex items-center gap-2">
                         {selectedProduct && (
                             <button
                                 type="button"
                                 onClick={resetSelection}
-                                title="إلغاء الاختيار وتفريغ الحقول"
-                                className="h-16 sm:h-20 px-4 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 font-black text-sm sm:text-base flex items-center justify-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer shadow-sm"
+                                title="إلغاء وتفريغ"
+                                className="h-11 sm:h-12 px-3.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
                             >
-                                <X className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+                                <X className="w-4 h-4" />
                                 <span>إلغاء</span>
                             </button>
                         )}
@@ -469,9 +626,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                             type="button"
                             onClick={handleAddToCart}
                             disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
-                            className="spatial-button flex-1 sm:flex-initial min-w-[140px] flex items-center justify-center gap-2.5 sm:gap-3 px-8 sm:px-12 h-16 sm:h-20 rounded-[22px] text-xl sm:text-[22px] font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] transition-transform shadow-lg"
+                            className="h-11 sm:h-12 px-6 sm:px-8 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
                         >
-                            <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> إضافة
+                            <Plus className="w-4 h-4" />
+                            <span>إضافة للفاتورة</span>
                         </button>
                     </div>
                 </div>
@@ -479,25 +637,25 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
             {/* Row 4: Dedicated Item Total preview row */}
             {previewTotal !== null && previewQty !== null && previewQty > 0 && (
-                <div className="flex items-center justify-between px-5 py-3 sm:py-3.5 rounded-[22px] bg-primary/10 dark:bg-primary/15 border-2 border-primary/30 backdrop-blur-md shadow-sm">
-                    <span className="text-sm sm:text-base font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                        الإجمالي
+                <div className="flex items-center justify-between px-4 py-2.5 rounded-[2px] bg-sky-500/10 dark:bg-sky-500/10 border border-sky-500/25">
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        إجمالي العنصر المتوقع
                     </span>
-                    <div className="flex items-baseline gap-1.5">
-                        <span className="text-2xl sm:text-3xl font-black text-primary tracking-tight">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-base sm:text-lg font-number font-black text-sky-600 dark:text-sky-400">
                             {fmt(previewTotal)}
                         </span>
-                        <span className="text-xs sm:text-sm font-black text-primary">د.ل</span>
+                        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">د.ل</span>
                     </div>
                 </div>
             )}
 
             {/* Stock warning */}
             {selectedProduct && maxCount !== undefined && maxCount === 0 && (
-                <div className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-[12px] bg-red-500/10 border border-red-500/20">
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                    <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">
-                        المخزون غير كافٍ — المتاح: {availableStock} {selectedProduct.category.unit}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-[2px] bg-rose-500/10 border border-rose-500/25">
+                    <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                        المخزون غير كافٍ — المتاح حالياً: {availableStock} {selectedProduct.category.unit}
                     </span>
                 </div>
             )}

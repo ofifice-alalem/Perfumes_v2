@@ -48,6 +48,10 @@ interface PaymentDrawerProps {
     openPad: (title: string, initial: string, cb: (v: string) => void, max?: number) => void;
 }
 
+function fmt(n: number) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     showPaymentDrawer,
     setShowPaymentDrawer,
@@ -87,193 +91,199 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
     const [showDebtMethodModal, setShowDebtMethodModal] = useState<boolean>(false);
 
     return createPortal(
-        <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
             <div onClick={() => setShowPaymentDrawer(false)} className="absolute inset-0 cursor-pointer" />
 
-            <div className="relative z-10 w-full max-w-5xl mx-auto bg-white dark:bg-slate-900 border-t-2 border-black/10 dark:border-white/10 rounded-t-[36px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom duration-300">
+            {/* Workstation Payment Sheet */}
+            <div className="relative z-10 w-full max-w-5xl mx-auto bg-white dark:bg-[#0c1421] border-t border-x border-slate-200/90 dark:border-[#1d2d42] rounded-t-[2px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom duration-200">
+                
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-[20px] bg-primary/15 text-primary flex items-center justify-center font-black shrink-0 shadow-sm border border-primary/20">
-                            <Wallet className="w-7 h-7" />
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-[2px] bg-sky-500/10 border border-sky-500/25 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                            <Wallet className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                            <h3 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl">إتمام عملية السداد والحساب</h3>
-                            <p className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">
-                                العميل: <span className="text-primary font-black text-sm sm:text-base">{selectedCustomerName}</span> ({isCashCustomer ? 'زبون نقدي' : (customerType === 'vip' ? 'زبون VIP' : 'زبون آجل')})
+                            <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">إتمام عملية السداد والحساب</h3>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                العميل: <span className="text-slate-800 dark:text-slate-200 font-bold">{selectedCustomerName}</span> ({isCashCustomer ? 'زبون نقدي' : (customerType === 'vip' ? 'VIP' : 'آجل')})
                             </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        {/* Auto Print Toggle inside Title Bar Header */}
+                    <div className="flex items-center gap-2">
+                        {/* Auto Print Toggle */}
                         {setAutoPrintNode && (
                             <button
                                 type="button"
                                 onClick={() => setAutoPrintNode(!autoPrintNode)}
-                                className={`px-6 py-3 min-w-[180px] sm:min-w-[200px] rounded-2xl border-2 transition-all flex items-center justify-between gap-3.5 cursor-pointer shadow-md active:scale-95 touch-manipulation ${
+                                className={`h-8.5 px-3 rounded-[2px] border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs ${
                                     autoPrintNode
-                                        ? 'bg-emerald-500/20 border-emerald-500/60 text-emerald-800 dark:text-emerald-300 shadow-emerald-500/10'
-                                        : 'bg-slate-200/90 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                        : 'bg-white dark:bg-[#121c2c] border-slate-200 dark:border-[#1d2d42] text-slate-500'
                                 }`}
-                                title="تفعيل أو إلغاء الطباعة التلقائية للفاتورة"
+                                title="تفعيل أو إلغاء الطباعة التلقائية"
                             >
-                                <div className="flex items-center gap-2.5">
-                                    <Printer className={`w-6 h-6 ${autoPrintNode ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
-                                    <span className="text-sm sm:text-base font-black whitespace-nowrap">طباعة فاتورة</span>
-                                </div>
-                                <div className={`w-13 h-7 rounded-full p-0.5 border-2 transition-all flex items-center shadow-inner shrink-0 ${
-                                    autoPrintNode ? 'bg-emerald-600 border-emerald-500 justify-start' : 'bg-slate-400 dark:bg-slate-600 border-slate-400 justify-end'
-                                }`}>
-                                    <div className="w-5 h-5 rounded-full bg-white shadow-md transform transition-all duration-200" />
-                                </div>
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>طباعة إيصال تلقائي</span>
+                                <span className={`text-[10px] font-mono px-1 py-0.2 rounded-[2px] ${autoPrintNode ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
+                                    {autoPrintNode ? 'مفعل' : 'معطل'}
+                                </span>
                             </button>
                         )}
 
                         <button
                             type="button"
                             onClick={() => setShowPaymentDrawer(false)}
-                            className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 flex items-center justify-center text-slate-500 dark:text-white/70 transition-all active:scale-95 border border-black/5 dark:border-white/10 cursor-pointer"
+                            className="w-8 h-8 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273b] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
 
                 {/* Totals Summary Strip */}
-                <div className="px-6 sm:px-8 py-4 bg-slate-100/80 dark:bg-slate-800/90 border-b-2 border-slate-200 dark:border-slate-700 grid grid-cols-2 sm:flex sm:items-center justify-between gap-3 text-center sm:text-right">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] sm:text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">إجمالي الفاتورة</span>
-                        <span className="text-base sm:text-lg font-black text-slate-800 dark:text-white">{total.toFixed(2)} د.ل</span>
+                <div className="px-5 py-3 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-100/60 dark:bg-[#09111c] grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                    <div className="p-2.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/80 dark:border-[#1d2d42] shadow-2xs flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">إجمالي الفاتورة</span>
+                        <span className="text-sm sm:text-base font-number font-black text-slate-900 dark:text-white tabular-nums">{fmt(total)} د.ل</span>
                     </div>
+
                     {debtPayment && (
-                        <div className="flex flex-col">
-                            <span className="text-[10px] sm:text-xs font-black text-red-500 uppercase tracking-widest">الدين السابق</span>
-                            <span className="text-base sm:text-lg font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)} د.ل</span>
+                        <div className="p-2.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-rose-500/25 shadow-2xs flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">الدين السابق</span>
+                            <span className="text-sm sm:text-base font-number font-black text-rose-600 dark:text-rose-400 tabular-nums">{fmt(originalDebt)} د.ل</span>
                         </div>
                     )}
-                    <div className="flex flex-col">
-                        <span className="text-[10px] sm:text-xs font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">الإجمالي النهائى</span>
-                        <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">{grandTotal.toFixed(2)} د.ل</span>
+
+                    <div className="p-2.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/80 dark:border-[#1d2d42] shadow-2xs flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">الإجمالي النهائي</span>
+                        <span className="text-sm sm:text-base font-number font-black text-slate-900 dark:text-white tabular-nums">{fmt(grandTotal)} د.ل</span>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">المدفوع</span>
-                        <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)} د.ل</span>
+
+                    <div className="p-2.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/80 dark:border-[#1d2d42] shadow-2xs flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">المدفوع</span>
+                        <span className="text-sm sm:text-base font-number font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(totalPaid)} د.ل</span>
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[10px] sm:text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">المتبقي</span>
-                        <span className={`text-xl sm:text-2xl font-black ${remaining > 0.01 ? 'text-red-500 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'}`}>{remaining.toFixed(2)} د.ل</span>
+
+                    <div className="p-2.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/80 dark:border-[#1d2d42] shadow-2xs flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">المتبقي</span>
+                        <span className={`text-sm sm:text-base font-number font-black tabular-nums ${remaining > 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}>
+                            {fmt(remaining)} د.ل
+                        </span>
                     </div>
                 </div>
 
                 {/* Body Grid */}
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col lg:flex-row gap-6 sm:gap-8">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col lg:flex-row gap-4 sm:gap-6">
                     {/* Left Col — Select Payment Method */}
-                    <div className="flex flex-col gap-4 w-full lg:w-1/2">
-                        <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">اختر طريقة الدفع والمبلغ</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {paymentMethods.map(m => (
-                                <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => handleSelectPaymentMethod(String(m.id))}
-                                    className={`h-16 sm:h-20 rounded-[20px] font-black text-base sm:text-lg transition-all border-2 flex items-center justify-center cursor-pointer ${selMethod === String(m.id)
-                                        ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30'
-                                        : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-white hover:border-primary/60 active:scale-95 shadow-sm'
+                    <div className="flex flex-col gap-3 w-full lg:w-1/2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">اختر طريقة الدفع والمبلغ</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {paymentMethods.map(m => {
+                                const isSelected = selMethod === String(m.id);
+                                return (
+                                    <button
+                                        key={m.id}
+                                        type="button"
+                                        onClick={() => handleSelectPaymentMethod(String(m.id))}
+                                        className={`h-11 sm:h-12 rounded-[2px] font-bold text-xs sm:text-sm transition-all border flex items-center justify-center cursor-pointer shadow-2xs ${
+                                            isSelected
+                                                ? 'bg-brand text-white border-brand shadow-xs'
+                                                : 'bg-white dark:bg-[#101a29] border-slate-200 dark:border-[#1d2d42] text-slate-800 dark:text-slate-200 hover:border-brand/60 hover:bg-slate-50 dark:hover:bg-[#152338]'
                                         }`}
-                                >
-                                    {m.name}
-                                </button>
-                            ))}
+                                    >
+                                        {m.name}
+                                    </button>
+                                );
+                            })}
                         </div>
-                        <div className="flex gap-3 mt-1">
+
+                        <div className="flex gap-2 items-center">
                             <button
                                 type="button"
                                 onClick={() => openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining)}
-                                className="spatial-input flex-1 h-16 sm:h-20 rounded-[22px] px-5 text-2xl sm:text-3xl font-black text-center cursor-pointer hover:border-primary/60 border-2 transition-all active:scale-95 shadow-sm"
+                                className="flex-1 h-11 sm:h-12 rounded-[2px] px-3 font-number font-bold text-base sm:text-lg text-center cursor-pointer border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-900 dark:text-white hover:border-brand transition-colors shadow-2xs"
                             >
-                                {selAmount || remaining.toFixed(2)}
+                                {selAmount || (remaining > 0 ? remaining.toFixed(2) : '0.00')} <span className="text-xs font-normal text-slate-400">د.ل</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={addPayment}
                                 disabled={!selMethod || !selAmount}
-                                className="spatial-button flex items-center justify-center gap-2 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] text-lg font-black disabled:opacity-40 shrink-0 active:scale-95 shadow-md cursor-pointer"
+                                className="h-11 sm:h-12 px-4 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 shadow-xs cursor-pointer transition-opacity shrink-0"
                             >
-                                <Plus className="w-6 h-6" /> إضافة دفعة
+                                <Plus className="w-4 h-4" />
+                                <span>إضافة دفعة</span>
                             </button>
                         </div>
                     </div>
 
                     {/* Right Col — Payments Cards List */}
-                    <div className="flex flex-col gap-3 w-full lg:w-1/2">
-                        <label className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">الدفعات المسجلة في الفاتورة</label>
+                    <div className="flex flex-col gap-2.5 w-full lg:w-1/2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">الدفعات المسجلة في الفاتورة</label>
 
-                        {/* Debt Settlement Card in Right Column */}
+                        {/* Debt Settlement Card */}
                         {debtPayment && (
-                            <div className="flex flex-col gap-2.5 p-4 sm:p-5 rounded-[22px] sm:rounded-[24px] bg-red-500/15 dark:bg-red-500/20 border-2 border-red-500/40 shadow-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                                setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                            }, originalDebt)}
-                                            className="w-12 h-12 rounded-[16px] bg-amber-500/20 text-amber-600 dark:text-amber-300 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
-                                            title="تعديل القيمة"
-                                        >
-                                            <Edit className="w-5 h-5" />
-                                        </button>
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="font-black text-red-600 dark:text-red-300 text-xs sm:text-sm">سداد الدين السابق</span>
-                                            <span className="font-black text-slate-900 dark:text-white text-xl sm:text-[22px]">{debtPayment.amount} د.ل</span>
-                                        </div>
-                                    </div>
+                            <div className="p-3 rounded-[2px] bg-rose-500/10 border border-rose-500/25 flex items-center justify-between gap-3 shadow-2xs">
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                     <button
                                         type="button"
-                                        onClick={() => setDebtPayment(null)}
-                                        className="w-11 h-11 rounded-[16px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-sm cursor-pointer"
-                                        title="إلغاء سداد الدين"
+                                        onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                            setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                        }, originalDebt)}
+                                        className="w-8 h-8 rounded-[2px] border border-rose-500/30 bg-white dark:bg-[#121c2c] text-rose-600 dark:text-rose-400 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
+                                        title="تعديل القيمة"
                                     >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Edit className="w-3.5 h-3.5" />
                                     </button>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-bold text-rose-600 dark:text-rose-400 text-xs truncate">سداد الدين السابق</span>
+                                        <span className="font-number font-black text-slate-900 dark:text-white text-sm sm:text-base">{debtPayment.amount} د.ل</span>
+                                    </div>
                                 </div>
-
-                                {/* Active Debt Payment Method Display & Modal Trigger Button (Longer/Wider) */}
-                                <div className="flex items-center justify-between pt-2.5 border-t border-red-500/20">
-                                    <span className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">طريقة سداد الدين:</span>
+                                <div className="flex items-center gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setShowDebtMethodModal(true)}
-                                        className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-black text-sm flex items-center justify-between gap-3 shadow-md transition-all cursor-pointer min-w-[140px] sm:min-w-[170px]"
+                                        className="h-8 px-2.5 rounded-[2px] bg-white dark:bg-[#121c2c] border border-rose-500/30 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1 cursor-pointer"
                                     >
                                         <span>{debtPayment.method_name}</span>
-                                        <ChevronDown className="w-4 h-4 text-white/80" />
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDebtPayment(null)}
+                                        className="w-8 h-8 rounded-[2px] border border-rose-500/30 bg-rose-500/20 text-rose-600 hover:bg-rose-600 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                                        title="إلغاء سداد الدين"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>
                         )}
+
                         {payments.length === 0 && !debtPayment ? (
-                            <div className="flex-1 flex items-center justify-center min-h-[120px] text-slate-500 dark:text-slate-400 font-black text-lg border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 rounded-[24px]">
-                                لم يتم إضافة أي دفعات بعد
+                            <div className="flex-1 flex flex-col items-center justify-center min-h-[120px] text-slate-400 dark:text-slate-500 text-xs font-bold border border-dashed border-slate-200 dark:border-[#1d2d42] bg-slate-50/50 dark:bg-[#09111c] rounded-[2px] p-6 text-center">
+                                لم يتم تسجيل أي دفعات بعد — حدد طريقة الدفع وأضف الدفعة
                             </div>
                         ) : (
                             payments.map((p, idx) => (
-                                <div key={idx} className="flex items-center gap-3 px-4 sm:px-5 h-22 sm:h-24 rounded-[22px] sm:rounded-[24px] bg-emerald-500/15 dark:bg-emerald-500/20 border-2 border-emerald-500/40 shadow-sm">
+                                <div key={idx} className="p-3 rounded-[2px] bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-between gap-3 shadow-2xs">
                                     <button
                                         type="button"
                                         onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
                                             setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
                                             setPaymentManuallySet(true);
                                         })}
-                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95 shadow-sm cursor-pointer"
+                                        className="w-8 h-8 rounded-[2px] border border-emerald-500/30 bg-white dark:bg-[#121c2c] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
                                         title="تعديل القيمة"
                                     >
-                                        <Edit className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        <Edit className="w-3.5 h-3.5" />
                                     </button>
                                     <div className="flex flex-col min-w-0 flex-1">
-                                        <span className="font-black text-emerald-600 dark:text-emerald-300 text-xs sm:text-sm truncate">{p.method_name}</span>
-                                        <span className="font-black text-slate-900 dark:text-white text-xl sm:text-[24px] truncate">{p.amount}</span>
+                                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs truncate">{p.method_name}</span>
+                                        <span className="font-number font-black text-slate-900 dark:text-white text-sm sm:text-base truncate">{p.amount} د.ل</span>
                                     </div>
                                     <button
                                         type="button"
@@ -281,10 +291,10 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                                             setPayments(prev => prev.filter((_, i) => i !== idx));
                                             setPaymentManuallySet(true);
                                         }}
-                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-[18px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-90 shadow-sm cursor-pointer"
+                                        className="w-8 h-8 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
                                         title="حذف"
                                     >
-                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             ))
@@ -292,12 +302,11 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                     </div>
                 </div>
 
-                {/* Drawer Footer / Submit */}
-                <div className="px-6 sm:px-8 pt-5 pb-16 sm:pb-24 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex flex-col gap-3 shrink-0">
-
+                {/* Footer / Submit */}
+                <div className="px-5 py-3.5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] flex flex-col gap-2 shrink-0">
                     {isCashCustomer && remaining > 0.01 && (
-                        <div className="px-4 py-3 rounded-[16px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 font-black text-sm text-center">
-                            ⚠️ زبون نقدي — يجب الدفع الكامل واستيفاء المبلغ المتبقي ({remaining.toFixed(2)} د.ل) قبل التأكيد
+                        <div className="px-3 py-1.5 rounded-[2px] bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 font-bold text-xs text-center">
+                            ⚠️ زبون نقدي — يجب سداد المبلغ المتبقي بالكامل ({fmt(remaining)} د.ل) قبل تأكيد البيع
                         </div>
                     )}
 
@@ -305,40 +314,37 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         type="button"
                         onClick={submit}
                         disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                        className="spatial-button h-24 sm:h-28 rounded-[28px] text-2xl sm:text-[26px] font-black w-full flex items-center justify-center gap-4 shadow-2xl active:scale-95 hover:scale-[1.01] transition-all disabled:opacity-40 cursor-pointer"
+                        className="h-11 sm:h-12 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-sm sm:text-base w-full flex items-center justify-center gap-2 shadow-xs transition-opacity disabled:opacity-40 cursor-pointer"
                     >
                         {processing ? (
-                            <RefreshCw className="w-8 h-8 sm:w-10 sm:h-10 animate-spin" />
+                            <RefreshCw className="w-4 h-4 animate-spin" />
                         ) : (
-                            <Check className="w-8 h-8 sm:w-10 sm:h-10" />
+                            <Check className="w-4 h-4" />
                         )}
-                        {processing
-                            ? 'جاري حفظ الفاتورة...'
-                            : (isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة')
-                        }
+                        <span>{processing ? 'جاري حفظ الفاتورة...' : (isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة')}</span>
                     </button>
                 </div>
             </div>
 
-            {/* Modal Choice for Debt Payment Method (Supports Light & Dark Modes) */}
+            {/* Modal Choice for Debt Payment Method */}
             {showDebtMethodModal && debtPayment && (
-                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 dir-rtl touch-manipulation">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 dir-rtl">
                     <div
-                        className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+                        className="absolute inset-0 bg-black/75 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
                         onClick={() => setShowDebtMethodModal(false)}
                     />
-                    <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-[32px] p-6 shadow-2xl space-y-5 z-10 animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-4">
-                            <h4 className="text-xl font-black text-slate-900 dark:text-white">اختر طريقة سداد الدين</h4>
+                    <div className="relative w-full max-w-md bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] text-slate-900 dark:text-white rounded-[2px] p-5 shadow-2xl flex flex-col gap-4 z-10 animate-in zoom-in-95 duration-150">
+                        <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#19273b] pb-3">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">اختر طريقة سداد الدين</h4>
                             <button
                                 type="button"
                                 onClick={() => setShowDebtMethodModal(false)}
-                                className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-600 dark:text-white transition-all active:scale-90 cursor-pointer"
+                                className="w-7 h-7 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] hover:bg-slate-100 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2">
                             {paymentMethods.map(m => (
                                 <button
                                     key={m.id}
@@ -347,10 +353,10 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                                         setDebtPayment(prev => prev ? { ...prev, payment_method_id: String(m.id), method_name: m.name } : null);
                                         setShowDebtMethodModal(false);
                                     }}
-                                    className={`h-20 rounded-2xl font-black text-lg transition-all border-2 flex items-center justify-center cursor-pointer active:scale-95 ${
+                                    className={`h-11 rounded-[2px] font-bold text-xs transition-all border flex items-center justify-center cursor-pointer ${
                                         String(debtPayment.payment_method_id) === String(m.id)
-                                            ? 'bg-red-600 border-red-500 text-white shadow-xl shadow-red-600/30'
-                                            : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-red-500/60'
+                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                            : 'bg-white dark:bg-[#121c2c] border-slate-200 dark:border-[#1d2d42] text-slate-800 dark:text-slate-200 hover:border-brand'
                                     }`}
                                 >
                                     {m.name}

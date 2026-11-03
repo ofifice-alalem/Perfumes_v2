@@ -26,6 +26,10 @@ interface HoldInvoicesProps {
     deleteHoldInvoice: (holdId: string) => void;
 }
 
+function fmt(n: number) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
     showHoldList,
     setShowHoldList,
@@ -38,112 +42,113 @@ export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
 
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex justify-start dir-rtl">
-            {/* Backdrop with Fade Transition */}
+            {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
                 onClick={() => setShowHoldList(false)}
             />
 
-            {/* Drawer Panel with Slide Transition */}
-            <div className="relative w-full sm:w-[600px] md:w-[700px] lg:w-[800px] max-w-[95vw] h-full
-                bg-gradient-to-b from-white via-slate-50 to-slate-100
-                dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)]
-                shadow-[-24px_0_60px_rgba(0,0,0,0.4)]
-                border-l-2 border-black/10 dark:border-white/15 flex flex-col animate-in slide-in-from-right duration-300 z-10 cursor-default">
+            {/* Workstation Drawer Panel */}
+            <div className="relative w-full sm:w-[560px] md:w-[680px] max-w-[95vw] h-full bg-white dark:bg-[#0c1421] border-l border-slate-200/90 dark:border-[#1d2d42] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 z-10 cursor-default">
 
-                {/* Drawer Header */}
-                <div className="flex items-center justify-between px-6 sm:px-8 py-5 border-b-2 border-black/5 dark:border-white/8 shrink-0 bg-amber-500/10 dark:bg-amber-500/10 backdrop-blur-md">
-                    <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-[22px] bg-gradient-to-br from-amber-500/20 via-amber-500/15 to-amber-600/20 border-2 border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-300 shadow-lg shadow-amber-500/10 shrink-0">
-                            <Clock className="w-7 h-7 sm:w-8 sm:h-8" />
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-[2px] bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                            <Clock className="w-4 h-4" />
                         </div>
-                        <div className="flex flex-col">
-                            <h3 className="font-black text-slate-900 dark:text-white text-2xl sm:text-3xl">الفواتير المعلقة</h3>
-                            <p className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                                عدد الفواتير المحفوظة مؤقتاً: <span className="font-black text-base">{holdInvoices.length}</span>
-                            </p>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">الفواتير المعلقة</h3>
+                            <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-[2px]">
+                                {holdInvoices.length} معلقة
+                            </span>
                         </div>
                     </div>
                     <button
                         type="button"
                         onClick={() => setShowHoldList(false)}
-                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-black/5 dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-500 dark:text-white/60 flex items-center justify-center transition-all border border-black/5 dark:border-white/10 active:scale-95 shrink-0 cursor-pointer"
+                        className="w-8 h-8 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273b] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                         title="إغلاق"
                     >
-                        <X className="w-6 h-6 sm:w-7 sm:h-7" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Drawer Content */}
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-4">
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col gap-3">
                     {holdInvoices.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-400 dark:text-white/30 text-center py-20">
-                            <div className="w-24 h-24 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 border-2 border-amber-500/20 shadow-inner">
-                                <Clock className="w-12 h-12 opacity-80" />
+                        <div className="h-full flex flex-col items-center justify-center gap-2.5 text-slate-400 dark:text-slate-500 text-center py-24">
+                            <div className="w-12 h-12 rounded-[2px] bg-amber-500/10 border border-amber-500/25 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                <Clock className="w-6 h-6 stroke-1" />
                             </div>
-                            <span className="font-black text-xl text-slate-700 dark:text-slate-200">لا توجد فواتير معلقة حالياً</span>
-                            <span className="text-sm opacity-70 max-w-sm leading-relaxed font-bold">يمكنك تعليق أي فاتورة بيع بالضغط على زر "تعليق الفاتورة" لاسترجاعها وإكمال عملية البيع لاحقاً.</span>
+                            <span className="font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200">لا توجد فواتير معلقة حالياً</span>
+                            <span className="text-[11px] font-medium text-slate-500 max-w-xs leading-relaxed">
+                                يمكنك تعليق أي فاتورة مؤقتاً بالضغط على «تعليق الفاتورة» لاسترجاعها وإتمام البيع لاحقاً.
+                            </span>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="flex flex-col gap-3">
                             {holdInvoices.map(hold => (
-                                <div key={hold.id} className="flex flex-col gap-4 p-6 rounded-[26px] bg-white dark:bg-slate-800/90 border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500/50 dark:hover:border-amber-500/60 transition-all shadow-md hover:shadow-xl">
-                                    <div className="flex items-start justify-between gap-4">
+                                <div key={hold.id} className="p-4 rounded-[2px] bg-slate-50/70 dark:bg-[#09111c] border border-slate-200/90 dark:border-[#1d2d42] hover:border-amber-500/40 transition-colors shadow-2xs flex flex-col gap-3">
+                                    <div className="flex items-start justify-between gap-3">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                                                <span className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl truncate">{hold.customerName}</span>
-                                                <span className="text-xs font-black text-amber-800 dark:text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full whitespace-nowrap">
-                                                    {hold.cart.length} منتجات
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                                <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">{hold.customerName}</span>
+                                                <span className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-[2px]">
+                                                    {hold.cart.length} أصناف
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2.5 py-0.5 rounded-md">
-                                                    {new Date(hold.timestamp).toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' })}
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="font-mono text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42] px-2 py-0.5 rounded-[2px]">
+                                                    {new Date(hold.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
-                                                {hold.notes && <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 truncate">— {hold.notes}</span>}
+                                                {hold.notes && <span className="text-slate-500 text-xs truncate">— {hold.notes}</span>}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col items-end shrink-0 bg-amber-500/10 dark:bg-amber-500/20 px-4 py-2 rounded-[18px] border border-amber-500/20">
-                                            <span className="text-[11px] text-amber-700 dark:text-amber-300 font-black uppercase tracking-wider">الإجمالي</span>
-                                            <span className="font-black text-primary dark:text-amber-400 text-2xl sm:text-3xl">{hold.total.toFixed(2)} <span className="text-xs font-bold">د.ل</span></span>
+
+                                        <div className="px-3 py-1.5 rounded-[2px] bg-white dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42] flex flex-col items-end shrink-0 shadow-2xs">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">الإجمالي</span>
+                                            <span className="font-number font-black text-sm sm:text-base text-slate-900 dark:text-white">
+                                                {fmt(hold.total)} <span className="text-[10px] font-normal text-slate-400">د.ل</span>
+                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Cart items list preview */}
+                                    {/* Cart items preview tags */}
                                     {hold.cart && hold.cart.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 pt-3 border-t border-slate-200/80 dark:border-slate-700/60">
+                                        <div className="flex flex-wrap gap-1.5 pt-2.5 border-t border-slate-200/80 dark:border-[#172437]">
                                             {hold.cart.slice(0, 5).map((item, idx) => (
-                                                <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-2xs">
-                                                    <span className="font-black text-primary">{item.quantity}×</span>
-                                                    <span className="truncate max-w-[150px]">{item.product_name}</span>
+                                                <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[2px] bg-white dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42] text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                                                    <span className="text-brand font-number">{item.quantity}×</span>
+                                                    <span className="truncate max-w-[140px]">{item.product_name}</span>
                                                     {item.size_label && <span className="text-[10px] text-slate-400">({item.size_label})</span>}
                                                 </span>
                                             ))}
                                             {hold.cart.length > 5 && (
-                                                <span className="inline-flex items-center px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-black text-amber-700 dark:text-amber-300">
-                                                    +{hold.cart.length - 5} منتجات أخرى
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-[2px] bg-amber-500/10 border border-amber-500/25 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                                                    +{hold.cart.length - 5} أصناف أخرى
                                                 </span>
                                             )}
                                         </div>
                                     )}
 
-                                    {/* Touch Action Buttons */}
-                                    <div className="flex items-center gap-3 pt-3 border-t border-slate-200 dark:border-slate-700/60">
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2 pt-2.5 border-t border-slate-200/80 dark:border-[#172437]">
                                         <button
                                             type="button"
                                             onClick={() => restoreHoldInvoice(hold)}
-                                            className="flex-1 flex items-center justify-center gap-3 h-14 sm:h-16 rounded-[20px] bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-black text-base sm:text-lg transition-all active:scale-95 shadow-lg shadow-emerald-500/20 hover:shadow-xl cursor-pointer"
+                                            className="flex-1 h-9 px-3 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                                         >
-                                            <Play className="w-6 h-6 sm:w-7 sm:h-7 fill-current" />
-                                            <span>استرجاع الفاتورة</span>
+                                            <Play className="w-3.5 h-3.5 fill-current" />
+                                            <span>استرجاع الفاتورة للمتابعة</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => deleteHoldInvoice(hold.id)}
-                                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-[20px] bg-red-500/15 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white border-2 border-red-500/30 flex items-center justify-center transition-all active:scale-95 shadow-sm shrink-0 cursor-pointer"
-                                            title="حذف الفاتورة"
+                                            className="h-9 w-9 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            title="حذف الفاتورة المعلقة"
                                         >
-                                            <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" />
+                                            <Trash2 className="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -152,15 +157,15 @@ export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
                     )}
                 </div>
 
-                {/* Drawer Footer */}
+                {/* Footer */}
                 {holdInvoices.length > 0 && (
-                    <div className="p-6 border-t-2 border-black/8 dark:border-white/10 bg-white/90 dark:bg-[#13192e]/90 backdrop-blur-2xl shrink-0 shadow-2xl">
+                    <div className="p-3.5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
                         <button
                             type="button"
                             onClick={() => setHoldInvoices([])}
-                            className="w-full flex items-center justify-center gap-3 h-14 sm:h-16 rounded-[20px] bg-red-500/15 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white border-2 border-red-500/30 font-black text-base sm:text-lg transition-all active:scale-95 shadow-sm cursor-pointer"
+                            className="w-full h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                         >
-                            <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                            <Trash2 className="w-3.5 h-3.5" />
                             <span>حذف جميع الفواتير المعلقة</span>
                         </button>
                     </div>

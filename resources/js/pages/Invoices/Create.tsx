@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { router, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { SizeSelect } from '@/components/ui/SizeSelect';
@@ -10,7 +9,7 @@ import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
     CreditCard, ChevronLeft, User, AlertCircle, Clock, Play, Pause, Edit,
-    ChevronUp, Wallet, CheckCircle2, History, RefreshCw,
+    ChevronUp, Wallet, CheckCircle2, History, RefreshCw, Search, ChevronDown,
 } from 'lucide-react';
 import { ProductSelector } from './components/ProductSelector';
 import { Cart } from './components/Cart';
@@ -864,25 +863,147 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
         }
     }
 
-    const customerOptions = [
-        { label: 'زبون نقدي', badge: 'نقدي' },
-        ...customers.filter(c => c.id !== 1).map(c => ({ label: c.name, badge: '' })),
-    ];
     const selectedCustomerName = selectedCustomer?.name ?? 'زبون نقدي';
+
+    // ── Workstation Customer Select Component ──────────────────────────────
+    function WorkstationCustomerSelect({
+        selectedId,
+        onSelect,
+    }: {
+        selectedId: string;
+        onSelect: (id: string) => void;
+    }) {
+        const [isOpen, setIsOpen] = useState(false);
+        const [search, setSearch] = useState('');
+        const ref = useRef<HTMLDivElement>(null);
+        const inputRef = useRef<HTMLInputElement>(null);
+
+        useEffect(() => {
+            function handleClickOutside(e: MouseEvent) {
+                if (ref.current && !ref.current.contains(e.target as Node)) {
+                    setIsOpen(false);
+                }
+            }
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }, []);
+
+        useEffect(() => {
+            if (isOpen) {
+                setTimeout(() => inputRef.current?.focus(), 50);
+            } else {
+                setSearch('');
+            }
+        }, [isOpen]);
+
+        const cashCustomer = customers.find(c => c.id === 1) || { id: 1, name: 'زبون نقدي' };
+        const otherCustomers = customers.filter(c => c.id !== 1);
+
+        const filtered = otherCustomers.filter(c => {
+            if (!search.trim()) return true;
+            return (c.name || '').toLowerCase().includes(search.toLowerCase().trim());
+        });
+
+        const currentCustomer = selectedId ? customers.find(c => String(c.id) === selectedId) : cashCustomer;
+
+        return (
+            <div className="relative flex-1 min-w-0" ref={ref}>
+                <button
+                    type="button"
+                    onClick={() => setIsOpen(!isOpen)}
+                    className={`h-11 sm:h-12 w-full px-3 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                        isOpen
+                            ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
+                            : selectedId
+                                ? 'border-slate-300 dark:border-[#22354e] bg-white dark:bg-[#0c1421] text-slate-900 dark:text-white'
+                                : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 hover:border-slate-300'
+                    }`}
+                >
+                    <div className="flex items-center gap-2 truncate">
+                        <User className="w-4 h-4 text-brand shrink-0" />
+                        <span className="truncate">{currentCustomer ? currentCustomer.name : 'زبون نقدي'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 mr-1.5">
+                        {selectedId && currentCustomer?.total_debt && +currentCustomer.total_debt > 0 && (
+                            <span className="text-[10px] text-rose-600 dark:text-rose-400 bg-rose-500/10 border border-rose-500/25 px-1.5 py-0.5 rounded-[2px] font-number font-bold">
+                                دين: {fmt(+currentCustomer.total_debt)}
+                            </span>
+                        )}
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180 text-brand' : ''}`} />
+                    </div>
+                </button>
+
+                {isOpen && (
+                    <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden animate-in fade-in duration-100 min-w-[260px]">
+                        <div className="p-2 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/80 dark:bg-[#09111c] flex items-center gap-2">
+                            <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="بحث عن عميل..."
+                                className="w-full bg-transparent border-none text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
+                            />
+                        </div>
+                        <ul className="max-h-64 overflow-y-auto p-1.5 flex flex-col gap-1">
+                            {(!search || 'زبون نقدي'.includes(search.trim())) && (
+                                <li
+                                    onClick={() => { setCustomerId(''); setIsOpen(false); }}
+                                    className={`px-3 py-2 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between border ${
+                                        !selectedId
+                                            ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                                            : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <span>زبون نقدي (افتراضي)</span>
+                                    {!selectedId && <Check className="w-3.5 h-3.5 text-brand" />}
+                                </li>
+                            )}
+                            {filtered.map(c => {
+                                const isSelected = selectedId === String(c.id);
+                                return (
+                                    <li
+                                        key={c.id}
+                                        onClick={() => { setCustomerId(String(c.id)); setIsOpen(false); }}
+                                        className={`px-3 py-2 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between border ${
+                                            isSelected
+                                                ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30'
+                                                : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100'
+                                        }`}
+                                    >
+                                        <span className="truncate">{c.name}</span>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {c.total_debt && +c.total_debt > 0 && (
+                                                <span className="text-[10px] text-rose-600 dark:text-rose-400 font-number font-bold">
+                                                    دين: {fmt(+c.total_debt)}
+                                                </span>
+                                            )}
+                                            {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     // ── render ────────────────────────────────────────────────────────────────
     return (
         <>
             <AppShell pageTitle={isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة بيع جديدة'}>
-                {/* 🌟 Compact Floating Spatial Toast (Top-Left) */}
+                {/* 🌟 Workstation Floating Toast */}
                 {toastMessage && (
-                    <div className="fixed top-5 left-5 z-[9999] animate-in fade-in slide-in-from-left-4 duration-300">
-                        <div className="spatial-card backdrop-blur-2xl bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-white px-3.5 py-2.5 rounded-[20px] shadow-2xl border border-emerald-500/30 dark:border-emerald-500/25 flex items-center gap-3 max-w-md">
-                            <div className="w-7 h-7 rounded-full bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                    <div className="fixed top-5 left-5 z-[9999] animate-in fade-in slide-in-from-left-4 duration-200">
+                        <div className="bg-white dark:bg-[#0c1421] text-slate-800 dark:text-white px-3.5 py-2.5 rounded-[2px] shadow-xl border border-emerald-500/30 dark:border-emerald-500/25 flex items-center gap-3 max-w-md">
+                            <div className="w-7 h-7 rounded-[2px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
                                 <CheckCircle2 className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="font-black text-xs sm:text-sm text-slate-800 dark:text-white leading-tight">
+                                <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-white leading-tight">
                                     {toastMessage}
                                 </p>
                             </div>
@@ -892,14 +1013,14 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                         type="button"
                                         disabled={reprintingToast}
                                         onClick={() => triggerNodePrint(createdInvId)}
-                                        className="px-2 py-1 rounded-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-50 text-slate-700 dark:text-slate-200 font-black text-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 border border-black/5 dark:border-white/10"
+                                        className="px-2 py-1 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] disabled:opacity-50 text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer flex items-center gap-1 border border-slate-200 dark:border-[#1d2d42]"
                                         title="إعادة طباعة نسخة إضافية من الإيصال الحراري"
                                     >
                                         {reprintingToast ? 'جاري...' : 'طباعة 🖨️'}
                                     </button>
                                     <Link
                                         href={`/invoices/${createdInvId}`}
-                                        className="px-2 py-1 rounded-[10px] bg-primary/10 hover:bg-primary/20 text-primary font-black text-xs transition-all active:scale-95 border border-primary/20"
+                                        className="px-2 py-1 rounded-[2px] bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs transition-colors border border-sky-500/25"
                                     >
                                         عرض
                                     </Link>
@@ -908,7 +1029,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <button
                                 type="button"
                                 onClick={() => setToastMessage(null)}
-                                className="w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
+                                className="w-6 h-6 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#152238] text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                                 title="إغلاق"
                             >
                                 <X className="w-3.5 h-3.5" />
@@ -917,22 +1038,23 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     </div>
                 )}
 
-                {/* Desktop Layout - كما هو */}
+                {/* Desktop Layout */}
                 <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
 
                     {/* ══ LEFT PANEL ══ */}
-                    <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">
+                    <div className="flex-1 flex flex-col overflow-hidden border-r border-slate-200/90 dark:border-[#1d2d42]">
 
                         {/* Top bar */}
-                        <div className="flex items-center justify-between px-3 sm:px-5 py-2 sm:py-3 border-b border-black/5 dark:border-white/5 shrink-0">
-                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs sm:text-sm shrink-0">
-                                    <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                                    <span className="hidden sm:inline">{isEditMode ? 'عرض الفاتورة' : 'فواتير البيع'}</span>
-                                    <span className="sm:hidden">رجوع</span>
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors font-bold text-xs">
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                    <span>{isEditMode ? 'عرض الفاتورة' : 'فواتير البيع'}</span>
                                 </Link>
-                                <span className="text-slate-300 dark:text-white/10 hidden sm:inline">/</span>
-                                <span className="font-black text-slate-800 dark:text-white text-xs sm:text-sm truncate">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
+                                <span className="text-slate-300 dark:text-slate-700">/</span>
+                                <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                    {isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}
+                                </span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                                 {/* Refresh / Sync Products Catalog Button */}
@@ -940,39 +1062,37 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     type="button"
                                     onClick={refreshProductsCatalog}
                                     disabled={isRefreshing}
-                                    className="h-10 sm:h-12 px-3 sm:px-4 rounded-[14px] sm:rounded-[18px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 border border-black/10 dark:border-white/20 text-slate-700 dark:text-white/80 font-bold flex items-center gap-2 transition-all shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                                    title="تحديث قائمة المنتجات ومزامنة المخزون اللحظي"
+                                    className="h-9 px-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/70 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs disabled:opacity-50"
+                                    title="تحديث المنتجات ومزامنة المخزون اللحظي"
                                 >
-                                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-primary ${isRefreshing ? 'animate-spin' : ''}`} />
-                                    <span className="text-xs sm:text-sm font-black hidden md:inline">تحديث المنتجات</span>
-                                    <span className="text-[10px] sm:text-xs font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                        {productsList.length}
-                                    </span>
+                                    <RefreshCw className={`w-3.5 h-3.5 text-brand ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <span>تحديث المنتجات</span>
+                                    <span className="text-[10px] font-number text-slate-500 mr-0.5">({productsList.length})</span>
                                 </button>
 
-                                {/* Hold invoices touchscreen square button */}
+                                {/* Hold invoices button */}
                                 {!isEditMode && (
                                     <button
+                                        type="button"
                                         onClick={() => setShowHoldList(!showHoldList)}
-                                        className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-[18px] sm:rounded-[24px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border-2 border-amber-500/50 hover:border-amber-500/80 text-amber-800 dark:text-amber-200 font-black flex flex-col items-center justify-center gap-0.5 sm:gap-1 transition-all shadow-md hover:shadow-xl active:scale-95 shrink-0 cursor-pointer"
+                                        className="h-9 px-3 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-xs"
                                         title="الفواتير المعلقة"
                                     >
-                                        <Clock className="w-6 h-6 sm:w-9 sm:h-9 text-amber-600 dark:text-amber-300" />
-                                        <span className="text-[10px] sm:text-xs font-black leading-none">معلقة</span>
+                                        <Clock className="w-3.5 h-3.5 text-amber-500" />
+                                        <span>معلقة</span>
                                         {holdInvoices.length > 0 && (
-                                            <span className="absolute -top-2 -right-2 min-w-[24px] sm:min-w-[30px] h-[24px] sm:h-[30px] px-1 rounded-full bg-amber-500 text-white font-black text-xs sm:text-base flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-lg animate-pulse">
+                                            <span className="min-w-[18px] h-[18px] px-1 rounded-[2px] bg-amber-500 text-white font-number font-bold text-[10px] flex items-center justify-center">
                                                 {holdInvoices.length}
                                             </span>
                                         )}
                                     </button>
                                 )}
-                                {flash?.error && <span className="text-[10px] sm:text-xs font-bold text-red-500 max-w-[100px] sm:max-w-none truncate">{flash.error}</span>}
+                                {flash?.error && <span className="text-xs font-bold text-rose-500 max-w-[140px] truncate">{flash.error}</span>}
                             </div>
                         </div>
 
-
                         {/* Add product form */}
-                        <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4 border-b border-black/5 dark:border-white/5">
+                        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3.5 bg-slate-50/30 dark:bg-[#080e18]/40">
                             <ProductSelector
                                 key={`desktop-ps-${productSelectorKey}`}
                                 products={productsList}
@@ -988,89 +1108,114 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             />
                         </div>
 
-
                         {/* Submit Action Bar */}
-                        <div className="px-3 sm:px-5 pt-2.5 sm:pt-3 pb-2 sm:pb-2.5 border-t border-black/5 dark:border-white/5 shrink-0 flex items-stretch gap-2 sm:gap-3">
-                            <div className="flex flex-col gap-2 shrink-0">
-                                <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-slate-600 dark:text-white/70 font-black text-base sm:text-lg transition-all border border-black/10 dark:border-white/20 shrink-0 shadow-sm active:scale-95">
-                                    <X className="w-6 h-6" /> إلغاء
-                                </Link>
-                                {!isEditMode && (
-                                    <button onClick={clearForm} disabled={cart.length === 0} className="h-16 sm:h-20 w-36 sm:w-48 flex items-center justify-center gap-2.5 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-black text-base sm:text-lg transition-all shrink-0 shadow-sm active:scale-95 disabled:opacity-40 disabled:pointer-events-none">
-                                        <Trash2 className="w-6 h-6" /> مسح
-                                    </button>
-                                )}
-                            </div>
-                            <button onClick={() => setShowPaymentDrawer(true)}
+                        <div className="px-4 py-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-2.5">
+                            <Link
+                                href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
+                                className="h-11 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors shrink-0"
+                            >
+                                <X className="w-4 h-4" />
+                                <span>إلغاء</span>
+                            </Link>
+                            {!isEditMode && (
+                                <button
+                                    type="button"
+                                    onClick={clearForm}
+                                    disabled={cart.length === 0}
+                                    className="h-11 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>مسح الفاتورة</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowPaymentDrawer(true)}
                                 disabled={cart.length === 0}
-                                className="spatial-button flex-1 flex items-center justify-between px-6 sm:px-10 rounded-[28px] text-xl sm:text-[24px] font-black shadow-2xl disabled:opacity-40 hover:scale-[1.01] active:scale-95 transition-all">
-                                <div className="flex items-center gap-3.5">
-                                    <Wallet className="w-8 h-8 sm:w-10 sm:h-10" />
+                                className="flex-1 h-11 flex items-center justify-between px-5 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Wallet className="w-4 h-4" />
                                     <span>{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
                                 </div>
-                                <div className="flex items-center gap-3.5">
-                                    <span className="text-xs sm:text-sm font-black bg-white/20 dark:bg-black/20 px-3.5 py-2 rounded-full">{cart.length} أصناف</span>
-                                    <span className="text-2xl sm:text-3xl font-black">{grandTotal.toFixed(2)} د.ل</span>
-                                    <ChevronUp className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce" />
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-[2px]">
+                                        {cart.length} أصناف
+                                    </span>
+                                    <span className="text-sm sm:text-base font-number font-black">
+                                        {grandTotal.toFixed(2)} د.ل
+                                    </span>
+                                    <ChevronUp className="w-4 h-4" />
                                 </div>
                             </button>
                         </div>
                     </div>
 
                     {/* ══ RIGHT PANEL ══ */}
-                    <div className="w-full lg:w-[600px] flex flex-col overflow-hidden bg-black/2 dark:bg-white/[0.02] shrink-0 border-r border-black/5 dark:border-white/5">
+                    <div className="w-full lg:w-[480px] xl:w-[520px] flex flex-col overflow-hidden bg-white dark:bg-[#0c1421] shrink-0 border-r border-slate-200/90 dark:border-[#1d2d42]">
 
                         {/* Customer bar */}
-                        <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
-                            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3">
-                                <div className="flex items-center gap-2 flex-1 min-w-[160px]">
-                                    <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                        <User className="w-4.5 h-4.5 sm:w-4 sm:h-4 text-primary" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <ModernSelect key={`customer-${resetKey}`} label="" options={customerOptions}
-                                            defaultValue={customerId ? customers.find(c => c.id === +customerId)?.name ?? 'زبون نقدي' : 'زبون نقدي'} placeholder="اختر العميل"
-                                            onSelect={val => {
-                                                const c = customers.find(c => c.name === val);
-                                                setCustomerId(c && c.id !== 1 ? String(c.id) : '');
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
+                        <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex flex-col gap-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">العميل</span>
+                                <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold ${
+                                    customerType === 'vip'
+                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25'
+                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                                }`}>
+                                    {customerType === 'vip' ? '⭐ عميل مميز VIP' : 'عميل عادي'}
+                                </span>
                             </div>
 
-                            {/* Debt warning */}
+                            <WorkstationCustomerSelect
+                                selectedId={customerId}
+                                onSelect={id => setCustomerId(id)}
+                            />
+
+                            {/* Debt warning if any */}
                             {customerId && originalDebt > 0 && (
-                                <div className="mx-3 sm:mx-5 mb-2.5 sm:mb-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-[12px] sm:rounded-[14px] bg-red-500/10 border border-red-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                                        <span className="text-xs sm:text-sm font-bold text-red-600 dark:text-red-400">الدين السابق: {originalDebt.toFixed(2)}</span>
+                                <div className="p-2 rounded-[2px] bg-rose-500/10 border border-rose-500/25 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                                        <span className="text-xs font-bold text-rose-600 dark:text-rose-400 truncate">
+                                            الدين السابق: {originalDebt.toFixed(2)} د.ل
+                                        </span>
                                     </div>
-                                    <button onClick={() => {
-                                        const m = activePaymentMethods[0];
-                                        if (!m) return;
-                                        setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
-                                    }} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 h-9 sm:h-8 rounded-[10px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-xs transition-all shrink-0 active:scale-95">
-                                        <CreditCard className="w-3.5 h-3.5" /> سداد الدين
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const m = activePaymentMethods[0];
+                                            if (!m) return;
+                                            setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
+                                        }}
+                                        className="h-7 px-2.5 rounded-[2px] bg-rose-500 text-white font-bold text-[11px] hover:bg-rose-600 transition-colors cursor-pointer shrink-0"
+                                    >
+                                        سداد الدين
                                     </button>
                                 </div>
                             )}
                         </div>
 
                         {/* Panel header */}
-                        <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 border-b border-black/5 dark:border-white/5 shrink-0">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/75 dark:bg-[#0e1726] shrink-0">
                             <div className="flex items-center gap-2">
-                                <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-                                <span className="font-black text-slate-800 dark:text-white text-xs sm:text-sm">
+                                <ShoppingCart className="w-4 h-4 text-brand" />
+                                <span className="font-bold text-slate-900 dark:text-white text-xs">
                                     عناصر الفاتورة
-                                    {cart.length > 0 && <span className="mr-1.5 sm:mr-2 text-[10px] sm:text-xs font-black text-primary bg-primary/10 px-1.5 sm:px-2 py-0.5 rounded-full">{cart.length}</span>}
                                 </span>
+                                {cart.length > 0 && (
+                                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/25 px-1.5 py-0.2 rounded-[2px]">
+                                        {cart.length}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-xs font-number font-bold text-slate-600 dark:text-slate-400">
+                                الإجمالي: <span className="text-sky-600 dark:text-sky-400 font-black">{total.toFixed(2)} د.ل</span>
                             </div>
                         </div>
 
                         {/* Cart items */}
-                        <div className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-2.5 sm:py-3">
+                        <div className="flex-1 min-h-0 overflow-y-auto p-3">
                             <Cart
                                 cart={cart}
                                 products={productsList}
@@ -1087,33 +1232,30 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
 
                         {/* Action Bar: Hold Invoice + Recent Invoices Quick Print */}
-                        <div className="px-3 sm:px-4 pb-1.5 sm:pb-2 border-t border-black/5 dark:border-white/5 shrink-0 pt-2 sm:pt-2.5">
-                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                                {!isEditMode && cart.length > 0 && (
-                                    <button onClick={holdCurrentInvoice}
-                                        className="flex-1 sm:flex-none sm:w-56 flex flex-col items-center justify-center gap-1.5 rounded-[18px] sm:rounded-[22px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 hover:from-amber-500/35 hover:to-amber-600/35 border-2 border-amber-500/50 hover:border-amber-500/80 text-amber-800 dark:text-amber-200 font-black transition-all duration-200 shrink-0 shadow-xl hover:shadow-2xl transform hover:scale-[1.02] active:scale-[0.98] min-h-[90px] sm:min-h-[110px] px-4 cursor-pointer">
-                                        <div className="flex items-center gap-2">
-                                            <Pause className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-300" />
-                                            <span className="text-base sm:text-lg font-black">تعليق الفاتورة</span>
-                                        </div>
-                                        <span className="text-xs opacity-85 font-bold">حفظ مؤقت واسترجاع لاحقاً</span>
-                                    </button>
-                                )}
+                        <div className="p-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex gap-2">
+                            {!isEditMode && cart.length > 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => setShowRecentDrawer(true)}
-                                    className="flex-1 flex flex-col items-center justify-center gap-1.5 rounded-[18px] sm:rounded-[22px] bg-gradient-to-br from-blue-600/20 via-indigo-600/15 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border-2 border-blue-500/40 hover:border-blue-500/70 text-slate-900 dark:text-white font-black transition-all duration-200 shadow-xl hover:shadow-2xl transform hover:scale-[1.01] active:scale-[0.98] min-h-[90px] sm:min-h-[110px] px-5 group cursor-pointer"
+                                    onClick={holdCurrentInvoice}
+                                    className="flex-1 h-10 px-3 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                                 >
-                                    <div className="flex items-center gap-2.5">
-                                        <History className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500 group-hover:rotate-[-12deg] transition-transform" />
-                                        <span className="text-base sm:text-lg font-black">آخر 4 فواتير</span>
-                                        <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-xs font-black shadow-sm">
-                                            {recentInvoices?.length || 0}
-                                        </span>
-                                    </div>
-                                    <span className="text-xs text-slate-500 dark:text-slate-300 font-bold">عرض الفواتير السابقة وإعادة طباعتها فورياً ⚡</span>
+                                    <Pause className="w-4 h-4" />
+                                    <span>تعليق الفاتورة</span>
                                 </button>
-                            </div>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setShowRecentDrawer(true)}
+                                className="flex-1 h-10 px-3 rounded-[2px] border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                            >
+                                <History className="w-4 h-4" />
+                                <span>آخر 4 فواتير</span>
+                                {recentInvoices && recentInvoices.length > 0 && (
+                                    <span className="text-[10px] font-number font-bold bg-sky-500 text-white px-1.5 py-0.2 rounded-[2px]">
+                                        {recentInvoices.length}
+                                    </span>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1122,32 +1264,34 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 <div className="lg:hidden flex flex-col -m-4 h-[calc(100vh-80px)] overflow-hidden">
 
                     {/* Top Bar - Customer Selection */}
-                    <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-black/5 dark:border-white/5">
-                            <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-400 dark:text-white/40 hover:text-primary transition-all font-bold text-xs">
+                    <div className="flex flex-col border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0">
+                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/90 dark:border-[#1d2d42]">
+                            <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'} className="flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-brand transition-colors font-bold text-xs">
                                 <ChevronLeft className="w-3.5 h-3.5" /> رجوع
                             </Link>
-                            <span className="font-black text-slate-800 dark:text-white text-xs">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
+                            <span className="font-bold text-slate-900 dark:text-white text-xs">{isEditMode ? `تعديل فاتورة #${editInvoice!.id}` : 'فاتورة جديدة'}</span>
                             <div className="flex items-center gap-1.5">
                                 <button
                                     type="button"
                                     onClick={refreshProductsCatalog}
                                     disabled={isRefreshing}
-                                    className="h-10 px-2.5 rounded-[12px] bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 text-slate-700 dark:text-white/80 font-bold flex items-center gap-1.5 transition-all active:scale-95 disabled:opacity-50"
+                                    className="h-8 px-2 rounded-[2px] bg-slate-50 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1 transition-colors disabled:opacity-50 text-xs"
                                     title="تحديث المنتجات والمخزون"
                                 >
-                                    <RefreshCw className={`w-3.5 h-3.5 text-primary ${isRefreshing ? 'animate-spin' : ''}`} />
-                                    <span className="text-[11px] font-black">{productsList.length}</span>
+                                    <RefreshCw className={`w-3.5 h-3.5 text-brand ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <span className="text-[11px] font-number font-bold">{productsList.length}</span>
                                 </button>
 
                                 {!isEditMode && (
-                                    <button onClick={() => setShowHoldList(!showHoldList)}
-                                        className="relative w-14 h-14 rounded-[18px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 border-2 border-amber-500/50 text-amber-800 dark:text-amber-200 font-black flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95 shadow-md shrink-0 cursor-pointer"
-                                        title="الفواتير المعلقة">
-                                        <Clock className="w-6 h-6 text-amber-600 dark:text-amber-300" />
-                                        <span className="text-[10px] font-black leading-none">معلقة</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowHoldList(!showHoldList)}
+                                        className="h-8 px-2 rounded-[2px] bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 text-xs"
+                                        title="الفواتير المعلقة"
+                                    >
+                                        <Clock className="w-3.5 h-3.5" />
                                         {holdInvoices.length > 0 && (
-                                            <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 rounded-full bg-amber-500 text-white font-black text-xs flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md animate-pulse">
+                                            <span className="min-w-[16px] h-[16px] px-1 rounded-[2px] bg-amber-500 text-white font-number text-[10px] flex items-center justify-center font-bold">
                                                 {holdInvoices.length}
                                             </span>
                                         )}
@@ -1156,34 +1300,29 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 px-3 py-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                <User className="w-4 h-4 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <ModernSelect key={`customer-mobile-${resetKey}`} label="" options={customerOptions}
-                                    defaultValue={customerId ? customers.find(c => c.id === +customerId)?.name ?? 'زبون نقدي' : 'زبون نقدي'} placeholder="اختر العميل"
-                                    onSelect={val => {
-                                        const c = customers.find(c => c.name === val);
-                                        setCustomerId(c && c.id !== 1 ? String(c.id) : '');
-                                    }}
-                                />
-                            </div>
-
+                        <div className="p-2.5">
+                            <WorkstationCustomerSelect
+                                selectedId={customerId}
+                                onSelect={id => setCustomerId(id)}
+                            />
                         </div>
 
                         {customerId && originalDebt > 0 && (
-                            <div className="mx-3 mb-2 px-3 py-2 rounded-[12px] bg-red-500/10 border border-red-500/20 flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                                    <span className="text-xs font-bold text-red-600 dark:text-red-400 truncate">دين: {originalDebt.toFixed(2)}</span>
+                            <div className="mx-2.5 mb-2 px-2.5 py-1.5 rounded-[2px] bg-rose-500/10 border border-rose-500/25 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400 truncate">دين: {originalDebt.toFixed(2)} د.ل</span>
                                 </div>
-                                <button onClick={() => {
-                                    const m = activePaymentMethods[0];
-                                    if (!m) return;
-                                    setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
-                                    setActiveTab('payment');
-                                }} className="flex items-center gap-1 px-2.5 h-7 rounded-[8px] bg-red-500/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white font-bold text-[10px] transition-all shrink-0 whitespace-nowrap">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const m = activePaymentMethods[0];
+                                        if (!m) return;
+                                        setDebtPayment({ payment_method_id: String(m.id), method_name: m.name, amount: originalDebt.toFixed(2) });
+                                        setActiveTab('payment');
+                                    }}
+                                    className="flex items-center gap-1 px-2 h-6 rounded-[2px] bg-rose-500 text-white font-bold text-[10px] transition-colors shrink-0"
+                                >
                                     <CreditCard className="w-3 h-3" /> سداد
                                 </button>
                             </div>
@@ -1191,43 +1330,49 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                     </div>
 
                     {/* Tabs Navigation */}
-                    <div className="flex border-b border-black/5 dark:border-white/5 bg-white dark:bg-slate-900 shrink-0">
-                        <button onClick={() => setActiveTab('products')}
-                            className={`flex-1 flex items-center justify-center gap-2 h-12 font-bold text-sm transition-all relative ${activeTab === 'products'
-                                ? 'text-primary'
-                                : 'text-slate-400 dark:text-white/40'
-                                }`}>
+                    <div className="flex border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('products')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 h-11 font-bold text-xs transition-colors relative ${
+                                activeTab === 'products' ? 'text-brand' : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                        >
                             <Package className="w-4 h-4" />
                             <span>المنتجات</span>
                             {cart.length > 0 && (
-                                <span className="absolute top-2 left-1/2 -translate-x-1/2 translate-x-6 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center">
+                                <span className="min-w-[18px] h-[18px] px-1 rounded-[2px] bg-sky-500 text-white text-[10px] font-bold flex items-center justify-center">
                                     {cart.reduce((s, i) => s + (i.sale_type === 'unit_based' ? +i.quantity : 1), 0)}
                                 </span>
                             )}
                             {activeTab === 'products' && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
                             )}
                         </button>
-                        <button onClick={() => setActiveTab('payment')}
-                            className={`flex-1 flex items-center justify-center gap-2 h-12 font-bold text-sm transition-all relative ${activeTab === 'payment'
-                                ? 'text-primary'
-                                : 'text-slate-400 dark:text-white/40'
-                                }`}>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('payment')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 h-11 font-bold text-xs transition-colors relative ${
+                                activeTab === 'payment' ? 'text-brand' : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                        >
                             <CreditCard className="w-4 h-4" />
                             <span>الدفع</span>
                             {activeTab === 'payment' && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
                             )}
                         </button>
-                        <button onClick={() => setActiveTab('confirm')}
-                            className={`flex-1 flex items-center justify-center gap-2 h-12 font-bold text-sm transition-all relative ${activeTab === 'confirm'
-                                ? 'text-primary'
-                                : 'text-slate-400 dark:text-white/40'
-                                }`}>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('confirm')}
+                            className={`flex-1 flex items-center justify-center gap-1.5 h-11 font-bold text-xs transition-colors relative ${
+                                activeTab === 'confirm' ? 'text-brand' : 'text-slate-500 dark:text-slate-400'
+                            }`}
+                        >
                             <Check className="w-4 h-4" />
                             <span>تأكيد</span>
                             {activeTab === 'confirm' && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand" />
                             )}
                         </button>
                     </div>
@@ -1237,8 +1382,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         {/* Products Tab */}
                         {activeTab === 'products' && (
                             <div className="flex flex-col">
-                                {/* Add Product Form */}
-                                <div className="px-3 py-3 border-b border-black/5 dark:border-white/5">
+                                <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42]">
                                     <ProductSelector
                                         key={`mobile-ps-${productSelectorKey}`}
                                         products={productsList}
@@ -1254,8 +1398,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     />
                                 </div>
 
-                                {/* Cart Items */}
-                                <div className="flex-1 overflow-y-auto px-3 py-3">
+                                <div className="flex-1 overflow-y-auto p-3">
                                     <Cart
                                         cart={cart}
                                         products={productsList}
@@ -1277,60 +1420,71 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         {activeTab === 'payment' && (
                             <div className="flex flex-col">
                                 {/* Totals Summary */}
-                                <div className="px-3 py-3 border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2">
-                                    <div className="flex flex-col gap-2 p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
-                                        <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
-                                            <span className="text-xs font-bold text-slate-500 dark:text-white/40">الفاتورة</span>
-                                            <span className="text-lg font-black text-slate-800 dark:text-white">{total.toFixed(2)}</span>
+                                <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/50 dark:bg-[#0c1421]/50">
+                                    <div className="flex flex-col gap-2 p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                                        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-[#142033]">
+                                            <span className="text-xs font-bold text-slate-500">الفاتورة</span>
+                                            <span className="text-base font-number font-bold text-slate-800 dark:text-white">{fmt(total)} د.ل</span>
                                         </div>
                                         {debtPayment && (
-                                            <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/5">
-                                                <span className="text-xs font-bold text-red-500">الدين السابق</span>
-                                                <span className="text-lg font-black text-red-600 dark:text-red-400">{originalDebt.toFixed(2)}</span>
+                                            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-[#142033]">
+                                                <span className="text-xs font-bold text-rose-500">الدين السابق</span>
+                                                <span className="text-base font-number font-bold text-rose-600 dark:text-rose-400">{fmt(originalDebt)} د.ل</span>
                                             </div>
                                         )}
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold text-slate-600 dark:text-white/60">الإجمالي</span>
-                                            <span className="text-2xl font-black text-primary">{grandTotal.toFixed(2)}</span>
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">الإجمالي الكلي</span>
+                                            <span className="text-lg font-number font-black text-sky-600 dark:text-sky-400">{fmt(grandTotal)} د.ل</span>
                                         </div>
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">المدفوع</span>
-                                            <span className="text-xl font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)}</span>
+                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">المدفوع</span>
+                                            <span className="text-base font-number font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalPaid)} د.ل</span>
                                         </div>
-                                        <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
-                                            <span className="text-sm font-bold text-slate-600 dark:text-white/60">المتبقي</span>
-                                            <span className={`text-2xl font-black ${remaining > 0.01 ? 'text-red-500' : 'text-slate-400 dark:text-white/30'}`}>{remaining.toFixed(2)}</span>
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-[#142033]">
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">المتبقي</span>
+                                            <span className={`text-lg font-number font-black ${remaining > 0.01 ? 'text-rose-500' : 'text-slate-400'}`}>{fmt(remaining)} د.ل</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Payment Methods */}
-                                <div className="px-3 py-3">
+                                <div className="p-3">
                                     <div className="flex flex-col gap-3">
                                         {/* Add Payment Section */}
                                         {cart.length > 0 && (
-                                            <div className="flex flex-col gap-2.5">
-                                                <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">إضافة دفعة</label>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">إضافة دفعة جديدة</label>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     {activePaymentMethods.map(m => (
-                                                        <button key={m.id}
+                                                        <button
+                                                            key={m.id}
+                                                            type="button"
                                                             onClick={() => handleSelectPaymentMethod(String(m.id))}
-                                                            className={`h-16 rounded-[14px] font-bold text-sm transition-all border-2 ${selMethod === String(m.id)
-                                                                ? 'bg-primary border-primary text-white'
-                                                                : 'bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 hover:border-primary/40 active:scale-95'
-                                                                }`}>
+                                                            className={`h-11 rounded-[2px] font-bold text-xs transition-colors border ${
+                                                                selMethod === String(m.id)
+                                                                    ? 'bg-brand border-brand text-white'
+                                                                    : 'bg-white dark:bg-[#0c1421] border-slate-200 dark:border-[#1d2d42] text-slate-700 dark:text-slate-200 hover:border-brand'
+                                                            }`}
+                                                        >
                                                             {m.name}
                                                         </button>
                                                     ))}
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => openPad('المبلغ', selAmount || (remaining > 0 ? remaining.toFixed(2) : ''), v => setSelAmount(v), remaining > 0 ? remaining : undefined)}
-                                                        className="spatial-input flex-1 h-16 rounded-[14px] px-3 text-base font-black text-center cursor-pointer hover:border-primary/40 transition-all active:scale-95">
-                                                        {selAmount || (remaining > 0 ? remaining.toFixed(2) : '0.00')}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openPad('المبلغ', selAmount || (remaining > 0 ? remaining.toFixed(2) : ''), v => setSelAmount(v), remaining > 0 ? remaining : undefined)}
+                                                        className="flex-1 h-11 rounded-[2px] px-3 font-number font-bold text-sm text-center border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] cursor-pointer"
+                                                    >
+                                                        {selAmount || (remaining > 0 ? remaining.toFixed(2) : '0.00')} د.ل
                                                     </button>
-                                                    <button onClick={addPayment} disabled={!selMethod || (selAmount ? +selAmount <= 0 : remaining <= 0)}
-                                                        className="spatial-button flex items-center justify-center w-16 h-16 disabled:opacity-40 active:scale-95">
-                                                        <Plus className="w-6 h-6" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={addPayment}
+                                                        disabled={!selMethod || (selAmount ? +selAmount <= 0 : remaining <= 0)}
+                                                        className="flex items-center justify-center w-11 h-11 rounded-[2px] bg-brand text-white disabled:opacity-40 cursor-pointer"
+                                                    >
+                                                        <Plus className="w-5 h-5" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -1338,47 +1492,63 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
 
                                         {/* Payment List */}
                                         <div className="flex flex-col gap-2">
-                                            <label className="text-[10px] font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الدفعات</label>
+                                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">سجل الدفعات</label>
                                             {debtPayment && (
-                                                <div className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-red-500/10 border-2 border-red-500/20">
-                                                    <button onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
-                                                        setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
-                                                    }, originalDebt)}
-                                                        className="w-10 h-10 rounded-[12px] bg-amber-500/20 text-amber-600 hover:bg-amber-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
-                                                        <Edit className="w-4 h-4" />
+                                                <div className="flex items-center gap-2 p-2.5 rounded-[2px] bg-rose-500/10 border border-rose-500/25">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openPad('مبلغ سداد الدين', debtPayment.amount, v => {
+                                                            setDebtPayment(prev => prev ? { ...prev, amount: v } : null);
+                                                        }, originalDebt)}
+                                                        className="w-8 h-8 rounded-[2px] bg-rose-500/20 text-rose-600 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0"
+                                                        title="تعديل القيمة"
+                                                    >
+                                                        <Edit className="w-3.5 h-3.5" />
                                                     </button>
                                                     <div className="flex flex-col min-w-0 flex-1">
-                                                        <span className="font-bold text-red-600 dark:text-red-400 text-[10px] truncate">سداد الدين — {debtPayment.method_name}</span>
-                                                        <span className="font-black text-slate-800 dark:text-white text-base truncate">{debtPayment.amount}</span>
+                                                        <span className="font-bold text-rose-600 dark:text-rose-400 text-[10px] truncate">سداد الدين — {debtPayment.method_name}</span>
+                                                        <span className="font-number font-bold text-slate-800 dark:text-white text-sm truncate">{debtPayment.amount} د.ل</span>
                                                     </div>
-                                                    <button onClick={() => setDebtPayment(null)}
-                                                        className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
-                                                        <Trash2 className="w-4 h-4" />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setDebtPayment(null)}
+                                                        className="w-8 h-8 rounded-[2px] bg-rose-500 text-white hover:bg-rose-600 flex items-center justify-center transition-colors shrink-0"
+                                                        title="حذف"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             )}
                                             {payments.length === 0 && !debtPayment ? (
-                                                <div className="flex flex-col items-center justify-center py-8 text-slate-300 dark:text-white/20">
-                                                    <CreditCard className="w-12 h-12 mb-2" />
-                                                    <span className="font-bold text-sm">لا توجد دفعات</span>
-                                                    <span className="text-xs mt-1">أضف دفعة من الأعلى</span>
+                                                <div className="flex flex-col items-center justify-center py-6 text-slate-400 dark:text-slate-500">
+                                                    <CreditCard className="w-8 h-8 mb-1.5 stroke-[1.5]" />
+                                                    <span className="font-bold text-xs">لا توجد دفعات مسجلة</span>
                                                 </div>
                                             ) : (
                                                 payments.map((p, idx) => (
-                                                    <div key={idx} className="flex items-center gap-2 px-3 h-[72px] rounded-[14px] bg-emerald-500/10 border-2 border-emerald-500/20">
-                                                        <button onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
-                                                            setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
-                                                            setPaymentManuallySet(true);
-                                                        })} className="w-10 h-10 rounded-[12px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-all shrink-0 active:scale-95" title="تعديل القيمة">
-                                                            <Edit className="w-4 h-4" />
+                                                    <div key={idx} className="flex items-center gap-2 p-2.5 rounded-[2px] bg-emerald-500/10 border border-emerald-500/25">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openPad(`تعديل مبلغ (${p.method_name})`, p.amount, v => {
+                                                                setPayments(prev => prev.map((pay, i) => i === idx ? { ...pay, amount: v } : pay));
+                                                                setPaymentManuallySet(true);
+                                                            })}
+                                                            className="w-8 h-8 rounded-[2px] bg-emerald-500/20 text-emerald-600 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition-colors shrink-0"
+                                                            title="تعديل القيمة"
+                                                        >
+                                                            <Edit className="w-3.5 h-3.5" />
                                                         </button>
                                                         <div className="flex flex-col min-w-0 flex-1">
                                                             <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[10px] truncate">{p.method_name}</span>
-                                                            <span className="font-black text-slate-800 dark:text-white text-base truncate">{p.amount}</span>
+                                                            <span className="font-number font-bold text-slate-800 dark:text-white text-sm truncate">{p.amount} د.ل</span>
                                                         </div>
-                                                        <button onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
-                                                            className="w-10 h-10 rounded-[12px] bg-red-500 text-white hover:bg-red-600 flex items-center justify-center transition-all shrink-0 active:scale-95" title="حذف">
-                                                            <Trash2 className="w-4 h-4" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setPayments(prev => prev.filter((_, i) => i !== idx)); setPaymentManuallySet(false); }}
+                                                            className="w-8 h-8 rounded-[2px] bg-rose-500 text-white hover:bg-rose-600 flex items-center justify-center transition-colors shrink-0"
+                                                            title="حذف"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
                                                 ))
@@ -1392,90 +1562,98 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         {/* Confirm Tab */}
                         {activeTab === 'confirm' && (
                             <div className="flex flex-col">
-                                {/* Summary */}
-                                <div className="px-3 py-3">
-                                    <div className="flex flex-col gap-3">
+                                <div className="p-3">
+                                    <div className="flex flex-col gap-2.5">
                                         {/* Customer Info */}
-                                        <div className="p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <User className="w-4 h-4 text-primary" />
-                                                <span className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">العميل</span>
+                                        <div className="p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                                <User className="w-3.5 h-3.5 text-brand" />
+                                                <span className="text-[11px] font-bold text-slate-500">العميل</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="font-bold text-slate-800 dark:text-white">{selectedCustomerName}</span>
-                                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${customerType === 'vip'
-                                                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                                                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                                                    }`}>
+                                                <span className="font-bold text-slate-900 dark:text-white text-xs">{selectedCustomerName}</span>
+                                                <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold ${
+                                                    customerType === 'vip'
+                                                        ? 'bg-amber-500/10 text-amber-600 border border-amber-500/25'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                                }`}>
                                                     {customerType === 'vip' ? '⭐ VIP' : 'عادي'}
                                                 </span>
                                             </div>
                                         </div>
 
                                         {/* Cart Summary */}
-                                        <div className="p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <ShoppingCart className="w-4 h-4 text-primary" />
-                                                <span className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">المنتجات</span>
+                                        <div className="p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                                <ShoppingCart className="w-3.5 h-3.5 text-brand" />
+                                                <span className="text-[11px] font-bold text-slate-500">المنتجات</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="font-bold text-slate-800 dark:text-white">{cart.reduce((s, i) => s + (i.sale_type === 'unit_based' ? +i.quantity : 1), 0)} قطعة</span>
-                                                <span className="text-lg font-black text-primary">{total.toFixed(2)}</span>
+                                                <span className="font-bold text-slate-900 dark:text-white text-xs">
+                                                    {cart.reduce((s, i) => s + (i.sale_type === 'unit_based' ? +i.quantity : 1), 0)} قطعة
+                                                </span>
+                                                <span className="font-number font-black text-sky-600 dark:text-sky-400 text-sm">
+                                                    {total.toFixed(2)} د.ل
+                                                </span>
                                             </div>
                                         </div>
 
                                         {/* Payment Summary */}
-                                        <div className="p-3 rounded-[14px] bg-white dark:bg-slate-800 border border-black/5 dark:border-white/5">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <CreditCard className="w-4 h-4 text-primary" />
-                                                <span className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest">الدفع</span>
+                                        <div className="p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                                            <div className="flex items-center gap-1.5 mb-1.5">
+                                                <CreditCard className="w-3.5 h-3.5 text-brand" />
+                                                <span className="text-[11px] font-bold text-slate-500">الدفع المسجل</span>
                                             </div>
-                                            <div className="flex flex-col gap-2">
+                                            <div className="flex flex-col gap-1.5">
                                                 {debtPayment && (
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-red-600 dark:text-red-400 font-bold">سداد الدين</span>
-                                                        <span className="font-black text-red-600 dark:text-red-400">{debtPayment.amount}</span>
+                                                    <div className="flex items-center justify-between text-xs">
+                                                        <span className="text-rose-600 font-bold">سداد الدين</span>
+                                                        <span className="font-number font-bold text-rose-600">{debtPayment.amount} د.ل</span>
                                                     </div>
                                                 )}
                                                 {payments.map((p, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between text-sm">
-                                                        <span className="text-slate-600 dark:text-slate-400 font-bold">{p.method_name}</span>
-                                                        <span className="font-black text-slate-800 dark:text-white">{p.amount}</span>
+                                                    <div key={idx} className="flex items-center justify-between text-xs">
+                                                        <span className="text-slate-600 dark:text-slate-400">{p.method_name}</span>
+                                                        <span className="font-number font-bold text-slate-900 dark:text-white">{p.amount} د.ل</span>
                                                     </div>
                                                 ))}
-                                                <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
-                                                    <span className="font-bold text-slate-600 dark:text-white/60">المجموع</span>
-                                                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">{totalPaid.toFixed(2)}</span>
+                                                <div className="flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-[#142033]">
+                                                    <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">المجموع المدفوع</span>
+                                                    <span className="font-number font-black text-emerald-600 dark:text-emerald-400 text-sm">{totalPaid.toFixed(2)} د.ل</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Total Summary */}
-                                        <div className="p-4 rounded-[14px] bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className="text-sm font-bold text-slate-600 dark:text-white/60">الإجمالي</span>
-                                                <span className="text-2xl font-black text-primary">{grandTotal.toFixed(2)}</span>
+                                        <div className="p-3 rounded-[2px] bg-sky-500/10 border border-sky-500/25">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">الإجمالي الكلي</span>
+                                                <span className="font-number font-black text-sky-600 dark:text-sky-400 text-base">{grandTotal.toFixed(2)} د.ل</span>
                                             </div>
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm font-bold text-slate-600 dark:text-white/60">المتبقي</span>
-                                                <span className={`text-xl font-black ${remaining > 0.01 ? 'text-red-500' : 'text-emerald-500'}`}>{remaining.toFixed(2)}</span>
+                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">المتبقي</span>
+                                                <span className={`font-number font-black text-sm ${remaining > 0.01 ? 'text-rose-500' : 'text-emerald-500'}`}>{remaining.toFixed(2)} د.ل</span>
                                             </div>
                                         </div>
 
                                         {/* Notes */}
                                         <div>
-                                            <label className="text-xs font-bold text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2 block">ملاحظات</label>
-                                            <textarea value={notes} onChange={e => setNotes(e.target.value)}
-                                                rows={3} placeholder="ملاحظات على الفاتورة... (اختياري)"
-                                                className="w-full spatial-input rounded-[14px] px-3 py-2.5 text-xs font-bold resize-none" />
+                                            <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">ملاحظات</label>
+                                            <textarea
+                                                value={notes}
+                                                onChange={e => setNotes(e.target.value)}
+                                                rows={2}
+                                                placeholder="ملاحظات على الفاتورة... (اختياري)"
+                                                className="w-full rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] px-3 py-2 text-xs font-bold resize-none outline-none focus:border-brand"
+                                            />
                                         </div>
 
-                                        {/* Warnings */}
+                                        {/* Cash customer warning */}
                                         {isCashCustomer && remaining > 0.01 && (
-                                            <div className="px-3 py-2.5 rounded-[12px] bg-amber-500/10 border border-amber-500/20 flex items-start gap-2">
+                                            <div className="p-2.5 rounded-[2px] bg-amber-500/10 border border-amber-500/25 flex items-start gap-2">
                                                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                                                 <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-                                                    ⚠️ زبون نقدي — يجب الدفع الكامل قبل التأكيد
+                                                    زبون نقدي — يجب الدفع الكامل قبل التأكيد
                                                 </span>
                                             </div>
                                         )}
@@ -1483,35 +1661,46 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="px-3 py-3 border-t border-black/5 dark:border-white/5 bg-white dark:bg-slate-900">
+                                <div className="p-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421]">
                                     <div className="flex flex-col gap-2">
-                                        {/* Main Action */}
-                                        <button onClick={submit}
+                                        <button
+                                            type="button"
+                                            onClick={submit}
                                             disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                                            className="spatial-button w-full flex items-center justify-center gap-2 h-14 text-lg font-black disabled:opacity-40 active:scale-95 transition-transform cursor-pointer">
-                                            {processing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                                            <span>{processing ? 'جاري الحفظ والطباعة...' : (isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)}` : `تأكيد البيع — ${grandTotal.toFixed(2)}`)}</span>
+                                            className="w-full h-11 rounded-[2px] bg-brand text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                                        >
+                                            {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            <span>{processing ? 'جاري الحفظ والطباعة...' : (isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)} د.ل` : `تأكيد البيع — ${grandTotal.toFixed(2)} د.ل`)}</span>
                                         </button>
 
-                                        {/* Secondary Actions */}
                                         {!isEditMode && cart.length > 0 && (
-                                            <button onClick={holdCurrentInvoice}
-                                                className="w-full flex items-center justify-center gap-2.5 h-16 rounded-[16px] bg-gradient-to-br from-amber-500/25 via-amber-500/20 to-amber-600/25 hover:from-amber-500/35 border-2 border-amber-500/50 text-amber-800 dark:text-amber-200 font-black text-lg transition-all active:scale-95 shadow-md">
-                                                <Pause className="w-6 h-6 text-amber-600 dark:text-amber-300" />
+                                            <button
+                                                type="button"
+                                                onClick={holdCurrentInvoice}
+                                                className="w-full h-10 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                            >
+                                                <Pause className="w-4 h-4" />
                                                 <span>تعليق الفاتورة (حفظ مؤقت)</span>
                                             </button>
                                         )}
                                         <div className="grid grid-cols-2 gap-2">
                                             {!isEditMode && cart.length > 0 && (
-                                                <button onClick={clearForm}
-                                                    className="flex flex-row items-center justify-center gap-1.5 h-12 rounded-[12px] bg-red-500/15 hover:bg-red-500/30 border border-red-500/30 text-red-500 font-bold text-xs transition-all active:scale-95">
-                                                    <Trash2 className="w-4 h-4" />
+                                                <button
+                                                    type="button"
+                                                    onClick={clearForm}
+                                                    className="h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                     <span>مسح</span>
                                                 </button>
                                             )}
-                                            <Link href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                                className={`flex flex-row items-center justify-center gap-1.5 h-12 rounded-[12px] bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 border border-black/10 dark:border-white/20 text-slate-600 dark:text-white/70 font-bold text-xs transition-all ${(!isEditMode && cart.length > 0) ? '' : 'col-span-2'}`}>
-                                                <X className="w-4 h-4" />
+                                            <Link
+                                                href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
+                                                className={`h-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1 ${
+                                                    (!isEditMode && cart.length > 0) ? '' : 'col-span-2'
+                                                }`}
+                                            >
+                                                <X className="w-3.5 h-3.5" />
                                                 <span>إلغاء</span>
                                             </Link>
                                         </div>

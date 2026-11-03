@@ -1,3 +1,5 @@
+import React from 'react';
+
 interface Size { id: number; label: string; value: string; }
 
 interface SizeSelectProps {
@@ -53,27 +55,38 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
   }
 
   return (
-    <div className={`flex flex-col gap-2.5 ${className}`}>
-      {/* Mobile: grid 2 cols — Desktop: flex wrap */}
-      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3.5">
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+        اختر الحجم
+      </span>
+      {/* Workstation Size Selector Buttons */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
         {availableSizes.map(size => {
           const price = getPrice(size);
           const isTier = product?.selling_type === 'tier_based';
-          // للعطور الأصلية: نعرض السعر الإجمالي للحجم كمعلومة للمستخدم
           const displayPrice = isTier ? price : price * +size.value;
           const isSelected = selectedSizeId === String(size.id);
+
           return (
-            <button key={size.id} onClick={() => handleSelect(String(size.id), size)}
-              className={`flex items-center justify-between px-5 h-16 rounded-[20px] border-2 transition-all active:scale-95 sm:flex-col sm:justify-center sm:px-6 sm:h-[84px] sm:min-w-[105px] ${
+            <button
+              key={size.id}
+              type="button"
+              onClick={() => handleSelect(String(size.id), size)}
+              className={`flex items-center justify-between px-3.5 h-12 rounded-[2px] border transition-all cursor-pointer select-none sm:flex-col sm:justify-center sm:px-5 sm:h-13 sm:min-w-[95px] ${
                 isSelected
-                  ? 'border-primary bg-primary text-white shadow-lg shadow-primary/25'
-                  : 'border-black/10 dark:border-white/10 bg-white dark:bg-white/5 text-slate-700 dark:text-white/80 hover:border-primary/40 hover:bg-primary/5'
-              }`}>
-              <span className="font-black text-base sm:text-lg leading-tight">{size.label}</span>
-              <span className={`text-xs sm:text-sm font-black sm:mt-1 ${
-                isSelected ? 'text-white/90' : 'text-primary dark:text-primary-light'
-              }`}>
-                {displayPrice > 0 ? `${displayPrice.toFixed(2)} د` : '—'}
+                  ? 'border-brand bg-brand text-white shadow-xs'
+                  : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-[#2a3e59] hover:bg-slate-50 dark:hover:bg-[#121c2c]'
+              }`}
+            >
+              <span className="font-bold text-xs sm:text-sm leading-tight">
+                {size.label}
+              </span>
+              <span
+                className={`text-[11px] sm:text-xs font-number font-bold sm:mt-0.5 ${
+                  isSelected ? 'text-white/90' : 'text-sky-600 dark:text-sky-400'
+                }`}
+              >
+                {displayPrice > 0 ? `${displayPrice.toFixed(2)} د.ل` : '—'}
               </span>
             </button>
           );
