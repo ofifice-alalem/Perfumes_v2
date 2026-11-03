@@ -136,7 +136,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
   return (
     <aside className={`
-      ${isOpen ? 'w-52 translate-x-0' : 'w-[56px] max-lg:translate-x-full'}
+      ${isOpen ? 'w-52 translate-x-0' : 'w-[58px] max-lg:translate-x-full'}
       max-lg:fixed max-lg:right-0 max-lg:top-0 max-lg:bottom-0 max-lg:h-screen max-lg:z-[999]
       transition-all duration-300 overflow-hidden
       border-l border-slate-200/90 dark:border-[#19273b]
@@ -169,10 +169,10 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         <button 
           type="button"
           onClick={onToggle} 
-          className="w-7 h-7 shrink-0 rounded-none border border-slate-200 dark:border-[#223348] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273a] text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+          className={`${!isOpen ? 'w-9 h-9' : 'w-7 h-7'} shrink-0 rounded-none border border-slate-200 dark:border-[#223348] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273a] text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-2xs`}
           title={isOpen ? 'طي القائمة الجانبية' : 'توسيع القائمة الجانبية'}
         >
-          {isOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
+          {isOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-4.5 h-4.5" />}
         </button>
       </div>
 
@@ -201,17 +201,19 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
             <button
               type="button"
               onClick={toggleSimpleMode}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-none border transition-all cursor-pointer shadow-2xs ${
+              className={`w-full flex items-center justify-between px-2 py-2 min-h-[40px] rounded-none border transition-all cursor-pointer shadow-2xs ${
                 isSimpleMode
                   ? 'bg-brand/10 border-brand/30 text-brand font-bold'
                   : 'bg-white dark:bg-[#0e1726] border-slate-200/90 dark:border-[#1d2d42] text-slate-600 dark:text-[#8293a4] hover:bg-slate-100 dark:hover:bg-[#142032]'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-brand" />
-                <span className="text-[11px] font-bold">الوضع المبسط</span>
+              <div className="flex items-center">
+                <div className="w-7 h-7 shrink-0 rounded-none flex items-center justify-center text-brand">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span className="text-xs mr-2 font-bold whitespace-nowrap">الوضع المبسط</span>
               </div>
-              <div className={`w-4 h-4 rounded-none border flex items-center justify-center transition-all ${
+              <div className={`w-4 h-4 shrink-0 rounded-none border flex items-center justify-center transition-all ${
                 isSimpleMode ? 'border-brand bg-brand text-white shadow-xs' : 'border-slate-300 dark:border-[#3d4f65]'
               }`}>
                 {isSimpleMode && <span className="text-[10px] font-black leading-none">✓</span>}
@@ -222,23 +224,23 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
               type="button"
               onClick={toggleSimpleMode}
               title={isSimpleMode ? 'الوضع المبسط (مفعل)' : 'الوضع المبسط (معطل)'}
-              className={`w-7 h-7 rounded-none border flex items-center justify-center transition-all cursor-pointer shadow-2xs ${
+              className={`w-9 h-9 rounded-none border flex items-center justify-center transition-all cursor-pointer shadow-2xs ${
                 isSimpleMode
                   ? 'bg-brand text-white border-brand'
                   : 'bg-white dark:bg-[#0e1726] border-slate-200 dark:border-[#223043] text-slate-600 dark:text-[#8fa1b5] hover:text-white'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-5 h-5" />
             </button>
           )}
         </div>
       )}
 
       {/* روابط التنقل الرئيسية بنمط Steam Workstation */}
-      <nav className="flex-1 flex flex-col gap-0.5 w-full px-1.5 overflow-y-auto custom-scroll pb-6">
+      <nav className="flex-1 flex flex-col gap-1 w-full px-1.5 overflow-y-auto custom-scroll pb-6">
         {canToggleSimpleMode && isSimpleMode ? (
           /* الوضع المبسط: 3 روابط فقط */
-          <div className="flex flex-col gap-0.5 animate-in fade-in duration-150">
+          <div className="flex flex-col border border-slate-200/80 dark:border-[#192b42] divide-y divide-slate-200/80 dark:divide-[#192b42] bg-white dark:bg-[#0d1726] animate-in fade-in duration-150">
             {simpleModeItems.map((item) => {
               const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
               return (
@@ -247,15 +249,17 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                   href={item.href}
                   prefetch
                   id={isActive ? 'active-nav-link' : undefined}
-                  className={`flex items-center w-full px-2 py-1.5 rounded-none transition-all cursor-pointer ${
+                  className={`flex items-center w-full px-2 py-2 rounded-none transition-all cursor-pointer ${
                     !isOpen ? 'justify-center' : ''
                   } ${
                     isActive 
                       ? 'bg-sky-100/90 dark:bg-[#132840] text-slate-900 dark:text-white border-r-[3px] border-brand font-black shadow-xs' 
-                      : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#142032] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
+                      : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-100 dark:hover:bg-[#121e30] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
                   }`}
                 >
-                  <div className={`w-7 h-7 shrink-0 rounded-none flex items-center justify-center transition-all ${
+                  <div className={`shrink-0 rounded-none flex items-center justify-center transition-all ${
+                    !isOpen ? 'w-9 h-9 [&>svg]:w-5 [&>svg]:h-5' : 'w-7 h-7 [&>svg]:w-4 [&>svg]:h-4'
+                  } ${
                     isActive ? 'bg-brand text-white shadow-xs' : 'text-slate-500 dark:text-[#6a7c8e]'
                   }`}>
                     {item.icon}
@@ -274,51 +278,53 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
           <>
             {/* الرئيسية — لوحة التحكم للأدمن */}
             {isSuperAdmin && (
-              <Link 
-                href="/"
-                prefetch
-                id={url === '/' ? 'active-nav-link' : undefined}
-                className={`flex items-center w-full px-2 py-1.5 rounded-none transition-all cursor-pointer ${
-                  !isOpen ? 'justify-center' : ''
-                } ${
-                  url === '/' 
-                    ? 'bg-sky-100/90 dark:bg-[#132840] text-slate-900 dark:text-white border-r-[3px] border-brand font-black shadow-xs' 
-                    : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#142032] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
-                }`}
-              >
-                <div className={`w-7 h-7 shrink-0 rounded-none flex items-center justify-center transition-all ${
-                  url === '/' ? 'bg-brand text-white shadow-xs' : 'text-slate-500 dark:text-[#6a7c8e]'
-                }`}>
-                  <LayoutDashboard className="w-4 h-4" />
-                </div>
-                {isOpen && (
-                  <span className={`text-xs mr-2 whitespace-nowrap truncate ${url === '/' ? 'font-black text-brand dark:text-sky-300' : ''}`}>
-                    لوحة التحكم
-                  </span>
-                )}
-              </Link>
+              <div className="border border-slate-200/80 dark:border-[#192b42] bg-white dark:bg-[#0d1726]">
+                <Link 
+                  href="/"
+                  prefetch
+                  id={url === '/' ? 'active-nav-link' : undefined}
+                  className={`flex items-center w-full px-2 py-2 rounded-none transition-all cursor-pointer ${
+                    !isOpen ? 'justify-center' : ''
+                  } ${
+                    url === '/' 
+                      ? 'bg-sky-100/90 dark:bg-[#132840] text-slate-900 dark:text-white border-r-[3px] border-brand font-black shadow-xs' 
+                      : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-100 dark:hover:bg-[#121e30] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
+                  }`}
+                >
+                  <div className={`shrink-0 rounded-none flex items-center justify-center transition-all ${
+                    !isOpen ? 'w-9 h-9 [&>svg]:w-5 [&>svg]:h-5' : 'w-7 h-7 [&>svg]:w-4 [&>svg]:h-4'
+                  } ${
+                    url === '/' ? 'bg-brand text-white shadow-xs' : 'text-slate-500 dark:text-[#6a7c8e]'
+                  }`}>
+                    <LayoutDashboard className="w-4 h-4" />
+                  </div>
+                  {isOpen && (
+                    <span className={`text-xs mr-2 whitespace-nowrap truncate ${url === '/' ? 'font-black text-brand dark:text-sky-300' : ''}`}>
+                      لوحة التحكم
+                    </span>
+                  )}
+                </Link>
+              </div>
             )}
-
-            {isSuperAdmin && <div className="h-px bg-slate-200/80 dark:bg-[#19273b] my-1 mx-2" />}
 
             {/* أقسام النظام */}
             {navSections.filter(s => canAccess(s.roles)).map((section) => (
-              <div key={section.title} className="mb-0.5">
+              <div key={section.title} className="mb-1">
                 {/* عنوان القسم */}
                 {isOpen && (
                   <button
                     type="button"
                     onClick={() => toggleSection(section.title)}
-                    className="flex items-center justify-between w-full px-2 py-1 text-[10px] font-mono font-black text-slate-400 dark:text-[#56718d] uppercase tracking-wider hover:text-slate-700 dark:hover:text-[#8ba0b5] transition-colors cursor-pointer select-none"
+                    className="flex items-center justify-between w-full px-1.5 py-1 text-[10px] font-mono font-black text-slate-400 dark:text-[#56718d] uppercase tracking-wider hover:text-slate-700 dark:hover:text-[#8ba0b5] transition-colors cursor-pointer select-none"
                   >
                     <span>{section.title}</span>
                     <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedSections[section.title] ? 'rotate-180' : ''}`} />
                   </button>
                 )}
 
-                {/* عناصر القسم */}
+                {/* عناصر القسم مقسمة بفواصل أفقية دقيقة */}
                 {(isOpen ? expandedSections[section.title] : true) && (
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-col border border-slate-200/80 dark:border-[#192b42] divide-y divide-slate-200/80 dark:divide-[#192b42] bg-white dark:bg-[#0d1726]">
                     {section.items.filter(item => canAccess(item.roles)).map((item) => {
                       const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                       return (
@@ -327,15 +333,17 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                           href={item.href}
                           prefetch
                           id={isActive ? 'active-nav-link' : undefined}
-                          className={`flex items-center w-full px-2 py-1.5 rounded-none transition-all cursor-pointer ${
+                          className={`flex items-center w-full px-2 py-2 rounded-none transition-all cursor-pointer ${
                             !isOpen ? 'justify-center' : ''
                           } ${
                             isActive 
                               ? 'bg-sky-100/90 dark:bg-[#132840] text-slate-900 dark:text-white border-r-[3px] border-brand font-black shadow-xs' 
-                              : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#142032] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
+                              : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-100 dark:hover:bg-[#121e30] hover:text-slate-900 dark:hover:text-white font-bold border-r-[3px] border-transparent'
                           }`}
                         >
-                          <div className={`w-7 h-7 shrink-0 rounded-none flex items-center justify-center transition-all ${
+                          <div className={`shrink-0 rounded-none flex items-center justify-center transition-all ${
+                            !isOpen ? 'w-9 h-9 [&>svg]:w-5 [&>svg]:h-5' : 'w-7 h-7 [&>svg]:w-4 [&>svg]:h-4'
+                          } ${
                             isActive ? 'bg-brand text-white shadow-xs' : 'text-slate-500 dark:text-[#6a7c8e]'
                           }`}>
                             {item.icon}
@@ -355,22 +363,24 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
           </>
         )}
 
-        {/* فاصل وزر تسجيل الخروج */}
-        <div className="h-px bg-slate-200/80 dark:bg-[#19273b] my-2 mx-2" />
-
-        <Link 
-          href="/logout" 
-          method="post" 
-          as="button"
-          className={`flex items-center w-full px-2 py-1.5 rounded-none transition-colors cursor-pointer ${
-            !isOpen ? 'justify-center' : ''
-          } text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 dark:hover:text-rose-300 font-bold border border-transparent hover:border-rose-200 dark:hover:border-rose-900/30`}
-        >
-          <div className="w-7 h-7 shrink-0 rounded-none flex items-center justify-center text-rose-500">
-            <Power className="w-4 h-4" />
-          </div>
-          {isOpen && <span className="text-xs mr-2 whitespace-nowrap truncate">تسجيل الخروج</span>}
-        </Link>
+        {/* زر تسجيل الخروج بإطار مستقل ومميز */}
+        <div className="border border-rose-200/70 dark:border-rose-900/40 bg-white dark:bg-[#0d1726] mt-1">
+          <Link 
+            href="/logout" 
+            method="post" 
+            as="button"
+            className={`flex items-center w-full px-2 py-2 rounded-none transition-colors cursor-pointer ${
+              !isOpen ? 'justify-center' : ''
+            } text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 dark:hover:text-rose-300 font-bold`}
+          >
+            <div className={`shrink-0 rounded-none flex items-center justify-center text-rose-500 ${
+              !isOpen ? 'w-9 h-9 [&>svg]:w-5 [&>svg]:h-5' : 'w-7 h-7 [&>svg]:w-4 [&>svg]:h-4'
+            }`}>
+              <Power className="w-4 h-4" />
+            </div>
+            {isOpen && <span className="text-xs mr-2 whitespace-nowrap truncate">تسجيل الخروج</span>}
+          </Link>
+        </div>
       </nav>
     </aside>
   );
