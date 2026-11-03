@@ -58,6 +58,11 @@ class SettingController extends Controller
             'label_default_tab' => 'nullable|string|in:ean13,serial,classic',
             'label_qr_size' => 'nullable|numeric|min:5|max:60',
             'label_title_font_size' => 'nullable|numeric|min:4|max:30',
+            'theme_color_primary' => 'nullable|string|max:30',
+            'theme_color_btn_primary' => 'nullable|string|max:30',
+            'theme_color_btn_secondary' => 'nullable|string|max:30',
+            'theme_color_accent' => 'nullable|string|max:30',
+            'theme_preset' => 'nullable|string|max:50',
         ]);
 
         if ($request->hasFile('store_logo_file')) {
@@ -88,6 +93,11 @@ class SettingController extends Controller
             'label_rotation',
             'label_qr_size',
             'label_title_font_size',
+            'theme_color_primary',
+            'theme_color_btn_primary',
+            'theme_color_btn_secondary',
+            'theme_color_accent',
+            'theme_preset',
         ];
 
         foreach ($fields as $field) {

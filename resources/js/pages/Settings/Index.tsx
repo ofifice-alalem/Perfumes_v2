@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, FormEvent, useRef } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent, useRef } from 'react';
 import { useForm, usePage, Link } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { QRCodeSVG } from 'qrcode.react';
@@ -8,7 +8,7 @@ import {
   RefreshCw, HardDrive, BookOpen, ChevronLeft, Store,
   FileText, CheckCircle2, Save, Upload, Eye, ArrowRight, Type, QrCode,
   Sliders, Tag, Sparkles, Copy, Check, Barcode as BarcodeIcon,
-  Maximize2, RotateCw, Layers
+  Maximize2, RotateCw, Layers, Palette, Play, ShieldCheck
 } from 'lucide-react';
 
 const PERFUME_SVG_B64 = "data:image/svg+xml;base64," + btoa(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><rect x="22" y="18" width="20" height="32" rx="6" fill="#1e293b"/><rect x="26" y="10" width="12" height="10" rx="3" fill="#1e293b"/><rect x="29" y="6" width="6" height="6" rx="2" fill="#475569"/><ellipse cx="32" cy="34" rx="6" ry="8" fill="white" opacity="0.15"/><rect x="28" y="8" width="2" height="4" rx="1" fill="white" opacity="0.4"/></svg>`);
@@ -39,6 +39,11 @@ interface SettingsProps {
     label_rotation?: string;
     label_qr_size?: string;
     label_title_font_size?: string;
+    theme_color_primary?: string;
+    theme_color_btn_primary?: string;
+    theme_color_btn_secondary?: string;
+    theme_color_accent?: string;
+    theme_preset?: string;
   };
   products?: Array<{
     id: number;
@@ -86,8 +91,8 @@ function toEan13(code: string): string {
 export default function SettingsIndex({ settings, products = [] }: SettingsProps) {
   const { flash } = usePage<{ flash: { success?: string } }>().props;
 
-  // View state: 'grid' | 'receipt' | 'node_receipt' | 'label_printer'
-  const [activeTab, setActiveTab] = useState<'grid' | 'receipt' | 'node_receipt' | 'label_printer'>('grid');
+  // View state: 'grid' | 'receipt' | 'node_receipt' | 'label_printer' | 'theme_colors'
+  const [activeTab, setActiveTab] = useState<'grid' | 'receipt' | 'node_receipt' | 'label_printer' | 'theme_colors'>('grid');
 
   const [previewLogo, setPreviewLogo] = useState<string>(settings.store_logo || '/images/taqniya-logo.png');
 
@@ -265,8 +270,50 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
     label_zoom: settings.label_zoom || '125',
     label_qr_size: settings.label_qr_size || '',
     label_title_font_size: settings.label_title_font_size || '',
+    theme_color_primary: settings.theme_color_primary || '#1a9fff',
+    theme_color_btn_primary: settings.theme_color_btn_primary || '#75b022',
+    theme_color_btn_secondary: settings.theme_color_btn_secondary || '#212b37',
+    theme_color_accent: settings.theme_color_accent || '#00d2ff',
+    theme_preset: settings.theme_preset || 'steam_classic',
     store_logo_file: null as File | null,
   });
+
+  // تطبيق حي وتفاعلي لمتغيرات الألوان على النظام بأكمله فور تغيير القيم أو اختيار قالب
+  useEffect(() => {
+    if (activeTab === 'theme_colors') {
+      const root = document.documentElement;
+      if (data.theme_color_primary) {
+        root.style.setProperty('--brand-primary', data.theme_color_primary);
+        const hex = data.theme_color_primary.replace('#', '');
+        if (hex.length === 6) {
+          const r = parseInt(hex.substring(0, 2), 16) / 255;
+          const g = parseInt(hex.substring(2, 4), 16) / 255;
+          const b = parseInt(hex.substring(4, 6), 16) / 255;
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          let h = 0, s = 0, l = (max + min) / 2;
+          if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+              case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+              case g: h = ((b - r) / d + 2) / 6; break;
+              case b: h = ((r - g) / d + 4) / 6; break;
+            }
+          }
+          root.style.setProperty('--primary', `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`);
+        }
+      }
+      if (data.theme_color_btn_primary) {
+        root.style.setProperty('--btn-primary', data.theme_color_btn_primary);
+      }
+      if (data.theme_color_btn_secondary) {
+        root.style.setProperty('--btn-secondary', data.theme_color_btn_secondary);
+      }
+      if (data.theme_color_accent) {
+        root.style.setProperty('--brand-accent', data.theme_color_accent);
+      }
+    }
+  }, [data.theme_color_primary, data.theme_color_btn_primary, data.theme_color_btn_secondary, data.theme_color_accent, activeTab]);
 
   const handleLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -453,6 +500,15 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
 
   // Modular Cards List matching Reports design
   const settingCards = [
+    {
+      id: 'theme-colors',
+      icon: <Palette className="w-8 h-8 text-[#1a9fff]" />,
+      label: 'تخصيص ألوان وهوية المنظومة',
+      desc: 'تحديد الألوان الأساسية والثانوية ولون الأزرار والتفاعل بما يناسب هوية وشعار العميل مع لوحة معاينة حية.',
+      action: () => setActiveTab('theme_colors'),
+      badge: 'ألوان وهوية مخصصة',
+      active: true,
+    },
     {
       id: 'receipt',
       icon: <Printer className="w-8 h-8" />,
@@ -2185,6 +2241,321 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
 
             </div>
 
+          </form>
+        )}
+
+        {/* 🎨 THEME & BRAND COLOR STUDIO 🎨 */}
+        {activeTab === 'theme_colors' && (
+          <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in select-none">
+            {/* Header Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-300 dark:border-[#1f2d3f]">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('grid')}
+                  className="p-2.5 rounded-[3px] bg-slate-100 dark:bg-[#1e2632] text-slate-700 dark:text-[#c6d4df] hover:bg-slate-200 dark:hover:bg-[#283546] transition-all border border-slate-300 dark:border-[#2b3a4c] cursor-pointer"
+                  title="الرجوع للوحة الإعدادات"
+                >
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-black text-[#1a9fff] uppercase bg-[#1a9fff]/10 px-2 py-0.5 rounded-[2px] border border-[#1a9fff]/20">
+                      BRAND STUDIO
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                      تخصيص ألوان وهوية المنظومة
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-[#8ba0b5] mt-0.5">
+                    تعديل المتغيرات اللونية لتلائم شعار العميل وهوية المتجر، مع حفظها وتطبيقها تلقائياً على كافة الشاشات.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={processing}
+                  className="px-5 h-10 rounded-[3px] bg-gradient-to-b from-[#75b022] to-[#588a1b] hover:from-[#8ed428] hover:to-[#68a420] text-white border-t border-[#b8e84b]/60 shadow-[0_2px_4px_rgba(0,0,0,0.4)] font-black text-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{processing ? 'جاري الحفظ...' : 'حفظ واعتماد الألوان'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* أنماط لونية جاهزة ومجهزة مسبقاً (Presets) */}
+            <div className="p-4 rounded-[3px] border border-slate-300 dark:border-[#212f42] bg-white dark:bg-[#111721] shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white">أنماط جاهزة للاختيار السريع بنقرة واحدة</h3>
+                </div>
+                <span className="text-[10px] text-slate-400 dark:text-[#56718d] font-bold">يمكنك اختيار نمط جاهز ثم تخصيص أي لون بدقة</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                {[
+                  { id: 'steam_classic', label: 'ستيم المكتبي الأصلي', primary: '#1a9fff', btn_primary: '#75b022', btn_secondary: '#212b37', accent: '#00d2ff' },
+                  { id: 'royal_blue', label: 'أزرق ملكي عصري', primary: '#2563eb', btn_primary: '#1d4ed8', btn_secondary: '#1e293b', accent: '#38bdf8' },
+                  { id: 'emerald_luxury', label: 'زمرد وفخامة', primary: '#059669', btn_primary: '#10b981', btn_secondary: '#064e3b', accent: '#f59e0b' },
+                  { id: 'amber_gold', label: 'عنبر وذهب ملكي', primary: '#d97706', btn_primary: '#b45309', btn_secondary: '#292524', accent: '#fbbf24' },
+                  { id: 'velvet_purple', label: 'بنفسجي إمبراطوري', primary: '#7c3aed', btn_primary: '#8b5cf6', btn_secondary: '#2e1065', accent: '#c084fc' },
+                ].map(p => {
+                  const isCur = data.theme_color_primary === p.primary && data.theme_color_btn_primary === p.btn_primary;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setData(prev => ({
+                          ...prev,
+                          theme_color_primary: p.primary,
+                          theme_color_btn_primary: p.btn_primary,
+                          theme_color_btn_secondary: p.btn_secondary,
+                          theme_color_accent: p.accent,
+                          theme_preset: p.id,
+                        }));
+                      }}
+                      className={`p-2.5 rounded-[3px] border text-right transition-all cursor-pointer flex flex-col gap-2 ${
+                        isCur
+                          ? 'border-[#1a9fff] bg-sky-50 dark:bg-[#182332] shadow-sm ring-1 ring-[#1a9fff]'
+                          : 'border-slate-200 dark:border-[#213042] bg-slate-50/70 dark:bg-[#0d131b] hover:border-slate-300 dark:hover:border-[#2d3e54]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-slate-800 dark:text-white truncate">{p.label}</span>
+                        {isCur && <span className="text-[10px] text-[#1a9fff] font-bold">محدد</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-4 h-4 rounded-full border border-black/10 dark:border-white/10" style={{ backgroundColor: p.primary }} title="اللون الأساسي" />
+                        <span className="w-4 h-4 rounded-full border border-black/10 dark:border-white/10" style={{ backgroundColor: p.btn_primary }} title="زر أساسي" />
+                        <span className="w-4 h-4 rounded-full border border-black/10 dark:border-white/10" style={{ backgroundColor: p.btn_secondary }} title="زر ثانوي" />
+                        <span className="w-4 h-4 rounded-full border border-black/10 dark:border-white/10" style={{ backgroundColor: p.accent }} title="لون التمييز" />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              
+              {/* مدخلات ومحددات الألوان (Color Pickers) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="p-5 rounded-[3px] border border-slate-300 dark:border-[#212f42] bg-white dark:bg-[#111721] shadow-sm space-y-5">
+                  <div className="flex items-center gap-2 pb-3 border-b border-slate-200 dark:border-[#1f2d3f]">
+                    <Palette className="w-4 h-4 text-[#1a9fff]" />
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">تحديد وتخصيص المتغيرات اللونية بالهكسا (Hex Codes)</h3>
+                  </div>
+
+                  {/* 1. اللون الأساسي للعلامة التجارية */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[3px] border border-slate-200 dark:border-[#1f2b3b] bg-slate-50/60 dark:bg-[#0c1219]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.theme_color_primary }} />
+                        <label className="text-xs font-black text-slate-800 dark:text-white">اللون الأساسي وهوية النظام (Primary Brand Color)</label>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#8fa1b5]">
+                        يتحكم في الخطوط النشطة، علامات التحديد، الهوية العامة، ووسوم النظام.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="color"
+                        value={data.theme_color_primary}
+                        onChange={e => setData('theme_color_primary', e.target.value)}
+                        className="w-10 h-9 rounded-[3px] border border-slate-300 dark:border-[#3d4f65] bg-transparent cursor-pointer p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={data.theme_color_primary}
+                        onChange={e => setData('theme_color_primary', e.target.value)}
+                        className="w-24 h-9 px-2 rounded-[3px] border border-slate-300 dark:border-[#233348] bg-white dark:bg-[#090d13] font-mono text-xs font-bold text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. لون الأزرار الأساسية */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[3px] border border-slate-200 dark:border-[#1f2b3b] bg-slate-50/60 dark:bg-[#0c1219]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.theme_color_btn_primary }} />
+                        <label className="text-xs font-black text-slate-800 dark:text-white">لون الأزرار الأساسية (Primary Buttons Color)</label>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#8fa1b5]">
+                        يتحكم في زر فاتورة بيع جديدة، أزرار الحفظ والاعتماد الرئيسية بنمط التشغيل.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="color"
+                        value={data.theme_color_btn_primary}
+                        onChange={e => setData('theme_color_btn_primary', e.target.value)}
+                        className="w-10 h-9 rounded-[3px] border border-slate-300 dark:border-[#3d4f65] bg-transparent cursor-pointer p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={data.theme_color_btn_primary}
+                        onChange={e => setData('theme_color_btn_primary', e.target.value)}
+                        className="w-24 h-9 px-2 rounded-[3px] border border-slate-300 dark:border-[#233348] bg-white dark:bg-[#090d13] font-mono text-xs font-bold text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 3. لون الأزرار الثانوية */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[3px] border border-slate-200 dark:border-[#1f2b3b] bg-slate-50/60 dark:bg-[#0c1219]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.theme_color_btn_secondary }} />
+                        <label className="text-xs font-black text-slate-800 dark:text-white">لون الأزرار الثانوية (Secondary Utility Buttons)</label>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#8fa1b5]">
+                        يتحكم في أزرار الأدوات، التقارير، الفلاتر، والإجراءات البديلة.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="color"
+                        value={data.theme_color_btn_secondary}
+                        onChange={e => setData('theme_color_btn_secondary', e.target.value)}
+                        className="w-10 h-9 rounded-[3px] border border-slate-300 dark:border-[#3d4f65] bg-transparent cursor-pointer p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={data.theme_color_btn_secondary}
+                        onChange={e => setData('theme_color_btn_secondary', e.target.value)}
+                        className="w-24 h-9 px-2 rounded-[3px] border border-slate-300 dark:border-[#233348] bg-white dark:bg-[#090d13] font-mono text-xs font-bold text-center"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 4. لون التمييز والأكشن */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-[3px] border border-slate-200 dark:border-[#1f2b3b] bg-slate-50/60 dark:bg-[#0c1219]">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.theme_color_accent }} />
+                        <label className="text-xs font-black text-slate-800 dark:text-white">لون التمييز والأكشن (Accent / Highlights)</label>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-[#8fa1b5]">
+                        يتحكم في خطوط الأشرطة التزيينية، ومؤشرات التقدم، والإشعارات.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input
+                        type="color"
+                        value={data.theme_color_accent}
+                        onChange={e => setData('theme_color_accent', e.target.value)}
+                        className="w-10 h-9 rounded-[3px] border border-slate-300 dark:border-[#3d4f65] bg-transparent cursor-pointer p-0.5"
+                      />
+                      <input
+                        type="text"
+                        value={data.theme_color_accent}
+                        onChange={e => setData('theme_color_accent', e.target.value)}
+                        className="w-24 h-9 px-2 rounded-[3px] border border-slate-300 dark:border-[#233348] bg-white dark:bg-[#090d13] font-mono text-xs font-bold text-center"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* لوحة المعاينة التفاعلية الحية (Live Workstation Preview Canvas) */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="p-5 rounded-[3px] border border-slate-300 dark:border-[#212f42] bg-white dark:bg-[#111721] shadow-sm">
+                  <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-200 dark:border-[#1f2d3f]">
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-[#1a9fff]" />
+                      <h3 className="text-xs font-black text-slate-900 dark:text-white">معاينة حية للمتجر بالمتغيرات الجديدة</h3>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold text-emerald-500">LIVE PREVIEW</span>
+                  </div>
+
+                  {/* نموذج محاكي لشاشة الواجهة */}
+                  <div className="p-4 rounded-[3px] border border-slate-300 dark:border-[#212f42] bg-slate-100 dark:bg-[#0a0e14] space-y-3.5">
+                    
+                    {/* شريط علوي تجريبي */}
+                    <div className="h-10 px-3 rounded-[3px] bg-white dark:bg-[#171d25] border border-slate-200 dark:border-[#2a3848] flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="text-[9px] font-mono font-black uppercase px-1.5 py-0.5 rounded-[2px] border"
+                          style={{ 
+                            color: data.theme_color_primary, 
+                            backgroundColor: `${data.theme_color_primary}15`,
+                            borderColor: `${data.theme_color_primary}30`
+                          }}
+                        >
+                          محطة العمل
+                        </span>
+                        <span className="text-xs font-black text-slate-800 dark:text-white">
+                          {data.store_name || 'متجر العميل'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div 
+                          className="h-6 px-2 rounded-[2px] font-black text-[10px] text-white flex items-center gap-1 shadow-sm"
+                          style={{ backgroundColor: data.theme_color_btn_primary }}
+                        >
+                          <Play className="w-2.5 h-2.5 fill-current" />
+                          <span>فاتورة بيع</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* كرت إحصائية تجريبي */}
+                    <div className="p-3.5 rounded-[3px] border border-slate-200 dark:border-[#212f42] bg-white dark:bg-[#111721] space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span 
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-[2px] border"
+                          style={{ 
+                            color: data.theme_color_primary, 
+                            backgroundColor: `${data.theme_color_primary}15`,
+                            borderColor: `${data.theme_color_primary}30`
+                          }}
+                        >
+                          إيراد مبيعات اليوم
+                        </span>
+                        <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: data.theme_color_accent }} />
+                      </div>
+                      <div className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                        4,850 <span className="text-xs text-slate-400">د.ل</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-[1px] bg-slate-200 dark:bg-[#0c1219] overflow-hidden">
+                        <div className="h-full rounded-[1px]" style={{ width: '75%', backgroundColor: data.theme_color_accent }} />
+                      </div>
+                    </div>
+
+                    {/* أزرار الإجراءات التجريبية */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        className="h-9 px-3 rounded-[3px] text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-sm"
+                        style={{ backgroundColor: data.theme_color_btn_primary }}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>زر رئيسي أساسي</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="h-9 px-3 rounded-[3px] text-white font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 shadow-sm"
+                        style={{ backgroundColor: data.theme_color_btn_secondary }}
+                      >
+                        <Sliders className="w-3.5 h-3.5" />
+                        <span>زر فرعي ثانوي</span>
+                      </button>
+                    </div>
+
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-slate-200 dark:border-[#1f2d3f] flex items-center justify-between text-xs font-bold text-slate-400 dark:text-[#56718d]">
+                    <span>تأثير التغييرات</span>
+                    <span className="text-emerald-500">ينعكس فور الحفظ على كافة المحطات</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           </form>
         )}
 

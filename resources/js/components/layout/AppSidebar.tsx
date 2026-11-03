@@ -5,7 +5,7 @@ import {
   Tags, Layers, Ruler, DollarSign, Power, RotateCcw,
   CreditCard, RefreshCw, ChevronDown,
   PanelRightClose, PanelRightOpen, AlertTriangle, BarChart2, HardDrive, BookOpen, Settings,
-  Sparkles
+  Sparkles, ShieldCheck
 } from 'lucide-react';
 
 interface AppSidebarProps {
@@ -27,61 +27,61 @@ interface NavItem {
 }
 
 const simpleModeItems: NavItem[] = [
-  { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
-  { icon: <Truck className="w-5 h-5" />, label: 'المشتريات', href: '/purchases' },
-  { icon: <ShoppingCart className="w-5 h-5" />, label: 'الفواتير', href: '/invoices' },
+  { icon: <Package className="w-4 h-4" />, label: 'المنتجات', href: '/products' },
+  { icon: <Truck className="w-4 h-4" />, label: 'المشتريات', href: '/purchases' },
+  { icon: <ShoppingCart className="w-4 h-4" />, label: 'الفواتير', href: '/invoices' },
 ];
 
 const navSections: NavSection[] = [
   {
-    title: 'العملاء',
+    title: 'العملاء والمبيعات',
     items: [
-      { icon: <ShoppingCart className="w-5 h-5" />, label: 'الفواتير', href: '/invoices' },
-      { icon: <CreditCard className="w-5 h-5" />, label: 'دفعات العملاء', href: '/payments' },
-      { icon: <RefreshCw className="w-5 h-5" />, label: 'تسويات العملاء', href: '/settlements' },
-      { icon: <RotateCcw className="w-5 h-5" />, label: 'مرتجعات العملاء', href: '/invoice-returns' },
-      { icon: <Users className="w-5 h-5" />, label: 'قائمة العملاء', href: '/customers', roles: ['super-admin', 'admin', 'saler'] },
+      { icon: <ShoppingCart className="w-4 h-4" />, label: 'الفواتير', href: '/invoices' },
+      { icon: <CreditCard className="w-4 h-4" />, label: 'دفعات العملاء', href: '/payments' },
+      { icon: <RefreshCw className="w-4 h-4" />, label: 'تسويات العملاء', href: '/settlements' },
+      { icon: <RotateCcw className="w-4 h-4" />, label: 'مرتجعات العملاء', href: '/invoice-returns' },
+      { icon: <Users className="w-4 h-4" />, label: 'قائمة العملاء', href: '/customers', roles: ['super-admin', 'admin', 'saler'] },
     ],
   },
   {
-    title: 'الموردون',
+    title: 'الموردون والمشتريات',
     roles: ['super-admin', 'admin', 'saler'],
     items: [
-      { icon: <Truck className="w-5 h-5" />, label: 'المشتريات', href: '/purchases' },
-      { icon: <CreditCard className="w-5 h-5" />, label: 'مدفوعات للموردين', href: '/supplier-payments' },
-      { icon: <RefreshCw className="w-5 h-5" />, label: 'تسويات الموردين', href: '/supplier-settlements' },
-      { icon: <RotateCcw className="w-5 h-5" />, label: 'مرتجعات الموردين', href: '/purchase-returns' },
-      { icon: <Truck className="w-5 h-5" />, label: 'قائمة الموردين', href: '/suppliers' },
+      { icon: <Truck className="w-4 h-4" />, label: 'المشتريات', href: '/purchases' },
+      { icon: <CreditCard className="w-4 h-4" />, label: 'مدفوعات للموردين', href: '/supplier-payments' },
+      { icon: <RefreshCw className="w-4 h-4" />, label: 'تسويات الموردين', href: '/supplier-settlements' },
+      { icon: <RotateCcw className="w-4 h-4" />, label: 'مرتجعات الموردين', href: '/purchase-returns' },
+      { icon: <Truck className="w-4 h-4" />, label: 'قائمة الموردين', href: '/suppliers' },
     ],
   },
   {
-    title: 'المخزون',
+    title: 'المخزون والهالك',
     roles: ['super-admin', 'admin', 'saler'],
     items: [
-      { icon: <AlertTriangle className="w-5 h-5" />, label: 'التالف والخسائر', href: '/waste-logs' },
+      { icon: <AlertTriangle className="w-4 h-4" />, label: 'التالف والخسائر', href: '/waste-logs' },
     ],
   },
   {
-    title: 'إدارة المنتجات',
+    title: 'إدارة المنتجات والتسعير',
     roles: ['super-admin', 'admin', 'saler'],
     items: [
-      { icon: <Layers className="w-5 h-5" />, label: 'التصنيفات', href: '/categories' },
-      { icon: <Ruler className="w-5 h-5" />, label: 'الأحجام', href: '/sizes' },
-      { icon: <Tags className="w-5 h-5" />, label: 'التيرات والأسعار', href: '/price-tiers' },
-      { icon: <Package className="w-5 h-5" />, label: 'المنتجات', href: '/products' },
+      { icon: <Layers className="w-4 h-4" />, label: 'التصنيفات', href: '/categories' },
+      { icon: <Ruler className="w-4 h-4" />, label: 'الأحجام', href: '/sizes' },
+      { icon: <Tags className="w-4 h-4" />, label: 'التيرات والأسعار', href: '/price-tiers' },
+      { icon: <Package className="w-4 h-4" />, label: 'المنتجات', href: '/products' },
     ],
   },
   {
-    title: 'الإعدادات العامة والسياسات',
+    title: 'الإعدادات والرقابة',
     roles: ['super-admin', 'admin', 'saler', 'cashier'],
     items: [
-      { icon: <Settings className="w-5 h-5 text-primary" />, label: 'الاعدادات', href: '/settings', roles: ['super-admin', 'admin'] },
-      { icon: <BarChart2 className="w-5 h-5" />, label: 'التقارير', href: '/reports', roles: ['super-admin', 'admin'] },
-      { icon: <DollarSign className="w-5 h-5" />, label: 'وسائل الدفع', href: '/payment-methods', roles: ['super-admin', 'admin'] },
-      { icon: <Users className="w-5 h-5" />, label: 'المستخدمون', href: '/users', roles: ['super-admin', 'admin'] },
-      { icon: <HardDrive className="w-5 h-5" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
-      { icon: <RefreshCw className="w-5 h-5" />, label: 'الإقفال والجرد', href: '/periods', roles: ['super-admin'] },
-      { icon: <BookOpen className="w-5 h-5" />, label: 'سياسات ودليل النظام', href: '/policy' },
+      { icon: <Settings className="w-4 h-4" />, label: 'الاعدادات', href: '/settings', roles: ['super-admin', 'admin'] },
+      { icon: <BarChart2 className="w-4 h-4" />, label: 'التقارير', href: '/reports', roles: ['super-admin', 'admin'] },
+      { icon: <DollarSign className="w-4 h-4" />, label: 'وسائل الدفع', href: '/payment-methods', roles: ['super-admin', 'admin'] },
+      { icon: <Users className="w-4 h-4" />, label: 'المستخدمون', href: '/users', roles: ['super-admin', 'admin'] },
+      { icon: <HardDrive className="w-4 h-4" />, label: 'النسخ الاحتياطية', href: '/backups', roles: ['super-admin'] },
+      { icon: <RefreshCw className="w-4 h-4" />, label: 'الإقفال والجرد', href: '/periods', roles: ['super-admin'] },
+      { icon: <BookOpen className="w-4 h-4" />, label: 'سياسات ودليل النظام', href: '/policy' },
     ],
   },
 ];
@@ -125,7 +125,6 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
   // Scroll active link into view
   useEffect(() => {
-    // Small delay to ensure render is complete
     const timeout = setTimeout(() => {
       const activeEl = document.getElementById('active-nav-link');
       if (activeEl) {
@@ -137,94 +136,85 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
 
   return (
     <aside className={`
-      ${isOpen ? 'w-64 translate-x-0' : 'w-[88px] max-lg:translate-x-full'}
-      max-lg:fixed max-lg:right-0 max-lg:top-0 max-lg:bottom-0 max-lg:h-screen max-lg:border-l max-lg:border-black/10 dark:max-lg:border-white/10
-      transition-all duration-500 overflow-hidden
-      border-l border-black/5 dark:border-white/[0.08]
-      flex flex-col py-8
-      bg-white/90 dark:bg-slate-900/90 lg:bg-white/20 lg:dark:bg-white/[0.02]
-      backdrop-blur-2xl lg:backdrop-blur-none
-      relative z-[999] shrink-0 self-stretch
+      ${isOpen ? 'w-60 translate-x-0' : 'w-[68px] max-lg:translate-x-full'}
+      max-lg:fixed max-lg:right-0 max-lg:top-0 max-lg:bottom-0 max-lg:h-screen max-lg:z-[999]
+      transition-all duration-300 overflow-hidden
+      border-l border-slate-300 dark:border-[#1d2d42]
+      flex flex-col py-3.5
+      bg-[#f8fafc] dark:bg-[#0c1524]
+      relative shrink-0 self-stretch select-none
     `}>
-      {/* Logo & Toggle */}
-      <div className={`flex items-center w-full mb-4 ${isOpen ? 'justify-between px-5' : 'justify-center'}`}>
+      {/* ترويسة الشريط الجانبي: الشعار + زر الطي/الفتح */}
+      <div className={`flex items-center w-full mb-3 px-3 ${isOpen ? 'justify-between' : 'justify-center'}`}>
         {isOpen && (
-          <div className="flex items-center gap-2.5 animate-in fade-in pl-2 max-w-[170px]">
+          <div className="flex items-center gap-2 pl-1 max-w-[170px] truncate">
             {(props as any)?.storeBranding?.logo ? (
               <img 
                 src={(props as any).storeBranding.logo} 
                 alt={(props as any).storeBranding.name || 'شعار المتجر'} 
-                className="h-10 w-auto max-w-[120px] object-contain drop-shadow-sm rounded-lg"
+                className="h-7 w-auto max-w-[100px] object-contain drop-shadow-sm rounded-[2px]"
               />
             ) : (
               <div className="flex items-center gap-2 truncate">
-                <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center text-white shrink-0 shadow-sm">
-                  <Sparkles className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-[2px] bg-[#1a9fff] flex items-center justify-center text-white shrink-0 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5" />
                 </div>
-                <span className="font-black text-slate-800 dark:text-white text-sm truncate">
+                <span className="font-black text-slate-800 dark:text-white text-xs truncate">
                   {(props as any)?.storeBranding?.name || 'منظومة السحابة'}
                 </span>
               </div>
             )}
           </div>
         )}
-        <button onClick={onToggle} className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-white/50 hover:text-slate-800 dark:hover:text-white transition-all focus:outline-none">
-          {isOpen ? <PanelRightClose className="w-5 h-5" /> : <PanelRightOpen className="w-5 h-5" />}
+        <button 
+          type="button"
+          onClick={onToggle} 
+          className="w-7 h-7 shrink-0 rounded-[2px] border border-slate-300 dark:border-[#223043] bg-slate-100 dark:bg-[#141b24] hover:bg-slate-200 dark:hover:bg-[#1f2d3d] text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer"
+          title={isOpen ? 'طي القائمة الجانبية' : 'توسيع القائمة الجانبية'}
+        >
+          {isOpen ? <PanelRightClose className="w-3.5 h-3.5" /> : <PanelRightOpen className="w-3.5 h-3.5" />}
         </button>
       </div>
 
-      {/* User Info */}
+      {/* بطاقة المستخدم المكتبي — Live User Badge */}
       {isOpen && (
-        <div className="px-5 mb-4">
-          <div className="flex flex-col px-4 py-3 rounded-[18px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/8">
-            <span className="font-black text-slate-800 dark:text-white text-sm truncate">
+        <div className="px-3 mb-3">
+          <div className="px-2.5 py-1.5 rounded-[3px] bg-slate-100 dark:bg-[#090d13] border border-slate-200 dark:border-[#233348] flex items-center justify-between text-xs">
+            <span className="font-black text-slate-800 dark:text-white text-xs truncate">
               {(props.auth?.user?.name as string) ?? ''}
             </span>
-            <span className="text-xs font-bold text-slate-400 dark:text-white/40 truncate mt-0.5">
-              {userRoles[0] === 'super-admin' ? 'مدير عام'
-                : userRoles[0] === 'admin'   ? 'مدير'
-                : userRoles[0] === 'saler'   ? 'بائع'
-                : userRoles[0] === 'cashier' ? 'أمين صندوق'
-                : ''}
+            <span className="text-[10px] font-mono font-bold text-[#1a9fff] uppercase bg-[#1a9fff]/10 px-1.5 py-0.5 rounded-[2px] border border-[#1a9fff]/20">
+              {userRoles[0] === 'super-admin' ? 'SUPER'
+                : userRoles[0] === 'admin'   ? 'ADMIN'
+                : userRoles[0] === 'saler'   ? 'SALER'
+                : userRoles[0] === 'cashier' ? 'POS'
+                : 'USER'}
             </span>
           </div>
         </div>
       )}
 
-      {/* Simple Mode Toggle Card (Available for admin & super-admin) */}
+      {/* زر التبديل للوضع المبسط (للإدارة) */}
       {canToggleSimpleMode && (
-        <div className={`px-4 mb-4 ${!isOpen ? 'flex justify-center' : ''}`}>
+        <div className={`px-3 mb-3 ${!isOpen ? 'flex justify-center' : ''}`}>
           {isOpen ? (
             <button
               type="button"
               onClick={toggleSimpleMode}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-[18px] border transition-all duration-300 group ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[3px] border transition-all cursor-pointer ${
                 isSimpleMode
-                  ? 'bg-primary/10 border-primary/30 text-primary shadow-sm shadow-primary/10'
-                  : 'bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/10 text-slate-600 dark:text-white/70 hover:bg-black/10 dark:hover:bg-white/10'
+                  ? 'bg-[#1a9fff]/10 border-[#1a9fff]/30 text-[#1a9fff]'
+                  : 'bg-slate-100 dark:bg-[#111721] border-slate-200 dark:border-[#212f42] text-slate-600 dark:text-[#8293a4] hover:bg-slate-200 dark:hover:bg-[#151f2c]'
               }`}
             >
-              <div className="flex items-center gap-2.5">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                  isSimpleMode
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-black/5 dark:bg-white/10 text-slate-500 dark:text-white/50 group-hover:text-primary'
-                }`}>
-                  <Sparkles className="w-4 h-4" />
-                </div>
-                <div className="flex flex-col text-right">
-                  <span className="text-xs font-black leading-tight">الوضع المبسط</span>
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-white/40">
-                    {isSimpleMode ? '3 روابط أساسية' : 'القائمة الكاملة'}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span className="text-[11px] font-bold">الوضع المبسط</span>
               </div>
-
-              {/* VisionOS style toggle switch */}
-              <div className={`w-10 h-6 rounded-full p-1 transition-colors duration-300 flex items-center ${
-                isSimpleMode ? 'bg-primary justify-end' : 'bg-slate-300 dark:bg-white/20 justify-start'
+              <div className={`w-3.5 h-3.5 rounded-[1px] border flex items-center justify-center ${
+                isSimpleMode ? 'border-[#1a9fff] bg-[#1a9fff] text-white' : 'border-slate-400 dark:border-[#3d4f65]'
               }`}>
-                <div className="w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300" />
+                {isSimpleMode && <span className="text-[9px] font-black leading-none">✓</span>}
               </div>
             </button>
           ) : (
@@ -232,26 +222,23 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
               type="button"
               onClick={toggleSimpleMode}
               title={isSimpleMode ? 'الوضع المبسط (مفعل)' : 'الوضع المبسط (معطل)'}
-              className={`w-12 h-12 rounded-[16px] flex items-center justify-center relative transition-all duration-300 ${
+              className={`w-8 h-8 rounded-[2px] border flex items-center justify-center transition-all cursor-pointer ${
                 isSimpleMode
-                  ? 'bg-primary text-white shadow-md shadow-primary/25'
-                  : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'
+                  ? 'bg-[#1a9fff] text-white border-[#1a9fff]'
+                  : 'bg-slate-100 dark:bg-[#141b24] border-slate-300 dark:border-[#223043] text-slate-600 dark:text-[#8fa1b5] hover:text-white'
               }`}
             >
-              <Sparkles className="w-5 h-5" />
-              {isSimpleMode && (
-                <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-primary" />
-              )}
+              <Sparkles className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="flex-1 flex flex-col gap-2 w-full px-4 overflow-y-auto custom-scroll pb-14">
+      {/* روابط التنقل الرئيسية بنمط Steam Workstation */}
+      <nav className="flex-1 flex flex-col gap-1 w-full px-2 overflow-y-auto custom-scroll pb-6">
         {canToggleSimpleMode && isSimpleMode ? (
-          /* Simple Mode: 3 links only */
-          <div className="flex flex-col gap-1.5 animate-in fade-in duration-300">
+          /* الوضع المبسط: 3 روابط فقط */
+          <div className="flex flex-col gap-1 animate-in fade-in duration-150">
             {simpleModeItems.map((item) => {
               const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
               return (
@@ -260,13 +247,21 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                   href={item.href}
                   prefetch
                   id={isActive ? 'active-nav-link' : undefined}
-                  className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                  className={`flex items-center w-full px-2 py-1.5 rounded-[2px] transition-all cursor-pointer ${
+                    !isOpen ? 'justify-center' : ''
+                  } ${
+                    isActive 
+                      ? 'bg-[#e0f2fe] dark:bg-[#182332] text-[#0284c7] dark:text-[#1a9fff] border-r-4 border-[#0284c7] dark:border-[#1a9fff] font-black' 
+                      : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#131b26] hover:text-slate-900 dark:hover:text-white font-bold'
+                  }`}
                 >
-                  <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+                  <div className={`w-7 h-7 shrink-0 rounded-[2px] flex items-center justify-center ${
+                    isActive ? 'text-[#0284c7] dark:text-[#1a9fff]' : 'text-slate-500 dark:text-[#6a7c8e]'
+                  }`}>
                     {item.icon}
                   </div>
                   {isOpen && (
-                    <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                    <span className="text-xs mr-2 whitespace-nowrap truncate">
                       {item.label}
                     </span>
                   )}
@@ -275,57 +270,78 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
             })}
           </div>
         ) : (
-          /* Full Navigation */
+          /* القائمة المكتملة */
           <>
-            {/* الرئيسية — super-admin فقط */}
+            {/* الرئيسية — لوحة التحكم للأدمن */}
             {isSuperAdmin && (
-              <Link href="/"
+              <Link 
+                href="/"
                 prefetch
-                className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${url === '/' ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                id={url === '/' ? 'active-nav-link' : undefined}
+                className={`flex items-center w-full px-2 py-1.5 rounded-[2px] transition-all cursor-pointer ${
+                  !isOpen ? 'justify-center' : ''
+                } ${
+                  url === '/' 
+                    ? 'bg-[#e0f2fe] dark:bg-[#182332] text-[#0284c7] dark:text-[#1a9fff] border-r-4 border-[#0284c7] dark:border-[#1a9fff] font-black' 
+                    : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#131b26] hover:text-slate-900 dark:hover:text-white font-bold'
+                }`}
               >
-                <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${url === '/' ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
-                  <LayoutDashboard className="w-5 h-5" />
+                <div className={`w-7 h-7 shrink-0 rounded-[2px] flex items-center justify-center ${
+                  url === '/' ? 'text-[#0284c7] dark:text-[#1a9fff]' : 'text-slate-500 dark:text-[#6a7c8e]'
+                }`}>
+                  <LayoutDashboard className="w-4 h-4" />
                 </div>
                 {isOpen && (
-                  <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${url === '/' ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-                    الرئيسية
+                  <span className="text-xs mr-2 whitespace-nowrap truncate">
+                    لوحة التحكم
                   </span>
                 )}
               </Link>
             )}
 
-            {isSuperAdmin && <div className="h-px bg-black/10 dark:bg-white/10 my-2 mx-3" />}
+            {isSuperAdmin && <div className="h-px bg-slate-200 dark:bg-[#1f2b3b] my-1 mx-2" />}
 
-            {/* الأقسام */}
+            {/* أقسام النظام */}
             {navSections.filter(s => canAccess(s.roles)).map((section) => (
-              <div key={section.title} className="mb-2">
+              <div key={section.title} className="mb-1">
                 {/* عنوان القسم */}
                 {isOpen && (
                   <button
+                    type="button"
                     onClick={() => toggleSection(section.title)}
-                    className="flex items-center justify-between w-full px-4 py-2 text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest hover:text-slate-600 dark:hover:text-white/50 transition-colors"
+                    className="flex items-center justify-between w-full px-2 py-1 text-[10px] font-mono font-black text-slate-400 dark:text-[#56718d] uppercase tracking-wider hover:text-slate-700 dark:hover:text-[#8ba0b5] transition-colors cursor-pointer select-none"
                   >
                     <span>{section.title}</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${expandedSections[section.title] ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedSections[section.title] ? 'rotate-180' : ''}`} />
                   </button>
                 )}
 
                 {/* عناصر القسم */}
                 {(isOpen ? expandedSections[section.title] : true) && (
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-0.5">
                     {section.items.filter(item => canAccess(item.roles)).map((item) => {
                       const isActive = url === item.href || (item.href !== '/' && url.startsWith(item.href));
                       return (
-                        <Link key={item.href} href={item.href}
+                        <Link 
+                          key={item.href} 
+                          href={item.href}
                           prefetch
                           id={isActive ? 'active-nav-link' : undefined}
-                          className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} ${isActive ? 'bg-primary' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                          className={`flex items-center w-full px-2 py-1.5 rounded-[2px] transition-all cursor-pointer ${
+                            !isOpen ? 'justify-center' : ''
+                          } ${
+                            isActive 
+                              ? 'bg-[#e0f2fe] dark:bg-[#182332] text-[#0284c7] dark:text-[#1a9fff] border-r-4 border-[#0284c7] dark:border-[#1a9fff] font-black' 
+                              : 'text-slate-600 dark:text-[#8293a4] hover:bg-slate-200/60 dark:hover:bg-[#131b26] hover:text-slate-900 dark:hover:text-white font-bold'
+                          }`}
                         >
-                          <div className={`w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center transition-all ${isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/5 text-slate-500 dark:text-white/50 group-hover:bg-black/10 dark:group-hover:bg-white/10 group-hover:text-primary'}`}>
+                          <div className={`w-7 h-7 shrink-0 rounded-[2px] flex items-center justify-center ${
+                            isActive ? 'text-[#0284c7] dark:text-[#1a9fff]' : 'text-slate-500 dark:text-[#6a7c8e]'
+                          }`}>
                             {item.icon}
                           </div>
                           {isOpen && (
-                            <span className={`text-[15px] font-bold mr-4 whitespace-nowrap animate-in fade-in ${isActive ? 'text-white drop-shadow-sm' : 'text-slate-600 dark:text-white/70 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                            <span className="text-xs mr-2 whitespace-nowrap truncate">
                               {item.label}
                             </span>
                           )}
@@ -339,15 +355,21 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
           </>
         )}
 
-        <div className="h-px bg-black/20 dark:bg-white/20 my-3 mx-3" />
+        {/* فاصل وزر تسجيل الخروج */}
+        <div className="h-px bg-slate-200 dark:bg-[#1f2b3b] my-2 mx-2" />
 
-        <Link href="/logout" method="post" as="button"
-          className={`flex items-center w-full p-2 rounded-[20px] transition-all duration-200 group ${!isOpen ? 'justify-center' : ''} hover:bg-red-500/10`}
+        <Link 
+          href="/logout" 
+          method="post" 
+          as="button"
+          className={`flex items-center w-full px-2 py-1.5 rounded-[2px] transition-colors cursor-pointer ${
+            !isOpen ? 'justify-center' : ''
+          } text-rose-500 dark:text-rose-400 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-300 font-bold`}
         >
-          <div className="w-12 h-12 shrink-0 rounded-[14px] flex items-center justify-center bg-red-500/5 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-all">
-            <Power className="w-5 h-5" />
+          <div className="w-7 h-7 shrink-0 rounded-[2px] flex items-center justify-center text-rose-400">
+            <Power className="w-4 h-4" />
           </div>
-          {isOpen && <span className="text-[15px] font-bold text-red-400 group-hover:text-red-500 mr-4 whitespace-nowrap animate-in fade-in">تسجيل الخروج</span>}
+          {isOpen && <span className="text-xs mr-2 whitespace-nowrap truncate">تسجيل الخروج</span>}
         </Link>
       </nav>
     </aside>

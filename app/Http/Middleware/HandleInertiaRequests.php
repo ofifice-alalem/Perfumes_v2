@@ -43,11 +43,25 @@ class HandleInertiaRequests extends Middleware
                     return [
                         'name' => \App\Models\Setting::get('store_name', env('APP_NAME', 'منظومة السحابة')),
                         'logo' => \App\Models\Setting::get('store_logo'),
+                        'theme_colors' => [
+                            'primary'       => \App\Models\Setting::get('theme_color_primary', '#1a9fff'),
+                            'btn_primary'   => \App\Models\Setting::get('theme_color_btn_primary', '#75b022'),
+                            'btn_secondary' => \App\Models\Setting::get('theme_color_btn_secondary', '#212b37'),
+                            'accent'        => \App\Models\Setting::get('theme_color_accent', '#00d2ff'),
+                            'preset'        => \App\Models\Setting::get('theme_preset', 'steam_classic'),
+                        ],
                     ];
                 } catch (\Throwable $e) {
                     return [
                         'name' => env('APP_NAME', 'منظومة السحابة'),
                         'logo' => null,
+                        'theme_colors' => [
+                            'primary'       => '#1a9fff',
+                            'btn_primary'   => '#75b022',
+                            'btn_secondary' => '#212b37',
+                            'accent'        => '#00d2ff',
+                            'preset'        => 'steam_classic',
+                        ],
                     ];
                 }
             })(),

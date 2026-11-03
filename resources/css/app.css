@@ -9,6 +9,10 @@
 
 @layer base {
   :root {
+    --brand-primary: #1a9fff;
+    --btn-primary: #75b022;
+    --btn-secondary: #212b37;
+    --brand-accent: #00d2ff;
     --background: 240 5% 96%;
     --foreground: 240 10% 10%;
     --card: 0 0% 100%;
@@ -32,24 +36,24 @@
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
-    --card: 240 5% 18%;
+    --background: 217 48% 10%;
+    --foreground: 210 40% 98%;
+    --card: 217 38% 13%;
     --card-foreground: 0 0% 100%;
-    --popover: 240 5% 18%;
+    --popover: 217 38% 13%;
     --popover-foreground: 0 0% 100%;
     --primary: 217 100% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 24%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 24%;
-    --muted-foreground: 240 5% 75%;
+    --secondary: 217 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 30% 18%;
+    --muted-foreground: 217 20% 70%;
     --accent: 217 100% 55%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 100% 65%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 100%;
-    --input: 0 0% 100%;
+    --border: 217 30% 22%;
+    --input: 217 30% 22%;
     --ring: 217 100% 55%;
   }
 
@@ -71,67 +75,175 @@
   #app {
     height: 100dvh;
     overflow: hidden;
+    position: relative;
+    z-index: 1;
   }
 }
 
 @layer utilities {
   .body-bg-dark {
-    background: radial-gradient(circle at 50% 0%, #32323f 0%, #13131a 100%) !important;
-    background-size: cover !important;
-    background-attachment: fixed !important;
+    background-color: #0c1524 !important;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* pseudo-elements لإعطاء انطباع التدرج اللوني الأزرق الداكن الفاخر (Gradient Impression) */
+  .body-bg-dark::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: 
+      radial-gradient(ellipse 90% 55% at 50% -10%, rgba(26, 120, 240, 0.28), transparent 75%),
+      radial-gradient(ellipse 70% 50% at 100% 100%, rgba(14, 165, 233, 0.16), transparent 60%),
+      radial-gradient(ellipse 60% 45% at 0% 90%, rgba(30, 58, 138, 0.24), transparent 55%),
+      linear-gradient(180deg, #0d1728 0%, #0a111e 100%);
+  }
+
+  .body-bg-dark::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.5), transparent);
+    pointer-events: none;
+    z-index: 99;
   }
 
   .body-bg-light {
-    background: radial-gradient(circle at 50% 0%, #f0f4f8 0%, #d9e2ec 100%) !important;
+    background: #edf2f7 !important;
     background-size: cover !important;
     background-attachment: fixed !important;
   }
 
   .spatial-window {
-    @apply backdrop-blur-[80px] border border-black/10 dark:border-white/15 transition-colors duration-500 h-full;
-    background: rgba(255,255,255,0.45);
+    @apply border-0 md:border border-slate-300 dark:border-[#1d2d42] transition-colors duration-300 h-full relative z-10;
+    background: #edf2f7;
   }
   .dark .spatial-window {
-    background: linear-gradient(145deg, rgba(30,50,100,0.55) 0%, rgba(15,20,40,0.45) 100%);
+    background: #0d1728;
   }
 
   .spatial-card {
-    @apply backdrop-blur-3xl rounded-[30px] border border-black/10 dark:border-white/[0.12] hover:border-black/15 dark:hover:border-white/[0.20] transition-all duration-300;
-    background: linear-gradient(145deg, rgba(255,255,255,0.85) 0%, rgba(220,230,245,0.60) 100%);
+    @apply rounded-[3px] border border-slate-300 dark:border-[#1f3047] hover:border-slate-400 dark:hover:border-[#2b4464] transition-all duration-200;
+    background: #ffffff;
   }
   .spatial-card.transparent {
     background: transparent !important;
   }
   .spatial-card:hover {
-    background: linear-gradient(145deg, rgba(255,255,255,0.92) 0%, rgba(210,225,245,0.70) 100%);
+    background: #ffffff;
   }
   .dark .spatial-card {
-    background: linear-gradient(145deg, rgba(40,60,120,0.35) 0%, rgba(20,25,55,0.25) 100%);
+    background: #121c2d;
   }
   .dark .spatial-card:hover {
-    background: linear-gradient(145deg, rgba(40,60,120,0.45) 0%, rgba(20,25,55,0.35) 100%);
+    background: #162438;
   }
 
   .spatial-input {
-    @apply border border-black/10 dark:border-white/15 text-slate-800 dark:text-white placeholder:text-slate-500 dark:placeholder:text-white/50 focus:ring-1 focus:ring-primary/50 dark:focus:ring-white/25 focus:border-primary/50 dark:focus:border-white/40 transition-all duration-200 outline-none;
-    background: rgba(0,0,0,0.05);
+    @apply border border-slate-300 dark:border-[#22354c] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#67829f] transition-all duration-150 outline-none rounded-[3px];
+    background: #f8fafc;
+  }
+  .spatial-input:focus {
+    border-color: var(--brand-primary, #1a9fff) !important;
+    box-shadow: 0 0 0 1px var(--brand-primary, #1a9fff) !important;
   }
   .dark .spatial-input {
-    background: linear-gradient(135deg, rgba(40,60,120,0.30) 0%, rgba(20,25,55,0.20) 100%);
+    background: #0b1320;
   }
   .dark .spatial-input:hover {
-    background: linear-gradient(135deg, rgba(40,60,120,0.40) 0%, rgba(20,25,55,0.28) 100%);
+    background: #0e1828;
   }
   .dark .spatial-input:focus {
-    background: linear-gradient(135deg, rgba(40,60,120,0.45) 0%, rgba(20,25,55,0.32) 100%);
+    background: #0b1320;
   }
 
+  /* ربط أزرار المنظومة بمتغيرات الألوان المخصصة (Primary & Brand) */
   .spatial-button {
-    @apply bg-primary hover:bg-blue-500 text-white rounded-[20px] transition-all font-bold;
+    background-color: var(--btn-primary, var(--brand-primary, #1a9fff)) !important;
+    color: #ffffff !important;
+    border-radius: 4px;
+    transition: all 0.15s ease-in-out;
+    font-weight: 700;
+    border-top: 1px solid rgba(255, 255, 255, 0.3) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35) !important;
+  }
+  .spatial-button:hover {
+    filter: brightness(1.12);
+  }
+  .spatial-button:active {
+    filter: brightness(0.95);
+    transform: translateY(1px);
+  }
+
+  .spatial-button-secondary {
+    background-color: var(--btn-secondary, #212b37) !important;
+    color: #c6d4df !important;
+    border-radius: 4px;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    transition: all 0.15s ease-in-out;
+  }
+  .spatial-button-secondary:hover {
+    filter: brightness(1.2);
+    color: #ffffff !important;
   }
 
   .spatial-icon-btn {
-    @apply w-12 h-12 flex items-center justify-center rounded-full bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/15 border border-transparent dark:border-white/10 text-slate-600 hover:text-slate-900 dark:text-white/70 dark:hover:text-white transition-all;
+    @apply w-8 h-8 flex items-center justify-center rounded-[3px] border border-slate-300 dark:border-[#26374d] bg-slate-100 dark:bg-[#162132] hover:bg-slate-200 dark:hover:bg-[#1f2e44] text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white transition-all;
+  }
+
+  .btn-theme-primary {
+    background: linear-gradient(to bottom, var(--btn-primary, #75b022), color-mix(in srgb, var(--btn-primary, #75b022) 75%, black)) !important;
+    color: #ffffff !important;
+    border-radius: 4px !important;
+    font-weight: 800 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4) !important;
+    transition: all 0.15s ease-in-out;
+  }
+  .btn-theme-primary:hover {
+    filter: brightness(1.12);
+  }
+  .btn-theme-primary:active {
+    transform: translateY(1px);
+  }
+
+  .btn-theme-secondary {
+    background-color: var(--btn-secondary, #212b37) !important;
+    color: #c6d4df !important;
+    border-radius: 4px !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    transition: all 0.15s ease-in-out;
+  }
+  .btn-theme-secondary:hover {
+    color: #ffffff !important;
+    filter: brightness(1.2);
+  }
+
+  /* أصناف مساعدة لربط الخطوط والعناصر بالمتغيرات النشطة */
+  .text-brand {
+    color: var(--brand-primary, #1a9fff) !important;
+  }
+  .bg-brand {
+    background-color: var(--brand-primary, #1a9fff) !important;
+  }
+  .border-brand {
+    border-color: var(--brand-primary, #1a9fff) !important;
+  }
+  .text-brand-accent {
+    color: var(--brand-accent, #00d2ff) !important;
+  }
+  .border-brand-accent {
+    border-color: var(--brand-accent, #00d2ff) !important;
   }
 }
 
