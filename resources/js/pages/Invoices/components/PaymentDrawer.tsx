@@ -119,14 +119,14 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                                 onClick={() => setAutoPrintNode(!autoPrintNode)}
                                 className={`h-9 px-3 rounded-[2px] border text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs ${
                                     autoPrintNode
-                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                        ? 'bg-brand/10 border-brand/35 text-brand'
                                         : 'bg-white dark:bg-[#121c2c] border-slate-200 dark:border-[#1d2d42] text-slate-500'
                                 }`}
                                 title="تفعيل أو إلغاء الطباعة التلقائية"
                             >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>طباعة إيصال تلقائي</span>
-                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] ${autoPrintNode ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
+                                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-[2px] ${autoPrintNode ? 'bg-brand text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
                                     {autoPrintNode ? 'مفعل' : 'معطل'}
                                 </span>
                             </button>
@@ -306,7 +306,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                                             setPayments(prev => prev.filter((_, i) => i !== idx));
                                             setPaymentManuallySet(true);
                                         }}
-                                        className="w-9 h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
+                                        className="w-11 h-11 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
                                         title="حذف الدفعة"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -329,21 +329,21 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         type="button"
                         onClick={submit}
                         disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                        className="h-14 sm:h-15 mb-2 sm:mb-3 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base sm:text-lg w-full flex items-center justify-between px-6 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+                        className="h-20 sm:h-22 mb-2 sm:mb-3 rounded-[2px] bg-brand hover:opacity-95 text-white font-black text-lg sm:text-xl w-full flex items-center justify-between px-8 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
                     >
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-3">
                             {processing ? (
-                                <RefreshCw className="w-5 h-5 animate-spin" />
+                                <RefreshCw className="w-6 h-6 animate-spin" />
                             ) : (
-                                <Printer className="w-5 h-5" />
+                                <Printer className="w-6 h-6" />
                             )}
                             <span>{processing ? 'جاري حفظ الفاتورة...' : (isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة')}</span>
                         </div>
-                        <div className="flex items-center gap-2.5">
-                            <span className="text-xs font-bold bg-white/20 px-3 py-1 rounded-[2px]">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm sm:text-base font-bold bg-white/20 px-3.5 py-1.5 rounded-[2px]">
                                 المدفوع: {fmt(totalPaid)} د.ل
                             </span>
-                            <Check className="w-5 h-5" />
+                            <Check className="w-6 h-6" />
                         </div>
                     </button>
                 </div>

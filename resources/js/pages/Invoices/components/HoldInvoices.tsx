@@ -133,18 +133,18 @@ export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
                                         <button
                                             type="button"
                                             onClick={() => restoreHoldInvoice(hold)}
-                                            className="flex-1 h-9 px-3 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                                            className="flex-1 h-11 sm:h-12 px-3 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs transition-colors cursor-pointer"
                                         >
-                                            <Play className="w-3.5 h-3.5 fill-current" />
+                                            <Play className="w-4 h-4 fill-current" />
                                             <span>استرجاع الفاتورة للمتابعة</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => deleteHoldInvoice(hold.id)}
-                                            className="h-9 w-9 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                            className="h-11 w-11 sm:h-12 sm:w-12 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                             title="حذف الفاتورة المعلقة"
                                         >
-                                            <Trash2 className="w-3.5 h-3.5" />
+                                            <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
@@ -159,7 +159,7 @@ export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
                         <button
                             type="button"
                             onClick={() => setHoldInvoices([])}
-                            className="w-full h-11 sm:h-12 rounded-[2px] border border-rose-500/35 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
+                            className="w-full h-12 sm:h-13 rounded-[2px] border border-rose-500/35 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
                         >
                             <Trash2 className="w-4 h-4" />
                             <span>حذف جميع الفواتير المعلقة</span>

@@ -522,20 +522,6 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                     </div>
                 )}
 
-                {/* Qty / Count input */}
-                {selectedProduct && (isTier || selSaleType) && (
-                    <div className="w-full sm:w-28 shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
-                            className="h-11 sm:h-12 w-full px-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-sm sm:text-base font-number font-black text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors"
-                            title={needsQty ? 'الكمية' : 'العدد'}
-                        >
-                            {selQty || '1'}
-                        </button>
-                    </div>
-                )}
-
                 {/* Dedicated Touchscreen Clear / Reset Button */}
                 {selectedProduct && (
                     <button
@@ -564,9 +550,9 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                 </div>
             )}
 
-            {/* Row 3: Unit price field & add button */}
+            {/* Row 3: Unit price field & Count & Add button */}
             {showPriceField && (
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end p-3.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
                     <div className="flex-1 flex flex-col gap-1">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
@@ -586,41 +572,42 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                                 selUnitPrice,
                                 v => setSelUnitPrice(v),
                             )}
-                            className={`h-11 sm:h-12 rounded-[2px] px-4 font-number font-bold text-sm sm:text-base flex items-center justify-between cursor-pointer transition-colors border ${
+                            className={`h-11 sm:h-12 rounded-[2px] px-4 font-number font-bold text-sm sm:text-base flex items-center justify-start cursor-pointer transition-colors border ${
                                 selUnitPrice && +selUnitPrice < selMinPrice
                                     ? 'border-rose-500 text-rose-500 bg-rose-500/5'
                                     : 'border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] text-slate-900 dark:text-white hover:border-brand'
                             }`}
                         >
                             <span>{selUnitPrice ? `${selUnitPrice} د.ل` : '0.00 د.ل'}</span>
-                            <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.5 rounded-[2px] font-sans font-bold">
-                                لوحة الأرقام
-                            </span>
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        {selectedProduct && (
+                    {/* Qty / Count input (replaces cancel button next to price) */}
+                    {selectedProduct && (isTier || selSaleType) && (
+                        <div className="flex flex-col gap-1 w-full sm:w-28 shrink-0">
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                                {needsQty ? 'الكمية' : 'العدد'}
+                            </span>
                             <button
                                 type="button"
-                                onClick={resetSelection}
-                                title="إلغاء وتفريغ"
-                                className="h-11 sm:h-12 px-3.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-600 dark:text-slate-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                                onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
+                                className="h-11 sm:h-12 w-full px-3 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-sm sm:text-base font-number font-black text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
+                                title={needsQty ? 'الكمية' : 'العدد'}
                             >
-                                <X className="w-4 h-4" />
-                                <span>إلغاء</span>
+                                {selQty || '1'}
                             </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={handleAddToCart}
-                            disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
-                            className="h-11 sm:h-12 px-6 sm:px-8 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
-                        >
-                            <Plus className="w-4 h-4" />
-                            <span>إضافة للفاتورة</span>
-                        </button>
-                    </div>
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
+                        className="h-11 sm:h-12 px-6 sm:px-8 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>إضافة للفاتورة</span>
+                    </button>
                 </div>
             )}
 

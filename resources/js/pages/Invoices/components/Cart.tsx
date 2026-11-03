@@ -199,7 +199,7 @@ export const Cart: React.FC<CartProps> = ({
                                         type="button"
                                         onClick={() => removeGroup(g.indices)}
                                         title="حذف الصنف من السلة"
-                                        className="w-10 h-10 sm:w-10.5 sm:h-10.5 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+                                        className="w-11 h-11 sm:w-12 sm:h-12 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
                                     >
                                         <Trash2 className="w-5 h-5" />
                                     </button>
@@ -237,9 +237,9 @@ export const Cart: React.FC<CartProps> = ({
                                     type="button"
                                     onClick={() => removeGroup(g.indices)}
                                     title="حذف"
-                                    className="w-9 h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                    className="w-11 h-11 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                 >
-                                    <Trash2 className="w-4.5 h-4.5" />
+                                    <Trash2 className="w-5 h-5" />
                                 </button>
                             </div>
 

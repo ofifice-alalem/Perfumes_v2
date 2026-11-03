@@ -1109,12 +1109,11 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
 
                         {/* Submit Action Bar */}
-                        <div className="px-4 py-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-2.5">
+                        <div className="px-4 py-4 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-3">
                             <Link
                                 href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                className="h-13 px-4 sm:px-5 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm transition-colors shrink-0 shadow-2xs"
+                                className="h-24 sm:h-28 px-6 sm:px-8 rounded-[2px] border border-slate-300 dark:border-[#22354e] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-800 dark:text-slate-100 font-black text-base sm:text-lg transition-colors shrink-0 flex items-center justify-center shadow-sm"
                             >
-                                <X className="w-4 h-4" />
                                 <span>إلغاء</span>
                             </Link>
                             {!isEditMode && (
@@ -1122,18 +1121,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     type="button"
                                     onClick={clearForm}
                                     disabled={cart.length === 0}
-                                    className="h-13 px-4 sm:px-5 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-2xs"
+                                    className="h-24 sm:h-28 px-6 sm:px-8 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 dark:text-rose-400 font-black text-base sm:text-lg transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
                                 >
-                                    <Trash2 className="w-4 h-4" />
                                     <span>مسح الفاتورة</span>
                                 </button>
                             )}
                             {cart.length === 0 ? (
-                                <div className="flex-1 h-13 flex items-center justify-between px-5 rounded-[2px] bg-slate-100/90 dark:bg-[#101a29] border border-slate-200/90 dark:border-[#1d2d42] text-slate-400 dark:text-slate-500 select-none shadow-2xs">
-                                    <span className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                                <div className="flex-1 h-24 sm:h-28 flex items-center justify-between px-8 sm:px-12 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-300 dark:border-[#22354e] text-slate-700 dark:text-slate-200 select-none shadow-sm">
+                                    <span className="text-xl sm:text-2xl font-black text-slate-600 dark:text-slate-300">
                                         السلة فارغة
                                     </span>
-                                    <span className="text-sm sm:text-base font-number font-bold text-slate-400 dark:text-slate-500">
+                                    <span className="text-2xl sm:text-3xl font-number font-black text-slate-500 dark:text-slate-400">
                                         0.00 د.ل
                                     </span>
                                 </div>
@@ -1141,12 +1139,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 <button
                                     type="button"
                                     onClick={() => setShowPaymentDrawer(true)}
-                                    className="flex-1 h-13 flex items-center justify-between px-6 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold cursor-pointer shadow-md active:scale-[0.99] transition-all"
+                                    className="flex-1 h-24 sm:h-28 flex items-center justify-between px-8 sm:px-12 rounded-[2px] bg-brand hover:opacity-95 text-white font-black cursor-pointer shadow-lg active:scale-[0.99] transition-all"
                                 >
-                                    <span className="text-base sm:text-lg font-black tracking-wide">
+                                    <span className="text-3xl sm:text-4xl font-black tracking-wide">
                                         دفع
                                     </span>
-                                    <span className="text-base sm:text-lg font-number font-black">
+                                    <span className="text-3xl sm:text-4xl font-number font-black">
                                         {fmt(grandTotal)} د.ل
                                     </span>
                                 </button>
@@ -1670,9 +1668,9 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             type="button"
                                             onClick={submit}
                                             disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                                            className="w-full h-11 rounded-[2px] bg-brand text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                                            className="w-full h-14 rounded-[2px] bg-brand text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 shadow-sm"
                                         >
-                                            {processing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            {processing ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                                             <span>{processing ? 'جاري الحفظ والطباعة...' : (isEditMode ? `حفظ التعديلات — ${grandTotal.toFixed(2)} د.ل` : `تأكيد البيع — ${grandTotal.toFixed(2)} د.ل`)}</span>
                                         </button>
 
@@ -1680,7 +1678,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                             <button
                                                 type="button"
                                                 onClick={holdCurrentInvoice}
-                                                className="w-full h-10 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                                                className="w-full h-12 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                                             >
                                                 <Pause className="w-4 h-4" />
                                                 <span>تعليق الفاتورة (حفظ مؤقت)</span>
@@ -1691,19 +1689,19 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                                 <button
                                                     type="button"
                                                     onClick={clearForm}
-                                                    className="h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                                    className="h-12 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                                                 >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                    <span>مسح</span>
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span>مسح الفاتورة</span>
                                                 </button>
                                             )}
                                             <Link
                                                 href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                                className={`h-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-1 ${
+                                                className={`h-12 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 ${
                                                     (!isEditMode && cart.length > 0) ? '' : 'col-span-2'
                                                 }`}
                                             >
-                                                <X className="w-3.5 h-3.5" />
+                                                <X className="w-4 h-4" />
                                                 <span>إلغاء</span>
                                             </Link>
                                         </div>
