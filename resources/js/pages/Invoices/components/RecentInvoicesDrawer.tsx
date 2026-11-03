@@ -160,7 +160,7 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
                                         </span>
                                     </div>
 
-                                    <div className="text-sm sm:text-base font-number font-black text-emerald-600 dark:text-emerald-400 shrink-0 tabular-nums">
+                                    <div className="text-sm sm:text-base font-number font-black text-slate-900 dark:text-white shrink-0 tabular-nums">
                                         {fmt(inv.total)} <span className="text-[10px] font-normal text-slate-400">د.ل</span>
                                     </div>
                                 </div>
@@ -171,7 +171,7 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
                                         type="button"
                                         onClick={() => handlePrint(inv.id)}
                                         disabled={printingId === inv.id}
-                                        className="h-9 px-3 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                                        className="h-9 px-3 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                                     >
                                         {printedSuccessId === inv.id ? (
                                             <>
@@ -262,7 +262,7 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
                                     handlePrint(previewInvoiceId);
                                     setPreviewInvoiceId(null);
                                 }}
-                                className="flex-1 h-9 px-4 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="flex-1 h-9 px-4 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>طباعة حرارية فورية</span>

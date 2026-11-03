@@ -161,9 +161,9 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         <span className="text-sm sm:text-base font-number font-black text-sky-700 dark:text-sky-300 tabular-nums">{fmt(grandTotal)} د.ل</span>
                     </div>
 
-                    <div className="p-3 rounded-[2px] bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/30 shadow-2xs flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">المدفوع الفعلي</span>
-                        <span className="text-sm sm:text-base font-number font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(totalPaid)} د.ل</span>
+                    <div className="p-3 rounded-[2px] bg-brand/10 border border-brand/25 shadow-2xs flex flex-col gap-0.5">
+                        <span className="text-[10px] font-bold text-brand uppercase tracking-wider">المدفوع الفعلي</span>
+                        <span className="text-sm sm:text-base font-number font-black text-brand tabular-nums">{fmt(totalPaid)} د.ل</span>
                     </div>
 
                     <div className={`p-3 rounded-[2px] border shadow-2xs flex flex-col gap-0.5 ${
@@ -172,7 +172,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                             : 'bg-white dark:bg-[#0c1421] border-slate-200/90 dark:border-[#1d2d42] text-slate-500 dark:text-slate-400'
                     }`}>
                         <span className="text-[10px] font-bold uppercase tracking-wider">المتبقي</span>
-                        <span className={`text-sm sm:text-base font-number font-black tabular-nums ${remaining > 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        <span className={`text-sm sm:text-base font-number font-black tabular-nums ${remaining > 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
                             {remaining > 0.01 ? `${fmt(remaining)} د.ل` : '0.00 د.ل (خالص)'}
                         </span>
                     </div>
@@ -337,7 +337,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                             ) : (
                                 <Printer className="w-6 h-6" />
                             )}
-                            <span>{processing ? 'جاري حفظ الفاتورة...' : (isEditMode ? 'حفظ التعديلات النهائية للفاتورة' : 'تأكيد البيع وطباعة الفاتورة')}</span>
+                            <span>{processing ? 'جاري الحفظ...' : (isEditMode ? 'حفظ التعديلات' : 'إتمام الدفع والطباعة')}</span>
                         </div>
                         <div className="flex items-center gap-3">
                             <span className="text-sm sm:text-base font-bold bg-white/20 px-3.5 py-1.5 rounded-[2px]">

@@ -998,8 +998,8 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 {/* 🌟 Workstation Floating Toast */}
                 {toastMessage && (
                     <div className="fixed top-5 left-5 z-[9999] animate-in fade-in slide-in-from-left-4 duration-200">
-                        <div className="bg-white dark:bg-[#0c1421] text-slate-800 dark:text-white px-3.5 py-2.5 rounded-[2px] shadow-xl border border-emerald-500/30 dark:border-emerald-500/25 flex items-center gap-3 max-w-md">
-                            <div className="w-7 h-7 rounded-[2px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                        <div className="bg-white dark:bg-[#0c1421] text-slate-800 dark:text-white px-3.5 py-2.5 rounded-[2px] shadow-xl border border-brand/30 flex items-center gap-3 max-w-md">
+                            <div className="w-7 h-7 rounded-[2px] bg-brand/15 text-brand flex items-center justify-center shrink-0 border border-brand/30">
                                 <CheckCircle2 className="w-4 h-4" />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1109,10 +1109,10 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
 
                         {/* Submit Action Bar */}
-                        <div className="px-4 py-4 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-3">
+                        <div className="px-4 py-4 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-2.5">
                             <Link
                                 href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                className="h-24 sm:h-28 px-6 sm:px-8 rounded-[2px] border border-slate-300 dark:border-[#22354e] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-800 dark:text-slate-100 font-black text-base sm:text-lg transition-colors shrink-0 flex items-center justify-center shadow-sm"
+                                className="h-24 sm:h-28 px-3.5 sm:px-4 rounded-[2px] border border-slate-300 dark:border-[#22354e] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm transition-colors shrink-0 flex items-center justify-center shadow-sm"
                             >
                                 <span>إلغاء</span>
                             </Link>
@@ -1121,31 +1121,27 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     type="button"
                                     onClick={clearForm}
                                     disabled={cart.length === 0}
-                                    className="h-24 sm:h-28 px-6 sm:px-8 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 dark:text-rose-400 font-black text-base sm:text-lg transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
+                                    className="h-24 sm:h-28 px-3.5 sm:px-4.5 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 dark:text-rose-400 font-bold text-xs sm:text-sm transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
                                 >
                                     <span>مسح الفاتورة</span>
                                 </button>
                             )}
                             {cart.length === 0 ? (
-                                <div className="flex-1 h-24 sm:h-28 flex items-center justify-between px-8 sm:px-12 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-300 dark:border-[#22354e] text-slate-700 dark:text-slate-200 select-none shadow-sm">
-                                    <span className="text-xl sm:text-2xl font-black text-slate-600 dark:text-slate-300">
+                                <div className="flex-1 h-24 sm:h-28 flex items-center justify-center gap-2 px-4 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-300 dark:border-[#22354e] text-slate-500 dark:text-slate-400 select-none shadow-sm">
+                                    <ShoppingCart className="w-5 h-5 opacity-60" />
+                                    <span className="text-base sm:text-lg font-bold">
                                         السلة فارغة
-                                    </span>
-                                    <span className="text-2xl sm:text-3xl font-number font-black text-slate-500 dark:text-slate-400">
-                                        0.00 د.ل
                                     </span>
                                 </div>
                             ) : (
                                 <button
                                     type="button"
                                     onClick={() => setShowPaymentDrawer(true)}
-                                    className="flex-1 h-24 sm:h-28 flex items-center justify-between px-8 sm:px-12 rounded-[2px] bg-brand hover:opacity-95 text-white font-black cursor-pointer shadow-lg active:scale-[0.99] transition-all"
+                                    className="flex-1 h-24 sm:h-28 flex items-center justify-center gap-2.5 px-6 rounded-[2px] bg-brand hover:opacity-95 text-white font-black cursor-pointer shadow-lg active:scale-[0.99] transition-all"
                                 >
-                                    <span className="text-3xl sm:text-4xl font-black tracking-wide">
-                                        دفع
-                                    </span>
-                                    <span className="text-3xl sm:text-4xl font-number font-black">
-                                        {fmt(grandTotal)} د.ل
+                                    <CreditCard className="w-6 h-6 stroke-[2.2]" />
+                                    <span className="text-xl sm:text-2xl font-black tracking-wide">
+                                        إتمام الدفع
                                     </span>
                                 </button>
                             )}
