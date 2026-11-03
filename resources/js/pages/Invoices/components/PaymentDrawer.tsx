@@ -318,7 +318,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                 </div>
 
                 {/* Footer / Submit */}
-                <div className="px-5 py-3.5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] flex flex-col gap-2 shrink-0">
+                <div className="px-5 pt-3.5 pb-5 sm:pb-6 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] flex flex-col gap-2.5 shrink-0">
                     {isCashCustomer && remaining > 0.01 && (
                         <div className="px-3.5 py-2 rounded-[2px] bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 font-bold text-xs text-center">
                             ⚠️ زبون نقدي — يجب سداد المبلغ المتبقي بالكامل ({fmt(remaining)} د.ل) قبل تأكيد البيع
@@ -329,7 +329,7 @@ export const PaymentDrawer: React.FC<PaymentDrawerProps> = ({
                         type="button"
                         onClick={submit}
                         disabled={processing || cart.length === 0 || (isCashCustomer && remaining > 0.01)}
-                        className="h-14 sm:h-15 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base sm:text-lg w-full flex items-center justify-between px-6 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
+                        className="h-14 sm:h-15 mb-2 sm:mb-3 rounded-[2px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base sm:text-lg w-full flex items-center justify-between px-6 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
                     >
                         <div className="flex items-center gap-2.5">
                             {processing ? (

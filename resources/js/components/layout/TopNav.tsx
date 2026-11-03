@@ -93,7 +93,7 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
   const selectedPaymentName = globalPaymentMethods.find((m: any) => String(m.id) === defaultPaymentId)?.name || 'افتراضي';
 
   return (
-    <header className="h-12 px-3 md:px-4 rounded-[6px] bg-white dark:bg-[#0e1726] border border-slate-200/90 dark:border-[#1c2c40] flex items-center justify-between shrink-0 mb-4 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-colors z-30 select-none">
+    <header className="h-12 px-3 md:px-4 rounded-[6px] bg-white dark:bg-[#0e1726] border border-slate-200/90 dark:border-[#1c2c40] flex items-center justify-between shrink-0 mb-2.5 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-colors z-30 select-none">
       
       {/* الطرف الأيمن: عنوان الصفحة ووسم محطة العمل المكتبي */}
       <div className="flex items-center gap-2">

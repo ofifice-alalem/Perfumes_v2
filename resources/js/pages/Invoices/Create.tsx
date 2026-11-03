@@ -1039,7 +1039,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 )}
 
                 {/* Desktop Layout */}
-                <div className="hidden lg:flex flex-row gap-0 flex-1 min-h-0 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421] mt-2">
+                <div className="hidden lg:flex flex-row gap-0 flex-1 min-h-0 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421] mt-0.5">
 
                     {/* ══ LEFT PANEL ══ */}
                     <div className="flex-1 flex flex-col overflow-hidden border-r border-slate-200/90 dark:border-[#1d2d42]">
@@ -1151,7 +1151,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 >
                                     <div className="flex items-center gap-2.5">
                                         <Wallet className="w-5 h-5" />
-                                        <span className="text-sm sm:text-base">{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
+                                        <span className="text-base sm:text-lg font-black tracking-wide">دفع</span>
                                     </div>
                                     <div className="flex items-center gap-3.5">
                                         <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-[2px]">
