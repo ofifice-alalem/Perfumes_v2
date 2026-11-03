@@ -117,43 +117,87 @@
   }
 
   .body-bg-light {
-    background: #edf2f7 !important;
-    background-size: cover !important;
-    background-attachment: fixed !important;
+    background-color: #f1f5f9 !important;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* تدرجات إضاءة محيطية رقيقة للوضع الفاتح تعطي انطباع الفخامة والمظهر المكتبي المصقول */
+  .body-bg-light::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: 
+      radial-gradient(ellipse 90% 50% at 50% -5%, rgba(26, 159, 255, 0.05), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(226, 232, 240, 0.6), transparent 60%),
+      linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+  }
+
+  .body-bg-light::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: linear-gradient(90deg, transparent, rgba(26, 159, 255, 0.4), transparent);
+    pointer-events: none;
+    z-index: 99;
   }
 
   .spatial-window {
-    @apply border-0 md:border border-slate-300 dark:border-[#1d2d42] transition-colors duration-300 h-full relative z-10;
-    background: #edf2f7;
+    @apply border-0 md:border border-slate-200 dark:border-[#1d2d42] transition-colors duration-300 h-full relative z-10;
+    background: #f1f5f9;
   }
   .dark .spatial-window {
     background: #0d1728;
   }
 
   .spatial-card {
-    @apply rounded-[3px] border border-slate-300 dark:border-[#1f3047] hover:border-slate-400 dark:hover:border-[#2b4464] transition-all duration-200;
+    @apply rounded-[6px] border border-slate-200/90 dark:border-[#1c2c40] transition-all duration-200;
     background: #ffffff;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
   }
   .spatial-card.transparent {
     background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
   }
   .spatial-card:hover {
-    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
   }
   .dark .spatial-card {
-    background: #121c2d;
+    background: #111a28;
+    border-color: #1c2b3e;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
   }
   .dark .spatial-card:hover {
-    background: #162438;
+    background: #142032;
+    border-color: #263a53;
   }
 
   .spatial-input {
-    @apply border border-slate-300 dark:border-[#22354c] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#67829f] transition-all duration-150 outline-none rounded-[3px];
+    @apply border border-slate-200 dark:border-[#22354c] text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-[#67829f] transition-all duration-150 outline-none rounded-[5px];
     background: #f8fafc;
   }
   .spatial-input:focus {
     border-color: var(--brand-primary, #1a9fff) !important;
     box-shadow: 0 0 0 1px var(--brand-primary, #1a9fff) !important;
+    background: #ffffff;
+  }
+
+  /* صنف مخصص للأرقام والمبالغ المالية لضمان تناسق الخط والوضوح المالي العالي */
+  .font-number {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Tajawal", sans-serif;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.015em;
   }
   .dark .spatial-input {
     background: #0b1320;
@@ -292,13 +336,17 @@ input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   padding: 0;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 4px; }
+/* Custom Scrollbar - sharp industrial / desktop styling, no bright blue curved capsule */
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(217, 100%, 50%); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(217, 100%, 40%); border-radius: 9999px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 0px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
+
+.dark ::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.5); border-radius: 0px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(71, 85, 105, 0.8); }
 
 .custom-scroll::-webkit-scrollbar { width: 4px; }
 .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-.custom-scroll::-webkit-scrollbar-thumb { background: hsl(var(--primary)); border-radius: 9999px; }
-.custom-scroll::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.7); border-radius: 9999px; }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.35); border-radius: 0px; }
+.custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.6); }
+.dark .custom-scroll::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.5); border-radius: 0px; }

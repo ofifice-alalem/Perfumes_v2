@@ -115,8 +115,8 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
   };
 
   return (
-    <div className="h-[100dvh] w-screen flex flex-col overflow-hidden font-['Tajawal'] select-none bg-[#edf2f7] dark:bg-[#0a0e14] text-slate-800 dark:text-white transition-colors duration-200" dir="rtl">
-      <div className="w-full h-full flex relative overflow-hidden bg-[#edf2f7] dark:bg-[#0a0e14]">
+    <div className="h-[100dvh] w-screen flex flex-col overflow-hidden font-['Tajawal'] select-none bg-slate-100/80 dark:bg-[#0a121e] text-slate-800 dark:text-white transition-colors duration-200" dir="rtl">
+      <div className="w-full h-full flex relative overflow-hidden bg-transparent">
 
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] lg:hidden animate-in fade-in duration-200"
