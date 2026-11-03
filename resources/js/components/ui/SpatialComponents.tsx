@@ -1054,7 +1054,7 @@ export function Pagination({
 
         if (isDisabled) {
             return (
-                <span className="h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed text-center shrink-0">
+                <span className="h-10 sm:h-11 px-4 sm:px-5 rounded-[2px] font-bold text-xs sm:text-sm flex items-center justify-center text-slate-300 dark:text-slate-600 bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/[0.05] cursor-not-allowed text-center shrink-0">
                     {text}
                 </span>
             );
@@ -1065,7 +1065,7 @@ export function Pagination({
                 <button
                     type="button"
                     onClick={() => onPageChange(targetPage)}
-                    className="spatial-input h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center transition-all shadow-md active:scale-95 border-2 bg-primary/10 text-primary border-primary/30 hover:bg-primary hover:text-white hover:border-primary text-center shrink-0"
+                    className="h-10 sm:h-11 px-4 sm:px-5 rounded-[2px] font-bold text-xs sm:text-sm flex items-center justify-center transition-colors shadow-2xs border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-700 dark:text-slate-200 hover:border-brand hover:text-brand text-center shrink-0 cursor-pointer"
                 >
                     {text}
                 </button>
@@ -1074,7 +1074,7 @@ export function Pagination({
 
         if (!link || !link.url) {
             return (
-                <span className="h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed text-center shrink-0">
+                <span className="h-10 sm:h-11 px-4 sm:px-5 rounded-[2px] font-bold text-xs sm:text-sm flex items-center justify-center text-slate-300 dark:text-slate-600 bg-slate-100/50 dark:bg-white/[0.02] border border-slate-200/50 dark:border-white/[0.05] cursor-not-allowed text-center shrink-0">
                     {text}
                 </span>
             );
@@ -1083,7 +1083,7 @@ export function Pagination({
         return (
             <Link
                 href={link.url}
-                className="spatial-input h-16 sm:h-20 px-5 sm:px-8 rounded-[22px] font-black text-lg sm:text-2xl flex items-center justify-center transition-all shadow-md active:scale-95 border-2 bg-primary/10 text-primary border-primary/30 hover:bg-primary hover:text-white hover:border-primary text-center shrink-0"
+                className="h-10 sm:h-11 px-4 sm:px-5 rounded-[2px] font-bold text-xs sm:text-sm flex items-center justify-center transition-colors shadow-2xs border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-700 dark:text-slate-200 hover:border-brand hover:text-brand text-center shrink-0 cursor-pointer"
             >
                 {text}
             </Link>
@@ -1091,14 +1091,12 @@ export function Pagination({
     };
 
     return (
-        <div className="flex flex-col items-center gap-5 pt-6 select-none w-full max-w-full overflow-hidden dir-rtl">
-            {/* Top Row: Previous (Right) | Exactly 10 Page Numbers (Scrollable container) | Next (Left) */}
-            <div className="flex items-center justify-between gap-2.5 sm:gap-4 w-full max-w-full">
-                {/* Previous Button (Start of Line - RTL Right) */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3.5 py-2 select-none w-full dir-rtl mb-4 sm:mb-6">
+            {/* أزرار الصفحات والتنقل */}
+            <div className="flex items-center gap-2 overflow-x-auto max-w-full">
                 {renderNavBtn(prevLink, true)}
 
-                {/* Exactly Max 10 Page Numbers */}
-                <div className="flex items-center justify-start sm:justify-center gap-2.5 overflow-x-auto overflow-y-hidden max-w-full flex-1 min-w-0 py-1.5 px-1 scrollbar-thin">
+                <div className="flex items-center gap-1.5 overflow-x-auto">
                     {max10PageLinks.map((link, i) => {
                         const label = formatLabel(link.label);
                         const pageNum = link.page ?? parseInt(label);
@@ -1107,7 +1105,7 @@ export function Pagination({
                             return (
                                 <span
                                     key={i}
-                                    className="h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center bg-primary text-white shadow-xl border-2 border-primary shrink-0"
+                                    className="h-10 sm:h-11 min-w-[40px] sm:min-w-[44px] px-3 rounded-[2px] font-number font-black text-sm sm:text-base flex items-center justify-center bg-brand text-white border border-brand shrink-0 shadow-xs"
                                 >
                                     {label}
                                 </span>
@@ -1120,7 +1118,7 @@ export function Pagination({
                                     key={i}
                                     type="button"
                                     onClick={() => onPageChange(pageNum)}
-                                    className="spatial-input h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-800 dark:text-white hover:border-primary/40 transition-all shadow-md active:scale-95 border-2 shrink-0"
+                                    className="h-10 sm:h-11 min-w-[40px] sm:min-w-[44px] px-3 rounded-[2px] font-number font-bold text-sm sm:text-base flex items-center justify-center text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] hover:border-brand hover:text-brand transition-colors shadow-2xs shrink-0 cursor-pointer"
                                 >
                                     {label}
                                 </button>
@@ -1131,7 +1129,7 @@ export function Pagination({
                             return (
                                 <span
                                     key={i}
-                                    className="h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-300 dark:text-white/20 bg-black/5 dark:bg-white/5 border-2 border-black/5 dark:border-white/5 cursor-not-allowed shrink-0"
+                                    className="h-10 sm:h-11 min-w-[40px] sm:min-w-[44px] px-3 rounded-[2px] font-number font-bold text-sm sm:text-base flex items-center justify-center text-slate-300 dark:text-slate-600 border border-slate-200/50 dark:border-white/[0.05] bg-slate-100/50 dark:bg-white/[0.02] cursor-not-allowed shrink-0"
                                 >
                                     {label}
                                 </span>
@@ -1142,7 +1140,7 @@ export function Pagination({
                             <Link
                                 key={i}
                                 href={link.url}
-                                className="spatial-input h-16 sm:h-20 min-w-[60px] sm:min-w-[72px] px-3.5 rounded-[22px] font-black text-xl sm:text-2xl flex items-center justify-center text-slate-800 dark:text-white hover:border-primary/40 transition-all shadow-md active:scale-95 border-2 shrink-0"
+                                className="h-10 sm:h-11 min-w-[40px] sm:min-w-[44px] px-3 rounded-[2px] font-number font-bold text-sm sm:text-base flex items-center justify-center text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] hover:border-brand hover:text-brand transition-colors shadow-2xs shrink-0 cursor-pointer"
                             >
                                 {label}
                             </Link>
@@ -1150,21 +1148,18 @@ export function Pagination({
                     })}
                 </div>
 
-                {/* Next Button (End of Line - RTL Left) */}
                 {renderNavBtn(nextLink, false)}
             </div>
 
-            {/* Bottom Row: Quick Page Jump Input */}
-            <div className="flex items-center justify-center gap-3 w-full pt-1">
-                <button
-                    type="button"
-                    onClick={() => setShowJumpPad(true)}
-                    className="spatial-input h-16 sm:h-20 rounded-[22px] px-6 text-base sm:text-xl font-black text-slate-800 dark:text-white hover:border-primary/50 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-3 border-2 border-primary/20 bg-primary/5 dark:bg-white/5 max-w-md w-full"
-                >
-                    <span className="text-primary text-xl sm:text-2xl">⚡</span>
-                    <span>الانتقال السريع للصفحة: <strong className="text-primary font-black dir-ltr inline-block">({curPage} من {maxPage})</strong></span>
-                </button>
-            </div>
+            {/* زر الانتقال السريع للصفحة بنمط Workstation المطور */}
+            <button
+                type="button"
+                onClick={() => setShowJumpPad(true)}
+                className="h-10 sm:h-11 px-4 sm:px-5 rounded-[2px] text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] hover:border-brand hover:text-brand transition-colors shadow-2xs flex items-center gap-2.5 shrink-0 cursor-pointer"
+            >
+                <span className="text-brand text-sm sm:text-base">⚡</span>
+                <span>الانتقال السريع: <span className="font-number font-black text-brand dir-ltr inline-block">({curPage} / {maxPage})</span></span>
+            </button>
 
             <NumberPadModal
                 isOpen={showJumpPad}

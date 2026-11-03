@@ -486,7 +486,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
 
     return (
         <AppShell pageTitle="فواتير البيع">
-            <div className="flex flex-col gap-3.5 pb-20 lg:pb-0">
+            <div className="flex flex-col gap-3.5 pb-24 sm:pb-36 mb-8 sm:mb-12">
 
                 {/* ── الترويسة الرئيسية مع زر الإجراء السريع ── */}
                 <div className="flex items-center justify-between gap-3 border-b border-slate-200/90 dark:border-[#1d2d42] pb-3">
@@ -612,14 +612,12 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                             <th className="px-3 py-2.5 text-left font-mono">الإجمالي</th>
                                             <th className="px-3 py-2.5 text-left font-mono">المدفوع</th>
                                             <th className="px-3 py-2.5 text-left font-mono">المتبقي</th>
-                                            <th className="px-3 py-2.5 text-center">الحالة</th>
                                             <th className="px-3 py-2.5 text-center font-mono">التاريخ</th>
                                             <th className="px-3 py-2.5 text-center w-28">الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200/70 dark:divide-[#162335]">
                                         {displayInvoices.map(inv => {
-                                            const status = inv.payment_status || (parseFloat(inv.due_amount) === 0 ? 'paid' : parseFloat(inv.paid_amount) > 0 ? 'partial' : 'unpaid');
                                             return (
                                                 <tr 
                                                     key={inv.id} 
@@ -644,11 +642,6 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                     </td>
                                                     <td className="px-3 py-2.5 text-left font-number font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
                                                         {fmt(inv.due_amount)} <span className="text-[10px] font-bold text-slate-400">د.ل</span>
-                                                    </td>
-                                                    <td className="px-3 py-2.5 text-center">
-                                                        <span className={`inline-block px-2 py-0.5 rounded-[2px] text-[10px] font-bold ${statusClass[status] || statusClass.unpaid}`}>
-                                                            {statusLabel[status] || '—'}
-                                                        </span>
                                                     </td>
                                                     <td className="px-3 py-2.5 text-center font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                                         {fmtDate(inv.created_at)}
@@ -770,7 +763,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                             </div>
 
                             {/* الترقيم والتنقل بين الصفحات */}
-                            <div className="px-3 py-2.5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421]">
+                            <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421] w-full">
                                 <Pagination links={invoices.links} currentPage={invoices.current_page} lastPage={invoices.last_page} />
                             </div>
                         </>
