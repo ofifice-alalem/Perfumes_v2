@@ -99,7 +99,7 @@ export const Cart: React.FC<CartProps> = ({
             {/* Desktop Workstation Table View */}
             <div className="hidden lg:block rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421]">
                 {/* Header */}
-                <div className="grid grid-cols-[56px_1fr_80px_90px_100px_44px] gap-2 px-3 py-2.5 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
+                <div className="grid grid-cols-[56px_1fr_80px_90px_100px_60px] gap-2 px-3 py-2.5 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
                     <span className="text-center">العدد</span>
                     <span>المنتج والصنف</span>
                     <span className="text-center">الحجم</span>
@@ -120,7 +120,7 @@ export const Cart: React.FC<CartProps> = ({
                         return (
                             <div
                                 key={idx}
-                                className="grid grid-cols-[56px_1fr_80px_90px_100px_44px] gap-2 px-3 py-2.5 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
+                                className="grid grid-cols-[56px_1fr_80px_90px_100px_60px] gap-2 px-3 py-2.5 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
                             >
                                 {/* Count - Clickable to edit via keypad */}
                                 <div className="flex items-center justify-center">
@@ -199,15 +199,15 @@ export const Cart: React.FC<CartProps> = ({
                                     </span>
                                 </div>
 
-                                {/* Delete Action */}
+                                {/* Delete Action - Enlarged and easily clickable */}
                                 <div className="flex items-center justify-center">
                                     <button
                                         type="button"
                                         onClick={() => removeGroup(g.indices)}
                                         title="حذف الصنف من السلة"
-                                        className="w-7 h-7 rounded-[2px] border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
+                                        className="w-10 h-10 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
@@ -243,9 +243,9 @@ export const Cart: React.FC<CartProps> = ({
                                     type="button"
                                     onClick={() => removeGroup(g.indices)}
                                     title="حذف"
-                                    className="w-7 h-7 rounded-[2px] border border-rose-500/25 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                                    className="w-9 h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-4.5 h-4.5" />
                                 </button>
                             </div>
 

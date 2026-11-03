@@ -392,135 +392,131 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-stretch sm:items-end">
                 
                 {/* Product Dropdown Container */}
-                <div className="flex items-center gap-1.5 flex-1 min-w-0" ref={dropdownRef}>
-                    <div className="flex-1 min-w-0 relative">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">
-                            اختر المنتج أو امسح الباركود
-                        </label>
-                        <button
-                            type="button"
-                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                            className={`h-11 sm:h-12 w-full px-3.5 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
-                                isDropdownOpen
-                                    ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
-                                    : selectedProduct
-                                        ? 'border-slate-300 dark:border-[#22354e] bg-white dark:bg-[#0c1421] text-slate-900 dark:text-white'
-                                        : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-400 hover:border-slate-300 dark:hover:border-[#283e58]'
-                            }`}
-                        >
-                            <span className="truncate">
-                                {selectedProduct ? selectedProduct.name : 'ابحث أو اختر المنتج...'}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0 mr-1.5">
-                                {selectedProduct && (
+                <div className="flex-1 min-w-0 relative" ref={dropdownRef}>
+                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">
+                        اختر المنتج أو امسح الباركود
+                    </label>
+                    <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className={`h-11 sm:h-12 w-full px-3 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                            isDropdownOpen
+                                ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
+                                : selectedProduct
+                                    ? 'border-slate-300 dark:border-[#22354e] bg-white dark:bg-[#0c1421] text-slate-900 dark:text-white'
+                                    : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-400 hover:border-slate-300 dark:hover:border-[#283e58]'
+                        }`}
+                    >
+                        <span className="truncate">
+                            {selectedProduct ? selectedProduct.name : 'ابحث أو اختر المنتج...'}
+                        </span>
+                        <div className="flex items-center gap-2 shrink-0 mr-1.5">
+                            {selectedProduct && (
+                                <>
                                     <span className="text-[11px] font-number font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-2 py-0.5 rounded-[2px]">
                                         {getProductDisplayPrice(selectedProduct, isVip)}
                                     </span>
-                                )}
-                                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-brand' : ''}`} />
-                            </div>
-                        </button>
-
-                        {/* Search Dropdown Menu */}
-                        {isDropdownOpen && (
-                            <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden animate-in fade-in duration-100 min-w-[280px]">
-                                {/* Search input inside dropdown */}
-                                <div className="p-2 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/80 dark:bg-[#09111c] flex items-center gap-2">
-                                    <Search className="w-4 h-4 text-slate-400 shrink-0" />
-                                    <input
-                                        ref={searchInputRef}
-                                        type="text"
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        placeholder="اكتب اسم المنتج أو الصنف أو امسح الباركود..."
-                                        className="w-full bg-transparent border-none text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter' && filteredProducts.length > 0) {
-                                                const p = filteredProducts[0];
-                                                setSelProduct(String(p.id));
-                                                setSelSaleType(''); setSelSize(''); setSelQty('1');
-                                                setSelUnitPrice(''); setSelMinPrice(0);
-                                                setIsDropdownOpen(false);
-                                            }
+                                    <span
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            resetSelection();
                                         }}
-                                    />
-                                    {searchQuery && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setSearchQuery('')}
-                                            className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                        </button>
-                                    )}
-                                </div>
+                                        title="إلغاء اختيار المنتج"
+                                        className="h-6 w-6 rounded-[2px] bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 border border-rose-500/25 flex items-center justify-center transition-colors cursor-pointer"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </span>
+                                </>
+                            )}
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-brand' : ''}`} />
+                        </div>
+                    </button>
 
-                                {/* Results list */}
-                                <ul className="max-h-72 overflow-y-auto p-2 flex flex-col gap-1.5">
-                                    {filteredProducts.length === 0 ? (
-                                        <li className="px-4 py-4 text-center text-xs font-semibold text-slate-400">
-                                            لا توجد منتجات مطابقة للبحث
-                                        </li>
-                                    ) : (
-                                        filteredProducts.map(p => {
-                                            const isSelected = p.id === +selProduct;
-                                            const priceStr = getProductDisplayPrice(p, isVip);
-                                            return (
-                                                <li
-                                                    key={p.id}
-                                                    onClick={() => {
-                                                        setSelProduct(String(p.id));
-                                                        setSelSaleType(''); setSelSize(''); setSelQty('1');
-                                                        setSelUnitPrice(''); setSelMinPrice(0);
-                                                        setIsDropdownOpen(false);
-                                                    }}
-                                                    className={`px-3 py-2.5 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between transition-all border ${
-                                                        isSelected
-                                                            ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 dark:border-sky-500/25 shadow-2xs'
-                                                            : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#253952]'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                                                        <span className="text-xs sm:text-sm font-bold truncate text-slate-900 dark:text-white">
-                                                            {p.name}
-                                                        </span>
-                                                        {p.category?.name && (
-                                                            <span className="text-[10px] px-1.5 py-0.5 rounded-[2px] bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
-                                                                {p.category.name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-3 shrink-0 mr-2">
-                                                        {priceStr && (
-                                                            <span className="text-xs font-number font-bold text-sky-600 dark:text-sky-400">
-                                                                {priceStr}
-                                                            </span>
-                                                        )}
-                                                        <span className="text-[11px] font-number text-slate-400 dark:text-slate-500">
-                                                            المخزون: {p.stock}
-                                                        </span>
-                                                        {isSelected && <Check className="w-4 h-4 text-brand" />}
-                                                    </div>
-                                                </li>
-                                            );
-                                        })
-                                    )}
-                                </ul>
+                    {/* Search Dropdown Menu */}
+                    {isDropdownOpen && (
+                        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden animate-in fade-in duration-100 min-w-[280px]">
+                            {/* Search input inside dropdown */}
+                            <div className="p-2 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/80 dark:bg-[#09111c] flex items-center gap-2">
+                                <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="اكتب اسم المنتج أو الصنف أو امسح الباركود..."
+                                    className="w-full bg-transparent border-none text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && filteredProducts.length > 0) {
+                                            const p = filteredProducts[0];
+                                            setSelProduct(String(p.id));
+                                            setSelSaleType(''); setSelSize(''); setSelQty('1');
+                                            setSelUnitPrice(''); setSelMinPrice(0);
+                                            setIsDropdownOpen(false);
+                                        }
+                                    }}
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-white p-0.5 cursor-pointer"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Quick reset button */}
-                    {selectedProduct && (
-                        <div className="flex flex-col justify-end">
-                            <button
-                                type="button"
-                                onClick={resetSelection}
-                                title="إلغاء الاختيار وتفريغ الحقول"
-                                className="h-11 sm:h-12 w-11 sm:w-12 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            {/* Results list */}
+                            <ul className="max-h-72 overflow-y-auto p-2 flex flex-col gap-1.5">
+                                {filteredProducts.length === 0 ? (
+                                    <li className="px-4 py-4 text-center text-xs font-semibold text-slate-400">
+                                        لا توجد منتجات مطابقة للبحث
+                                    </li>
+                                ) : (
+                                    filteredProducts.map(p => {
+                                        const isSelected = p.id === +selProduct;
+                                        const priceStr = getProductDisplayPrice(p, isVip);
+                                        return (
+                                            <li
+                                                key={p.id}
+                                                onClick={() => {
+                                                    setSelProduct(String(p.id));
+                                                    setSelSaleType(''); setSelSize(''); setSelQty('1');
+                                                    setSelUnitPrice(''); setSelMinPrice(0);
+                                                    setIsDropdownOpen(false);
+                                                }}
+                                                className={`px-3 py-2.5 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between transition-all border ${
+                                                    isSelected
+                                                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 dark:border-sky-500/25 shadow-2xs'
+                                                        : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#253952]'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                    <span className="text-xs sm:text-sm font-bold truncate text-slate-900 dark:text-white">
+                                                        {p.name}
+                                                    </span>
+                                                    {p.category?.name && (
+                                                        <span className="text-[10px] px-1.5 py-0.5 rounded-[2px] bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                                                            {p.category.name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-3 shrink-0 mr-2">
+                                                    {priceStr && (
+                                                        <span className="text-xs font-number font-bold text-sky-600 dark:text-sky-400">
+                                                            {priceStr}
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[11px] font-number text-slate-400 dark:text-slate-500">
+                                                        المخزون: {p.stock}
+                                                    </span>
+                                                    {isSelected && <Check className="w-4 h-4 text-brand" />}
+                                                </div>
+                                            </li>
+                                        );
+                                    })
+                                )}
+                            </ul>
                         </div>
                     )}
                 </div>
@@ -563,7 +559,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
             {/* Row 2: Sizes (if needed) */}
             {needsSize && selectedProduct && (
-                <div className="w-full">
+                <div className="w-full p-3 sm:p-4 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42]">
                     <SizeSelect
                         sizes={sizes}
                         selectedSizeId={selSize}

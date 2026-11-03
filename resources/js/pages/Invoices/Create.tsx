@@ -1039,7 +1039,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                 )}
 
                 {/* Desktop Layout */}
-                <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
+                <div className="hidden lg:flex flex-row gap-0 flex-1 min-h-0 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421] mt-2">
 
                     {/* ══ LEFT PANEL ══ */}
                     <div className="flex-1 flex flex-col overflow-hidden border-r border-slate-200/90 dark:border-[#1d2d42]">
@@ -1112,7 +1112,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         <div className="px-4 py-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-2.5">
                             <Link
                                 href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                className="h-11 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors shrink-0"
+                                className="h-12 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors shrink-0"
                             >
                                 <X className="w-4 h-4" />
                                 <span>إلغاء</span>
@@ -1122,7 +1122,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     type="button"
                                     onClick={clearForm}
                                     disabled={cart.length === 0}
-                                    className="h-11 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                                    className="h-12 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     <span>مسح الفاتورة</span>
@@ -1132,17 +1132,17 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                 type="button"
                                 onClick={() => setShowPaymentDrawer(true)}
                                 disabled={cart.length === 0}
-                                className="flex-1 h-11 flex items-center justify-between px-5 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                className="flex-1 h-12 flex items-center justify-between px-5 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
                                 <div className="flex items-center gap-2">
-                                    <Wallet className="w-4 h-4" />
+                                    <Wallet className="w-4.5 h-4.5" />
                                     <span>{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[11px] font-bold bg-white/20 px-2 py-0.5 rounded-[2px]">
+                                    <span className="text-[11px] font-bold bg-white/20 px-2.5 py-0.5 rounded-[2px]">
                                         {cart.length} أصناف
                                     </span>
-                                    <span className="text-sm sm:text-base font-number font-black">
+                                    <span className="text-base sm:text-lg font-number font-black">
                                         {grandTotal.toFixed(2)} د.ل
                                     </span>
                                     <ChevronUp className="w-4 h-4" />
@@ -1232,12 +1232,12 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         </div>
 
                         {/* Action Bar: Hold Invoice + Recent Invoices Quick Print */}
-                        <div className="p-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex gap-2">
+                        <div className="px-4 py-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex gap-2.5">
                             {!isEditMode && cart.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={holdCurrentInvoice}
-                                    className="flex-1 h-10 px-3 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                                    className="flex-1 h-12 px-3 rounded-[2px] border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                                 >
                                     <Pause className="w-4 h-4" />
                                     <span>تعليق الفاتورة</span>
@@ -1246,7 +1246,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                             <button
                                 type="button"
                                 onClick={() => setShowRecentDrawer(true)}
-                                className="flex-1 h-10 px-3 rounded-[2px] border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                                className="flex-1 h-12 px-3 rounded-[2px] border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                             >
                                 <History className="w-4 h-4" />
                                 <span>آخر 4 فواتير</span>

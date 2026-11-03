@@ -59,8 +59,8 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
       <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
         اختر الحجم
       </span>
-      {/* Workstation Size Selector Buttons */}
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+      {/* Responsive Workstation Grid with balanced spacing */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-7 gap-2">
         {availableSizes.map(size => {
           const price = getPrice(size);
           const isTier = product?.selling_type === 'tier_based';
@@ -72,17 +72,17 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
               key={size.id}
               type="button"
               onClick={() => handleSelect(String(size.id), size)}
-              className={`flex items-center justify-between px-3.5 h-12 rounded-[2px] border transition-all cursor-pointer select-none sm:flex-col sm:justify-center sm:px-5 sm:h-13 sm:min-w-[95px] ${
+              className={`flex flex-col items-center justify-center p-2 h-14 rounded-[2px] border transition-all cursor-pointer select-none ${
                 isSelected
                   ? 'border-brand bg-brand text-white shadow-xs'
-                  : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-[#2a3e59] hover:bg-slate-50 dark:hover:bg-[#121c2c]'
+                  : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 hover:border-brand/60 hover:bg-slate-50 dark:hover:bg-[#121c2c]'
               }`}
             >
-              <span className="font-bold text-xs sm:text-sm leading-tight">
+              <span className="font-bold text-xs sm:text-sm leading-tight text-center truncate w-full">
                 {size.label}
               </span>
               <span
-                className={`text-[11px] sm:text-xs font-number font-bold sm:mt-0.5 ${
+                className={`text-[11px] font-number font-bold mt-0.5 text-center truncate w-full ${
                   isSelected ? 'text-white/90' : 'text-sky-600 dark:text-sky-400'
                 }`}
               >
