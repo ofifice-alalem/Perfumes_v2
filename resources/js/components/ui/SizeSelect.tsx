@@ -57,10 +57,10 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
       <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
-        اختر الحجم
+        اختر الحجم (معروض بالسعر الكامل)
       </span>
-      {/* Responsive Workstation Grid with balanced spacing */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-7 gap-2">
+      {/* Responsive Workstation Grid with full size & price display without any truncation */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
         {availableSizes.map(size => {
           const price = getPrice(size);
           const isTier = product?.selling_type === 'tier_based';
@@ -72,18 +72,18 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
               key={size.id}
               type="button"
               onClick={() => handleSelect(String(size.id), size)}
-              className={`flex flex-col items-center justify-center p-2 h-14 rounded-[2px] border transition-all cursor-pointer select-none ${
+              className={`flex flex-col items-center justify-center px-3 py-2.5 h-16 rounded-[2px] border transition-all cursor-pointer select-none ${
                 isSelected
                   ? 'border-brand bg-brand text-white shadow-xs'
                   : 'border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 hover:border-brand/60 hover:bg-slate-50 dark:hover:bg-[#121c2c]'
               }`}
             >
-              <span className="font-bold text-xs sm:text-sm leading-tight text-center truncate w-full">
+              <span className="font-bold text-xs sm:text-sm leading-tight text-center whitespace-nowrap">
                 {size.label}
               </span>
               <span
-                className={`text-[11px] font-number font-bold mt-0.5 text-center truncate w-full ${
-                  isSelected ? 'text-white/90' : 'text-sky-600 dark:text-sky-400'
+                className={`text-xs font-number font-bold mt-1 text-center whitespace-nowrap ${
+                  isSelected ? 'text-white/95' : 'text-sky-600 dark:text-sky-400'
                 }`}
               >
                 {displayPrice > 0 ? `${displayPrice.toFixed(2)} د.ل` : '—'}

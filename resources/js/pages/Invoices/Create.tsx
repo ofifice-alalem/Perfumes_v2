@@ -1112,7 +1112,7 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                         <div className="px-4 py-3 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-stretch gap-2.5">
                             <Link
                                 href={isEditMode ? `/invoices/${editInvoice!.id}` : '/invoices'}
-                                className="h-12 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors shrink-0"
+                                className="h-13 px-4 sm:px-5 flex items-center justify-center gap-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:bg-slate-100 text-slate-700 dark:text-slate-300 font-bold text-xs sm:text-sm transition-colors shrink-0 shadow-2xs"
                             >
                                 <X className="w-4 h-4" />
                                 <span>إلغاء</span>
@@ -1122,37 +1122,53 @@ export default function InvoicesCreate({ customers, products, sizes, paymentMeth
                                     type="button"
                                     onClick={clearForm}
                                     disabled={cart.length === 0}
-                                    className="h-12 px-4 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                                    className="h-13 px-4 sm:px-5 flex items-center justify-center gap-1.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm transition-colors shrink-0 disabled:opacity-40 disabled:pointer-events-none cursor-pointer shadow-2xs"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                     <span>مسح الفاتورة</span>
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                onClick={() => setShowPaymentDrawer(true)}
-                                disabled={cart.length === 0}
-                                className="flex-1 h-12 flex items-center justify-between px-5 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Wallet className="w-4.5 h-4.5" />
-                                    <span>{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
+                            {cart.length === 0 ? (
+                                <div className="flex-1 h-13 flex items-center justify-between px-5 rounded-[2px] bg-slate-100/90 dark:bg-[#101a29] border border-slate-200/90 dark:border-[#1d2d42] text-slate-400 dark:text-slate-500 select-none shadow-2xs">
+                                    <div className="flex items-center gap-2.5">
+                                        <ShoppingCart className="w-4.5 h-4.5 text-slate-400 dark:text-slate-500" />
+                                        <span className="text-xs sm:text-sm font-bold">السلة فارغة — أضف أصنافاً للمتابعة والدفع</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-[2px] bg-slate-200/70 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300">
+                                            0 أصناف
+                                        </span>
+                                        <span className="text-sm sm:text-base font-number font-bold text-slate-400 dark:text-slate-500">
+                                            0.00 د.ل
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[11px] font-bold bg-white/20 px-2.5 py-0.5 rounded-[2px]">
-                                        {cart.length} أصناف
-                                    </span>
-                                    <span className="text-base sm:text-lg font-number font-black">
-                                        {grandTotal.toFixed(2)} د.ل
-                                    </span>
-                                    <ChevronUp className="w-4 h-4" />
-                                </div>
-                            </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPaymentDrawer(true)}
+                                    className="flex-1 h-13 flex items-center justify-between px-5 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm cursor-pointer shadow-md active:scale-[0.99] transition-all"
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <Wallet className="w-5 h-5" />
+                                        <span className="text-sm sm:text-base">{isEditMode ? 'تأكيد الفاتورة والسداد' : 'تأكيد الفاتورة والانتقال للدفع'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3.5">
+                                        <span className="text-xs font-bold bg-white/20 px-2.5 py-1 rounded-[2px]">
+                                            {cart.length} أصناف
+                                        </span>
+                                        <span className="text-base sm:text-lg font-number font-black">
+                                            {fmt(grandTotal)} د.ل
+                                        </span>
+                                        <ChevronLeft className="w-5 h-5" />
+                                    </div>
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {/* ══ RIGHT PANEL ══ */}
-                    <div className="w-full lg:w-[480px] xl:w-[520px] flex flex-col overflow-hidden bg-white dark:bg-[#0c1421] shrink-0 border-r border-slate-200/90 dark:border-[#1d2d42]">
+                    {/* ══ RIGHT PANEL (Cart & Customer) ══ */}
+                    <div className="w-full lg:w-[460px] xl:w-[480px] 2xl:w-[500px] flex flex-col overflow-hidden bg-white dark:bg-[#0c1421] shrink-0 border-r border-slate-200/90 dark:border-[#1d2d42]">
 
                         {/* Customer bar */}
                         <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex flex-col gap-2">

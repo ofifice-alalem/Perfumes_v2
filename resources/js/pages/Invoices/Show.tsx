@@ -644,7 +644,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                 <div className="flex items-center justify-between border-b border-slate-200 dark:border-[#19273b] pb-2.5">
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">تسجيل دفعات جديدة</span>
-                                        <span className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-2 py-0.5 rounded-[2px]">
+                                        <span className="text-xs font-mono font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-2 py-0.5 rounded-[2px]">
                                             الحد الأقصى المتاح: {fmt(maxPayment)} د.ل
                                         </span>
                                     </div>
@@ -676,7 +676,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                 className="h-10 px-3 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-xs font-number font-bold text-slate-900 dark:text-white flex items-center justify-between cursor-pointer transition-colors"
                                             >
                                                 <span>{row.amount ? `${fmt(row.amount)} د.ل` : <span className="text-slate-400 font-sans font-normal">حدد المبلغ...</span>}</span>
-                                                <span className="text-[10px] text-sky-600 dark:text-sky-400 font-bold bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-1.5 py-0.5 rounded-[2px]">لوحة الأرقام</span>
+                                                <span className="text-[10px] text-sky-600 dark:text-sky-400 font-bold bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.5 rounded-[2px]">لوحة الأرقام</span>
                                             </button>
                                         </div>
 

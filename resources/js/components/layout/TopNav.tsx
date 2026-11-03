@@ -97,7 +97,7 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
       
       {/* الطرف الأيمن: عنوان الصفحة ووسم محطة العمل المكتبي */}
       <div className="flex items-center gap-2">
-        <span className="hidden sm:inline-block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase bg-sky-500/10 px-2 py-0.5 rounded-[2px] border border-sky-500/30 dark:border-sky-500/25">
+        <span className="hidden sm:inline-block text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase bg-sky-500/10 dark:bg-sky-950/40 px-2 py-0.5 rounded-[2px] border border-sky-200 dark:border-sky-800/60">
           محطة العمل
         </span>
         {pageTitle && (

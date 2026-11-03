@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
-import { Plus, X, AlertCircle, RefreshCw, ChevronDown, Search, Layers, Check } from 'lucide-react';
+import { Plus, X, AlertCircle, RefreshCw, ChevronDown, Search, Layers, Check, Trash2 } from 'lucide-react';
 
 export interface Category { id: number; name: string; unit: string; }
 export interface ProductPrice {
@@ -393,13 +393,15 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                 
                 {/* Product Dropdown Container */}
                 <div className="flex-1 min-w-0 relative" ref={dropdownRef}>
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1 block">
-                        اختر المنتج أو امسح الباركود
-                    </label>
+                    <div className="mb-1">
+                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                            اختر المنتج أو امسح الباركود
+                        </label>
+                    </div>
                     <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`h-11 sm:h-12 w-full px-3 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                        className={`h-11 sm:h-12 w-full px-3.5 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
                             isDropdownOpen
                                 ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
                                 : selectedProduct
@@ -412,21 +414,9 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                         </span>
                         <div className="flex items-center gap-2 shrink-0 mr-1.5">
                             {selectedProduct && (
-                                <>
-                                    <span className="text-[11px] font-number font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-2 py-0.5 rounded-[2px]">
-                                        {getProductDisplayPrice(selectedProduct, isVip)}
-                                    </span>
-                                    <span
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            resetSelection();
-                                        }}
-                                        title="إلغاء اختيار المنتج"
-                                        className="h-6 w-6 rounded-[2px] bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 border border-rose-500/25 flex items-center justify-center transition-colors cursor-pointer"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </span>
-                                </>
+                                <span className="text-[11px] font-number font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-300/40 dark:border-sky-800/60 dark:bg-sky-950/40 px-2 py-0.5 rounded-[2px]">
+                                    {getProductDisplayPrice(selectedProduct, isVip)}
+                                </span>
                             )}
                             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-brand' : ''}`} />
                         </div>
@@ -487,7 +477,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                                                 }}
                                                 className={`px-3 py-2.5 rounded-[2px] text-xs font-bold cursor-pointer flex items-center justify-between transition-all border ${
                                                     isSelected
-                                                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 dark:border-sky-500/25 shadow-2xs'
+                                                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-800/60 dark:bg-sky-950/40 shadow-2xs'
                                                         : 'bg-slate-50/50 dark:bg-[#09111c] text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-[#1a273b] hover:bg-slate-100 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#253952]'
                                                 }`}
                                             >
@@ -555,6 +545,24 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                         </button>
                     </div>
                 )}
+
+                {/* Dedicated Touchscreen Clear / Reset Button */}
+                {selectedProduct && (
+                    <div className="flex flex-col gap-1 shrink-0">
+                        <label className="text-[11px] font-bold text-transparent select-none hidden sm:block">
+                            تفريغ
+                        </label>
+                        <button
+                            type="button"
+                            onClick={resetSelection}
+                            title="تفريغ الصنف المختار والبدء من جديد"
+                            className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            <span>تفريغ</span>
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Row 2: Sizes (if needed) */}
@@ -600,7 +608,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                             }`}
                         >
                             <span>{selUnitPrice ? `${selUnitPrice} د.ل` : '0.00 د.ل'}</span>
-                            <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-1.5 py-0.5 rounded-[2px] font-sans font-bold">
+                            <span className="text-[10px] text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.5 rounded-[2px] font-sans font-bold">
                                 لوحة الأرقام
                             </span>
                         </button>

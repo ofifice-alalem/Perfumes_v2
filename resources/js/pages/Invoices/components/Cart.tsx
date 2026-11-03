@@ -99,7 +99,7 @@ export const Cart: React.FC<CartProps> = ({
             {/* Desktop Workstation Table View */}
             <div className="hidden lg:block rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421]">
                 {/* Header */}
-                <div className="grid grid-cols-[56px_1fr_80px_90px_100px_60px] gap-2 px-3 py-2.5 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
+                <div className="grid grid-cols-[48px_1fr_68px_74px_84px_46px] gap-2 px-3 py-2.5 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
                     <span className="text-center">العدد</span>
                     <span>المنتج والصنف</span>
                     <span className="text-center">الحجم</span>
@@ -120,7 +120,7 @@ export const Cart: React.FC<CartProps> = ({
                         return (
                             <div
                                 key={idx}
-                                className="grid grid-cols-[56px_1fr_80px_90px_100px_60px] gap-2 px-3 py-2.5 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
+                                className="grid grid-cols-[48px_1fr_68px_74px_84px_46px] gap-2 px-3 py-2 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
                             >
                                 {/* Count - Clickable to edit via keypad */}
                                 <div className="flex items-center justify-center">
@@ -153,7 +153,7 @@ export const Cart: React.FC<CartProps> = ({
                                                 });
                                             }, cartMax);
                                         }}
-                                        className="h-8 w-11 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand font-number font-bold text-xs text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors"
+                                        className="h-8.5 w-10.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand font-number font-bold text-xs text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors shadow-2xs"
                                         title="تعديل الكمية"
                                     >
                                         {displayCount}
@@ -161,11 +161,11 @@ export const Cart: React.FC<CartProps> = ({
                                 </div>
 
                                 {/* Product details */}
-                                <div className="min-w-0 flex flex-col justify-center">
-                                    <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                <div className="min-w-0 flex flex-col justify-center py-0.5">
+                                    <span className="font-bold text-slate-900 dark:text-white text-xs leading-tight">
                                         {g.product_name}
                                     </span>
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
                                         {saleTypeLabels[g.sale_type] ?? g.sale_type}
                                     </span>
                                 </div>
@@ -173,11 +173,11 @@ export const Cart: React.FC<CartProps> = ({
                                 {/* Size */}
                                 <div className="flex items-center justify-center">
                                     {g.size_label ? (
-                                        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-1.5 py-0.5 rounded-[2px]">
+                                        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-300/40 dark:border-sky-800/60 dark:bg-sky-950/40 px-1.5 py-0.5 rounded-[2px] truncate max-w-full">
                                             {g.size_label}
                                         </span>
                                     ) : g.sale_type === 'full_bottle' ? (
-                                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.5 rounded-[2px]">
+                                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.5 rounded-[2px] truncate max-w-full">
                                             {products.find(p => p.id === g.product_id)?.original_perfume_detail?.bottle_volume} مل
                                         </span>
                                     ) : (
@@ -205,9 +205,9 @@ export const Cart: React.FC<CartProps> = ({
                                         type="button"
                                         onClick={() => removeGroup(g.indices)}
                                         title="حذف الصنف من السلة"
-                                        className="w-10 h-10 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
+                                        className="w-9.5 h-9.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
                                     >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Trash2 className="w-4.5 h-4.5" />
                                     </button>
                                 </div>
                             </div>
@@ -286,7 +286,7 @@ export const Cart: React.FC<CartProps> = ({
                                 </button>
 
                                 {g.size_label && (
-                                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-1.5 py-0.5 rounded-[2px]">
+                                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.5 rounded-[2px]">
                                         {g.size_label}
                                     </span>
                                 )}
