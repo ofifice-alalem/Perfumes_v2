@@ -155,13 +155,13 @@ export const HoldInvoices: React.FC<HoldInvoicesProps> = ({
 
                 {/* Footer */}
                 {holdInvoices.length > 0 && (
-                    <div className="p-3 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
+                    <div className="p-3.5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
                         <button
                             type="button"
                             onClick={() => setHoldInvoices([])}
-                            className="w-full h-8.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                            className="w-full h-11 sm:h-12 rounded-[2px] border border-rose-500/35 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
                         >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                             <span>حذف جميع الفواتير المعلقة</span>
                         </button>
                     </div>

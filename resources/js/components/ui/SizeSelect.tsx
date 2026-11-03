@@ -56,9 +56,6 @@ export function SizeSelect({ sizes, selectedSizeId, onSizeSelect, onPriceResolve
 
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
-        اختر الحجم (معروض بالسعر الكامل)
-      </span>
       {/* Responsive Workstation Grid with full size & price display without any truncation */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
         {availableSizes.map(size => {

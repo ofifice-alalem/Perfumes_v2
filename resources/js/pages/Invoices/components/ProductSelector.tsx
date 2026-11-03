@@ -389,15 +389,10 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
     return (
         <div className="flex flex-col gap-2.5 sm:gap-3">
             {/* Row 1: Workstation Searchable Product Selector + Sale Type + Qty */}
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-stretch sm:items-end">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-stretch sm:items-center">
                 
                 {/* Product Dropdown Container */}
                 <div className="flex-1 min-w-0 relative" ref={dropdownRef}>
-                    <div className="mb-1">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            اختر المنتج أو امسح الباركود
-                        </label>
-                    </div>
                     <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -513,14 +508,11 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
                 {/* Sale type button for non-tier with multiple options */}
                 {selectedProduct && !isTier && saleTypeOptions().length > 1 && selSaleType && (
-                    <div className="flex flex-col gap-1 w-full sm:w-44 shrink-0">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            نوع البيع
-                        </label>
+                    <div className="w-full sm:w-44 shrink-0">
                         <button
                             type="button"
                             onClick={() => setShowSaleTypeModal(true)}
-                            className="h-11 sm:h-12 px-3.5 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] hover:border-brand text-xs sm:text-sm font-bold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer transition-colors"
+                            className="h-11 sm:h-12 w-full px-3.5 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] hover:border-brand text-xs sm:text-sm font-bold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer transition-colors"
                         >
                             <span className="truncate">
                                 {saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}
@@ -532,14 +524,12 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
                 {/* Qty / Count input */}
                 {selectedProduct && (isTier || selSaleType) && (
-                    <div className="flex flex-col gap-1 w-full sm:w-28 shrink-0">
-                        <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
-                            {needsQty ? 'الكمية' : 'العدد'}
-                        </label>
+                    <div className="w-full sm:w-28 shrink-0">
                         <button
                             type="button"
                             onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
-                            className="h-11 sm:h-12 px-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-sm sm:text-base font-number font-black text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors"
+                            className="h-11 sm:h-12 w-full px-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand text-sm sm:text-base font-number font-black text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors"
+                            title={needsQty ? 'الكمية' : 'العدد'}
                         >
                             {selQty || '1'}
                         </button>
@@ -548,20 +538,15 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
                 {/* Dedicated Touchscreen Clear / Reset Button */}
                 {selectedProduct && (
-                    <div className="flex flex-col gap-1 shrink-0">
-                        <label className="text-[11px] font-bold text-transparent select-none hidden sm:block">
-                            تفريغ
-                        </label>
-                        <button
-                            type="button"
-                            onClick={resetSelection}
-                            title="تفريغ الصنف المختار والبدء من جديد"
-                            className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            <span>تفريغ</span>
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={resetSelection}
+                        title="تفريغ الصنف المختار والبدء من جديد"
+                        className="h-11 sm:h-12 px-3.5 sm:px-4 rounded-[2px] border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-500 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span>تفريغ</span>
+                    </button>
                 )}
             </div>
 
