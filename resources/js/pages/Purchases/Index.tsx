@@ -1,18 +1,20 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { router, Link } from '@inertiajs/react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect, Pagination } from '@/components/ui/SpatialComponents';
+import { Pagination, DraggableOnScreenKeyboard } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { RestoreModal } from '@/components/ui/RestoreModal';
 import { DateFilterInput } from '@/components/ui/DateFilterInput';
 import { AmountRangeInput } from '@/components/ui/AmountRangeInput';
 import {
     Plus, Eye, Trash2, ShoppingCart, RotateCcw, AlertTriangle, X,
-    SlidersHorizontal, Search, Hash
+    SlidersHorizontal, Search, Hash, CheckCircle2, AlertCircle,
+    Calendar, DollarSign, Keyboard, ChevronDown, Package, User as UserIcon
 } from 'lucide-react';
 
-interface Supplier { id: number; name: string; }
-interface Product  { id: number; name: string; }
+interface Supplier      { id: number; name: string; }
+interface Product       { id: number; name: string; }
 interface PaymentMethod { id: number; name: string; }
 interface Purchase {
     id: number;
@@ -42,10 +44,10 @@ interface Props {
 }
 
 const statusLabel = { unpaid: 'غير مدفوع', partial: 'جزئي', paid: 'مدفوع' };
-const statusClass  = {
-    unpaid:  'bg-red-500/10 text-red-500 border border-red-500/20',
-    partial: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
-    paid:    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+const statusClass = {
+    unpaid:  'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25',
+    partial: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25',
+    paid:    'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25',
 };
 
 function fmt(v: string | number) {
@@ -56,10 +58,183 @@ function fmt(v: string | number) {
 function fmtDate(v: string | null): string {
     if (!v) return '—';
     const d = new Date(v.replace(' ', 'T'));
-    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+    return isNaN(d.getTime()) || d.getFullYear() < 2000 ? '—' : d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
 }
 
-// ── Modal إلغاء الفاتورة ──────────────────────────────────────────────────────
+/**
+ * قائمة منسدلة ذكية تدعم البحث النصي المباشر ولوحة المفاتيح الافتراضية للمس
+ */
+function WorkstationSearchableSelect({
+    label,
+    options,
+    value,
+    placeholder = 'الكل',
+    onSelect,
+}: {
+    label: string;
+    options: { id: string; label: string; badge?: string }[];
+    value: string;
+    placeholder?: string;
+    onSelect: (id: string) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const [showKeyboard, setShowKeyboard] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+                setShowKeyboard(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen && inputRef.current) {
+            setTimeout(() => inputRef.current?.focus(), 50);
+        } else {
+            setSearch('');
+            setShowKeyboard(false);
+        }
+    }, [isOpen]);
+
+    const filtered = options.filter(opt =>
+        opt.label.toLowerCase().includes(search.toLowerCase().trim())
+    );
+
+    const selectedOption = options.find(o => o.id === value);
+
+    return (
+        <div className="flex flex-col gap-1.5 relative" ref={containerRef}>
+            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
+                {label}
+            </label>
+
+            {/* الحقل التفاعلي */}
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className={`h-11 sm:h-12 px-3.5 rounded-[2px] border text-sm sm:text-base font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                    isOpen
+                        ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
+                        : value
+                            ? 'border-brand/50 dark:border-brand/40 bg-white dark:bg-[#111a29] text-slate-900 dark:text-white shadow-2xs'
+                            : 'border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#111a29] text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-[#2f486b]'
+                }`}
+            >
+                <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 mr-1.5 ${isOpen ? 'rotate-180 text-brand' : ''}`} />
+            </button>
+
+            {/* القائمة المنسدلة الذكية */}
+            {isOpen && (
+                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] flex flex-col overflow-hidden animate-in fade-in duration-100 min-w-[260px]">
+                    {/* شريط البحث + زر لوحة المفاتيح للشاشات اللمسية */}
+                    <div className="p-2.5 border-b border-slate-100 dark:border-[#172437] bg-slate-50 dark:bg-[#0a121e] flex items-center gap-2">
+                        <div className="relative flex-1">
+                            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="بحث بالاسم أو الكلمة..."
+                                className="w-full h-10 pr-9 pl-3 text-sm rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#070d18] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-brand font-medium"
+                            />
+                        </div>
+
+                        {/* زر فتح لوحة المفاتيح اللمسية */}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowKeyboard(!showKeyboard);
+                            }}
+                            className={`h-10 px-3 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer ${
+                                showKeyboard
+                                    ? 'bg-amber-500 text-white border-amber-600'
+                                    : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/25'
+                            }`}
+                            title="لوحة مفاتيح الشاشة"
+                        >
+                            <Keyboard className="w-4 h-4" />
+                            <span className="hidden sm:inline">لوحة لمس</span>
+                        </button>
+                    </div>
+
+                    {/* خيارات القائمة بمربعات محددة وفاصل واضح ومريح للمس */}
+                    <ul className="max-h-72 sm:max-h-80 overflow-y-auto custom-scroll p-2 space-y-1.5">
+                        <li
+                            onClick={() => {
+                                onSelect('');
+                                setIsOpen(false);
+                            }}
+                            className={`px-4 py-3 sm:py-3.5 text-sm sm:text-base font-bold cursor-pointer flex items-center justify-between rounded-[2px] transition-all min-h-[48px] sm:min-h-[52px] ${
+                                !value
+                                    ? 'bg-brand/10 border-2 border-brand text-brand font-black shadow-2xs'
+                                    : 'bg-slate-50 hover:bg-slate-100/90 dark:bg-[#0e1624] dark:hover:bg-[#142033] border border-slate-200 dark:border-[#1c2a3f] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-[#2b3e5a]'
+                            }`}
+                        >
+                            <span>{placeholder}</span>
+                            {!value && <span className="text-brand text-sm sm:text-base font-bold">✓</span>}
+                        </li>
+
+                        {filtered.length === 0 ? (
+                            <li className="px-4 py-6 text-center text-sm font-medium text-slate-400 dark:text-slate-500 rounded-[2px] bg-slate-50/50 dark:bg-[#0a121e] border border-dashed border-slate-200 dark:border-[#1c2a3f]">
+                                لا توجد نتائج مطابقة
+                            </li>
+                        ) : (
+                            filtered.map(opt => {
+                                const isSelected = opt.id === value;
+                                return (
+                                    <li
+                                        key={opt.id}
+                                        onClick={() => {
+                                            onSelect(opt.id);
+                                            setIsOpen(false);
+                                        }}
+                                        className={`px-4 py-3 sm:py-3.5 text-sm sm:text-base font-bold cursor-pointer flex items-center justify-between rounded-[2px] transition-all min-h-[48px] sm:min-h-[52px] ${
+                                            isSelected
+                                                ? 'bg-brand/10 border-2 border-brand text-brand font-black shadow-2xs'
+                                                : 'bg-slate-50 hover:bg-slate-100/90 dark:bg-[#0e1624] dark:hover:bg-[#142033] border border-slate-200 dark:border-[#1c2a3f] text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-[#2b3e5a]'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            {opt.badge && <span className="text-xs font-bold px-2 py-0.5 rounded-[2px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-[#243750] text-slate-600 dark:text-slate-400">{opt.badge}</span>}
+                                            <span className="truncate">{opt.label}</span>
+                                        </div>
+                                        {isSelected && <span className="text-brand text-sm sm:text-base font-bold">✓</span>}
+                                    </li>
+                                );
+                            })
+                        )}
+                    </ul>
+
+                    {/* لوحة المفاتيح الافتراضية للشاشات اللمسية */}
+                    {showKeyboard && (
+                        <div className="border-t border-slate-100 dark:border-[#172437]">
+                            <DraggableOnScreenKeyboard
+                                value={search}
+                                onKeyPress={char => setSearch(prev => prev + char)}
+                                onBackspace={() => setSearch(prev => prev.slice(0, -1))}
+                                onClear={() => setSearch('')}
+                                onSpace={() => setSearch(prev => prev + ' ')}
+                                onClose={() => setShowKeyboard(false)}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ── Modal إلغاء الفاتورة المصقول ──────────────────────────────────────────────────────
 function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClose: () => void }) {
     const [deletePayments,    setDeletePayments]    = useState(false);
     const [deleteSettlements, setDeleteSettlements] = useState(false);
@@ -80,94 +255,95 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
         });
     }
 
-    function RadioGroup({ value, onChange, yesLabel, yesDesc, noLabel, noDesc }: {
-        value: boolean; onChange: (v: boolean) => void;
-        yesLabel: string; yesDesc: string; noLabel: string; noDesc: string;
-    }) {
-        return (
-            <div className="flex flex-col gap-3">
-                <label className="flex items-center gap-3.5 cursor-pointer group p-3.5 rounded-[18px] border-2 border-black/5 dark:border-white/10 hover:border-red-500/40 transition-all" onClick={() => onChange(true)}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${value ? 'border-red-500 bg-red-500' : 'border-slate-300 dark:border-white/30 group-hover:border-red-400'}`}>
-                        {value && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-black text-slate-800 dark:text-white text-base">{yesLabel}</span>
-                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">{yesDesc}</span>
-                    </div>
-                </label>
-                <label className="flex items-center gap-3.5 cursor-pointer group p-3.5 rounded-[18px] border-2 border-black/5 dark:border-white/10 hover:border-primary/40 transition-all" onClick={() => onChange(false)}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${!value ? 'border-primary bg-primary' : 'border-slate-300 dark:border-white/30 group-hover:border-primary/60'}`}>
-                        {!value && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="font-black text-slate-800 dark:text-white text-base">{noLabel}</span>
-                        <span className="text-sm font-bold text-slate-400 dark:text-white/40">{noDesc}</span>
-                    </div>
-                </label>
-            </div>
-        );
-    }
-
     return createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full sm:max-w-lg rounded-[32px] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200
-                border-2 border-black/10 dark:border-white/15
-                bg-white dark:bg-slate-900 shadow-2xl z-10">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs" onClick={onClose} />
+            <div className="relative w-full sm:max-w-md rounded-[2px] p-5 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150
+                border border-slate-200 dark:border-[#1d2d42]
+                bg-white dark:bg-[#0a121e]
+                shadow-2xl">
 
-                <div className="flex items-center justify-between">
-                    <div className="w-14 h-14 rounded-[20px] bg-red-500/12 border border-red-500/20 flex items-center justify-center">
-                        <AlertTriangle className="w-7 h-7 text-red-500" />
+                <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#19273b] pb-3">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-[2px] bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
+                            <AlertTriangle className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-black text-slate-900 dark:text-white">إلغاء فاتورة الشراء #{purchase.id}</h3>
+                            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">سيتم إلغاء الفاتورة وإرجاع كميات المواد للمخزون</p>
+                        </div>
                     </div>
-                    <button onClick={onClose}
-                        className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-500 dark:text-white/70 flex items-center justify-center transition-all">
-                        <X className="w-6 h-6" />
+                    <button onClick={onClose} className="w-7 h-7 rounded-[2px] border border-slate-200 dark:border-[#223348] text-slate-500 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors">
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                    <h3 className="text-2xl font-black text-slate-800 dark:text-white">إلغاء فاتورة الشراء #{purchase.id}</h3>
-                    <p className="text-base font-bold text-slate-500 dark:text-white/60 leading-relaxed">
-                        سيتم إلغاء الفاتورة وإرجاع كميات المواد إلى المخزون.
-                    </p>
-                </div>
-
                 {hasPayments && (
-                    <div className="flex flex-col gap-4 p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border-2 border-black/5 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                            <span className="text-base font-black text-slate-700 dark:text-white/80">الدفعات المرتبطة</span>
-                            <span className="font-black text-emerald-600 dark:text-emerald-400 text-xl">{fmt(purchase.paid_amount)} د.ل</span>
+                    <div className="flex flex-col gap-2 p-3 rounded-[2px] bg-slate-50 dark:bg-[#0e1726] border border-slate-200/80 dark:border-[#1d2d42]">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">الدفعات المرتبطة بالفاتورة</span>
+                            <span className="font-number font-black text-emerald-600 dark:text-emerald-400 text-xs">{fmt(purchase.paid_amount)} د.ل</span>
                         </div>
-                        <RadioGroup
-                            value={deletePayments} onChange={setDeletePayments}
-                            yesLabel="نعم، احذف الدفعات معها" yesDesc="الفاتورة كانت خطأ في الإدخال"
-                            noLabel="لا، أبقِ الدفعات كدين على المورد" noDesc="المال دُفع فعلاً وسيبقى في سجل المورد"
-                        />
+                        <div className="h-px bg-slate-200/80 dark:bg-[#19273b]" />
+                        <div className="flex flex-col gap-2 pt-1 text-xs">
+                            <label className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#142032]" onClick={() => setDeletePayments(true)}>
+                                <div className={`w-4 h-4 rounded-none border flex items-center justify-center shrink-0 ${deletePayments ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-300 dark:border-[#33465e]'}`}>
+                                    {deletePayments && <span className="text-[10px] font-black leading-none">✓</span>}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-800 dark:text-white text-xs">نعم، احذف الدفعات معها</span>
+                                    <span className="text-[11px] text-slate-400 dark:text-[#8fa1b5]">الفاتورة كانت خطأ في الإدخال</span>
+                                </div>
+                            </label>
+                            <label className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#142032]" onClick={() => setDeletePayments(false)}>
+                                <div className={`w-4 h-4 rounded-none border flex items-center justify-center shrink-0 ${!deletePayments ? 'border-brand bg-brand text-white' : 'border-slate-300 dark:border-[#33465e]'}`}>
+                                    {!deletePayments && <span className="text-[10px] font-black leading-none">✓</span>}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-800 dark:text-white text-xs">لا، أبقِ الدفعات كدين على المورد</span>
+                                    <span className="text-[11px] text-slate-400 dark:text-[#8fa1b5]">المال دُفع فعلاً وسيبقى في سجل المورد</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 )}
 
                 {hasSettlements && (
-                    <div className="flex flex-col gap-4 p-5 rounded-[22px] bg-black/3 dark:bg-white/5 border-2 border-black/5 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                            <span className="text-base font-black text-slate-700 dark:text-white/80">التسويات المرتبطة</span>
-                            <span className="font-black text-purple-500 text-xl">{fmt(String(settlementsTotal))} د.ل</span>
+                    <div className="flex flex-col gap-2 p-3 rounded-[2px] bg-slate-50 dark:bg-[#0e1726] border border-slate-200/80 dark:border-[#1d2d42]">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">التسويات المرتبطة</span>
+                            <span className="font-number font-black text-purple-600 dark:text-purple-400 text-xs">{fmt(String(settlementsTotal))} د.ل</span>
                         </div>
-                        <RadioGroup
-                            value={deleteSettlements} onChange={setDeleteSettlements}
-                            yesLabel="نعم، احذف التسويات معها" yesDesc="التسوية لم تُنفَّذ فعلاً"
-                            noLabel="لا، أبقِ التسويات كرصيد مستقل" noDesc="المبلغ استُرد فعلاً وسيبقى في سجل المورد"
-                        />
+                        <div className="h-px bg-slate-200/80 dark:bg-[#19273b]" />
+                        <div className="flex flex-col gap-2 pt-1 text-xs">
+                            <label className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#142032]" onClick={() => setDeleteSettlements(true)}>
+                                <div className={`w-4 h-4 rounded-none border flex items-center justify-center shrink-0 ${deleteSettlements ? 'border-rose-500 bg-rose-500 text-white' : 'border-slate-300 dark:border-[#33465e]'}`}>
+                                    {deleteSettlements && <span className="text-[10px] font-black leading-none">✓</span>}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-800 dark:text-white text-xs">نعم، احذف التسويات معها</span>
+                                    <span className="text-[11px] text-slate-400 dark:text-[#8fa1b5]">التسوية لم تُنفَّذ فعلاً</span>
+                                </div>
+                            </label>
+                            <label className="flex items-center gap-2.5 cursor-pointer p-1.5 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#142032]" onClick={() => setDeleteSettlements(false)}>
+                                <div className={`w-4 h-4 rounded-none border flex items-center justify-center shrink-0 ${!deleteSettlements ? 'border-brand bg-brand text-white' : 'border-slate-300 dark:border-[#33465e]'}`}>
+                                    {!deleteSettlements && <span className="text-[10px] font-black leading-none">✓</span>}
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-bold text-slate-800 dark:text-white text-xs">لا، أبقِ التسويات كرصيد مستقل</span>
+                                    <span className="text-[11px] text-slate-400 dark:text-[#8fa1b5]">المبلغ استُرد فعلاً وسيبقى في سجل المورد</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 )}
 
-                <div className="flex items-center gap-4 pt-2">
-                    <button onClick={confirm}
-                        className="flex-1 h-16 sm:h-18 rounded-[22px] bg-red-500 hover:bg-red-600 text-white font-black text-lg sm:text-xl transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95">
-                        <Trash2 className="w-6 h-6" /> تأكيد الإلغاء
+                <div className="flex items-center gap-2.5 pt-2 border-t border-slate-200/80 dark:border-[#19273b]">
+                    <button onClick={onClose} className="flex-1 h-9 rounded-[2px] border border-slate-200 dark:border-[#223348] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273a] text-slate-700 dark:text-[#8fa1b5] font-bold text-xs transition-colors cursor-pointer">
+                        تراجع
                     </button>
-                    <button onClick={onClose}
-                        className="h-16 sm:h-18 px-8 rounded-[22px] bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-700 dark:text-white/80 font-black text-lg transition-all border-2 border-black/5 dark:border-white/10">
-                        إلغاء
+                    <button onClick={confirm} className="flex-1 h-9 rounded-[2px] bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer">
+                        <Trash2 className="w-3.5 h-3.5" /> تأكيد الإلغاء
                     </button>
                 </div>
             </div>
@@ -176,8 +352,15 @@ function CancelPurchaseModal({ purchase, onClose }: { purchase: Purchase; onClos
     );
 }
 
-// ── FilterDrawer Component (Identical to Invoices/Index.tsx) ────────────────
-function FilterDrawer({ isOpen, onClose, children, applyFilter, resetFilter, hasFilter }: {
+// ── درج الفلترة المكتبي الجانبي (Slide-over Drawer) ────────────────────────
+function FilterDrawer({
+    isOpen,
+    onClose,
+    children,
+    applyFilter,
+    resetFilter,
+    hasFilter
+}: {
     isOpen: boolean;
     onClose: () => void;
     children: React.ReactNode;
@@ -188,52 +371,56 @@ function FilterDrawer({ isOpen, onClose, children, applyFilter, resetFilter, has
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
-            {/* Backdrop Overlay */}
+        <div className="fixed inset-0 z-[9999] flex justify-start dir-rtl">
+            {/* الخلفية المعتمة */}
             <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
+                className="absolute inset-0 bg-slate-900/60 dark:bg-black/75 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in"
                 onClick={onClose}
             />
 
-            {/* Slide-over Drawer from Right */}
-            <div className="relative w-full sm:w-[720px] md:w-[840px] lg:w-[900px] max-w-[95vw] h-full
-                bg-gradient-to-b from-white via-slate-50 to-slate-100
-                dark:[background:linear-gradient(165deg,#13192e_0%,#0e1220_100%)]
-                shadow-[-24px_0_60px_rgba(0,0,0,0.4)]
-                border-l-2 border-black/10 dark:border-white/15 flex flex-col animate-in slide-in-from-right duration-300 z-10 cursor-default">
+            {/* الحاوية الجانبية الانزلاقية */}
+            <div className="relative w-full sm:w-[500px] md:w-[540px] max-w-[95vw] h-full
+                bg-white dark:bg-[#0a121e]
+                shadow-2xl border-l border-slate-200 dark:border-[#1d2d42] flex flex-col animate-in slide-in-from-right duration-200 z-10 cursor-default">
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-8 py-6 border-b-2 border-black/5 dark:border-white/8 shrink-0 bg-black/3 dark:bg-white/4">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-[22px] bg-primary/10 border-2 border-primary/25 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
-                            <SlidersHorizontal className="w-8 h-8" />
+                {/* الترويسة */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-[#19273b] shrink-0 bg-slate-50 dark:bg-[#0c1421]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-[2px] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                            <SlidersHorizontal className="w-4 h-4" />
                         </div>
                         <div>
-                            <h3 className="font-black text-slate-800 dark:text-white text-2xl sm:text-3xl">تصفية فواتير الشراء المتقدمة</h3>
-                            <p className="text-sm font-bold text-slate-400 dark:text-white/40 mt-1">تخصيص نتائج البحث والفلترة بكفاءة عالية</p>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base">تصفية فواتير الشراء المتقدمة</h3>
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">تخصيص معايير البحث والفلترة بدقة</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-14 h-14 rounded-full bg-black/6 dark:bg-white/10 hover:bg-red-500 hover:text-white text-slate-500 dark:text-white/60 flex items-center justify-center transition-all border border-black/5 dark:border-white/10 active:scale-95"
+                        className="w-8 h-8 rounded-[2px] border border-slate-200 dark:border-[#223348] text-slate-500 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                     >
-                        <X className="w-7 h-7" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Scrollable Content Area */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                {/* محتوى الحقول القابل للتمرير */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
                     {children}
                 </div>
 
-                {/* Sticky Action Footer */}
-                <div className="px-8 py-5 border-t-2 border-black/8 dark:border-white/10 bg-white/90 dark:bg-[#13192e]/90 backdrop-blur-2xl flex items-center gap-4 shrink-0 shadow-2xl">
-                    <button onClick={applyFilter} className="flex-1 h-16 sm:h-20 rounded-[22px] bg-primary hover:bg-primary/90 text-white font-black text-xl sm:text-2xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-95">
-                        <Search className="w-6 h-6 sm:w-7 sm:h-7" /> تطبيق الفلتر
+                {/* شريط الإجراءات السفلي */}
+                <div className="px-6 py-3.5 border-t border-slate-200 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421] flex items-center gap-3 shrink-0 shadow-lg">
+                    <button
+                        onClick={applyFilter}
+                        className="flex-1 h-12 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-sm sm:text-base transition-opacity flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                    >
+                        <Search className="w-4 h-4" /> تطبيق الفلتر
                     </button>
                     {hasFilter && (
-                        <button onClick={resetFilter} className="h-16 sm:h-20 px-8 sm:px-10 rounded-[22px] bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 font-black text-lg sm:text-xl transition-all border-2 border-red-500/30 flex items-center justify-center gap-2.5 active:scale-95 shrink-0">
-                            <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" /> إعادة تعيين
+                        <button
+                            onClick={resetFilter}
+                            className="h-12 px-5 rounded-[2px] border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-bold text-sm sm:text-base transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                            <RotateCcw className="w-4 h-4" /> إعادة تعيين
                         </button>
                     )}
                 </div>
@@ -246,7 +433,7 @@ function FilterDrawer({ isOpen, onClose, children, applyFilter, resetFilter, has
 // ── الصفحة الرئيسية ───────────────────────────────────────────────────────────
 export default function PurchasesIndex({ purchases, suppliers = [], products = [], paymentMethods = [], flash }: Props) {
     const [cancelTarget, setCancelTarget] = useState<Purchase | null>(null);
-    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
     const [showIdPad, setShowIdPad] = useState(false);
     const [activeTab, setActiveTab] = useState<'active' | 'deleted'>('active');
 
@@ -279,317 +466,436 @@ export default function PurchasesIndex({ purchases, suppliers = [], products = [
         if (fAmountFrom) f['filter[amount_from]']       = fAmountFrom;
         if (fAmountTo)   f['filter[amount_to]']         = fAmountTo;
         if (fPayMethod)  f['filter[payment_method_id]'] = fPayMethod;
+        setDrawerOpen(false);
         router.get('/purchases', f, { preserveScroll: true });
-        setFilterDrawerOpen(false);
     }
 
     function resetFilter() {
         setFPurchaseId(''); setFSupplier(''); setFStatus(''); setFProduct('');
         setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo(''); setFPayMethod('');
+        setDrawerOpen(false);
         router.get('/purchases', {}, { preserveScroll: true });
-        setFilterDrawerOpen(false);
     }
 
     return (
         <AppShell pageTitle="المشتريات">
-            <div className="flex flex-col gap-8 pb-32 lg:pb-0">
+            <div className="flex flex-col gap-3.5 pb-24 sm:pb-36 mb-8 sm:mb-12">
 
-                {/* Header Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {/* ── الترويسة الرئيسية مع زر الإجراء السريع ── */}
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200/90 dark:border-[#1d2d42] pb-3">
                     <div>
-                        <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white">فواتير الشراء</h1>
-                        <p className="text-base sm:text-lg font-bold text-slate-400 dark:text-white/40 mt-1">سجل وإدارة فواتير الشراء ومتابعة حسابات الموردين</p>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">فواتير الشراء</h1>
+                            <span className="text-[11px] font-mono font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-500/30 dark:border-sky-500/25 px-2 py-0.5 rounded-[2px]">
+                                {purchases.total} فاتورة
+                            </span>
+                        </div>
+                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">سجل وإدارة فواتير الشراء ومتابعة حسابات الموردين والمدفوعات</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Link href="/purchases/create"
-                            className="spatial-button flex items-center justify-center gap-3 px-7 sm:px-9 h-16 sm:h-20 rounded-[22px] text-lg sm:text-2xl font-black shadow-xl">
-                            <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> فاتورة شراء جديدة
-                        </Link>
-                    </div>
+
+                    <Link 
+                        href="/purchases/create" 
+                        className="h-9 px-4 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-opacity cursor-pointer shrink-0"
+                    >
+                        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                        <span>فاتورة شراء جديدة</span>
+                    </Link>
                 </div>
 
                 {/* Flash Messages */}
                 {flash?.success && (
-                    <div className="px-6 py-4 rounded-[22px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg sm:text-xl shadow-sm">
-                        {flash.success}
+                    <div className="px-3.5 py-2 rounded-[2px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        <span>{flash.success}</span>
                     </div>
                 )}
                 {flash?.error && (
-                    <div className="px-6 py-4 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg sm:text-xl shadow-sm">
-                        {flash.error}
+                    <div className="px-3.5 py-2 rounded-[2px] bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{flash.error}</span>
                     </div>
                 )}
 
-                {/* Tabs & Filter Bar Section */}
-                <div className="flex flex-col gap-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => setActiveTab('active')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'active' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                                <span>الفواتير النشطة</span>
-                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'active' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
-                                    {activePurchases.length}
-                                </span>
-                            </button>
-                            <button onClick={() => setActiveTab('deleted')} className={`h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl px-6 sm:px-8 transition-all flex items-center gap-3 ${activeTab === 'deleted' ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 hover:bg-black/10 dark:hover:bg-white/12'}`}>
-                                <span>الفواتير الملغية</span>
-                                <span className={`px-3 py-1 rounded-full text-base font-black ${activeTab === 'deleted' ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-slate-800 dark:text-white'}`}>
-                                    {deletedPurchases.length}
-                                </span>
-                            </button>
-                        </div>
+                {/* ── شريط التحكم الموحد: التبويبات + زر فتح الدرج ── */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] p-1.5 rounded-[2px]">
+                    {/* التبويبات (Active / Deleted) */}
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('active')}
+                            className={`px-3.5 py-1.5 rounded-[2px] font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                                activeTab === 'active'
+                                    ? 'bg-brand text-white shadow-xs'
+                                    : 'text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                        >
+                            الفواتير النشطة ({activePurchases.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('deleted')}
+                            className={`px-3.5 py-1.5 rounded-[2px] font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                                activeTab === 'deleted'
+                                    ? 'bg-rose-600 text-white shadow-xs'
+                                    : 'text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                        >
+                            الفواتير الملغية ({deletedPurchases.length})
+                        </button>
+                    </div>
 
-                        <div className="flex items-center gap-3">
-                            {hasFilter && (
-                                <button onClick={resetFilter} className="flex items-center gap-2.5 px-6 h-16 sm:h-20 rounded-[22px] font-black text-base sm:text-xl transition-all border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white active:scale-95 shadow-md">
-                                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" />
-                                    <span>إعادة تعيين</span>
-                                </button>
-                            )}
-                            <button onClick={() => setFilterDrawerOpen(true)}
-                                className={`flex items-center gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-xl transition-all border-2 active:scale-95 shadow-md ${hasFilter ? 'bg-primary/15 border-primary text-primary shadow-primary/10' : 'spatial-input text-slate-800 dark:text-white hover:border-primary/40'}`}>
-                                <SlidersHorizontal className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
-                                <span>الفلترة</span>
-                                {hasFilter && (
-                                    <span className="w-3.5 h-3.5 rounded-full bg-primary animate-pulse" />
-                                )}
+                    {/* زر فتح درج التصفية المتقدمة */}
+                    <div className="flex items-center gap-2">
+                        {hasFilter && (
+                            <button
+                                type="button"
+                                onClick={resetFilter}
+                                className="h-9 px-3 rounded-[2px] border border-rose-300 dark:border-rose-900/50 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                title="إلغاء التصفية"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                <span>إعادة تعيين</span>
                             </button>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => setDrawerOpen(true)}
+                            className={`h-9 px-3.5 rounded-[2px] border font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-2xs ${
+                                hasFilter
+                                    ? 'bg-brand/10 border-brand text-brand font-black'
+                                    : 'bg-white dark:bg-[#0c1421] border-slate-300 dark:border-[#22354e] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#142032]'
+                            }`}
+                        >
+                            <SlidersHorizontal className="w-4 h-4 text-brand" />
+                            <span>تصفية الفواتير</span>
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── جدول البيانات المكتبي (Workstation Data Grid) ── */}
+                <div className="spatial-card p-0 overflow-hidden border border-slate-200/90 dark:border-[#1d2d42]">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421]">
+                        <div className="flex items-center gap-2">
+                            <ShoppingCart className="w-4 h-4 text-brand" />
+                            <span className="text-sm font-bold text-slate-800 dark:text-white">
+                                سجل الشراء ({displayPurchases.length})
+                            </span>
+                        </div>
+                        <div className="text-xs font-mono text-slate-400 dark:text-slate-500">
+                            صفحة {purchases.current_page} من {purchases.last_page || 1}
                         </div>
                     </div>
 
-                    {/* Table / Cards Section */}
-                    <SpatialCard title={`سجل الشراء (${displayPurchases.length})`} icon={<ShoppingCart className="w-6 h-6 text-primary" />}>
-                        {displayPurchases.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
-                                <span className="text-6xl">🛒</span>
-                                <span className="font-black text-2xl">{activeTab === 'active' ? 'لا توجد فواتير شراء نشطة' : 'لا توجد فواتير شراء ملغية'}</span>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Desktop Table */}
-                                <div className="hidden lg:block overflow-x-auto">
-                                    <table className="w-full text-right">
-                                        <thead>
-                                            <tr className="bg-black/3 dark:bg-white/3 border-b-2 border-black/5 dark:border-white/5">
-                                                {['#', 'المورد', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'التاريخ', 'الإجراءات'].map(h => (
-                                                    <th key={h} className="px-5 py-5 text-base sm:text-lg font-black text-slate-500 dark:text-white/40 uppercase tracking-widest whitespace-nowrap">{h}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                            {displayPurchases.map(p => (
-                                                <tr key={p.id} className={`hover:bg-primary/5 dark:hover:bg-primary/20 transition-colors group ${p.deleted_at ? 'opacity-50' : ''}`}>
-                                                    <td className="px-5 py-6 font-black text-slate-400 dark:text-white/40 text-xl">#{p.id}</td>
-                                                    <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl">{p.supplier?.name ?? 'مورد غير معروف'}</td>
-                                                    <td className="px-5 py-6 font-black text-slate-800 dark:text-white text-2xl whitespace-nowrap">{fmt(p.total)} <span className="text-sm font-bold text-slate-400">د.ل</span></td>
-                                                    <td className="px-5 py-6 font-black text-emerald-600 dark:text-emerald-400 text-2xl whitespace-nowrap">{fmt(p.paid_amount)} <span className="text-sm font-bold opacity-75">د.ل</span></td>
-                                                    <td className="px-5 py-6 font-black text-amber-500 text-2xl whitespace-nowrap">{fmt(p.due_amount)} <span className="text-sm font-bold opacity-75">د.ل</span></td>
-                                                    <td className="px-5 py-6 whitespace-nowrap">
-                                                        {p.deleted_at ? (
-                                                            <span className="text-base font-black px-4 py-2 rounded-[14px] bg-red-500/10 text-red-500 border border-red-500/20">ملغي</span>
-                                                        ) : (
-                                                            <span className={`text-base font-black px-4 py-2 rounded-[14px] ${statusClass[p.payment_status]}`}>
-                                                                {statusLabel[p.payment_status]}
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-5 py-6 text-slate-500 dark:text-white/60 font-bold text-lg whitespace-nowrap">
-                                                        {fmtDate(p.created_at)}
-                                                    </td>
-                                                    <td className="px-5 py-6 text-center whitespace-nowrap">
-                                                        <div className="flex items-center justify-center gap-3">
-                                                            <Link href={`/purchases/${p.id}`}
-                                                                className="flex items-center gap-2.5 px-6 sm:px-8 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                <Eye className="w-5 h-5 sm:w-6 sm:h-6" /> عرض
-                                                            </Link>
-                                                            {p.deleted_at ? (
-                                                                <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
-                                                                    className="flex items-center gap-2.5 px-6 sm:px-8 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                    <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6" /> استعادة
-                                                                </button>
-                                                            ) : (
-                                                                <button onClick={() => setCancelTarget(p)}
-                                                                    className="flex items-center gap-2.5 px-6 sm:px-8 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                    <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" /> إلغاء
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Mobile Cards */}
-                                <div className="flex flex-col gap-4 lg:hidden">
-                                    {displayPurchases.map(p => (
-                                        <div key={p.id} className={`p-6 rounded-[28px] bg-black/3 dark:bg-white/3 border-2 border-black/5 dark:border-white/10 flex flex-col gap-4 ${p.deleted_at ? 'opacity-60' : ''}`}>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <span className="font-black text-slate-800 dark:text-white text-2xl">{p.supplier?.name ?? 'مورد غير معروف'}</span>
-                                                    <p className="text-base font-bold text-slate-400 dark:text-white/40 mt-0.5">#{p.id} — {fmtDate(p.created_at)}</p>
-                                                </div>
-                                                {p.deleted_at ? (
-                                                    <span className="text-base font-black px-4 py-2 rounded-[14px] bg-red-500/10 text-red-500 border border-red-500/20">ملغي</span>
-                                                ) : (
-                                                    <span className={`text-base font-black px-4 py-2 rounded-[14px] ${statusClass[p.payment_status]}`}>
-                                                        {statusLabel[p.payment_status]}
+                    {displayPurchases.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-2">
+                            <ShoppingCart className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600" />
+                            <span className="font-bold text-xs sm:text-sm">{activeTab === 'active' ? 'لا توجد فواتير شراء نشطة' : 'لا توجد فواتير شراء ملغية'}</span>
+                        </div>
+                    ) : (
+                        <>
+                            {/* عرض الجدول المكتبي للشاشات الكبيرة */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <table className="w-full text-sm sm:text-base text-right">
+                                    <thead>
+                                        <tr className="bg-slate-100/60 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-300 font-bold">
+                                            <th className="px-4 py-3.5 font-mono text-center w-16 text-xs sm:text-sm">#</th>
+                                            <th className="px-4 py-3.5 text-xs sm:text-sm">المورد</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">الإجمالي</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">المدفوع</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">المتبقي</th>
+                                            <th className="px-4 py-3.5 text-center font-mono text-xs sm:text-sm">التاريخ</th>
+                                            <th className="px-4 py-3.5 text-center w-36 text-xs sm:text-sm">الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200/70 dark:divide-[#162335]">
+                                        {displayPurchases.map(p => (
+                                            <tr 
+                                                key={p.id} 
+                                                className={`hover:bg-slate-50 dark:hover:bg-[#0e1828] transition-colors ${p.deleted_at ? 'opacity-60 bg-rose-50/20 dark:bg-rose-950/10' : ''}`}
+                                            >
+                                                <td className="px-4 py-3.5 font-mono font-bold text-slate-400 dark:text-slate-500 text-center text-xs sm:text-sm">
+                                                    #{p.id}
+                                                </td>
+                                                <td className="px-4 py-3.5">
+                                                    <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                                                        {p.supplier?.name ?? 'مورد غير معروف'}
                                                     </span>
-                                                )}
-                                            </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-left font-number font-black text-slate-900 dark:text-white whitespace-nowrap text-sm sm:text-base">
+                                                    {fmt(p.total)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-left font-number font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap text-sm sm:text-base">
+                                                    {fmt(p.paid_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-left font-number font-black text-amber-600 dark:text-amber-400 whitespace-nowrap text-sm sm:text-base">
+                                                    {fmt(p.due_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center font-mono text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                                    {fmtDate(p.created_at)}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <Link 
+                                                            href={`/purchases/${p.id}`} 
+                                                            className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-sky-500/35 dark:border-sky-500/30 bg-sky-500/10 hover:bg-sky-600 hover:text-white! text-sky-700 dark:text-sky-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
+                                                            title="عرض الفاتورة"
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 group-hover:text-white transition-colors" />
+                                                            <span className="group-hover:text-white transition-colors">عرض</span>
+                                                        </Link>
+                                                        {p.deleted_at ? (
+                                                            <RestoreModal
+                                                                title="استعادة فاتورة الشراء"
+                                                                description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الكميات وحسابات المورد المرتبطة بها."
+                                                                onConfirm={() => router.post(`/purchases/${p.id}/restore`)}
+                                                                trigger={
+                                                                    <button 
+                                                                        type="button"
+                                                                        className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-emerald-500/35 dark:border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white! font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
+                                                                        title="استعادة الفاتورة"
+                                                                    >
+                                                                        <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
+                                                                        <span className="group-hover:text-white transition-colors">استعادة</span>
+                                                                    </button>
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => setCancelTarget(p)} 
+                                                                className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-rose-500/35 dark:border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white! font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
+                                                                title="إلغاء الفاتورة"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5 text-rose-500 group-hover:text-white transition-colors" />
+                                                                <span className="group-hover:text-white transition-colors">إلغاء</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                                            <div className="grid grid-cols-3 gap-3 p-4 rounded-[20px] bg-black/3 dark:bg-white/5">
-                                                <div>
-                                                    <span className="text-xs font-black text-slate-400 uppercase">الإجمالي</span>
-                                                    <p className="font-black text-xl text-slate-800 dark:text-white">{fmt(p.total)} د.ل</p>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-black text-slate-400 uppercase">المدفوع</span>
-                                                    <p className="font-black text-emerald-600 dark:text-emerald-400">{fmt(p.paid_amount)} د.ل</p>
-                                                </div>
-                                                <div>
-                                                    <span className="text-xs font-black text-slate-400 uppercase">المتبقي</span>
-                                                    <p className="font-black text-xl text-amber-500">{fmt(p.due_amount)} د.ل</p>
-                                                </div>
+                            {/* بطاقات الجوال للشاشات الصغيرة */}
+                            <div className="flex flex-col divide-y divide-slate-200/80 dark:divide-[#19273b] lg:hidden">
+                                {displayPurchases.map(p => (
+                                    <div key={p.id} className={`p-3.5 flex flex-col gap-2.5 ${p.deleted_at ? 'opacity-60 bg-rose-50/20' : ''}`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-white">
+                                                    {p.supplier?.name ?? 'مورد غير معروف'}
+                                                </span>
+                                                <span className="font-mono text-xs sm:text-sm text-slate-400">
+                                                    #{p.id}
+                                                </span>
                                             </div>
+                                            {p.deleted_at && (
+                                                <span className="px-2 py-0.5 rounded-[2px] text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25">ملغي</span>
+                                            )}
+                                        </div>
 
-                                            <div className="flex items-center gap-3 pt-2">
-                                                <Link href={`/purchases/${p.id}`}
-                                                    className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-18 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white font-black text-lg sm:text-xl transition-all shadow-md active:scale-95">
-                                                    <Eye className="w-6 h-6" /> عرض
+                                        <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-[2px] bg-slate-50 dark:bg-[#0e1726] border border-slate-200/70 dark:border-[#1d2d42] text-xs sm:text-sm">
+                                            <div>
+                                                <div className="text-slate-400 text-xs">الإجمالي</div>
+                                                <div className="font-number font-black text-slate-900 dark:text-white text-sm sm:text-base">{fmt(p.total)}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-slate-400 text-xs">المدفوع</div>
+                                                <div className="font-number font-black text-emerald-600 text-sm sm:text-base">{fmt(p.paid_amount)}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-slate-400 text-xs">المتبقي</div>
+                                                <div className="font-number font-black text-amber-600 text-sm sm:text-base">{fmt(p.due_amount)}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <span className="font-mono text-xs sm:text-sm text-slate-400">{fmtDate(p.created_at)}</span>
+                                            <div className="flex items-center gap-2">
+                                                <Link 
+                                                    href={`/purchases/${p.id}`} 
+                                                    className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-sky-500/35 dark:border-sky-500/30 bg-sky-500/10 hover:bg-sky-600 hover:text-white! text-sky-700 dark:text-sky-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all group"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 group-hover:text-white transition-colors" />
+                                                    <span className="group-hover:text-white transition-colors">عرض</span>
                                                 </Link>
                                                 {p.deleted_at ? (
-                                                    <button onClick={() => router.post(`/purchases/${p.id}/restore`)}
-                                                        className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-18 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white font-black text-lg sm:text-xl transition-all shadow-md active:scale-95">
-                                                        <RotateCcw className="w-6 h-6" /> استعادة
-                                                    </button>
+                                                    <RestoreModal
+                                                        title="استعادة فاتورة الشراء"
+                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟"
+                                                        onConfirm={() => router.post(`/purchases/${p.id}/restore`)}
+                                                        trigger={
+                                                            <button className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-emerald-500/35 dark:border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all">
+                                                                <RotateCcw className="w-3.5 h-3.5" /> استعادة
+                                                            </button>
+                                                        }
+                                                    />
                                                 ) : (
-                                                    <button onClick={() => setCancelTarget(p)}
-                                                        className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-18 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white font-black text-lg sm:text-xl transition-all shadow-md active:scale-95">
-                                                        <Trash2 className="w-6 h-6" /> إلغاء
+                                                    <button 
+                                                        onClick={() => setCancelTarget(p)} 
+                                                        className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-rose-500/35 dark:border-rose-500/30 bg-rose-500/10 text-rose-600 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" /> إلغاء
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
+                                    </div>
+                                ))}
+                            </div>
 
-                                {/* Pagination */}
-                                <Pagination links={purchases?.links || []} currentPage={purchases?.current_page} lastPage={purchases?.last_page} />
-                            </>
-                        )}
-                    </SpatialCard>
+                            {/* الترقيم والتنقل بين الصفحات */}
+                            <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421] w-full">
+                                <Pagination links={purchases.links} currentPage={purchases.current_page} lastPage={purchases.last_page} />
+                            </div>
+                        </>
+                    )}
                 </div>
-
             </div>
 
             {cancelTarget && (
                 <CancelPurchaseModal purchase={cancelTarget} onClose={() => setCancelTarget(null)} />
             )}
 
-            {/* Portal Slide-Over Filter Drawer (Identical structure to Invoices/Index.tsx) */}
+            {/* ── درج الفلترة المتقدمة (Filter Drawer) مع دعم البحث ولوحة المفاتيح والنمبر باد ── */}
             <FilterDrawer
-                isOpen={filterDrawerOpen}
-                onClose={() => setFilterDrawerOpen(false)}
+                isOpen={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
                 applyFilter={applyFilter}
                 resetFilter={resetFilter}
-                hasFilter={Boolean(hasFilter)}
+                hasFilter={hasFilter}
             >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                    {/* العمود الأول (اليمين): البحث والمعلومات الأساسية + نطاق المبالغ */}
-                    <div className="flex flex-col gap-6">
-                        {/* قسم البحث والموردين */}
-                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                                <span className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/25 text-primary flex items-center justify-center text-xl shrink-0 border border-primary/20">🔍</span>
-                                <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
-                            </h4>
-
-                            {/* رقم الفاتورة */}
-                            <div className="flex flex-col gap-2.5">
-                                <label className="text-sm sm:text-base font-black text-slate-800 dark:text-white">
-                                    رقم فاتورة الشراء
-                                </label>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowIdPad(true)}
-                                    className={`spatial-input h-16 rounded-[20px] px-5 text-base sm:text-xl font-black cursor-pointer hover:border-primary/40 transition-all shadow-sm active:scale-95 flex items-center justify-between ${
-                                        fPurchaseId ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-white/30'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-2.5">
-                                        <Hash className="w-5 h-5 text-primary" />
-                                        <span>{fPurchaseId ? `#${fPurchaseId}` : 'ادخل رقم الفاتورة...'}</span>
-                                    </div>
-                                    {fPurchaseId && (
-                                        <span
-                                            onClick={(e) => { e.stopPropagation(); setFPurchaseId(''); }}
-                                            className="w-7 h-7 rounded-full bg-black/10 dark:bg-white/10 flex items-center justify-center text-xs text-slate-600 dark:text-white hover:bg-red-500 hover:text-white transition-colors"
-                                        >
-                                            ✕
-                                        </span>
-                                    )}
-                                </button>
-                            </div>
-
-                            <ModernSelect label="المورد" placeholder="الكل"
-                                options={[{ label: 'الكل' }, ...(suppliers || []).map(s => ({ label: s.name }))]}
-                                defaultValue={fSupplier ? ((suppliers || []).find(s => String(s.id) === fSupplier)?.name ?? '') : 'الكل'}
-                                onSelect={val => setFSupplier(val === 'الكل' ? '' : String((suppliers || []).find(s => s.name === val)?.id ?? ''))}
-                            />
-
-                            <ModernSelect label="حالة الدفع" placeholder="الكل"
-                                options={[{ label: 'الكل' }, { label: 'غير مدفوع' }, { label: 'جزئي' }, { label: 'مدفوع' }]}
-                                defaultValue={fStatus === 'unpaid' ? 'غير مدفوع' : fStatus === 'partial' ? 'جزئي' : fStatus === 'paid' ? 'مدفوع' : 'الكل'}
-                                onSelect={val => setFStatus(val === 'غير مدفوع' ? 'unpaid' : val === 'جزئي' ? 'partial' : val === 'مدفوع' ? 'paid' : '')}
-                            />
+                <div className="flex flex-col gap-3.5">
+                    {/* المجموعة 1: بيانات الفاتورة والمورد */}
+                    <div className="p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] flex flex-col gap-3">
+                        <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-[#172437] pb-2 text-xs font-bold text-slate-800 dark:text-slate-100">
+                            <Search className="w-3.5 h-3.5 text-brand" />
+                            <span>معلومات الفاتورة والمورد</span>
                         </div>
 
-                        {/* قسم المبالغ */}
-                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                                <span className="w-9 h-9 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-500/20">💵</span>
-                                <span className="text-slate-900 dark:text-white tracking-wide">نطاق المبالغ</span>
-                            </h4>
-                            <AmountRangeInput label="الإجمالي (من — إلى)" valueFrom={fAmountFrom} valueTo={fAmountTo}
-                                onChange={(from, to) => { setFAmountFrom(from); setFAmountTo(to); }} />
+                        {/* رقم الفاتورة مع خيار النمبر باد المطور */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">رقم فاتورة الشراء</label>
+                            <button
+                                type="button"
+                                onClick={() => setShowIdPad(true)}
+                                className={`h-11 sm:h-12 px-3.5 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                                    fPurchaseId 
+                                        ? 'border-brand/50 dark:border-brand/40 bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs' 
+                                        : 'border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-[#2f486b]'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Hash className="w-4 h-4 text-brand" />
+                                    <span className="font-number font-bold text-sm sm:text-base">{fPurchaseId ? `#${fPurchaseId}` : 'ادخل رقم الفاتورة (لوحة أرقام)...'}</span>
+                                </div>
+                                {fPurchaseId ? (
+                                    <span
+                                        onClick={(e) => { e.stopPropagation(); setFPurchaseId(''); }}
+                                        className="px-2 py-1 rounded-[2px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-bold border border-rose-500/20 transition-colors"
+                                    >
+                                        مسح
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-[2px]">
+                                        لوحة اللمس
+                                    </span>
+                                )}
+                            </button>
                         </div>
+
+                        {/* المورد: قائمة منسدلة ذكية تبحث بالنص وتدعم لوحة اللمس */}
+                        <WorkstationSearchableSelect
+                            label="المورد"
+                            placeholder="كل الموردين"
+                            value={fSupplier}
+                            options={suppliers.map(s => ({ id: String(s.id), label: s.name }))}
+                            onSelect={setFSupplier}
+                        />
+
+                        {/* حالة الدفع */}
+                        <WorkstationSearchableSelect
+                            label="حالة الدفع"
+                            placeholder="كل الحالات"
+                            value={fStatus}
+                            options={[
+                                { id: 'unpaid',  label: 'غير مدفوع' },
+                                { id: 'partial', label: 'جزئي' },
+                                { id: 'paid',    label: 'مدفوع' },
+                            ]}
+                            onSelect={setFStatus}
+                        />
                     </div>
 
-                    {/* العمود الثاني (اليسار): طريقة الدفع والمنتجات + نطاق التواريخ */}
-                    <div className="flex flex-col gap-6">
-                        {/* قسم الأصناف والدفع */}
-                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                                <span className="w-9 h-9 rounded-xl bg-purple-500/10 dark:bg-purple-500/25 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl shrink-0 border border-purple-500/20">💳</span>
-                                <span className="text-slate-900 dark:text-white tracking-wide">طريقة الدفع والمنتجات</span>
-                            </h4>
-
-                            <ModernSelect label="المنتج" placeholder="الكل"
-                                options={[{ label: 'الكل' }, ...(products || []).map(p => ({ label: p.name }))]}
-                                defaultValue={fProduct ? ((products || []).find(p => String(p.id) === fProduct)?.name ?? '') : 'الكل'}
-                                onSelect={val => setFProduct(val === 'الكل' ? '' : String((products || []).find(p => p.name === val)?.id ?? ''))}
-                            />
-                            <ModernSelect label="طريقة الدفع" placeholder="الكل"
-                                options={[{ label: 'الكل' }, { label: 'هجين', badge: '🔀' }, ...(paymentMethods || []).map(m => ({ label: m.name }))]}
-                                defaultValue={fPayMethod === 'hybrid' ? 'هجين' : fPayMethod ? ((paymentMethods || []).find(m => String(m.id) === fPayMethod)?.name ?? '') : 'الكل'}
-                                onSelect={val => setFPayMethod(val === 'الكل' ? '' : val === 'هجين' ? 'hybrid' : String((paymentMethods || []).find(m => m.name === val)?.id ?? ''))}
-                            />
+                    {/* المجموعة 2: الأصناف وطريقة الدفع */}
+                    <div className="p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] flex flex-col gap-3">
+                        <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-[#172437] pb-2 text-xs font-bold text-slate-800 dark:text-slate-100">
+                            <Package className="w-3.5 h-3.5 text-brand" />
+                            <span>الأصناف وطرق الدفع</span>
                         </div>
 
-                        {/* قسم التواريخ */}
-                        <div className="p-6 sm:p-7 rounded-[28px] bg-black/3 dark:bg-white/4 border-2 border-black/6 dark:border-white/10 flex flex-col gap-6">
-                            <h4 className="text-base sm:text-xl font-black flex items-center gap-3 border-b-2 border-black/5 dark:border-white/8 pb-3.5">
-                                <span className="w-9 h-9 rounded-xl bg-amber-500/10 dark:bg-amber-500/25 text-amber-500 flex items-center justify-center text-xl shrink-0 border border-amber-500/20">📅</span>
-                                <span className="text-slate-900 dark:text-white tracking-wide">نطاق التواريخ</span>
-                            </h4>
-                            <DateFilterInput label="من تاريخ" value={fDateFrom} onChange={setFDateFrom} />
-                            <DateFilterInput label="إلى تاريخ" value={fDateTo}   onChange={setFDateTo} />
+                        {/* طريقة الدفع */}
+                        <WorkstationSearchableSelect
+                            label="طريقة الدفع"
+                            placeholder="كل طرق الدفع"
+                            value={fPayMethod}
+                            options={[
+                                { id: 'hybrid', label: 'هجين (أكثر من وسيلة)', badge: '🔀' },
+                                ...paymentMethods.map(m => ({ id: String(m.id), label: m.name }))
+                            ]}
+                            onSelect={setFPayMethod}
+                        />
+
+                        {/* المنتج */}
+                        <WorkstationSearchableSelect
+                            label="المنتج المُشترى"
+                            placeholder="كل المنتجات"
+                            value={fProduct}
+                            options={products.map(p => ({ id: String(p.id), label: p.name }))}
+                            onSelect={setFProduct}
+                        />
+                    </div>
+
+                    {/* المجموعة 3: المبالغ والتواريخ */}
+                    <div className="p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] flex flex-col gap-3.5">
+                        <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-[#172437] pb-2 text-xs font-bold text-slate-800 dark:text-slate-100">
+                            <Calendar className="w-3.5 h-3.5 text-brand" />
+                            <span>المبالغ والتواريخ</span>
+                        </div>
+
+                        {/* نطاق المبالغ مع أزرار النمبر باد للمس */}
+                        <AmountRangeInput
+                            label="نطاق المبلغ الإجمالي"
+                            valueFrom={fAmountFrom}
+                            valueTo={fAmountTo}
+                            onChange={(from, to) => {
+                                setFAmountFrom(from);
+                                setFAmountTo(to);
+                            }}
+                        />
+
+                        {/* نطاق التواريخ مع أزرار لمس منفصلة (يوم، شهر، سنة) ونمبر باد مخصص لكل خانة */}
+                        <div className="flex flex-col gap-3 pt-2 border-t border-slate-200/80 dark:border-[#172437]">
+                            <DateFilterInput
+                                label="من تاريخ"
+                                value={fDateFrom}
+                                onChange={setFDateFrom}
+                            />
+                            <DateFilterInput
+                                label="إلى تاريخ"
+                                value={fDateTo}
+                                onChange={setFDateTo}
+                            />
                         </div>
                     </div>
                 </div>
             </FilterDrawer>
 
+            {/* لوحة الأرقام المنبثقة لرقم الفاتورة */}
             <NumberPadModal
                 isOpen={showIdPad}
                 title="البحث برقم فاتورة الشراء"
