@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, ModernSelect, ModernMultiSelect, Pagination, normalizeSearchText, matchesSearchText } from '@/components/ui/SpatialComponents';
+import { SpatialCard, ModernSelect, Pagination, normalizeSearchText, matchesSearchText } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
-import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star, FileSpreadsheet, Upload, Download, FileUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Package, QrCode, RefreshCw, Printer, SlidersHorizontal, Search, RotateCcw, AlertTriangle, Calculator, Star, FileSpreadsheet, Upload, Download, FileUp, ChevronDown } from 'lucide-react';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -111,6 +111,268 @@ function toEan13(code: string): string {
     }
     const checkDigit = (10 - (sum % 10)) % 10;
     return base12 + checkDigit;
+}
+
+interface WorkstationSelectOption {
+    value: string;
+    label: string;
+    badge?: string;
+    isRecommended?: boolean;
+}
+
+function WorkstationSelect({
+    value,
+    onChange,
+    options,
+    placeholder = 'اختر...',
+    className = '',
+}: {
+    value: string;
+    onChange: (val: string) => void;
+    options: WorkstationSelectOption[];
+    placeholder?: string;
+    className?: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleOut(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleOut);
+        return () => document.removeEventListener('mousedown', handleOut);
+    }, []);
+
+    const selectedOption = options.find(o => o.value === value);
+
+    return (
+        <div className={`relative ${className}`} ref={ref}>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                className="w-full h-10 px-3 rounded-[2px] bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] font-bold text-xs text-slate-800 dark:text-slate-100 flex items-center justify-between hover:border-brand shadow-xs transition-colors cursor-pointer"
+            >
+                <div className="flex items-center gap-2 truncate">
+                    <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
+                    {selectedOption?.isRecommended && (
+                        <span className="px-1.5 py-0.2 rounded-[2px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 shrink-0">
+                            موصى بها
+                        </span>
+                    )}
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform shrink-0 mr-1.5 ${open ? 'rotate-180 text-brand' : ''}`} />
+            </button>
+
+            {open && (
+                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[100] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden max-h-56 overflow-y-auto custom-scroll p-1 animate-in fade-in duration-100 min-w-[200px]">
+                    {options.map((opt) => {
+                        const isSelected = opt.value === value;
+                        return (
+                            <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                    onChange(opt.value);
+                                    setOpen(false);
+                                }}
+                                className={`w-full text-right px-3 py-2 rounded-[2px] text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
+                                    isSelected
+                                        ? 'bg-brand/10 text-brand dark:text-white border border-brand/20'
+                                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32]'
+                                }`}
+                            >
+                                <span className="truncate">{opt.label}</span>
+                                <div className="flex items-center gap-1.5 shrink-0 mr-2">
+                                    {opt.isRecommended && (
+                                        <span className="px-1.5 py-0.2 rounded-[2px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                                            موصى بها
+                                        </span>
+                                    )}
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function WorkstationMultiSearch({
+    values,
+    onSelect,
+    options,
+    placeholder = 'ابحث باسم المنتج، أو الكود، أو الباركود...',
+}: {
+    values: string[];
+    onSelect: (vals: string[]) => void;
+    options: { value: string; label: string; badge?: string; meta?: string; searchKey?: string }[];
+    placeholder?: string;
+}) {
+    const [search, setSearch] = useState('');
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        function handleOut(e: MouseEvent) {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleOut);
+        return () => document.removeEventListener('mousedown', handleOut);
+    }, []);
+
+    const filtered = options.filter(o => {
+        if (!search.trim()) return true;
+        const q = search.toLowerCase().trim();
+        return (
+            o.label.toLowerCase().includes(q) ||
+            (o.searchKey && o.searchKey.toLowerCase().includes(q)) ||
+            (o.badge && o.badge.toLowerCase().includes(q))
+        );
+    });
+
+    const handleAdd = (val: string) => {
+        if (!val.trim()) return;
+        if (!values.includes(val)) {
+            onSelect([...values, val]);
+        }
+        setSearch('');
+    };
+
+    const handleRemove = (val: string) => {
+        onSelect(values.filter(v => v !== val));
+    };
+
+    return (
+        <div className="flex flex-col gap-2 relative" ref={ref}>
+            <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={search}
+                    onChange={e => {
+                        setSearch(e.target.value);
+                        setOpen(true);
+                    }}
+                    onFocus={() => setOpen(true)}
+                    onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (search.trim()) {
+                                handleAdd(search.trim());
+                            }
+                        }
+                    }}
+                    placeholder={placeholder}
+                    className="h-11 w-full pr-9 pl-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-brand shadow-xs transition-colors"
+                />
+                {search && (
+                    <button
+                        type="button"
+                        onClick={() => setSearch('')}
+                        className="absolute left-3 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                )}
+            </div>
+
+            {values.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-[2px] bg-slate-100/70 dark:bg-[#09111c]/70 border border-slate-200 dark:border-[#1d2d42]">
+                    {values.map(val => {
+                        const opt = options.find(o => o.value === val);
+                        const label = opt ? opt.label : `بحث: "${val}"`;
+                        return (
+                            <span
+                                key={val}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle font-bold text-xs shadow-2xs"
+                            >
+                                <span className="truncate max-w-[160px]">{label}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRemove(val)}
+                                    className="w-3.5 h-3.5 rounded-[1px] hover:bg-brand/20 flex items-center justify-center transition-colors cursor-pointer text-brand"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            </span>
+                        );
+                    })}
+                </div>
+            )}
+
+            {open && (
+                <div className="absolute top-full mt-1 right-0 left-0 z-50 bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] max-h-60 overflow-y-auto custom-scroll p-1 animate-in fade-in duration-100">
+                    {search.trim() && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                handleAdd(search.trim());
+                                setOpen(false);
+                            }}
+                            className="w-full text-right px-3 py-2 rounded-[2px] text-xs font-bold text-brand hover:bg-brand-subtle flex items-center gap-2 border-b border-slate-100 dark:border-[#172437] mb-1"
+                        >
+                            <Search className="w-3.5 h-3.5 shrink-0" />
+                            <span>إضافة ككلمة بحث حرة: "{search.trim()}"</span>
+                        </button>
+                    )}
+
+                    {filtered.length === 0 ? (
+                        <div className="p-3 text-center text-xs font-semibold text-slate-400">
+                            لا توجد منتجات مطابقة
+                        </div>
+                    ) : (
+                        filtered.slice(0, 30).map(opt => {
+                            const isSelected = values.includes(opt.value);
+                            return (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            handleRemove(opt.value);
+                                        } else {
+                                            handleAdd(opt.value);
+                                        }
+                                    }}
+                                    className={`w-full text-right px-3 py-2 rounded-[2px] text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
+                                        isSelected
+                                            ? 'bg-brand/10 text-brand dark:text-white border border-brand/20'
+                                            : 'text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32]'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2 truncate">
+                                        <span className="truncate">{opt.label}</span>
+                                        {opt.badge && (
+                                            <span className="text-[10px] px-1.5 py-0.2 rounded-[2px] bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 font-medium">
+                                                {opt.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0 mr-1.5">
+                                        {opt.meta && (
+                                            <span className="text-[11px] text-slate-400 font-mono">
+                                                المخزون: {opt.meta}
+                                            </span>
+                                        )}
+                                        {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
+                                    </div>
+                                </button>
+                            );
+                        })
+                    )}
+                </div>
+            )}
+        </div>
+    );
 }
 
 function QrModal({ product, productsList, onClose }: QrModalProps) {
@@ -1221,26 +1483,20 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                         <span>{loadingPrinters ? 'جاري الفحص...' : 'تحديث الطابعات'}</span>
                                     </button>
                                 </div>
-                                <select
+                                <WorkstationSelect
                                     value={selectedPrinter}
-                                    onChange={e => handleSelectPrinter(e.target.value)}
-                                    className="w-full h-10 px-3 rounded-[2px] bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] font-bold text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand shadow-xs cursor-pointer"
-                                >
-                                    {printersList.length > 0 ? (
-                                        printersList.map(p => {
-                                            const isRecommended = /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name);
-                                            return (
-                                                <option key={p.name} value={p.name}>
-                                                    {p.name} {isRecommended ? '⭐ (موصى بها للباركود)' : ''}
-                                                </option>
-                                            );
-                                        })
-                                    ) : (
-                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>
-                                            {selectedPrinter || 'Xprinter XP-365B'}
-                                        </option>
-                                    )}
-                                </select>
+                                    onChange={handleSelectPrinter}
+                                    placeholder="اختر طابعة الباركود..."
+                                    options={
+                                        printersList.length > 0
+                                            ? printersList.map(p => ({
+                                                value: p.name,
+                                                label: p.name,
+                                                isRecommended: /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name),
+                                            }))
+                                            : [{ value: selectedPrinter || 'Xprinter XP-365B', label: selectedPrinter || 'Xprinter XP-365B' }]
+                                    }
+                                />
                                 <div className="mt-2 flex items-center justify-between text-[10px]">
                                     <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -1329,10 +1585,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             </span>
                                             <span className="text-[9px] font-mono text-slate-400">Seagull Presets</span>
                                         </div>
-                                        <select
+                                        <WorkstationSelect
                                             value={selectedStock}
-                                            onChange={e => {
-                                                const val = e.target.value;
+                                            onChange={val => {
                                                 setSelectedStock(val);
                                                 localStorage.setItem('label_printer_stock', val);
                                                 if (val.includes('BIG') || val.includes('2.36')) {
@@ -1343,15 +1598,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     updateSize(50, 100);
                                                 }
                                             }}
-                                            className="w-full px-2.5 py-1.5 rounded-[2px] bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brand"
-                                        >
-                                            <option value="">-- اختيار قالب Stock من الطابعة (مثل XP-365-BIG) --</option>
-                                            {stockForms.map(f => (
-                                                <option key={f} value={f}>
-                                                    {f}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            placeholder="-- اختيار قالب Stock من الطابعة (مثل XP-365-BIG) --"
+                                            options={[
+                                                { value: '', label: '-- بدون قالب محدد --' },
+                                                ...stockForms.map(f => ({ value: f, label: f }))
+                                            ]}
+                                        />
                                     </div>
                                 )}
 
@@ -1455,22 +1707,24 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                 {nodePrintMsg.text}
                             </span>
                         ) : (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                                 <Printer className="w-4 h-4 text-brand shrink-0" />
                                 <span className="text-[11px] font-bold text-slate-400">الطابعة:</span>
-                                <select
+                                <WorkstationSelect
                                     value={selectedPrinter}
-                                    onChange={e => handleSelectPrinter(e.target.value)}
-                                    className="bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] rounded-[2px] px-2 py-1 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
-                                >
-                                    {printersList.length > 0 ? (
-                                        printersList.map(p => (
-                                            <option key={p.name} value={p.name}>{p.name}</option>
-                                        ))
-                                    ) : (
-                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>{selectedPrinter || 'Xprinter XP-365B'}</option>
-                                    )}
-                                </select>
+                                    onChange={handleSelectPrinter}
+                                    className="min-w-[190px]"
+                                    placeholder="اختر الطابعة..."
+                                    options={
+                                        printersList.length > 0
+                                            ? printersList.map(p => ({
+                                                value: p.name,
+                                                label: p.name,
+                                                isRecommended: /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name),
+                                            }))
+                                            : [{ value: selectedPrinter || 'Xprinter XP-365B', label: selectedPrinter || 'Xprinter XP-365B' }]
+                                    }
+                                />
                             </div>
                         )}
                     </div>
@@ -2029,7 +2283,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             }}
                         />
                         <div
-                            className="relative w-full sm:w-[840px] md:w-[980px] lg:w-[1100px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col overflow-hidden border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 cursor-default z-10"
+                            className="relative w-full sm:w-[680px] md:w-[780px] lg:w-[860px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col overflow-hidden border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 cursor-default z-10"
                         >
                             
                             {/* Drawer Header */}
@@ -2451,7 +2705,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             onClick={() => setFilterDrawerOpen(false)}
                         />
                         <div
-                            className="relative w-full sm:w-[580px] md:w-[640px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 overflow-hidden cursor-default"
+                            className="relative w-full sm:w-[500px] md:w-[560px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 overflow-hidden cursor-default"
                         >
                             {/* Drawer Header */}
                             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] select-none shrink-0">
@@ -2487,8 +2741,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             البحث بالمنتج (اختيار متعدد / كلمات مفتاحية / كود QR)
                                         </label>
                                         <div className="flex flex-col gap-2.5">
-                                            <ModernMultiSelect
-                                                label=""
+                                            <WorkstationMultiSearch
                                                 placeholder="اختر منتجات أو اكتب كلمة مثل «لويس» أو كود QR..."
                                                 values={draftSearchKeywords}
                                                 options={products.map(p => ({
@@ -2499,7 +2752,6 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                     searchKey: p.qrcode ? `${p.name} ${p.qrcode} ${p.id}` : `${p.name} ${p.id}`
                                                 }))}
                                                 onSelect={setDraftSearchKeywords}
-                                                allowFreeText={true}
                                             />
                                             {draftSearchKeywords.length > 0 && (
                                                 <div className="flex items-center justify-between">
@@ -2703,17 +2955,17 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                 {/* الشريط السريع للفلاتر النشطة إن وجدت */}
                 {hasActiveFilter && (
-                    <div className="p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] flex items-center justify-between gap-3 shadow-xs">
+                    <div className="p-3 sm:p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] flex flex-wrap items-center justify-between gap-3 shadow-xs">
                         <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 select-none pl-1">
                                 <SlidersHorizontal className="w-3.5 h-3.5 text-brand" /> الفلاتر المفعلة:
                             </span>
                             {searchKeywords.map((kw) => {
                                 const prod = !isNaN(Number(kw)) ? products.find(p => p.id === Number(kw)) : null;
                                 const displayText = prod ? prod.name : `بحث: "${kw}"`;
                                 return (
-                                    <span key={kw} className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
-                                        <span>{displayText}</span>
+                                    <span key={kw} className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle font-bold shadow-xs">
+                                        <span className="max-w-[200px] truncate">{displayText}</span>
                                         <button
                                             type="button"
                                             onClick={() => {
@@ -2721,34 +2973,56 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 setSearchKeywords(updated);
                                                 setDraftSearchKeywords(updated);
                                             }}
-                                            className="hover:bg-brand/20 rounded-[2px] p-0.5 cursor-pointer"
+                                            className="w-4 h-4 rounded-[1px] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
                                             title="إزالة هذا البحث"
                                         >
-                                            <X className="w-3 h-3 hover:text-rose-500" />
+                                            <X className="w-3 h-3" />
                                         </button>
                                     </span>
                                 );
                             })}
                             {filterCat && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25">
-                                    التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
+                                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[2px] bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25 font-bold shadow-xs">
+                                    <span>التصنيف: {categories.find(c => c.id === filterCat)?.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }}
+                                        className="w-4 h-4 rounded-[1px] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                                        title="إلغاء فلتر التصنيف"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
                                 </span>
                             )}
                             {filterTier && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
-                                    التير: {tiers.find(t => t.id === filterTier)?.name}
-                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
+                                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle font-bold shadow-xs">
+                                    <span>التير: {tiers.find(t => t.id === filterTier)?.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setFilterTier(null); setDraftTier(null); }}
+                                        className="w-4 h-4 rounded-[1px] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                                        title="إلغاء فلتر التير"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
                                 </span>
                             )}
                             {lowStockOnly && (
-                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                                    أوشكت على النفاد
-                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
+                                <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[2px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold shadow-xs">
+                                    <span>أوشكت على النفاد</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }}
+                                        className="w-4 h-4 rounded-[1px] flex items-center justify-center hover:bg-rose-500 hover:text-white transition-colors cursor-pointer"
+                                        title="إلغاء فلتر النواقص"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
                                 </span>
                             )}
                         </div>
                         <button
+                            type="button"
                             onClick={() => {
                                 setSearchKeywords([]);
                                 setFilterCat(null);
@@ -2759,9 +3033,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 setDraftTier(null);
                                 setDraftLowStockOnly(false);
                             }}
-                            className="text-xs font-bold text-rose-500 hover:underline shrink-0 cursor-pointer"
+                            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[2px] bg-rose-500/10 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:!text-white font-bold text-xs border border-rose-500/25 transition-all shadow-xs shrink-0 cursor-pointer"
                         >
-                            إلغاء الكل
+                            <RotateCcw className="w-3 h-3" />
+                            <span>إلغاء الكل</span>
                         </button>
                     </div>
                 )}
@@ -2857,7 +3132,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             <button
                                                                 onClick={() => handleGenerate(product)}
                                                                 title="إنشاء QR Code"
-                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs cursor-pointer shadow-xs"
+                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:!text-white hover:border-brand transition-colors font-bold text-xs cursor-pointer shadow-xs"
                                                             >
                                                                 <QrCode className="w-3.5 h-3.5" /> إنشاء
                                                             </button>
@@ -2866,7 +3141,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             <button
                                                                 onClick={() => setQrProduct(product)}
                                                                 title="عرض QR Code"
-                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs cursor-pointer shadow-xs"
+                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:!text-white hover:border-brand transition-colors font-bold text-xs cursor-pointer shadow-xs"
                                                             >
                                                                 <QrCode className="w-3.5 h-3.5" /> QR
                                                             </button>
@@ -2975,7 +3250,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 {!product.qrcode && (
                                                     <button
                                                         onClick={() => handleGenerate(product)}
-                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
+                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:!text-white hover:border-brand transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
                                                     >
                                                         <QrCode className="w-3.5 h-3.5" /> إنشاء
                                                     </button>
@@ -2983,7 +3258,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 {product.qrcode && (
                                                     <button
                                                         onClick={() => setQrProduct(product)}
-                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
+                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:!text-white hover:border-brand transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
                                                     >
                                                         <QrCode className="w-3.5 h-3.5" /> QR
                                                     </button>

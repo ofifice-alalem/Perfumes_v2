@@ -275,7 +275,7 @@
 
   /* أصناف مساعدة لربط الخطوط والعناصر بالمتغيرات النشطة */
   .text-brand {
-    color: var(--brand-primary, #1a9fff) !important;
+    color: var(--brand-primary, #1a9fff);
   }
   .bg-brand {
     background-color: var(--brand-primary, #1a9fff) !important;
@@ -296,7 +296,7 @@
     border-color: rgba(26, 159, 255, 0.22) !important;
   }
   .text-brand-accent {
-    color: var(--brand-accent, #00d2ff) !important;
+    color: var(--brand-accent, #00d2ff);
   }
   .border-brand-accent {
     border-color: var(--brand-accent, #00d2ff) !important;
