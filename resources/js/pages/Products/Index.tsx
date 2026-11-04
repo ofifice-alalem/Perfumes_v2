@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
@@ -167,33 +167,37 @@ function WorkstationSelect({
             </button>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[100] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden max-h-56 overflow-y-auto custom-scroll p-1 animate-in fade-in duration-100 min-w-[200px]">
-                    {options.map((opt) => {
+                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[100] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] overflow-hidden max-h-56 overflow-y-auto custom-scroll p-1.5 animate-in fade-in duration-100 min-w-[200px]">
+                    {options.map((opt, idx) => {
                         const isSelected = opt.value === value;
                         return (
-                            <button
-                                key={opt.value}
-                                type="button"
-                                onClick={() => {
-                                    onChange(opt.value);
-                                    setOpen(false);
-                                }}
-                                className={`w-full text-right px-3 py-2 rounded-[2px] text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
-                                    isSelected
-                                        ? 'bg-brand/10 text-brand dark:text-white border border-brand/20'
-                                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32]'
-                                }`}
-                            >
-                                <span className="truncate">{opt.label}</span>
-                                <div className="flex items-center gap-1.5 shrink-0 mr-2">
-                                    {opt.isRecommended && (
-                                        <span className="px-1.5 py-0.2 rounded-[2px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px]">
-                                            موصى بها
-                                        </span>
-                                    )}
-                                    {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
-                                </div>
-                            </button>
+                            <Fragment key={opt.value}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(opt.value);
+                                        setOpen(false);
+                                    }}
+                                    className={`w-full text-right px-3 py-2.5 rounded-[2px] text-xs font-bold transition-all cursor-pointer flex items-center justify-between border ${
+                                        isSelected
+                                            ? 'bg-brand/10 text-brand dark:text-white border-brand/30 shadow-2xs'
+                                            : 'border-slate-100 dark:border-[#162234] text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#22354e]'
+                                    }`}
+                                >
+                                    <span className="truncate">{opt.label}</span>
+                                    <div className="flex items-center gap-1.5 shrink-0 mr-2">
+                                        {opt.isRecommended && (
+                                            <span className="px-1.5 py-0.2 rounded-[2px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[10px]">
+                                                موصى بها
+                                            </span>
+                                        )}
+                                        {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
+                                    </div>
+                                </button>
+                                {idx < options.length - 1 && (
+                                    <div className="h-[1.5px] bg-slate-200 dark:bg-[#1a283e] my-1 mx-1" />
+                                )}
+                            </Fragment>
                         );
                     })}
                 </div>
@@ -330,42 +334,46 @@ function WorkstationMultiSearch({
                             لا توجد منتجات مطابقة
                         </div>
                     ) : (
-                        filtered.slice(0, 30).map(opt => {
+                        filtered.slice(0, 30).map((opt, idx) => {
                             const isSelected = values.includes(opt.value);
                             return (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => {
-                                        if (isSelected) {
-                                            handleRemove(opt.value);
-                                        } else {
-                                            handleAdd(opt.value);
-                                        }
-                                    }}
-                                    className={`w-full text-right px-3 py-2 rounded-[2px] text-xs font-bold transition-colors cursor-pointer flex items-center justify-between ${
-                                        isSelected
-                                            ? 'bg-brand/10 text-brand dark:text-white border border-brand/20'
-                                            : 'text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32]'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-2 truncate">
-                                        <span className="truncate">{opt.label}</span>
-                                        {opt.badge && (
-                                            <span className="text-[10px] px-1.5 py-0.2 rounded-[2px] bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 font-medium">
-                                                {opt.badge}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0 mr-1.5">
-                                        {opt.meta && (
-                                            <span className="text-[11px] text-slate-400 font-mono">
-                                                المخزون: {opt.meta}
-                                            </span>
-                                        )}
-                                        {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
-                                    </div>
-                                </button>
+                                <Fragment key={opt.value}>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                handleRemove(opt.value);
+                                            } else {
+                                                handleAdd(opt.value);
+                                            }
+                                        }}
+                                        className={`w-full text-right px-3 py-2.5 rounded-[2px] text-xs font-bold transition-all cursor-pointer flex items-center justify-between border ${
+                                            isSelected
+                                                ? 'bg-brand/10 text-brand dark:text-white border-brand/30 shadow-2xs'
+                                                : 'border-slate-100 dark:border-[#162234] text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#131f32] hover:border-slate-300 dark:hover:border-[#22354e]'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2 truncate">
+                                            <span className="truncate">{opt.label}</span>
+                                            {opt.badge && (
+                                                <span className="text-[10px] px-1.5 py-0.2 rounded-[2px] bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0 font-medium">
+                                                    {opt.badge}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0 mr-1.5">
+                                            {opt.meta && (
+                                                <span className="text-[11px] text-slate-400 font-mono">
+                                                    المخزون: {opt.meta}
+                                                </span>
+                                            )}
+                                            {isSelected && <Check className="w-3.5 h-3.5 text-brand" />}
+                                        </div>
+                                    </button>
+                                    {idx < Math.min(filtered.length, 30) - 1 && (
+                                        <div className="h-[1.5px] bg-slate-200 dark:bg-[#1a283e] my-1 mx-1" />
+                                    )}
+                                </Fragment>
                             );
                         })
                     )}

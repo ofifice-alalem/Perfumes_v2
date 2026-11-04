@@ -540,7 +540,7 @@ export function ModernSelect({
                   )}
                 </div>
               </li>
-              {idx < filtered.length - 1 && <div className="h-[1.5px] bg-slate-200 dark:bg-white/15 my-2 mx-1" />}
+              {idx < filtered.length - 1 && <div className="h-[1.5px] bg-slate-300 dark:bg-white/15 my-2 mx-1" />}
             </div>
           );
         })
@@ -820,7 +820,7 @@ export function ModernMultiSelect({
                   <span className={`text-base font-black shrink-0 px-3 py-1.5 rounded-xl ${isSelected ? 'bg-primary text-white' : 'bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/60'}`}>{opt.meta}</span>
                 )}
               </li>
-              {idx < filtered.length - 1 && <div className="h-px bg-black/5 dark:bg-white/5 my-1 mx-2" />}
+              {idx < filtered.length - 1 && <div className="h-[1.5px] bg-slate-300 dark:bg-white/15 my-2 mx-1" />}
             </div>
           );
         })}
