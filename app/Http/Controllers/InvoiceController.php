@@ -106,7 +106,7 @@ class InvoiceController extends Controller
         $recentInvoices = DB::select("
             SELECT 
                 i.id,
-                i.invoice_number,
+                i.id as invoice_number,
                 COALESCE(c.name, 'زبون نقدي') as customer_name,
                 COALESCE(u.name, 'الكاشير') as user_name,
                 CAST(i.total AS DOUBLE) as total,
