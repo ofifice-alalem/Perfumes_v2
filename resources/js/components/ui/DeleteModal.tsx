@@ -33,59 +33,64 @@ export function DeleteModal({
             ) : (
                 <button
                     onClick={() => setOpen(true)}
-                    className={triggerClassName ?? 'flex items-center justify-center gap-3 px-7 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-xl sm:text-2xl shadow-md active:scale-95'}
+                    className={triggerClassName ?? 'flex items-center justify-center gap-2 px-5 h-11 sm:h-12 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all font-bold text-sm shadow-sm active:scale-95 cursor-pointer'}
                 >
-                    <Trash2 className="w-8 h-8 sm:w-9 sm:h-9" /> حذف
+                    <Trash2 className="w-4 h-4" /> حذف
                 </button>
             )}
 
             {open && createPortal(
-                <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-4 sm:p-6">
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-md"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
                         onClick={() => setOpen(false)}
                     />
 
                     {/* Modal */}
-                    <div className="relative w-full sm:max-w-md rounded-[32px] p-7 sm:p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200
-                        border-2 border-black/10 dark:border-white/[0.15]
-                        bg-gradient-to-br from-white to-slate-100
-                        dark:[background:linear-gradient(145deg,rgba(35,45,85,0.95)_0%,rgba(15,20,45,0.95)_100%)]
-                        backdrop-blur-3xl shadow-2xl shadow-black/20">
+                    <div className="relative z-10 w-full max-w-md rounded-[2px] p-5 sm:p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-150
+                        border border-slate-200 dark:border-[#1d2d42]
+                        bg-white dark:bg-[#0c1421]
+                        shadow-2xl">
 
-                        {/* أيقونة التحذير */}
-                        <div className="flex items-center justify-between">
-                            <div className="w-20 h-20 rounded-[24px] bg-red-500/15 border-2 border-red-500/25 flex items-center justify-center">
-                                <AlertTriangle className="w-10 h-10 sm:w-11 sm:h-11 text-red-500" />
+                        {/* Header */}
+                        <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#19273b] pb-3">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-[2px] bg-rose-500/10 border border-rose-500/25 flex items-center justify-center shrink-0">
+                                    <AlertTriangle className="w-4 h-4 text-rose-500" />
+                                </div>
+                                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">{title}</h3>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => setOpen(false)}
-                                className="w-12 h-12 rounded-full bg-black/6 dark:bg-white/10 hover:bg-black/12 dark:hover:bg-white/20 text-slate-500 dark:text-white/60 hover:text-slate-800 dark:hover:text-white flex items-center justify-center transition-all border border-black/5 dark:border-white/10 active:scale-95"
+                                className="w-7 h-7 rounded-[2px] hover:bg-slate-100 dark:hover:bg-[#152238] text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer"
                             >
-                                <X className="w-6 h-6" />
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
 
-                        {/* النص */}
-                        <div className="flex flex-col gap-2">
-                            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">{title}</h3>
-                            <p className="text-base sm:text-xl font-bold text-slate-600 dark:text-white/60 leading-relaxed">{description}</p>
+                        {/* Body */}
+                        <div className="py-1">
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 leading-relaxed">{description}</p>
                         </div>
 
-                        {/* الأزرار */}
-                        <div className="flex items-center gap-4 mt-2">
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 pt-3 border-t border-slate-100 dark:border-[#19273b]">
                             <button
+                                type="button"
                                 onClick={() => setOpen(false)}
-                                className="flex-1 h-16 sm:h-18 rounded-[22px] bg-black/6 dark:bg-white/10 hover:bg-black/12 dark:hover:bg-white/20 text-slate-700 dark:text-white/80 font-black text-lg sm:text-2xl transition-all border-2 border-black/8 dark:border-white/12 active:scale-95"
+                                className="flex-1 h-11 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-700 dark:text-slate-200 font-bold text-sm transition-colors cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                             >
                                 إلغاء
                             </button>
                             <button
+                                type="button"
                                 onClick={handleConfirm}
-                                className="flex-1 h-16 sm:h-18 rounded-[22px] bg-red-500 hover:bg-red-600 text-white font-black text-lg sm:text-2xl transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/30 active:scale-95 border-2 border-red-400/30"
+                                className="flex-1 h-11 rounded-[2px] bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                             >
-                                <Trash2 className="w-8 h-8 sm:w-9 sm:h-9" /> حذف
+                                <Trash2 className="w-4 h-4" />
+                                <span>تأكيد الحذف</span>
                             </button>
                         </div>
 

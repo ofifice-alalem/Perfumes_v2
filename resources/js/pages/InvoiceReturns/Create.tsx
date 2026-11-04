@@ -764,11 +764,31 @@ export default function InvoiceReturnsCreate({
                                     </div>
                                 </div>
                             )}
+                            {/* Empty Selection State Guide */}
+                            {!selectedProduct && (
+                                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border border-dashed border-slate-200 dark:border-[#1d2d42] rounded-[2px] bg-white/60 dark:bg-[#0c1421]/40">
+                                    <Package className="w-10 h-10 text-slate-300 dark:text-slate-600 mb-2.5 stroke-[1.5]" />
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                                        ابحث أو اختر المنتج المراد إرجاعه من القائمة أعلاه
+                                    </p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-sm">
+                                        عند اختيار الصنف، ستظهر لك أزرار تحديد الحجم، سعر الإرجاع، والكمية لإضافتها إلى السلة فوراً
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     {/* Bottom Action Bar - Exact Workstation Matching Invoices/Create.tsx */}
                     <div className="p-3 sm:p-4 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-center gap-2 sm:gap-3">
+                        {/* Cancel link button */}
+                        <Link
+                            href="/invoice-returns"
+                            className="h-20 sm:h-24 px-3.5 sm:px-4.5 rounded-[2px] border border-slate-300 dark:border-[#22354e] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm transition-colors shrink-0 flex items-center justify-center shadow-sm"
+                        >
+                            <span>إلغاء</span>
+                        </Link>
+
                         {/* Clear Return Items button */}
                         {items.length > 0 && (
                             <button

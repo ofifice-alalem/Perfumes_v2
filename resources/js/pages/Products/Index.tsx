@@ -679,21 +679,21 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
             {/* الخلفية المعتمة ببلور ناعم وتعتيم كامل */}
             <div
-                className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer transition-opacity"
+                className="fixed inset-0 bg-black/75 backdrop-blur-xs cursor-pointer transition-opacity"
                 onClick={onClose}
             />
 
-            {/* نافذة الموديل بنمط Spatial UI العصري */}
-            <div className="relative z-10 w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_25px_70px_rgba(0,0,0,0.6)] border-2 border-slate-200/80 dark:border-white/10 flex flex-col max-h-[92vh] my-auto overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* نافذة الموديل بنمط Workstation UI العصري */}
+            <div className="relative z-10 w-full max-w-4xl bg-white dark:bg-[#0c1421] rounded-[2px] shadow-2xl border border-slate-200 dark:border-[#1d2d42] flex flex-col max-h-[92vh] my-auto overflow-hidden animate-in zoom-in-95 duration-150">
                 
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 dark:border-white/8 bg-slate-50/80 dark:bg-slate-800/40 backdrop-blur-sm shrink-0">
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-[16px] bg-primary/15 text-primary flex items-center justify-center border border-primary/20 shadow-sm">
-                            <QrCode className="w-5 h-5" />
+                        <div className="w-8 h-8 rounded-[2px] bg-brand-subtle text-brand flex items-center justify-center border border-brand-subtle shadow-xs">
+                            <QrCode className="w-4 h-4" />
                         </div>
                         <div>
-                            <h3 className="font-black text-slate-900 dark:text-white text-base">
+                            <h3 className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                                 {isBulk ? 'طباعة جماعية لملصقات الباركود والـ QR' : 'طباعة ملصق الباركود والـ QR'}
                             </h3>
                             <div className="flex items-center gap-2 mt-0.5">
@@ -701,12 +701,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     {isBulk ? `طباعة دفعة واحدة لـ ${items.length} منتج في نتائج البحث` : activeProduct.name}
                                 </span>
                                 {isBulk ? (
-                                    <span className="font-mono text-[11px] font-black px-2 py-0.5 rounded-md bg-primary/15 text-primary border border-primary/20">
+                                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
                                         {items.length} عنصر
                                     </span>
                                 ) : (
                                     activeProduct.qrcode && (
-                                        <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                        <span className="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1d2d42]">
                                             {activeProduct.qrcode}
                                         </span>
                                     )
@@ -716,7 +716,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800/80 hover:bg-red-500 hover:text-white text-slate-400 hover:text-white transition-all flex items-center justify-center cursor-pointer shadow-sm active:scale-95"
+                        className="w-8 h-8 rounded-[2px] bg-white dark:bg-[#152238] hover:bg-rose-500 hover:text-white text-slate-400 hover:text-white transition-colors flex items-center justify-center cursor-pointer border border-slate-200 dark:border-[#1d2d42] active:scale-95"
                         title="إغلاق"
                     >
                         <X className="w-4 h-4" />
@@ -724,24 +724,24 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                 </div>
 
                 {/* Body Content: شبكة مقسمة لعمودين (معاينة حية على جانب، والإعدادات على الجانب الآخر) */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
 
                         {/* العمود 1 (اليمين في RTL): المعاينة الحية للملصق وخيارات الإظهار */}
-                        <div className="md:col-span-5 flex flex-col gap-4">
-                            {/* صندوق المعاينة الفضائي */}
-                            <div className="flex flex-col items-center justify-center p-4 rounded-[24px] bg-slate-100/80 dark:bg-slate-800/40 border-2 border-dashed border-slate-300/80 dark:border-slate-700/80">
-                                <div className="text-[11px] font-black text-slate-600 dark:text-slate-300 mb-2 flex items-center justify-between w-full">
+                        <div className="md:col-span-5 flex flex-col gap-3.5">
+                            {/* صندوق المعاينة */}
+                            <div className="flex flex-col items-center justify-center p-3.5 rounded-[2px] bg-slate-50/70 dark:bg-[#080e18] border border-dashed border-slate-300 dark:border-[#1d2d42]">
+                                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-2 flex items-center justify-between w-full">
                                     <span className="flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                         {isBulk ? `معاينة نموذجية (${previewIndex + 1} من ${items.length})` : 'معاينة الملصق المباشرة'}
                                     </span>
                                     <div className="flex items-center gap-1">
-                                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-mono font-bold border border-primary/20">
+                                        <span className="px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand text-[10px] font-mono font-bold border border-brand-subtle">
                                             {widthMm} × {heightMm} مم
                                         </span>
                                         {rotation !== 0 && (
-                                            <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-black border border-amber-500/30">
+                                            <span className="px-1.5 py-0.5 rounded-[2px] bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/30">
                                                 {rotation}°
                                             </span>
                                         )}
@@ -750,15 +750,15 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                                 {/* شريط التنقل بين المنتجات لمعاينة أي منتج في حالة الطباعة الجماعية */}
                                 {isBulk && items.length > 1 && (
-                                    <div className="flex items-center justify-between w-full px-1 mb-2.5 bg-white/70 dark:bg-slate-900/60 p-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
-                                        <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate max-w-[150px]" title={activeProduct.name}>
+                                    <div className="flex items-center justify-between w-full px-1 mb-2.5 bg-white dark:bg-[#0c1421] p-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42]">
+                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate max-w-[150px]" title={activeProduct.name}>
                                             {activeProduct.name}
                                         </span>
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => setPreviewIndex(prev => (prev > 0 ? prev - 1 : items.length - 1))}
-                                                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-slate-200 dark:border-slate-600 transition-all active:scale-95"
+                                                className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] hover:bg-brand hover:text-white text-[10px] font-bold cursor-pointer border border-slate-200 dark:border-[#1d2d42] transition-colors"
                                                 title="معاينة المنتج السابق"
                                             >
                                                 السابق
@@ -766,7 +766,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => setPreviewIndex(Math.floor(Math.random() * items.length))}
-                                                className="px-2 py-0.5 rounded-md bg-primary/10 text-primary hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-primary/20 transition-all active:scale-95"
+                                                className="px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand hover:bg-brand hover:text-white text-[10px] font-bold cursor-pointer border border-brand-subtle transition-colors"
                                                 title="اختيار منتج عشوائي للمعاينة"
                                             >
                                                 عشوائي 🎲
@@ -774,7 +774,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => setPreviewIndex(prev => (prev < items.length - 1 ? prev + 1 : 0))}
-                                                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-primary hover:text-white text-[10px] font-black cursor-pointer border border-slate-200 dark:border-slate-600 transition-all active:scale-95"
+                                                className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] hover:bg-brand hover:text-white text-[10px] font-bold cursor-pointer border border-slate-200 dark:border-[#1d2d42] transition-colors"
                                                 title="معاينة المنتج التالي"
                                             >
                                                 التالي
@@ -789,7 +789,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                         width: '210px',
                                         height: `${Math.max(95, Math.min(160, Math.round(210 * (heightMm / widthMm))))}px`,
                                     }}
-                                    className="bg-white rounded-[12px] shadow-[0_10px_25px_rgba(0,0,0,0.15)] border border-slate-300/80 p-2 flex flex-col items-center justify-center text-slate-900 font-sans transition-all overflow-hidden select-none relative"
+                                    className="bg-white rounded-[2px] shadow-md border border-slate-300 p-2 flex flex-col items-center justify-center text-slate-900 font-sans transition-all overflow-hidden select-none relative"
                                 >
                                     <div
                                         style={{
@@ -903,12 +903,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                             </div>
 
                             {/* خيارات المحتوى الظاهر على الملصق */}
-                            <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
-                                <span className="text-xs font-black text-slate-700 dark:text-slate-300">عناصر الملصق:</span>
+                            <div className="p-3 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-2">
+                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">عناصر الملصق:</span>
                                 <div className="grid grid-cols-3 gap-2">
-                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                    <label className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-[2px] text-xs font-bold cursor-pointer border transition-all ${
                                         showName
-                                            ? 'bg-white dark:bg-slate-700/80 text-primary dark:text-white border-primary/30 shadow-xs'
+                                            ? 'bg-brand-subtle text-brand border-brand-subtle shadow-xs'
                                             : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
                                     }`}>
                                         <input
@@ -923,9 +923,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                         <span>اسم العطر</span>
                                     </label>
 
-                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                    <label className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-[2px] text-xs font-bold cursor-pointer border transition-all ${
                                         showPrice
-                                            ? 'bg-white dark:bg-slate-700/80 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs'
+                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs'
                                             : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
                                     }`}>
                                         <input
@@ -940,9 +940,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                         <span>السعر</span>
                                     </label>
 
-                                    <label className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-[12px] text-xs font-black cursor-pointer border transition-all ${
+                                    <label className={`flex items-center justify-center gap-1.5 py-1.5 px-1 rounded-[2px] text-xs font-bold cursor-pointer border transition-all ${
                                         showCodeText
-                                            ? 'bg-white dark:bg-slate-700/80 text-primary dark:text-white border-primary/30 shadow-xs'
+                                            ? 'bg-brand-subtle text-brand border-brand-subtle shadow-xs'
                                             : 'bg-transparent text-slate-400 border-transparent hover:border-slate-300'
                                     }`}>
                                         <input
@@ -961,13 +961,13 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                             {/* حجم خط عنوان المنتج (مفيد جداً للعناوين الطويلة) */}
                             {showName && (
-                                <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                <div className="p-3 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 block">
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                                                 حجم خط عنوان المنتج:
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-400">
+                                            <span className="text-[10px] font-medium text-slate-400">
                                                 {titleFontSizeCustom === null ? 'محسوب تلقائياً حسب حجم الملصق' : 'حجم خط مخصص للعناوين الطويلة'}
                                             </span>
                                         </div>
@@ -979,12 +979,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     setTitleFontSizeCustom(next);
                                                     localStorage.setItem('label_printer_title_font_size', String(next));
                                                 }}
-                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-[#1e2f47] active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                                 title="تصغير الخط للعناوين الطويلة"
                                             >
                                                 -
                                             </button>
-                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                                            <span className="font-mono font-bold text-xs px-2.5 py-1 bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] rounded-[2px] min-w-[54px] text-center shadow-xs">
                                                 {activeTitleFontSizePt} pt
                                             </span>
                                             <button
@@ -994,7 +994,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     setTitleFontSizeCustom(next);
                                                     localStorage.setItem('label_printer_title_font_size', String(next));
                                                 }}
-                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-[#1e2f47] active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                                 title="تكبير الخط"
                                             >
                                                 +
@@ -1006,7 +1006,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                         setTitleFontSizeCustom(null);
                                                         localStorage.removeItem('label_printer_title_font_size');
                                                     }}
-                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                                                    className="text-[11px] font-bold text-brand hover:underline px-1.5 cursor-pointer"
                                                 >
                                                     تلقائي
                                                 </button>
@@ -1015,8 +1015,8 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     </div>
 
                                     {/* أزرار سريعة للأحجام الشائعة */}
-                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام سريعة:</span>
+                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-[#1d2d42]">
+                                        <span className="text-[10px] font-medium text-slate-400 shrink-0">أحجام سريعة:</span>
                                         <div className="flex items-center gap-1 flex-wrap">
                                             {[
                                                 { label: 'صغير جداً (5.5)', val: 5.5 },
@@ -1031,10 +1031,10 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                         setTitleFontSizeCustom(opt.val);
                                                         localStorage.setItem('label_printer_title_font_size', String(opt.val));
                                                     }}
-                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                                                    className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold border transition-colors cursor-pointer ${
                                                         activeTitleFontSizePt === opt.val
-                                                            ? 'bg-primary text-white border-primary shadow-xs'
-                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                                            : 'bg-white dark:bg-[#101a29] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                     }`}
                                                 >
                                                     {opt.label}
@@ -1047,13 +1047,13 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                             {/* حجم رمز الـ QR (عند اختيار QR فقط) */}
                             {tab === 'classic' && (
-                                <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                                <div className="p-3 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-2">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <span className="text-xs font-black text-slate-700 dark:text-slate-300 block">
+                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
                                                 حجم رمز الـ QR:
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-400">
+                                            <span className="text-[10px] font-medium text-slate-400">
                                                 {qrSizeCustom === null ? 'محسوب تلقائياً حسب الورقة' : 'مقاس يدوي مخصص'}
                                             </span>
                                         </div>
@@ -1065,12 +1065,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     setQrSizeCustom(next);
                                                     localStorage.setItem('label_printer_qr_size', String(next));
                                                 }}
-                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-[#1e2f47] active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                                 title="تصغير"
                                             >
                                                 -
                                             </button>
-                                            <span className="font-mono font-black text-xs px-2.5 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-w-[54px] text-center shadow-xs">
+                                            <span className="font-mono font-bold text-xs px-2.5 py-1 bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] rounded-[2px] min-w-[54px] text-center shadow-xs">
                                                 {activeQrSizeMm} مم
                                             </span>
                                             <button
@@ -1080,7 +1080,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     setQrSizeCustom(next);
                                                     localStorage.setItem('label_printer_qr_size', String(next));
                                                 }}
-                                                className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-xs hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 cursor-pointer border border-slate-200 dark:border-slate-600"
+                                                className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 dark:hover:bg-[#1e2f47] active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                                 title="تكبير"
                                             >
                                                 +
@@ -1092,7 +1092,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                         setQrSizeCustom(null);
                                                         localStorage.removeItem('label_printer_qr_size');
                                                     }}
-                                                    className="text-[11px] font-bold text-primary hover:underline px-1.5 cursor-pointer"
+                                                    className="text-[11px] font-bold text-brand hover:underline px-1.5 cursor-pointer"
                                                 >
                                                     تلقائي
                                                 </button>
@@ -1101,8 +1101,8 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     </div>
 
                                     {/* أزرار سريعة لأحجام الـ QR */}
-                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/50">
-                                        <span className="text-[10px] font-bold text-slate-400 shrink-0">أحجام شائعة:</span>
+                                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-[#1d2d42]">
+                                        <span className="text-[10px] font-medium text-slate-400 shrink-0">أحجام شائعة:</span>
                                         <div className="flex items-center gap-1 flex-wrap">
                                             {[
                                                 { label: 'صغير (10 مم)', val: 10 },
@@ -1117,10 +1117,10 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                         setQrSizeCustom(opt.val);
                                                         localStorage.setItem('label_printer_qr_size', String(opt.val));
                                                     }}
-                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-colors cursor-pointer ${
+                                                    className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold border transition-colors cursor-pointer ${
                                                         activeQrSizeMm === opt.val
-                                                            ? 'bg-primary text-white border-primary shadow-xs'
-                                                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                                            : 'bg-white dark:bg-[#101a29] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                     }`}
                                                 >
                                                     {opt.label}
@@ -1132,9 +1132,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                             )}
 
                             {/* إزاحة وتوسيط الطباعة (X و Y) */}
-                            <div className="p-3 rounded-[20px] bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5 flex flex-col gap-2">
+                            <div className="p-3 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-xs font-black text-slate-700 dark:text-slate-300">إزاحة الطباعة (للتوسيط الدقيق بالمليمتر):</span>
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">إزاحة الطباعة (للتوسيط بالمليمتر):</span>
                                     {(offsetX !== 0 || offsetY !== 0) && (
                                         <button
                                             type="button"
@@ -1144,20 +1144,20 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                 localStorage.setItem('label_printer_offset_x', '0');
                                                 localStorage.setItem('label_printer_offset_y', '0');
                                             }}
-                                            className="text-[10px] font-black text-red-500 hover:underline cursor-pointer"
+                                            className="text-[10px] font-bold text-rose-500 hover:underline cursor-pointer"
                                         >
                                             تصفير
                                         </button>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between p-1.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42]">
                                         <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">عمودي (Y):</span>
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => updateOffsetY(-0.5)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                                className="w-6 h-6 rounded-[2px] bg-slate-100 dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                             >
                                                 -
                                             </button>
@@ -1167,20 +1167,20 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => updateOffsetY(0.5)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                                className="w-6 h-6 rounded-[2px] bg-slate-100 dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                             >
                                                 +
                                             </button>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between p-1.5 rounded-[10px] bg-white dark:bg-slate-700/60 border border-slate-200 dark:border-slate-600">
+                                    <div className="flex items-center justify-between p-1.5 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42]">
                                         <span className="text-[11px] font-bold text-slate-500 dark:text-slate-300">أفقي (X):</span>
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
                                                 onClick={() => updateOffsetX(-1)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                                className="w-6 h-6 rounded-[2px] bg-slate-100 dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                             >
                                                 -
                                             </button>
@@ -1190,7 +1190,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             <button
                                                 type="button"
                                                 onClick={() => updateOffsetX(1)}
-                                                className="w-6 h-6 rounded bg-slate-100 dark:bg-slate-600 flex items-center justify-center font-black text-xs hover:bg-slate-200 active:scale-95 cursor-pointer"
+                                                className="w-6 h-6 rounded-[2px] bg-slate-100 dark:bg-[#152238] flex items-center justify-center font-bold text-xs hover:bg-slate-200 active:scale-95 cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                                             >
                                                 +
                                             </button>
@@ -1201,12 +1201,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                         </div>
 
                         {/* العمود 2 (اليسار في RTL): أدوات الضبط والإعدادات */}
-                        <div className="md:col-span-7 flex flex-col gap-4">
+                        <div className="md:col-span-7 flex flex-col gap-3.5">
 
                             {/* 0. اختيار طابعة الباركود والملصقات */}
-                            <div className="p-3.5 rounded-[18px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 shadow-xs">
+                            <div className="p-3 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] shadow-xs">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                                         <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                         <span>طابعة الملصقات والباركود:</span>
                                     </label>
@@ -1214,17 +1214,17 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                         type="button"
                                         onClick={() => loadPrinters(false)}
                                         disabled={loadingPrinters}
-                                        className="text-[11px] font-bold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-1 cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
+                                        className="text-[11px] font-bold text-slate-500 hover:text-brand dark:text-slate-400 dark:hover:text-brand flex items-center gap-1 cursor-pointer transition-colors px-2 py-0.5 rounded-[2px] hover:bg-slate-200 dark:hover:bg-[#152238]"
                                         title="إعادة فحص طابعات الويندوز"
                                     >
-                                        <RefreshCw className={`w-3 h-3 ${loadingPrinters ? 'animate-spin text-primary' : ''}`} />
+                                        <RefreshCw className={`w-3 h-3 ${loadingPrinters ? 'animate-spin text-brand' : ''}`} />
                                         <span>{loadingPrinters ? 'جاري الفحص...' : 'تحديث الطابعات'}</span>
                                     </button>
                                 </div>
                                 <select
                                     value={selectedPrinter}
                                     onChange={e => handleSelectPrinter(e.target.value)}
-                                    className="w-full h-10 px-3 rounded-[12px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-black text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary shadow-xs cursor-pointer"
+                                    className="w-full h-10 px-3 rounded-[2px] bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] font-bold text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand shadow-xs cursor-pointer"
                                 >
                                     {printersList.length > 0 ? (
                                         printersList.map(p => {
@@ -1243,7 +1243,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                 </select>
                                 <div className="mt-2 flex items-center justify-between text-[10px]">
                                     <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                         طباعة مباشرة صامتة (TSPL Direct)
                                     </span>
                                     <span className="text-slate-400 font-mono">
@@ -1254,16 +1254,16 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                             {/* 1. نوع الرمز: 3 خيارات */}
                             <div>
-                                <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                                     نوع الرمز (Code Type):
                                 </label>
-                                <div className="flex items-center gap-1.5 p-1 rounded-[16px] bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 shrink-0">
+                                <div className="flex items-center gap-1 p-1 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] shrink-0">
                                     <button
                                         type="button"
                                         onClick={() => { setTab('ean13'); localStorage.setItem('label_printer_tab', 'ean13'); }}
-                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                        className={`flex-1 py-1.5 px-1 rounded-[2px] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
                                             tab === 'ean13'
-                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                ? 'bg-brand text-white shadow-xs'
                                                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                                         }`}
                                     >
@@ -1272,9 +1272,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     <button
                                         type="button"
                                         onClick={() => { setTab('serial'); localStorage.setItem('label_printer_tab', 'serial'); }}
-                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                        className={`flex-1 py-1.5 px-1 rounded-[2px] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
                                             tab === 'serial'
-                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                ? 'bg-brand text-white shadow-xs'
                                                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                                         }`}
                                     >
@@ -1283,9 +1283,9 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     <button
                                         type="button"
                                         onClick={() => { setTab('classic'); localStorage.setItem('label_printer_tab', 'classic'); }}
-                                        className={`flex-1 py-2 px-1 rounded-[12px] text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
+                                        className={`flex-1 py-1.5 px-1 rounded-[2px] text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
                                             tab === 'classic'
-                                                ? 'bg-white dark:bg-slate-700 text-primary dark:text-white shadow-sm'
+                                                ? 'bg-brand text-white shadow-xs'
                                                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
                                         }`}
                                     >
@@ -1296,7 +1296,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                             {/* 2. مقاس ورقة الملصق (Presets + مخصص) */}
                             <div>
-                                <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1.5">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                                     مقاس ورقة الملصق (Label Size):
                                 </label>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1307,10 +1307,10 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                 key={`${s.w}x${s.h}`}
                                                 type="button"
                                                 onClick={() => updateSize(s.w, s.h)}
-                                                className={`py-2 px-1.5 rounded-[12px] text-xs font-black border-2 transition-all cursor-pointer text-center ${
+                                                className={`py-1.5 px-1.5 rounded-[2px] text-xs font-bold border transition-all cursor-pointer text-center ${
                                                     isSelected
-                                                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/30'
-                                                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/50'
+                                                        ? 'bg-brand text-white border-brand shadow-xs'
+                                                        : 'bg-slate-50 dark:bg-[#101a29] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                 }`}
                                             >
                                                 {s.w}×{s.h} مم
@@ -1321,10 +1321,10 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                                 {/* اختيار قالب Stock المسجل في الطابعة */}
                                 {stockForms.length > 0 && (
-                                    <div className="mb-2.5 p-2 rounded-[14px] bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 mt-2">
+                                    <div className="mb-2 p-2 rounded-[2px] bg-slate-50 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] mt-2">
                                         <div className="flex items-center justify-between mb-1">
-                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand" />
                                                 قالب ورق الطابعة بالويندوز (Stock):
                                             </span>
                                             <span className="text-[9px] font-mono text-slate-400">Seagull Presets</span>
@@ -1343,7 +1343,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                     updateSize(50, 100);
                                                 }
                                             }}
-                                            className="w-full px-2.5 py-1.5 rounded-[10px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                                            className="w-full px-2.5 py-1.5 rounded-[2px] bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-brand"
                                         >
                                             <option value="">-- اختيار قالب Stock من الطابعة (مثل XP-365-BIG) --</option>
                                             {stockForms.map(f => (
@@ -1357,7 +1357,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                                 {/* مقاس مخصص */}
                                 <div className="mt-2 flex items-center gap-2">
-                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
+                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-[#0a121e] px-3 py-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42]">
                                         <span className="text-[11px] font-bold text-slate-400">العرض:</span>
                                         <input
                                             type="number"
@@ -1370,12 +1370,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                 setIsCustomSize(true);
                                                 localStorage.setItem('label_printer_w', String(val));
                                             }}
-                                            className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                                            className="w-full bg-transparent font-bold text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
                                         />
                                         <span className="text-[10px] font-bold text-slate-400">مم</span>
                                     </div>
 
-                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-[12px] border border-slate-200 dark:border-slate-700">
+                                    <div className="flex-1 flex items-center gap-2 bg-slate-50 dark:bg-[#0a121e] px-3 py-1.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42]">
                                         <span className="text-[11px] font-bold text-slate-400">الارتفاع:</span>
                                         <input
                                             type="number"
@@ -1388,7 +1388,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                 setIsCustomSize(true);
                                                 localStorage.setItem('label_printer_h', String(val));
                                             }}
-                                            className="w-full bg-transparent font-black text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
+                                            className="w-full bg-transparent font-bold text-xs font-mono text-slate-900 dark:text-white focus:outline-none"
                                         />
                                         <span className="text-[10px] font-bold text-slate-400">مم</span>
                                     </div>
@@ -1398,29 +1398,29 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                             {/* 3. الدوران وعدد النسخ */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1">
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                                         دوران الاتجاه:
                                     </label>
                                     <button
                                         type="button"
                                         onClick={toggleRotation}
-                                        className="w-full flex items-center justify-center gap-2 h-10 rounded-[12px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-black text-xs hover:border-primary transition-all cursor-pointer"
+                                        className="w-full flex items-center justify-center gap-2 h-10 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] text-slate-800 dark:text-slate-200 font-bold text-xs hover:border-brand transition-all cursor-pointer"
                                         title="تدوير الملصق"
                                     >
-                                        <RotateCcw className="w-3.5 h-3.5 text-primary" />
+                                        <RotateCcw className="w-3.5 h-3.5 text-brand" />
                                         <span>{rotation === 0 ? 'عادي (0°)' : rotation === 90 ? 'مدوّر (90°)' : rotation === 180 ? 'معكوس (180°)' : 'مدوّر (270°)'}</span>
                                     </button>
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-black text-slate-700 dark:text-slate-300 block mb-1">
+                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1">
                                         عدد النسخ:
                                     </label>
-                                    <div className="flex items-center h-10 rounded-[12px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2">
+                                    <div className="flex items-center h-10 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] px-2">
                                         <button
                                             type="button"
                                             onClick={() => setCopies(c => Math.max(1, c - 1))}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200"
+                                            className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200 dark:hover:bg-[#1e2f47]"
                                         >
                                             -
                                         </button>
@@ -1430,12 +1430,12 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             max="100"
                                             value={copies}
                                             onChange={e => setCopies(Math.max(1, Number(e.target.value) || 1))}
-                                            className="flex-1 text-center font-mono font-black text-xs bg-transparent text-slate-900 dark:text-white focus:outline-none"
+                                            className="flex-1 text-center font-mono font-bold text-xs bg-transparent text-slate-900 dark:text-white focus:outline-none"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setCopies(c => Math.min(100, c + 1))}
-                                            className="w-7 h-7 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center font-black text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200"
+                                            className="w-7 h-7 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center font-bold text-slate-700 dark:text-white shadow-xs cursor-pointer hover:bg-slate-200 dark:hover:bg-[#1e2f47]"
                                         >
                                             +
                                         </button>
@@ -1443,27 +1443,25 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                                 </div>
                             </div>
 
-
-
                         </div>
                     </div>
                 </div>
 
                 {/* Footer زر الطباعة */}
-                <div className="p-4 border-t border-black/5 dark:border-white/8 bg-slate-50/90 dark:bg-slate-800/40 backdrop-blur-sm shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="p-3.5 sm:p-4 border-t border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400">
                         {nodePrintMsg ? (
-                            <span className={nodePrintMsg.success ? 'text-emerald-600 font-black' : 'text-rose-500 font-black'}>
+                            <span className={nodePrintMsg.success ? 'text-emerald-600 font-bold' : 'text-rose-500 font-bold'}>
                                 {nodePrintMsg.text}
                             </span>
                         ) : (
                             <div className="flex items-center gap-1.5">
-                                <Printer className="w-4 h-4 text-primary shrink-0" />
+                                <Printer className="w-4 h-4 text-brand shrink-0" />
                                 <span className="text-[11px] font-bold text-slate-400">الطابعة:</span>
                                 <select
                                     value={selectedPrinter}
                                     onChange={e => handleSelectPrinter(e.target.value)}
-                                    className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-black text-slate-800 dark:text-slate-200 focus:outline-none"
+                                    className="bg-white dark:bg-[#09111c] border border-slate-200 dark:border-[#1d2d42] rounded-[2px] px-2 py-1 text-xs font-bold text-slate-800 dark:text-slate-200 focus:outline-none"
                                 >
                                     {printersList.length > 0 ? (
                                         printersList.map(p => (
@@ -1480,7 +1478,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                         <button
                             type="button"
                             onClick={handlePrint}
-                            className="flex-1 sm:flex-initial px-4 h-12 rounded-[16px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs active:scale-[0.98] transition-all cursor-pointer border border-slate-200 dark:border-slate-700"
+                            className="flex-1 sm:flex-initial px-4 h-11 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#152238] dark:hover:bg-[#1d2d42] text-slate-700 dark:text-slate-200 font-bold text-xs transition-colors cursor-pointer border border-slate-200 dark:border-[#1d2d42]"
                             title="فتح نافذة طباعة المتصفح التقليدية"
                         >
                             <span>{isBulk ? `طباعة المتصفح (${items.length})` : 'طباعة المتصفح'}</span>
@@ -1489,7 +1487,7 @@ function QrModal({ product, productsList, onClose }: QrModalProps) {
                             type="button"
                             onClick={handleNodePrint}
                             disabled={printingNode}
-                            className="flex-1 sm:flex-initial px-6 h-12 rounded-[16px] bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm flex items-center justify-center gap-2.5 active:scale-[0.98] transition-all shadow-md shadow-emerald-600/25 cursor-pointer disabled:opacity-50 border border-emerald-500/30 whitespace-nowrap"
+                            className="flex-1 sm:flex-initial px-6 h-11 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer disabled:opacity-50 whitespace-nowrap"
                         >
                             <Printer className="w-4 h-4 shrink-0" />
                             <span>
@@ -1836,15 +1834,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     const renderQrField = (form: typeof editForm | typeof createForm) => {
         const hasQr = !!form.data.qrcode;
         return (
-            <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                    <span className="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center text-lg shrink-0 border border-violet-500/30">📱</span>
+            <div className="p-4 sm:p-5 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3.5 shadow-xs">
+                <h4 className="text-sm sm:text-base font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2.5">
+                    <span className="w-7 h-7 rounded-[2px] bg-brand-subtle text-brand flex items-center justify-center text-sm shrink-0 border border-brand-subtle">📱</span>
                     <span className="text-slate-900 dark:text-white tracking-wide">رمز QR Code والتتبع</span>
                 </h4>
 
                 <div className="flex items-center justify-between">
-                    <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide flex items-center gap-2">
-                        <QrCode className="w-5 h-5 text-violet-500" />
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide flex items-center gap-1.5">
+                        <QrCode className="w-4 h-4 text-brand" />
                         رمز QR Code
                     </label>
 
@@ -1853,7 +1851,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <button
                                 type="button"
                                 onClick={() => form.setData('qrcode', '')}
-                                className="px-3 py-1.5 rounded-xl bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-xs transition-all border border-red-500/30"
+                                className="px-2.5 py-1 rounded-[2px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs transition-colors border border-rose-500/30 cursor-pointer"
                             >
                                 إزالة الرمز
                             </button>
@@ -1861,7 +1859,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <button
                                 type="button"
                                 onClick={() => form.setData('qrcode', generateQrCode())}
-                                className="px-3 py-1.5 rounded-xl bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white font-black text-xs transition-all border border-violet-500/30"
+                                className="px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand hover:bg-brand hover:text-white font-bold text-xs transition-colors border border-brand-subtle cursor-pointer"
                             >
                                 توليد QR جديد ⚡
                             </button>
@@ -1876,7 +1874,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         value={form.data.qrcode}
                         onChange={e => form.setData('qrcode', e.target.value)}
                         placeholder="أدخل كود الـ QR أو اضغط توليد تلقائي..."
-                        className="spatial-input h-14 rounded-[16px] px-4 text-base font-bold border-2 w-full font-mono dir-ltr"
+                        className="h-11 sm:h-12 rounded-[2px] px-3.5 text-sm font-mono border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full dir-ltr"
                     />
                 </div>
             </div>
@@ -1893,16 +1891,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     );
 
     return (
-        <AppShell title="إدارة المنتجات">
-            <div className="flex flex-col gap-6 pb-32 lg:pb-0">
+        <AppShell pageTitle="إدارة المنتجات">
+            <div className="flex flex-col gap-5 pb-32 lg:pb-0">
 
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">إدارة المنتجات</h1>
-                        <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400 mt-1">إدارة منتجات العطور والتسعير والتصنيفات بأحدث واجهة باللمس</p>
+                        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">إدارة المنتجات</h1>
+                        <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">إدارة منتجات العطور والتسعير والتصنيفات بأحدث واجهة باللمس</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
                         <button
                             onClick={() => {
                                 setDraftCat(filterCat);
@@ -1911,16 +1909,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 setDraftLowStockOnly(lowStockOnly);
                                 setFilterDrawerOpen(true);
                             }}
-                            className={`flex items-center justify-center gap-3 px-6 h-14 rounded-[20px] font-black text-base transition-all active:scale-95 border-2 cursor-pointer shrink-0 shadow-md touch-manipulation select-none ${
+                            className={`h-11 sm:h-12 px-4 sm:px-5 rounded-[2px] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer shrink-0 shadow-sm ${
                                 hasActiveFilter
-                                    ? 'bg-primary text-white border-primary shadow-primary/30'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                    ? 'bg-brand text-white border-brand'
+                                    : 'bg-slate-50 dark:bg-[#101a29] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:bg-slate-100 dark:hover:bg-[#152238]'
                             }`}
                         >
-                            <SlidersHorizontal className="w-5 h-5" />
+                            <SlidersHorizontal className="w-4 h-4" />
                             <span>تصفية المنتجات</span>
                             {hasActiveFilter && (
-                                <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse" />
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                             )}
                         </button>
                         {hasActiveFilter && (
@@ -1935,10 +1933,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     setDraftTier(null);
                                     setDraftLowStockOnly(false);
                                 }}
-                                className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base border-2 border-red-500/30 shrink-0 shadow-sm touch-manipulation select-none"
+                                className="h-11 sm:h-12 px-3.5 rounded-[2px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all font-bold text-xs sm:text-sm border border-rose-500/30 shrink-0 shadow-sm cursor-pointer flex items-center gap-1.5"
                                 title="إعادة تعيين الفلاتر"
                             >
-                                <RotateCcw className="w-5 h-5" />
+                                <RotateCcw className="w-4 h-4" />
                                 <span>إعادة تعيين</span>
                             </button>
                         )}
@@ -1946,9 +1944,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <button
                                 onClick={handleGenerateAll}
                                 disabled={generatingAll}
-                                className="flex items-center justify-center gap-2.5 px-6 h-14 rounded-[20px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base disabled:opacity-50 shrink-0"
+                                className="h-11 sm:h-12 px-4 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-all font-bold text-xs sm:text-sm disabled:opacity-50 shrink-0 cursor-pointer flex items-center gap-2"
                             >
-                                <QrCode className="w-5 h-5" />
+                                <QrCode className="w-4 h-4" />
                                 {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
                             </button>
                         )}
@@ -1957,13 +1955,13 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             type="button"
                             onClick={() => setBulkPrintOpen(true)}
                             disabled={filtered.length === 0}
-                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-primary/15 border-2 border-primary/30 text-primary dark:text-primary-foreground hover:bg-primary hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
+                            className="h-11 sm:h-12 px-4 rounded-[2px] bg-brand-subtle border border-brand-subtle text-brand hover:bg-brand hover:text-white transition-all font-bold text-xs sm:text-sm shrink-0 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 group"
                             title={filtered.length > 0 ? `طباعة جماعية لملصقات النتائج المعروضة (${filtered.length} منتج)` : 'لا توجد منتجات مطابقة لطباعتها'}
                         >
-                            <Printer className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                            <Printer className="w-4 h-4 text-brand group-hover:text-white transition-colors" />
                             <span>طباعة جماعية</span>
                             {filtered.length > 0 && (
-                                <span className="px-2 py-0.5 rounded-full bg-primary/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-primary transition-all">
+                                <span className="px-1.5 py-0.5 rounded-[2px] bg-white dark:bg-[#101a29] text-brand text-[11px] font-mono font-bold group-hover:bg-white/20 group-hover:text-white transition-all">
                                     {filtered.length}
                                 </span>
                             )}
@@ -1974,17 +1972,17 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             type="button"
                             onClick={handleExportExcel}
                             disabled={filtered.length === 0}
-                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
+                            className="h-11 sm:h-12 px-4 rounded-[2px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white transition-all font-bold text-xs sm:text-sm shrink-0 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2 group"
                             title={
                                 hasActiveFilter && filtered.length < products.length
                                     ? `تصدير شيت إكسل للمنتجات المفلترة حالياً (${filtered.length} منتج)`
                                     : 'تصدير شيت إكسل كامل يشمل المنتجات والتصنيفات والأحجام والتيرات والأسعار'
                             }
                         >
-                            <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
+                            <Download className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
                             <span>تصدير Excel</span>
                             {hasActiveFilter && filtered.length < products.length && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-emerald-700 transition-all">
+                                <span className="px-1.5 py-0.5 rounded-[2px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono font-bold group-hover:bg-white/20 group-hover:text-white transition-all">
                                     {filtered.length}
                                 </span>
                             )}
@@ -1998,123 +1996,125 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 importForm.clearErrors();
                                 setShowImportModal(true);
                             }}
-                            className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-amber-500/15 border-2 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none"
+                            className="h-11 sm:h-12 px-4 rounded-[2px] bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-600 hover:text-white transition-all font-bold text-xs sm:text-sm shrink-0 shadow-sm cursor-pointer flex items-center gap-2"
                             title="استيراد وتحديث البيانات من ملف إكسل"
                         >
-                            <FileUp className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                            <FileUp className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                             <span>استيراد Excel</span>
                         </button>
 
                         <button onClick={openCreateDrawer}
-                            className="spatial-button flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 h-14 text-lg font-black rounded-[20px] active:scale-95 shadow-xl shadow-primary/30 shrink-0">
-                            <Plus className="w-6 h-6" /> إضافة منتج
+                            className="h-11 sm:h-12 px-5 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs sm:text-sm transition-all shadow-sm shrink-0 cursor-pointer flex items-center gap-2">
+                            <Plus className="w-4 h-4" /> <span>إضافة منتج</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Flash */}
                 {flash?.success && (
-                    <div className="px-5 py-4 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-black text-sm">{flash.success}</div>
+                    <div className="px-4 py-3 rounded-[2px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-bold text-xs sm:text-sm">{flash.success}</div>
                 )}
                 {flash?.error && (
-                    <div className="px-5 py-4 rounded-[20px] bg-red-500/15 border-2 border-red-500/30 text-red-700 dark:text-red-300 font-black text-sm">{flash.error}</div>
+                    <div className="px-4 py-3 rounded-[2px] bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 font-bold text-xs sm:text-sm">{flash.error}</div>
                 )}
 
-                {/* Spatial Touch Drawer — إنشاء وتعديل المنتجات */}
+                {/* Touch Drawer — إنشاء وتعديل المنتجات */}
                 {(showCreate || editingId !== null) && createPortal(
                     <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
                         <div
-                            className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in cursor-pointer"
                             onClick={() => {
                                 setShowCreate(false);
                                 cancelEdit();
                             }}
                         />
                         <div
-                            className="relative w-full sm:w-[840px] md:w-[1000px] lg:w-[1140px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col overflow-hidden border-l-2 border-slate-200 dark:border-slate-700 animate-in slide-in-from-right duration-300 cursor-default z-10"
+                            className="relative w-full sm:w-[840px] md:w-[980px] lg:w-[1100px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col overflow-hidden border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 cursor-default z-10"
                         >
                             
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-13 h-13 rounded-[18px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black p-3">
-                                        {editingId !== null ? <Pencil className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29]">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle flex items-center justify-center font-bold">
+                                        {editingId !== null ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                                     </div>
                                     <div>
-                                        <h2 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl">
+                                        <h2 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">
                                             {editingId !== null ? `تعديل: ${editForm.data.name}` : 'إضافة منتج جديد'}
                                         </h2>
-                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                                             {editingId !== null ? 'تعديل التفاصيل، الأسعار، والحد الأدنى للمخزون' : 'أدخل بيانات المنتج الجديد وحد التنبيه والتسعير'}
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => { setShowCreate(false); cancelEdit(); }}
-                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600"
+                                    className="w-8 h-8 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors border border-slate-200 dark:border-[#1d2d42] cursor-pointer"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
 
                             {/* Drawer Body — شبكة من عمودين للحاويات المخصصة */}
-                            <div className="flex-1 overflow-y-auto p-6 sm:p-8 scrollbar-none">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            <div className="flex-1 overflow-y-auto p-5 sm:p-6 scrollbar-none">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
                                     
                                     {/* العمود الأول (اليمين): المعلومات الأساسية + QR Code */}
-                                    <div className="flex flex-col gap-6">
+                                    <div className="flex flex-col gap-5">
                                         {/* حاوية 1: المعلومات الأساسية والتصنيف */}
-                                        <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-5 shadow-sm">
-                                            <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                                                <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">📦</span>
+                                        <div className="p-4 sm:p-5 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-4 shadow-xs">
+                                            <h4 className="text-sm sm:text-base font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2.5">
+                                                <span className="w-7 h-7 rounded-[2px] bg-brand-subtle text-brand flex items-center justify-center text-sm shrink-0 border border-brand-subtle">📦</span>
                                                 <span className="text-slate-900 dark:text-white tracking-wide">المعلومات الأساسية والتصنيف</span>
                                             </h4>
 
                                             {/* الاسم */}
-                                            <div className="flex flex-col gap-2.5">
-                                                <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">اسم المنتج</label>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">اسم المنتج</label>
                                                 <input
                                                     type="text"
                                                     inputMode="text"
                                                     value={activeForm.data.name}
                                                     onChange={e => activeForm.setData('name', e.target.value)}
                                                     placeholder="مثال: Sauvage Elixir..."
-                                                    className={`spatial-input h-14 rounded-[18px] px-5 text-lg font-bold border-2 transition-all ${
-                                                        isDuplicateName ? 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5' : ''
+                                                    className={`h-11 sm:h-12 rounded-[2px] px-3.5 text-sm font-bold border transition-colors bg-white dark:bg-[#09111c] text-slate-900 dark:text-white ${
+                                                        isDuplicateName
+                                                            ? 'border-amber-500 ring-1 ring-amber-500/30 bg-amber-500/5'
+                                                            : 'border-slate-200 dark:border-[#1d2d42] focus:border-brand'
                                                     }`}
                                                 />
                                                 {isDuplicateName && (
-                                                    <p className="text-sm text-amber-600 dark:text-amber-400 font-black flex items-center gap-1.5 animate-in fade-in duration-200">
-                                                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                                                    <p className="text-xs text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1.5 animate-in fade-in duration-150">
+                                                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                                                         هذا الاسم مسجل مسبقاً في المنظومة. يرجى اختيار اسم فريد.
                                                     </p>
                                                 )}
-                                                {activeForm.errors.name && <p className="text-sm text-red-500 font-black">{activeForm.errors.name}</p>}
+                                                {activeForm.errors.name && <p className="text-xs text-rose-500 font-bold">{activeForm.errors.name}</p>}
                                             </div>
 
                                             {/* اختيار التصنيف باللمس */}
-                                            <div className="flex flex-col gap-2.5">
+                                            <div className="flex flex-col gap-2">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">التصنيف</label>
+                                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">التصنيف</label>
                                                     {activeCat && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleSetDefaultCategory(activeCat.id)}
-                                                            className={`text-xs font-black flex items-center gap-1.5 px-3 py-1 rounded-xl border transition-all active:scale-95 ${
+                                                            className={`text-xs font-bold flex items-center gap-1 px-2.5 py-0.5 rounded-[2px] border transition-colors cursor-pointer ${
                                                                 String(activeCat.id) === String(defaultCatId || initialDefCat?.id)
-                                                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                                                                    : 'bg-slate-200/60 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:text-amber-600 hover:border-amber-400'
+                                                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                                                    : 'bg-white dark:bg-[#121c2c] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#1d2d42] hover:text-amber-600 hover:border-amber-400'
                                                             }`}
                                                             title="جعل هذا التصنيف هو الخيار التلقائي عند فتح نافذة إضافة منتج جديد"
                                                         >
                                                             <Star className={`w-3.5 h-3.5 ${String(activeCat.id) === String(defaultCatId || initialDefCat?.id) ? 'fill-amber-500 text-amber-500' : ''}`} />
                                                             {String(activeCat.id) === String(defaultCatId || initialDefCat?.id)
-                                                                ? 'التصنيف الافتراضي للإضافة'
+                                                                ? 'التصنيف الافتراضي'
                                                                 : 'تعيين كافتراضي'}
                                                         </button>
                                                     )}
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-3">
+                                                <div className="grid grid-cols-2 gap-2.5">
                                                     {categories.map(c => {
                                                         const selected = activeCat?.id === c.id;
                                                         const isDefault = String(c.id) === String(defaultCatId || initialDefCat?.id);
@@ -2123,14 +2123,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                 key={c.id}
                                                                 type="button"
                                                                 onClick={() => onSelectCategory(activeForm, c.name)}
-                                                                className={`relative flex flex-col items-start gap-1 p-4 rounded-[20px] border-2 transition-all active:scale-95 text-right ${
+                                                                className={`relative flex flex-col items-start gap-1 p-3 rounded-[2px] border transition-colors cursor-pointer text-right ${
                                                                     selected
-                                                                        ? 'bg-primary/15 border-primary text-primary font-black shadow-md scale-[1.02]'
-                                                                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-slate-400 dark:hover:border-slate-500 font-bold'
+                                                                        ? 'bg-brand-subtle border-brand text-brand font-bold shadow-xs'
+                                                                        : 'bg-white dark:bg-[#0c1421] border-slate-200 dark:border-[#1d2d42] text-slate-700 dark:text-slate-200 hover:border-brand/40 font-medium'
                                                                 }`}
                                                             >
                                                                 <div className="flex items-center justify-between w-full">
-                                                                    <span className="text-base sm:text-lg font-black">{c.name}</span>
+                                                                    <span className="text-sm sm:text-base font-bold">{c.name}</span>
                                                                     <div
                                                                         role="button"
                                                                         tabIndex={0}
@@ -2138,20 +2138,20 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                             e.stopPropagation();
                                                                             handleSetDefaultCategory(c.id);
                                                                         }}
-                                                                        className={`p-1.5 rounded-lg transition-all ${
+                                                                        className={`p-1 rounded-[2px] transition-colors ${
                                                                             isDefault
                                                                                 ? 'text-amber-500 bg-amber-500/20'
                                                                                 : 'text-slate-300 dark:text-slate-600 hover:text-amber-500 hover:bg-amber-500/10'
                                                                         }`}
                                                                         title={isDefault ? 'هذا هو التصنيف الافتراضي' : 'اضغط لتعيين هذا التصنيف كافتراضي'}
                                                                     >
-                                                                        <Star className={`w-4 h-4 ${isDefault ? 'fill-amber-500 text-amber-500' : ''}`} />
+                                                                        <Star className={`w-3.5 h-3.5 ${isDefault ? 'fill-amber-500 text-amber-500' : ''}`} />
                                                                     </div>
                                                                 </div>
                                                                 <div className="flex items-center justify-between w-full mt-0.5">
-                                                                    <span className="text-xs sm:text-sm font-bold opacity-75">الوحدة: {unitLabels[c.unit]}</span>
+                                                                    <span className="text-xs font-medium opacity-75">الوحدة: {unitLabels[c.unit]}</span>
                                                                     {isDefault && (
-                                                                        <span className="text-[10px] font-black text-amber-700 dark:text-amber-300 bg-amber-400/20 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                                                                        <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-400/20 border border-amber-500/20 px-1.5 py-0.2 rounded-[2px]">
                                                                             افتراضي
                                                                         </span>
                                                                     )}
@@ -2160,7 +2160,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         );
                                                     })}
                                                 </div>
-                                                {activeForm.errors.category_id && <p className="text-sm text-red-500 font-black">{activeForm.errors.category_id}</p>}
+                                                {activeForm.errors.category_id && <p className="text-xs text-rose-500 font-bold">{activeForm.errors.category_id}</p>}
                                             </div>
                                         </div>
 
@@ -2169,19 +2169,19 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     </div>
 
                                     {/* العمود الثاني (اليسار): الأسعار والتسعين + المخزون */}
-                                    <div className="flex flex-col gap-6">
+                                    <div className="flex flex-col gap-5">
                                         {/* حاوية 2: تفاصيل التسعير والأسعار */}
-                                        <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-5 shadow-sm">
-                                            <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                                                <span className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0 border border-emerald-500/30">💰</span>
+                                        <div className="p-4 sm:p-5 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-4 shadow-xs">
+                                            <h4 className="text-sm sm:text-base font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2.5">
+                                                <span className="w-7 h-7 rounded-[2px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shrink-0 border border-emerald-500/30">💰</span>
                                                 <span className="text-slate-900 dark:text-white tracking-wide">تفاصيل التسعير والأسعار</span>
                                             </h4>
 
                                             {/* تير إذا كان tier_based */}
                                             {activeForm.data.selling_type === 'tier_based' && (
-                                                <div className="flex flex-col gap-2.5">
-                                                    <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">الفئة السعرية (التير)</label>
-                                                    <div className="grid grid-cols-3 gap-3">
+                                                <div className="flex flex-col gap-2">
+                                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">الفئة السعرية (التير)</label>
+                                                    <div className="grid grid-cols-3 gap-2.5">
                                                         {tiers.map(t => {
                                                             const selected = activeForm.data.price_tier_id === String(t.id);
                                                             return (
@@ -2189,10 +2189,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                     key={t.id}
                                                                     type="button"
                                                                     onClick={() => activeForm.setData('price_tier_id', String(t.id))}
-                                                                    className={`h-14 px-4 rounded-[16px] border-2 text-base font-black transition-all active:scale-95 ${
+                                                                    className={`h-11 sm:h-12 px-3 rounded-[2px] border text-xs sm:text-sm font-bold transition-colors cursor-pointer ${
                                                                         selected
-                                                                            ? 'bg-primary text-white border-primary shadow-md'
-                                                                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold'
+                                                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                                                            : 'bg-white dark:bg-[#0c1421] border-slate-200 dark:border-[#1d2d42] text-slate-700 dark:text-slate-200 hover:border-brand/40'
                                                                     }`}
                                                                 >
                                                                     {t.name}
@@ -2200,16 +2200,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             );
                                                         })}
                                                     </div>
-                                                    {activeForm.errors.price_tier_id && <p className="text-sm text-red-500 font-black">{activeForm.errors.price_tier_id}</p>}
+                                                    {activeForm.errors.price_tier_id && <p className="text-xs text-rose-500 font-bold">{activeForm.errors.price_tier_id}</p>}
                                                 </div>
                                             )}
 
                                             {/* الأسعار إن كانت unit_priced وغير تشغيلية */}
                                             {activeCat && activeForm.data.selling_type === 'unit_priced' && !activeCat.is_operational && (
-                                                <div className="flex flex-col gap-5">
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="flex flex-col gap-2">
-                                                            <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — عادي</label>
+                                                <div className="flex flex-col gap-4">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — عادي</label>
                                                             <div className="relative flex items-center">
                                                                 <input
                                                                     type="number"
@@ -2223,7 +2223,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                         field: 'price_per_unit_regular',
                                                                         initial: String(activeForm.data.price_per_unit_regular || '')
                                                                     })}
-                                                                    className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                    className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                                 />
                                                                 <button
                                                                     type="button"
@@ -2232,15 +2232,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                         field: 'price_per_unit_regular',
                                                                         initial: String(activeForm.data.price_per_unit_regular || '')
                                                                     })}
-                                                                    className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                    className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                                     title="فتح لوحة الأرقام اللمسية"
                                                                 >
-                                                                    <Calculator className="w-5 h-5" />
+                                                                    <Calculator className="w-4 h-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                        <div className="flex flex-col gap-2">
-                                                            <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — VIP</label>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">سعر {unitLabels[activeCat.unit]} — VIP</label>
                                                             <div className="relative flex items-center">
                                                                 <input
                                                                     type="number"
@@ -2254,7 +2254,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                         field: 'price_per_unit_vip',
                                                                         initial: String(activeForm.data.price_per_unit_vip || '')
                                                                     })}
-                                                                    className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                    className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                                 />
                                                                 <button
                                                                     type="button"
@@ -2263,19 +2263,19 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                         field: 'price_per_unit_vip',
                                                                         initial: String(activeForm.data.price_per_unit_vip || '')
                                                                     })}
-                                                                    className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                    className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                                     title="فتح لوحة الأرقام اللمسية"
                                                                 >
-                                                                    <Calculator className="w-5 h-5" />
+                                                                    <Calculator className="w-4 h-4" />
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
 
                                                     {activeIsOriginal && (
-                                                        <div className="flex flex-col gap-5 pt-4 border-t border-slate-200 dark:border-slate-700">
-                                                            <div className="flex flex-col gap-2">
-                                                                <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">حجم العبوة الأصلية (مليلتر)</label>
+                                                        <div className="flex flex-col gap-4 pt-3.5 border-t border-slate-200 dark:border-[#1d2d42]">
+                                                            <div className="flex flex-col gap-1.5">
+                                                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">حجم العبوة الأصلية (مليلتر)</label>
                                                                 <div className="relative flex items-center">
                                                                     <input
                                                                         type="number"
@@ -2290,7 +2290,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                             initial: String(activeForm.data.bottle_volume || '')
                                                                         })}
                                                                         placeholder="200"
-                                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                        className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                                     />
                                                                     <button
                                                                         type="button"
@@ -2299,16 +2299,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                             field: 'bottle_volume',
                                                                             initial: String(activeForm.data.bottle_volume || '')
                                                                         })}
-                                                                        className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                        className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                                         title="فتح لوحة الأرقام اللمسية"
                                                                     >
-                                                                        <Calculator className="w-5 h-5" />
+                                                                        <Calculator className="w-4 h-4" />
                                                                     </button>
                                                                 </div>
                                                             </div>
-                                                            <div className="grid grid-cols-2 gap-4">
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — عادي</label>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">سعر العبوة كاملة — عادي</label>
                                                                     <div className="relative flex items-center">
                                                                         <input
                                                                             type="number"
@@ -2322,7 +2322,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                                 field: 'full_bottle_regular',
                                                                                 initial: String(activeForm.data.full_bottle_regular || '')
                                                                             })}
-                                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                            className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                                         />
                                                                         <button
                                                                             type="button"
@@ -2331,15 +2331,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                                 field: 'full_bottle_regular',
                                                                                 initial: String(activeForm.data.full_bottle_regular || '')
                                                                             })}
-                                                                            className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                            className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                                             title="فتح لوحة الأرقام اللمسية"
                                                                         >
-                                                                            <Calculator className="w-5 h-5" />
+                                                                            <Calculator className="w-4 h-4" />
                                                                         </button>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex flex-col gap-2">
-                                                                    <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — VIP</label>
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">سعر العبوة كاملة — VIP</label>
                                                                     <div className="relative flex items-center">
                                                                         <input
                                                                             type="number"
@@ -2353,7 +2353,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                                 field: 'full_bottle_vip',
                                                                                 initial: String(activeForm.data.full_bottle_vip || '')
                                                                             })}
-                                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                            className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                                         />
                                                                         <button
                                                                             type="button"
@@ -2362,10 +2362,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                                 field: 'full_bottle_vip',
                                                                                 initial: String(activeForm.data.full_bottle_vip || '')
                                                                             })}
-                                                                            className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                                            className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                                             title="فتح لوحة الأرقام اللمسية"
                                                                         >
-                                                                            <Calculator className="w-5 h-5" />
+                                                                            <Calculator className="w-4 h-4" />
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -2377,14 +2377,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         </div>
 
                                         {/* حاوية 3: حد تنبيه المخزون */}
-                                        <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                            <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3">
-                                                <span className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg shrink-0 border border-amber-500/30">⚠️</span>
+                                        <div className="p-4 sm:p-5 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3.5 shadow-xs">
+                                            <h4 className="text-sm sm:text-base font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2.5">
+                                                <span className="w-7 h-7 rounded-[2px] bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm shrink-0 border border-amber-500/30">⚠️</span>
                                                 <span className="text-slate-900 dark:text-white tracking-wide">إدارة المخزون والتنبيهات</span>
                                             </h4>
 
-                                            <div className="flex flex-col gap-2.5">
-                                                <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">حد تنبيه نقصان المخزون</label>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">حد تنبيه نقصان المخزون</label>
                                                 <div className="relative flex items-center">
                                                     <input
                                                         type="number"
@@ -2399,7 +2399,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             initial: String(activeForm.data.min_stock || '')
                                                         })}
                                                         placeholder="0"
-                                                        className="spatial-input h-14 rounded-[18px] px-5 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                        className="h-11 sm:h-12 rounded-[2px] px-3.5 pl-11 text-sm font-bold border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#09111c] text-slate-900 dark:text-white focus:border-brand w-full cursor-pointer"
                                                     />
                                                     <button
                                                         type="button"
@@ -2408,10 +2408,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             field: 'min_stock',
                                                             initial: String(activeForm.data.min_stock || '')
                                                         })}
-                                                        className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all"
+                                                        className="absolute left-1.5 w-8 h-8 rounded-[2px] bg-brand-subtle hover:bg-brand/20 text-brand flex items-center justify-center font-bold transition-colors cursor-pointer"
                                                         title="فتح لوحة الأرقام اللمسية"
                                                     >
-                                                        <Calculator className="w-5 h-5" />
+                                                        <Calculator className="w-4 h-4" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -2422,18 +2422,18 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </div>
 
                             {/* Drawer Footer Actions */}
-                            <div className="p-6 sm:p-8 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4">
+                            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] flex items-center gap-3">
                                 <button
                                     onClick={editingId !== null ? () => submitEdit(editingId) : submitCreate}
                                     disabled={(editingId !== null ? editForm.processing : createForm.processing) || isDuplicateName}
-                                    className="flex-1 spatial-button h-16 rounded-[22px] text-lg font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex-1 h-12 rounded-[2px] bg-brand text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm hover:opacity-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    <Check className="w-6 h-6" />
-                                    {editingId !== null ? 'تحديث بيانات المنتج' : 'إضافة المنتج إلى النظام'}
+                                    <Check className="w-4 h-4" />
+                                    <span>{editingId !== null ? 'تحديث بيانات المنتج' : 'إضافة المنتج إلى النظام'}</span>
                                 </button>
                                 <button
                                     onClick={() => { setShowCreate(false); cancelEdit(); }}
-                                    className="h-16 px-8 rounded-[22px] bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-black text-lg active:scale-95 transition-all border-2 border-slate-300 dark:border-slate-600"
+                                    className="h-12 px-6 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#152238] dark:hover:bg-[#1e2f47] text-slate-700 dark:text-slate-200 font-bold text-sm transition-colors border border-slate-200 dark:border-[#1d2d42] cursor-pointer"
                                 >
                                     إلغاء
                                 </button>
@@ -2447,46 +2447,46 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 {filterDrawerOpen && createPortal(
                     <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
                         <div
-                            className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-in fade-in cursor-pointer"
+                            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in cursor-pointer"
                             onClick={() => setFilterDrawerOpen(false)}
                         />
                         <div
-                            className="relative w-full sm:w-[600px] md:w-[680px] max-w-[95vw] bg-white dark:bg-slate-900 h-full shadow-2xl flex flex-col z-10 border-l-2 border-slate-200 dark:border-slate-700 animate-in slide-in-from-right duration-300 overflow-hidden cursor-default"
+                            className="relative w-full sm:w-[580px] md:w-[640px] max-w-[95vw] bg-white dark:bg-[#0c1421] h-full shadow-2xl flex flex-col z-10 border-l border-slate-200 dark:border-[#1d2d42] animate-in slide-in-from-right duration-200 overflow-hidden cursor-default"
                         >
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between px-6 py-6 border-b-2 border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-800/90 select-none shrink-0">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-[20px] bg-primary/15 text-primary border-2 border-primary/30 flex items-center justify-center font-black p-3 shadow-md">
-                                        <SlidersHorizontal className="w-7 h-7" />
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] select-none shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle flex items-center justify-center font-bold shadow-xs">
+                                        <SlidersHorizontal className="w-4 h-4" />
                                     </div>
                                     <div>
-                                        <h2 className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl">تصفية المنتجات المتقدمة</h2>
-                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-0.5">تحديد خيارات البحث والفرز والتصنيف بكفاءة عالية</p>
+                                        <h2 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg">تصفية المنتجات المتقدمة</h2>
+                                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">تحديد خيارات البحث والفرز والتصنيف بكفاءة عالية</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setFilterDrawerOpen(false)}
-                                    className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white active:scale-95 transition-all border border-slate-300 dark:border-slate-600 touch-manipulation cursor-pointer"
+                                    className="w-8 h-8 rounded-[2px] bg-white dark:bg-[#152238] flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors border border-slate-200 dark:border-[#1d2d42] cursor-pointer"
                                     aria-label="إغلاق"
                                 >
-                                    <X className="w-6 h-6" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
 
                             {/* Drawer Content — الحاويات المقسمة */}
-                            <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-7 flex flex-col gap-6 scrollbar-none">
+                            <div className="flex-1 overflow-y-auto overscroll-contain p-5 flex flex-col gap-4 scrollbar-none">
                                 {/* حاوية 1: البحث والمعلومات الأساسية */}
-                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                        <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
-                                        <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                                <div className="p-4 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3 shadow-xs">
+                                    <h4 className="text-sm font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2 text-slate-900 dark:text-white select-none">
+                                        <span className="w-7 h-7 rounded-[2px] bg-brand-subtle text-brand flex items-center justify-center text-sm shrink-0 border border-brand-subtle">🔍</span>
+                                        <span className="tracking-wide">البحث والمعلومات الأساسية</span>
                                     </h4>
                                     
-                                    <div className="flex flex-col gap-3">
-                                        <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">
+                                    <div className="flex flex-col gap-2.5">
+                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300 select-none">
                                             البحث بالمنتج (اختيار متعدد / كلمات مفتاحية / كود QR)
                                         </label>
-                                        <div className="flex flex-col gap-3">
+                                        <div className="flex flex-col gap-2.5">
                                             <ModernMultiSelect
                                                 label=""
                                                 placeholder="اختر منتجات أو اكتب كلمة مثل «لويس» أو كود QR..."
@@ -2503,42 +2503,42 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             />
                                             {draftSearchKeywords.length > 0 && (
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                                                         تم تحديد {draftSearchKeywords.length} عنصر للبحث
                                                     </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setDraftSearchKeywords([])}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all font-black text-xs border border-red-500/30 cursor-pointer"
+                                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-colors font-bold text-xs border border-rose-500/30 cursor-pointer"
                                                     >
                                                         <X className="w-3.5 h-3.5" /> مسح محددات البحث
                                                     </button>
                                                 </div>
                                             )}
                                         </div>
-                                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 select-none">
-                                            💡 يمكنك النقر على العطور لاختيار أكثر من منتج (Checkboxes)، أو كتابة أي كلمة مثل "لويس" والضغط على إضافة للبحث عن كل المنتجات المطابقة.
+                                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 select-none">
+                                            💡 يمكنك النقر على العطور لاختيار أكثر من منتج، أو كتابة أي كلمة مثل "لويس" للبحث عن كل المنتجات المطابقة.
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* حاوية 2: تصنيف المنتجات والفرز */}
-                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                        <span className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg shrink-0 border border-purple-500/30">🏷️</span>
-                                        <span className="text-slate-900 dark:text-white tracking-wide">تصنيف المنتجات</span>
+                                <div className="p-4 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3 shadow-xs">
+                                    <h4 className="text-sm font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2 text-slate-900 dark:text-white select-none">
+                                        <span className="w-7 h-7 rounded-[2px] bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center text-sm shrink-0 border border-purple-500/30">🏷️</span>
+                                        <span className="tracking-wide">تصنيف المنتجات</span>
                                     </h4>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                         <button onClick={() => { setDraftCat(null); setDraftTier(null); }}
-                                            className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                            className={`flex items-center justify-between px-3.5 h-11 sm:h-12 rounded-[2px] font-bold text-xs sm:text-sm border transition-colors cursor-pointer select-none shadow-xs ${
                                                 !draftCat
-                                                    ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                    ? 'bg-brand text-white border-brand shadow-xs'
+                                                    : 'bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                             }`}>
                                             <span>جميع التصنيفات</span>
-                                            <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                                !draftCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-[2px] ${
+                                                !draftCat ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-[#152238] text-slate-700 dark:text-slate-300'
                                             }`}>{products.length}</span>
                                         </button>
                                         {categories.map(cat => {
@@ -2551,14 +2551,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                         setDraftTier(null);
                                                     }
                                                 }}
-                                                    className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                    className={`flex items-center justify-between px-3.5 h-11 sm:h-12 rounded-[2px] font-bold text-xs sm:text-sm border transition-colors cursor-pointer select-none shadow-xs ${
                                                         active
-                                                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/30'
-                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                                            : 'bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                     }`}>
                                                     <span className="truncate">{cat.name}</span>
-                                                    <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                                        active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-[2px] ${
+                                                        active ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-[#152238] text-slate-700 dark:text-slate-300'
                                                     }`}>{count}</span>
                                                 </button>
                                             );
@@ -2576,36 +2576,36 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     if (!isOilOrTierCat) return null;
 
                                     return (
-                                        <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-violet-500/30 dark:border-violet-500/30 flex flex-col gap-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
-                                            <h4 className="text-base sm:text-lg font-black flex items-center justify-between border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-9 h-9 rounded-xl bg-violet-500/15 text-violet-600 dark:text-violet-400 flex items-center justify-center text-lg shrink-0 border border-violet-500/30">💎</span>
+                                        <div className="p-4 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3 shadow-xs animate-in fade-in slide-in-from-top-1 duration-150">
+                                            <h4 className="text-sm font-bold flex items-center justify-between border-b border-slate-200 dark:border-[#1d2d42] pb-2 select-none">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="w-7 h-7 rounded-[2px] bg-brand-subtle text-brand flex items-center justify-center text-sm shrink-0 border border-brand-subtle">💎</span>
                                                     <span className="text-slate-900 dark:text-white tracking-wide">فئة السعر (Tier)</span>
                                                 </div>
                                                 {draftTier && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setDraftTier(null)}
-                                                        className="text-xs font-black text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+                                                        className="text-xs font-bold text-brand hover:underline cursor-pointer"
                                                     >
                                                         عرض كل التيرات
                                                     </button>
                                                 )}
                                             </h4>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                                 <button
                                                     type="button"
                                                     onClick={() => setDraftTier(null)}
-                                                    className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                    className={`flex items-center justify-between px-3.5 h-11 sm:h-12 rounded-[2px] font-bold text-xs sm:text-sm border transition-colors cursor-pointer select-none shadow-xs ${
                                                         !draftTier
-                                                            ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/30'
-                                                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                            ? 'bg-brand text-white border-brand shadow-xs'
+                                                            : 'bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                     }`}
                                                 >
                                                     <span>جميع التيرات</span>
-                                                    <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                                        !draftTier ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-[2px] ${
+                                                        !draftTier ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-[#152238] text-slate-700 dark:text-slate-300'
                                                     }`}>
                                                         {products.filter(p => p.category.id === draftCat).length}
                                                     </span>
@@ -2618,15 +2618,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                             key={tier.id}
                                                             type="button"
                                                             onClick={() => setDraftTier(tier.id)}
-                                                            className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
+                                                            className={`flex items-center justify-between px-3.5 h-11 sm:h-12 rounded-[2px] font-bold text-xs sm:text-sm border transition-colors cursor-pointer select-none shadow-xs ${
                                                                 active
-                                                                    ? 'bg-violet-600 text-white border-violet-600 shadow-lg shadow-violet-600/30'
-                                                                    : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                                    ? 'bg-brand text-white border-brand shadow-xs'
+                                                                    : 'bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:border-brand/40'
                                                             }`}
                                                         >
                                                             <span className="truncate">{tier.name}</span>
-                                                            <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                                                active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
+                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-[2px] ${
+                                                                active ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-[#152238] text-slate-700 dark:text-slate-300'
                                                             }`}>
                                                                 {count}
                                                             </span>
@@ -2639,26 +2639,26 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 })()}
 
                                 {/* حاوية 3: حالة المخزون والتنبيهات */}
-                                <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
-                                    <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
-                                        <span className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg shrink-0 border border-amber-500/30">⚠️</span>
-                                        <span className="text-slate-900 dark:text-white tracking-wide">حالة المخزون والتنبيهات</span>
+                                <div className="p-4 rounded-[2px] bg-slate-50/70 dark:bg-[#0a121e] border border-slate-200 dark:border-[#1d2d42] flex flex-col gap-3 shadow-xs">
+                                    <h4 className="text-sm font-bold flex items-center gap-2 border-b border-slate-200 dark:border-[#1d2d42] pb-2 text-slate-900 dark:text-white select-none">
+                                        <span className="w-7 h-7 rounded-[2px] bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm shrink-0 border border-amber-500/30">⚠️</span>
+                                        <span className="tracking-wide">حالة المخزون والتنبيهات</span>
                                     </h4>
 
                                     <button
                                         onClick={() => setDraftLowStockOnly(!draftLowStockOnly)}
-                                        className={`flex items-center justify-between px-6 h-18 sm:h-20 rounded-[22px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation ${
+                                        className={`flex items-center justify-between px-4 h-12 rounded-[2px] font-bold text-xs sm:text-sm border transition-colors cursor-pointer select-none ${
                                             draftLowStockOnly
-                                                ? 'bg-amber-500 text-white border-amber-500 shadow-xl shadow-amber-500/30'
-                                                : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                                                : 'bg-white dark:bg-[#0c1421] text-slate-800 dark:text-slate-200 border-slate-200 dark:border-[#1d2d42] hover:border-amber-400'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-3.5">
-                                            <AlertTriangle className={`w-6 h-6 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
+                                        <div className="flex items-center gap-2.5">
+                                            <AlertTriangle className={`w-4 h-4 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
                                             <span>المنتجات التي أوشكت على النفاد</span>
                                         </div>
-                                        <span className={`text-xs sm:text-sm font-black px-3.5 py-1.5 rounded-xl ${
-                                            draftLowStockOnly ? 'bg-white/30 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-[2px] ${
+                                            draftLowStockOnly ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                                         }`}>
                                             {products.filter(p => Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0).length} منتج
                                         </span>
@@ -2667,7 +2667,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </div>
 
                             {/* Drawer Footer Actions */}
-                            <div className="p-6 sm:p-7 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-100/95 dark:bg-slate-800/95 flex items-center gap-4 select-none shrink-0">
+                            <div className="px-5 py-4 border-t border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] flex items-center gap-3 select-none shrink-0">
                                 <button
                                     onClick={() => {
                                         setFilterCat(draftCat);
@@ -2676,10 +2676,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         setLowStockOnly(draftLowStockOnly);
                                         setFilterDrawerOpen(false);
                                     }}
-                                    className="flex-1 spatial-button h-16 sm:h-18 rounded-[22px] text-lg sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 touch-manipulation cursor-pointer"
+                                    className="flex-1 h-12 rounded-[2px] bg-brand text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-sm hover:opacity-95 transition-all cursor-pointer"
                                 >
-                                    <Check className="w-6 h-6" />
-                                    عرض النتائج ({draftFiltered.length})
+                                    <Check className="w-4 h-4" />
+                                    <span>عرض النتائج ({draftFiltered.length})</span>
                                 </button>
                                 {hasDraftFilter && (
                                     <button
@@ -2689,10 +2689,10 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                             setDraftTier(null);
                                             setDraftLowStockOnly(false);
                                         }}
-                                        className="h-16 sm:h-18 px-6 sm:px-8 rounded-[22px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white font-black text-base sm:text-lg active:scale-95 transition-all border-2 border-red-500/30 flex items-center gap-2 shrink-0 touch-manipulation cursor-pointer"
+                                        className="h-12 px-5 rounded-[2px] bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white font-bold text-xs sm:text-sm border border-rose-500/30 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
                                     >
-                                        <RotateCcw className="w-5 h-5" />
-                                        إعادة تعيين
+                                        <RotateCcw className="w-4 h-4" />
+                                        <span>إعادة تعيين</span>
                                     </button>
                                 )}
                             </div>
@@ -2703,16 +2703,16 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                 {/* الشريط السريع للفلاتر النشطة إن وجدت */}
                 {hasActiveFilter && (
-                    <div className="p-4 rounded-[22px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-sm">
-                        <div className="flex flex-wrap items-center gap-2.5 text-sm font-black">
-                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                <SlidersHorizontal className="w-4 h-4 text-primary" /> الفلاتر المفعلة:
+                    <div className="p-3.5 rounded-[2px] bg-slate-50 dark:bg-[#101a29] border border-slate-200 dark:border-[#1d2d42] flex items-center justify-between gap-3 shadow-xs">
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                            <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <SlidersHorizontal className="w-3.5 h-3.5 text-brand" /> الفلاتر المفعلة:
                             </span>
                             {searchKeywords.map((kw) => {
                                 const prod = !isNaN(Number(kw)) ? products.find(p => p.id === Number(kw)) : null;
                                 const displayText = prod ? prod.name : `بحث: "${kw}"`;
                                 return (
-                                    <span key={kw} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                                    <span key={kw} className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
                                         <span>{displayText}</span>
                                         <button
                                             type="button"
@@ -2721,30 +2721,30 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                 setSearchKeywords(updated);
                                                 setDraftSearchKeywords(updated);
                                             }}
-                                            className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
+                                            className="hover:bg-brand/20 rounded-[2px] p-0.5 cursor-pointer"
                                             title="إزالة هذا البحث"
                                         >
-                                            <X className="w-3.5 h-3.5 hover:text-red-500" />
+                                            <X className="w-3 h-3 hover:text-rose-500" />
                                         </button>
                                     </span>
                                 );
                             })}
                             {filterCat && (
-                                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/25">
                                     التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterCat(null); setDraftCat(null); setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
                                 </span>
                             )}
                             {filterTier && (
-                                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
                                     التير: {tiers.find(t => t.id === filterTier)?.name}
-                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setFilterTier(null); setDraftTier(null); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
                                 </span>
                             )}
                             {lowStockOnly && (
-                                <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
+                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-[2px] bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
                                     أوشكت على النفاد
-                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }} className="cursor-pointer"><X className="w-3.5 h-3.5 hover:text-red-500" /></button>
+                                    <button onClick={() => { setLowStockOnly(false); setDraftLowStockOnly(false); }} className="cursor-pointer"><X className="w-3 h-3 hover:text-rose-500" /></button>
                                 </span>
                             )}
                         </div>
@@ -2759,116 +2759,127 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 setDraftTier(null);
                                 setDraftLowStockOnly(false);
                             }}
-                            className="text-xs font-black text-red-500 hover:underline shrink-0 cursor-pointer"
+                            className="text-xs font-bold text-rose-500 hover:underline shrink-0 cursor-pointer"
                         >
                             إلغاء الكل
                         </button>
                     </div>
                 )}
 
-                {/* القائمة */}
-                <SpatialCard title={`المنتجات (${filtered.length})`} icon={<Package className="w-5 h-5" />}>
+                {/* القائمة الرئيسية للمنتجات */}
+                <div className="bg-white dark:bg-[#0c1421] rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden shadow-xs">
+                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/70 dark:bg-[#101a29]">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle flex items-center justify-center">
+                                <Package className="w-4 h-4" />
+                            </div>
+                            <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                                قائمة المنتجات ({filtered.length})
+                            </h2>
+                        </div>
+                    </div>
+                    <div className="p-4 sm:p-5">
                     {filtered.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
                             <span className="text-4xl">📦</span>
-                            <span className="font-black text-base">لا توجد منتجات مطابقة</span>
+                            <span className="font-bold text-sm sm:text-base">لا توجد منتجات مطابقة</span>
                         </div>
                     ) : (
                         <>
                             {/* جدول — PC */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-base">
+                                <table className="w-full text-sm">
                                     <thead>
-                                        <tr className="bg-slate-100/90 dark:bg-slate-800/90 border-b-2 border-slate-200 dark:border-slate-700">
+                                        <tr className="bg-slate-100 dark:bg-[#101a29] border-b border-slate-200 dark:border-[#1d2d42]">
                                             {['الاسم', 'التصنيف', 'مدى السعر', 'سعر العبوة', 'المخزون', 'الحد الأدنى', 'الإجراءات'].map(h => (
-                                                <th key={h} className="text-right px-5 py-4 text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-wide whitespace-nowrap first:rounded-r-[16px] last:rounded-l-[16px]">{h}</th>
+                                                <th key={h} className="text-right px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider whitespace-nowrap">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y-2 divide-slate-200/80 dark:divide-slate-700/60">
+                                    <tbody className="divide-y divide-slate-100 dark:divide-[#162338]">
                                         {paginatedProducts.map((product) => (
-                                            <tr key={product.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors group">
-                                                <td className="px-5 py-5">
-                                                    <div className="flex items-center gap-2.5">
-                                                        <span className="font-black text-slate-900 dark:text-white text-lg sm:text-xl">{product.name}</span>
+                                            <tr key={product.id} className="hover:bg-slate-50/80 dark:hover:bg-[#101a29]/60 transition-colors group">
+                                                <td className="px-4 py-3.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">{product.name}</span>
                                                         {product.category.is_operational && (
-                                                            <span className="text-xs font-black px-2.5 py-1 rounded-[8px] bg-slate-200 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300">تشغيلي</span>
+                                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] border border-slate-200 dark:border-[#1d2d42] text-slate-600 dark:text-slate-300">تشغيلي</span>
                                                         )}
                                                         {product.qrcode && (
-                                                            <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-[8px] bg-violet-500/15 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30">
-                                                                <QrCode className="w-3.5 h-3.5" /> QR
+                                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
+                                                                <QrCode className="w-3 h-3" /> QR
                                                             </span>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-5 font-black text-slate-800 dark:text-slate-200 text-base whitespace-nowrap">{product.category.name}</td>
-                                                <td className="px-5 py-5 whitespace-nowrap">
+                                                <td className="px-4 py-3.5 font-medium text-slate-800 dark:text-slate-200 text-sm whitespace-nowrap">{product.category.name}</td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
                                                     {product.selling_type === 'tier_based' ? (
-                                                        <span className="inline-flex items-center px-4 py-1.5 rounded-[12px] bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 font-black text-base border border-primary/25">{product.price_tier?.name}</span>
+                                                        <span className="inline-flex items-center px-2.5 py-1 rounded-[2px] bg-brand-subtle text-brand font-bold text-xs border border-brand-subtle">{product.price_tier?.name}</span>
                                                     ) : product.product_price ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-3 py-1.5 rounded-[10px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-base sm:text-lg">{fmt(product.product_price.price_per_unit_vip)}</span>
-                                                            <span className="text-slate-400 dark:text-slate-500 font-black text-base">—</span>
-                                                            <span className="px-3 py-1.5 rounded-[10px] bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 font-black text-base sm:text-lg">{fmt(product.product_price.price_per_unit_regular)}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs sm:text-sm font-number">{fmt(product.product_price.price_per_unit_vip)}</span>
+                                                            <span className="text-slate-400 dark:text-slate-500 font-bold">—</span>
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-800 dark:text-white border border-slate-200 dark:border-[#1d2d42] font-bold text-xs sm:text-sm font-number">{fmt(product.product_price.price_per_unit_regular)}</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-slate-400 dark:text-slate-500 font-black text-base">--</span>
+                                                        <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">--</span>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-5 whitespace-nowrap">
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
                                                     {product.product_price?.full_bottle_regular ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-3 py-1.5 rounded-[10px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-base sm:text-lg">{fmt(product.product_price.full_bottle_vip)}</span>
-                                                            <span className="text-slate-400 dark:text-slate-500 font-black text-base">—</span>
-                                                            <span className="px-3 py-1.5 rounded-[10px] bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600 font-black text-base sm:text-lg">{fmt(product.product_price.full_bottle_regular)}</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs sm:text-sm font-number">{fmt(product.product_price.full_bottle_vip)}</span>
+                                                            <span className="text-slate-400 dark:text-slate-500 font-bold">—</span>
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-800 dark:text-white border border-slate-200 dark:border-[#1d2d42] font-bold text-xs sm:text-sm font-number">{fmt(product.product_price.full_bottle_regular)}</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-slate-400 dark:text-slate-500 font-black text-base">--</span>
+                                                        <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">--</span>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-5 whitespace-nowrap">
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
                                                     {Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0 ? (
-                                                        <span className="inline-flex items-center gap-1.5 font-black px-3 py-1.5 rounded-[10px] bg-red-500/15 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30 text-lg">
+                                                        <span className="inline-flex items-center gap-1 font-bold px-2.5 py-1 rounded-[2px] bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs sm:text-sm">
                                                             ⚠️ {fmt(product.stock)} {unitLabels[product.category.unit]}
                                                         </span>
                                                     ) : (
-                                                        <span className="font-black text-xl text-slate-900 dark:text-white">
-                                                            {fmt(product.stock)} <span className="text-sm font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span>
+                                                        <span className="font-bold text-sm sm:text-base text-slate-900 dark:text-white font-number">
+                                                            {fmt(product.stock)} <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span>
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-5 whitespace-nowrap">
-                                                    <span className="font-black text-lg text-slate-800 dark:text-slate-200">{fmt(product.min_stock)} <span className="text-sm font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span></span>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    <span className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-number">{fmt(product.min_stock)} <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span></span>
                                                 </td>
-                                                <td className="px-5 py-5">
-                                                    <div className="flex items-center gap-2.5">
+                                                <td className="px-4 py-3.5">
+                                                    <div className="flex items-center gap-2">
                                                         {!product.qrcode && (
                                                             <button
                                                                 onClick={() => handleGenerate(product)}
                                                                 title="إنشاء QR Code"
-                                                                className="flex items-center gap-2 px-4 h-12 rounded-[16px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base shadow-sm"
+                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs cursor-pointer shadow-xs"
                                                             >
-                                                                <QrCode className="w-5 h-5" /> إنشاء
+                                                                <QrCode className="w-3.5 h-3.5" /> إنشاء
                                                             </button>
                                                         )}
                                                         {product.qrcode && (
                                                             <button
                                                                 onClick={() => setQrProduct(product)}
                                                                 title="عرض QR Code"
-                                                                className="flex items-center gap-2 px-4 h-12 rounded-[16px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base shadow-sm"
+                                                                className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs cursor-pointer shadow-xs"
                                                             >
-                                                                <QrCode className="w-5 h-5" /> QR
+                                                                <QrCode className="w-3.5 h-3.5" /> QR
                                                             </button>
                                                         )}
                                                         <button onClick={() => { setShowCreate(false); startEdit(product); }}
-                                                            className="flex items-center gap-2 px-4 h-12 rounded-[16px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white active:scale-95 transition-all font-black text-base shadow-sm">
-                                                            <Pencil className="w-5 h-5" /> تعديل
+                                                            className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] text-slate-700 dark:text-slate-200 hover:bg-brand hover:text-white hover:border-brand transition-colors font-bold text-xs cursor-pointer shadow-xs">
+                                                            <Pencil className="w-3.5 h-3.5" /> تعديل
                                                         </button>
                                                         <DeleteModal
                                                             onConfirm={() => deleteProduct(product.id)}
                                                             trigger={
-                                                                <button className="flex items-center gap-2 px-4 h-12 rounded-[16px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base shadow-sm">
-                                                                    <Trash2 className="w-5 h-5" /> حذف
+                                                                <button className="flex items-center gap-1 h-8 px-2.5 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-colors font-bold text-xs cursor-pointer shadow-xs">
+                                                                    <Trash2 className="w-3.5 h-3.5" /> حذف
                                                                 </button>
                                                             }
                                                         />
@@ -2881,112 +2892,112 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </div>
 
                             {/* كاردات — Mobile Touch */}
-                            <div className="flex flex-col gap-5 lg:hidden">
+                            <div className="flex flex-col gap-3.5 lg:hidden">
                                 {paginatedProducts.map(product => {
                                     const hasPrice = product.selling_type === 'unit_priced' && product.product_price;
                                     const hasBottle = !!product.product_price?.full_bottle_regular;
                                     const lowStock = Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0;
 
                                     return (
-                                        <div key={product.id} className="rounded-[26px] border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/90 overflow-hidden shadow-sm">
+                                        <div key={product.id} className="rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] overflow-hidden shadow-xs">
 
                                             {/* رأس الكارت */}
-                                            <div className="px-6 py-5 bg-slate-100/90 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700">
-                                                <div className="flex items-center gap-3 flex-wrap">
-                                                    <span className="font-black text-slate-900 dark:text-white text-xl sm:text-2xl leading-tight">{product.name}</span>
+                                            <div className="px-4 py-3 bg-slate-50/70 dark:bg-[#101a29] border-b border-slate-200 dark:border-[#1d2d42]">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-slate-900 dark:text-white text-base leading-tight">{product.name}</span>
                                                     {product.qrcode && (
-                                                        <span className="inline-flex items-center gap-1.5 text-xs font-black px-2.5 py-1 rounded-[8px] bg-violet-500/15 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border border-violet-500/30">
-                                                            <QrCode className="w-4 h-4" /> QR
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">
+                                                            <QrCode className="w-3 h-3" /> QR
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-3 flex-wrap mt-2">
-                                                    <span className="text-base font-black text-slate-700 dark:text-slate-200">{product.category.name}</span>
+                                                <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{product.category.name}</span>
                                                     {product.selling_type === 'tier_based' && (
-                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-primary/15 dark:bg-primary/25 text-primary dark:text-blue-300 border border-primary/25">{product.price_tier?.name}</span>
+                                                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-brand-subtle text-brand border border-brand-subtle">{product.price_tier?.name}</span>
                                                     )}
                                                     {product.category.is_operational && (
-                                                        <span className="text-xs font-black px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600">تشغيلي</span>
+                                                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#1d2d42]">تشغيلي</span>
                                                     )}
                                                 </div>
                                             </div>
 
                                             {/* بيانات */}
-                                            <div className="flex flex-col divide-y divide-slate-200 dark:divide-slate-700/60 px-6">
+                                            <div className="flex flex-col divide-y divide-slate-100 dark:divide-[#162338] px-4">
 
                                                 {hasPrice && (
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-black text-slate-700 dark:text-slate-300">مدى السعر</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-lg">{fmt(product.product_price!.price_per_unit_vip)}</span>
-                                                            <span className="text-slate-400 dark:text-slate-500 font-black">—</span>
-                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 font-black text-lg">{fmt(product.product_price!.price_per_unit_regular)}</span>
+                                                    <div className="flex items-center justify-between py-2.5">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">مدى السعر</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs font-number">{fmt(product.product_price!.price_per_unit_vip)}</span>
+                                                            <span className="text-slate-400 dark:text-slate-500 font-bold">—</span>
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-800 dark:text-white border border-slate-200 dark:border-[#1d2d42] font-bold text-xs font-number">{fmt(product.product_price!.price_per_unit_regular)}</span>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {hasBottle && (
-                                                    <div className="flex items-center justify-between py-4">
-                                                        <span className="text-base font-black text-slate-700 dark:text-slate-300">سعر العبوة</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-emerald-500/15 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-lg">{fmt(product.product_price!.full_bottle_vip)}</span>
-                                                            <span className="text-slate-400 dark:text-slate-500 font-black">—</span>
-                                                            <span className="px-3.5 py-1.5 rounded-[12px] bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-300 dark:border-slate-600 font-black text-lg">{fmt(product.product_price!.full_bottle_regular)}</span>
+                                                    <div className="flex items-center justify-between py-2.5">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">سعر العبوة</span>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-xs font-number">{fmt(product.product_price!.full_bottle_vip)}</span>
+                                                            <span className="text-slate-400 dark:text-slate-500 font-bold">—</span>
+                                                            <span className="px-2 py-0.5 rounded-[2px] bg-slate-100 dark:bg-[#152238] text-slate-800 dark:text-white border border-slate-200 dark:border-[#1d2d42] font-bold text-xs font-number">{fmt(product.product_price!.full_bottle_regular)}</span>
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                <div className="flex items-center justify-between py-4">
-                                                    <span className="text-base font-black text-slate-700 dark:text-slate-300">المخزون</span>
-                                                    <div className="flex items-baseline gap-1.5">
+                                                <div className="flex items-center justify-between py-2.5">
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">المخزون</span>
+                                                    <div className="flex items-baseline gap-1">
                                                         {lowStock ? (
-                                                            <span className="inline-flex items-center gap-1.5 font-black px-3 py-1 rounded-[10px] bg-red-500/15 dark:bg-red-500/20 text-red-700 dark:text-red-300 border border-red-500/30 text-lg">
+                                                            <span className="inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-[2px] bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-xs">
                                                                 ⚠️ {fmt(product.stock)} {unitLabels[product.category.unit]}
                                                             </span>
                                                         ) : (
-                                                            <span className="font-black text-xl text-slate-900 dark:text-white">{fmt(product.stock)} <span className="text-base font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span></span>
+                                                            <span className="font-bold text-sm text-slate-900 dark:text-white font-number">{fmt(product.stock)} <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span></span>
                                                         )}
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center justify-between py-4">
-                                                    <span className="text-base font-black text-slate-700 dark:text-slate-300">الحد الأدنى</span>
-                                                    <div className="flex items-baseline gap-1.5">
-                                                        <span className="font-black text-lg text-slate-800 dark:text-slate-200">{fmt(product.min_stock)}</span>
-                                                        <span className="text-base font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span>
+                                                <div className="flex items-center justify-between py-2.5">
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">الحد الأدنى</span>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="font-bold text-xs text-slate-800 dark:text-slate-200 font-number">{fmt(product.min_stock)}</span>
+                                                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span>
                                                     </div>
                                                 </div>
 
                                             </div>
 
                                             {/* الإجراءات باللمس */}
-                                            <div className="flex items-center gap-3 px-6 py-4 border-t-2 border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                                            <div className="flex items-center gap-2 px-4 py-2.5 border-t border-slate-200 dark:border-[#1d2d42] bg-slate-50/40 dark:bg-[#0e1624]">
                                                 {!product.qrcode && (
                                                     <button
                                                         onClick={() => handleGenerate(product)}
-                                                        className="flex items-center justify-center gap-2 h-13 px-5 rounded-[18px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm"
+                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
                                                     >
-                                                        <QrCode className="w-5 h-5" /> إنشاء
+                                                        <QrCode className="w-3.5 h-3.5" /> إنشاء
                                                     </button>
                                                 )}
                                                 {product.qrcode && (
                                                     <button
                                                         onClick={() => setQrProduct(product)}
-                                                        className="flex items-center justify-center gap-2 h-13 px-5 rounded-[18px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm"
+                                                        className="flex items-center justify-center gap-1 h-9 px-3 rounded-[2px] border border-brand-subtle bg-brand-subtle text-brand hover:bg-brand hover:text-white transition-colors font-bold text-xs shrink-0 shadow-xs cursor-pointer"
                                                     >
-                                                        <QrCode className="w-5 h-5" /> QR
+                                                        <QrCode className="w-3.5 h-3.5" /> QR
                                                     </button>
                                                 )}
                                                 <button onClick={() => { setShowCreate(false); startEdit(product); }}
-                                                    className="flex-1 flex items-center justify-center gap-2 h-13 rounded-[18px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white active:scale-95 transition-all font-black text-base shadow-sm">
-                                                    <Pencil className="w-5 h-5" /> تعديل
+                                                    className="flex-1 flex items-center justify-center gap-1 h-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] text-slate-700 dark:text-slate-200 hover:bg-brand hover:text-white hover:border-brand transition-colors font-bold text-xs shadow-xs cursor-pointer">
+                                                    <Pencil className="w-3.5 h-3.5" /> تعديل
                                                 </button>
                                                 <DeleteModal
                                                     onConfirm={() => deleteProduct(product.id)}
                                                     wrapperClassName="flex-1"
                                                     trigger={
-                                                        <button className="w-full flex items-center justify-center gap-2 h-13 rounded-[18px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base shadow-sm">
-                                                            <Trash2 className="w-5 h-5" /> حذف
+                                                        <button className="w-full flex items-center justify-center gap-1 h-9 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-colors font-bold text-xs shadow-xs cursor-pointer">
+                                                            <Trash2 className="w-3.5 h-3.5" /> حذف
                                                         </button>
                                                     }
                                                 />
@@ -3009,7 +3020,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             />
                         </>
                     )}
-                </SpatialCard>
+                    </div>
+                </div>
 
 
             </div>
@@ -3042,28 +3054,28 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             {showImportModal && createPortal(
                 <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 dir-rtl">
                     <div
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in cursor-pointer"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in cursor-pointer"
                         onClick={() => !importForm.processing && setShowImportModal(false)}
                     />
-                    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-[28px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200">
+                    <div className="relative w-full max-w-lg bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] rounded-[2px] shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-150">
                         {/* Header */}
-                        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29]">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                                    <FileSpreadsheet className="w-6 h-6" />
+                                <div className="w-9 h-9 rounded-[2px] bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                    <FileSpreadsheet className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white">استيراد البيانات من Excel</h3>
-                                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5">رفع شيت إكسل يتضمن المنتجات والتصنيفات والأحجام والتيرات</p>
+                                    <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">استيراد البيانات من Excel</h3>
+                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">رفع شيت إكسل يتضمن المنتجات والتصنيفات والأحجام والتيرات</p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 disabled={importForm.processing}
                                 onClick={() => setShowImportModal(false)}
-                                className="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center transition-all disabled:opacity-50"
+                                className="w-8 h-8 rounded-[2px] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#152238] text-slate-400 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors border border-slate-200 dark:border-[#1d2d42] disabled:opacity-50 cursor-pointer"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4" />
                             </button>
                         </div>
 
@@ -3081,48 +3093,48 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     },
                                 });
                             }}
-                            className="p-6 space-y-5"
+                            className="p-5 space-y-4"
                         >
                             {/* تعليمات وتنبيهات */}
-                            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs leading-relaxed space-y-1">
-                                <p className="font-black text-sm">💡 تنبيه وتعليمات الاستيراد:</p>
+                            <div className="p-3.5 rounded-[2px] bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs leading-relaxed space-y-1">
+                                <p className="font-bold text-xs sm:text-sm">💡 تنبيه وتعليمات الاستيراد:</p>
                                 <p>• يُفضّل دائماً تصدير نسخة من المنتجات كإجراء احتياطي قبل الاستيراد.</p>
                                 <p>• حدد أدناه كيفية معالجة البيانات السابقة (التصنيفات، الأحجام، التيرات، المنتجات).</p>
                             </div>
 
                             {/* خيارات طريقة الاستيراد */}
-                            <div className="space-y-2.5">
-                                <label className="text-xs font-black text-slate-700 dark:text-slate-300">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                                     طريقة معالجة البيانات:
                                 </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     {/* Option 1: إضافة المنتجات الجديدة فقط */}
                                     <div
                                         onClick={() => importForm.setData('import_mode', 'add_only')}
-                                        className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex flex-col justify-between gap-3 ${
+                                        className={`cursor-pointer rounded-[2px] p-3 border transition-colors flex flex-col justify-between gap-2.5 ${
                                             importForm.data.import_mode === 'add_only'
-                                                ? 'border-emerald-500 bg-emerald-500/10 shadow-md shadow-emerald-500/10'
-                                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/40'
+                                                ? 'border-emerald-500 bg-emerald-500/10 shadow-xs'
+                                                : 'border-slate-200 dark:border-[#1d2d42] hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-[#0a121e]'
                                         }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                                <div className={`w-7 h-7 rounded-[2px] flex items-center justify-center shrink-0 ${
                                                     importForm.data.import_mode === 'add_only'
                                                         ? 'bg-emerald-500 text-white'
-                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                                                        : 'bg-slate-100 dark:bg-[#152238] text-slate-500'
                                                 }`}>
-                                                    <Plus className="w-4 h-4 stroke-[3]" />
+                                                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
                                                 </div>
-                                                <span className="font-black text-sm text-slate-900 dark:text-white">
+                                                <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
                                                     إضافة الجديد فقط
                                                 </span>
                                             </div>
-                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-[2px] bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                                                 موصى به
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
                                             تخطي البيانات والمنتجات المشتركة وإبقاء بياناتها كما هي، وإضافة البيانات الجديدة فقط الواردة في الملف.
                                         </p>
                                     </div>
@@ -3130,31 +3142,31 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                     {/* Option 2: مسح البيانات السابقة ثم وضع البيانات الجديدة */}
                                     <div
                                         onClick={() => importForm.setData('import_mode', 'wipe_and_replace')}
-                                        className={`cursor-pointer rounded-2xl p-4 border-2 transition-all flex flex-col justify-between gap-3 ${
+                                        className={`cursor-pointer rounded-[2px] p-3 border transition-colors flex flex-col justify-between gap-2.5 ${
                                             importForm.data.import_mode === 'wipe_and_replace'
-                                                ? 'border-rose-500 bg-rose-500/10 shadow-md shadow-rose-500/10'
-                                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800/40'
+                                                ? 'border-rose-500 bg-rose-500/10 shadow-xs'
+                                                : 'border-slate-200 dark:border-[#1d2d42] hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-[#0a121e]'
                                         }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2">
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                                                <div className={`w-7 h-7 rounded-[2px] flex items-center justify-center shrink-0 ${
                                                     importForm.data.import_mode === 'wipe_and_replace'
                                                         ? 'bg-rose-500 text-white'
-                                                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                                                        : 'bg-slate-100 dark:bg-[#152238] text-slate-500'
                                                 }`}>
-                                                    <Trash2 className="w-4 h-4" />
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                 </div>
-                                                <span className="font-black text-sm text-slate-900 dark:text-white">
+                                                <span className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
                                                     مسح الكل واستبدال
                                                 </span>
                                             </div>
-                                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400">
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-[2px] bg-rose-500/20 text-rose-600 dark:text-rose-400">
                                                 حذف شامل
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                                            مسح كافة البيانات السابقة بالكامل (المنتجات، التصنيفات، الأحجام، التيرات والأسعار)، وتنزيل بيانات الملف كنسخة جديدة كلياً.
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                            مسح كافة البيانات السابقة بالكامل، وتنزيل بيانات الملف كنسخة جديدة كلياً.
                                         </p>
                                     </div>
                                 </div>
@@ -3175,34 +3187,34 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                                 <div
                                     onClick={() => importFileInputRef.current?.click()}
-                                    className={`cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                                    className={`cursor-pointer border border-dashed rounded-[2px] p-5 text-center transition-colors ${
                                         importForm.data.file
-                                            ? 'border-emerald-500 bg-emerald-500/10'
-                                            : 'border-slate-300 dark:border-slate-700 hover:border-amber-500 bg-slate-50 dark:bg-slate-800/40 hover:bg-amber-500/5'
+                                            ? 'border-emerald-500 bg-emerald-500/5'
+                                            : 'border-slate-300 dark:border-[#1d2d42] hover:border-brand bg-slate-50/50 dark:bg-[#0a121e]'
                                     }`}
                                 >
-                                    <div className="w-14 h-14 mx-auto rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-600 dark:text-slate-300 mb-3">
+                                    <div className="w-10 h-10 mx-auto rounded-[2px] bg-white dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42] shadow-xs flex items-center justify-center text-slate-600 dark:text-slate-300 mb-2">
                                         {importForm.data.file ? (
-                                            <FileSpreadsheet className="w-7 h-7 text-emerald-500" />
+                                            <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
                                         ) : (
-                                            <Upload className="w-7 h-7 text-amber-500" />
+                                            <Upload className="w-5 h-5 text-amber-500" />
                                         )}
                                     </div>
                                     {importForm.data.file ? (
-                                        <div className="space-y-1">
-                                            <p className="font-black text-sm text-emerald-700 dark:text-emerald-300 truncate max-w-xs mx-auto">
+                                        <div className="space-y-0.5">
+                                            <p className="font-bold text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 truncate max-w-xs mx-auto">
                                                 {importForm.data.file.name}
                                             </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                 الحجم: {(importForm.data.file.size / 1024).toFixed(1)} ك.ب (اضغط للتغيير)
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="space-y-1">
-                                            <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
+                                        <div className="space-y-0.5">
+                                            <p className="font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                                                 انقر هنا لاختيار ملف Excel (.xlsx)
                                             </p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            <p className="text-[11px] text-slate-500 dark:text-slate-400">
                                                 الحد الأقصى للحجم 20 ميغابايت
                                             </p>
                                         </div>
@@ -3210,35 +3222,35 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 </div>
 
                                 {importForm.errors.file && (
-                                    <p className="mt-2 text-xs font-bold text-red-600 dark:text-red-400">
+                                    <p className="mt-1.5 text-xs font-bold text-rose-500">
                                         {importForm.errors.file}
                                     </p>
                                 )}
                             </div>
 
                             {/* أزرار الإجراء */}
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                            <div className="flex items-center justify-end gap-2.5 pt-3.5 border-t border-slate-200 dark:border-[#1d2d42]">
                                 <button
                                     type="button"
                                     disabled={importForm.processing}
                                     onClick={() => setShowImportModal(false)}
-                                    className="px-5 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-black text-sm transition-all disabled:opacity-50"
+                                    className="px-4 h-10 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#121c2c] dark:hover:bg-[#18263b] text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors border border-slate-200 dark:border-[#1d2d42] disabled:opacity-50 cursor-pointer"
                                 >
                                     إلغاء
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={!importForm.data.file || importForm.processing}
-                                    className={`flex items-center gap-2 px-6 h-12 rounded-xl text-white font-black text-sm shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none ${
+                                    className={`flex items-center gap-1.5 px-5 h-10 rounded-[2px] text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
                                         importForm.data.import_mode === 'wipe_and_replace'
-                                            ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/25'
-                                            : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25'
+                                            ? 'bg-rose-600 hover:bg-rose-700'
+                                            : 'bg-brand hover:opacity-95'
                                     }`}
                                 >
                                     {importForm.data.import_mode === 'wipe_and_replace' ? (
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                     ) : (
-                                        <Plus className="w-4 h-4 stroke-[3]" />
+                                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
                                     )}
                                     <span>
                                         {importForm.processing
@@ -3255,6 +3267,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 </div>,
                 document.body
             )}
-        </AppShell>
+
+
+</AppShell>
     );
 }
