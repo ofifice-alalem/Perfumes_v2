@@ -525,11 +525,11 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                 {/* ── شريط التحكم الموحد: التبويبات + زر فتح الدرج ── */}
                 <div className="flex flex-wrap items-center justify-between gap-2.5 bg-slate-50 dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] p-1.5 rounded-[2px]">
                     {/* التبويبات (Active / Deleted) */}
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         <button
                             type="button"
                             onClick={() => setActiveTab('active')}
-                            className={`px-3 py-1.5 rounded-[2px] font-bold text-xs transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-[2px] font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                                 activeTab === 'active'
                                     ? 'bg-brand text-white shadow-xs'
                                     : 'text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white'
@@ -540,7 +540,7 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                         <button
                             type="button"
                             onClick={() => setActiveTab('deleted')}
-                            className={`px-3 py-1.5 rounded-[2px] font-bold text-xs transition-all cursor-pointer ${
+                            className={`px-3.5 py-1.5 rounded-[2px] font-bold text-xs sm:text-sm transition-all cursor-pointer ${
                                 activeTab === 'deleted'
                                     ? 'bg-rose-600 text-white shadow-xs'
                                     : 'text-slate-600 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white'
@@ -556,10 +556,10 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                             <button
                                 type="button"
                                 onClick={resetFilter}
-                                className="h-8 px-2.5 rounded-[2px] border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                className="h-9 px-3 rounded-[2px] border border-rose-300 dark:border-rose-900/50 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                                 title="إلغاء التصفية"
                             >
-                                <RotateCcw className="w-3.5 h-3.5" />
+                                <RotateCcw className="w-4 h-4" />
                                 <span>إعادة تعيين</span>
                             </button>
                         )}
@@ -567,29 +567,29 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                         <button
                             type="button"
                             onClick={() => setDrawerOpen(true)}
-                            className={`h-8 px-3 rounded-[2px] border font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs ${
+                            className={`h-9 px-3.5 rounded-[2px] border font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer shadow-2xs ${
                                 hasFilter
                                     ? 'bg-brand/10 border-brand text-brand font-black'
-                                    : 'bg-white dark:bg-[#0a121e] border-slate-200/90 dark:border-[#1d2d42] text-slate-700 dark:text-[#8fa1b5] hover:bg-slate-100 dark:hover:bg-[#121c2c]'
+                                    : 'bg-white dark:bg-[#0c1421] border-slate-300 dark:border-[#22354e] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#142032]'
                             }`}
                         >
-                            <SlidersHorizontal className="w-3.5 h-3.5 text-brand" />
+                            <SlidersHorizontal className="w-4 h-4 text-brand" />
                             <span>تصفية الفواتير</span>
-                            {hasFilter && <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse" />}
+                            {hasFilter && <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />}
                         </button>
                     </div>
                 </div>
 
                 {/* ── جدول البيانات المكتبي (Workstation Data Grid) ── */}
                 <div className="spatial-card p-0 overflow-hidden border border-slate-200/90 dark:border-[#1d2d42]">
-                    <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421]">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421]">
                         <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-brand" />
-                            <span className="text-xs font-bold text-slate-800 dark:text-white">
+                            <span className="text-sm font-bold text-slate-800 dark:text-white">
                                 سجل الفواتير ({displayInvoices.length})
                             </span>
                         </div>
-                        <div className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                        <div className="text-xs font-mono text-slate-400 dark:text-slate-500">
                             صفحة {invoices.current_page} من {invoices.last_page || 1}
                         </div>
                     </div>
@@ -597,23 +597,23 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                     {displayInvoices.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-2">
                             <FileText className="w-8 h-8 stroke-1 text-slate-300 dark:text-slate-600" />
-                            <span className="font-bold text-xs">{activeTab === 'active' ? 'لا توجد فواتير بيع مسجلة' : 'لا توجد فواتير ملغية'}</span>
+                            <span className="font-bold text-xs sm:text-sm">{activeTab === 'active' ? 'لا توجد فواتير بيع مسجلة' : 'لا توجد فواتير ملغية'}</span>
                         </div>
                     ) : (
                         <>
                             {/* عرض الجدول المكتبي للشاشات الكبيرة */}
                             <div className="hidden lg:block overflow-x-auto">
-                                <table className="w-full text-xs text-right">
+                                <table className="w-full text-sm sm:text-base text-right">
                                     <thead>
-                                        <tr className="bg-slate-100/60 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-500 dark:text-slate-400 font-bold">
-                                            <th className="px-3 py-2.5 font-mono text-center w-16">#</th>
-                                            <th className="px-3 py-2.5">العميل</th>
-                                            <th className="px-3 py-2.5">البائع</th>
-                                            <th className="px-3 py-2.5 text-left font-mono">الإجمالي</th>
-                                            <th className="px-3 py-2.5 text-left font-mono">المدفوع</th>
-                                            <th className="px-3 py-2.5 text-left font-mono">المتبقي</th>
-                                            <th className="px-3 py-2.5 text-center font-mono">التاريخ</th>
-                                            <th className="px-3 py-2.5 text-center w-28">الإجراءات</th>
+                                        <tr className="bg-slate-100/60 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-300 font-bold">
+                                            <th className="px-4 py-3.5 font-mono text-center w-16 text-xs sm:text-sm">#</th>
+                                            <th className="px-4 py-3.5 text-xs sm:text-sm">العميل</th>
+                                            <th className="px-4 py-3.5 text-xs sm:text-sm">البائع</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">الإجمالي</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">المدفوع</th>
+                                            <th className="px-4 py-3.5 text-left font-mono text-xs sm:text-sm">المتبقي</th>
+                                            <th className="px-4 py-3.5 text-center font-mono text-xs sm:text-sm">التاريخ</th>
+                                            <th className="px-4 py-3.5 text-center w-36 text-xs sm:text-sm">الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200/70 dark:divide-[#162335]">
@@ -623,38 +623,38 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                     key={inv.id} 
                                                     className={`hover:bg-slate-50 dark:hover:bg-[#0e1828] transition-colors ${inv.deleted_at ? 'opacity-60 bg-rose-50/20 dark:bg-rose-950/10' : ''}`}
                                                 >
-                                                    <td className="px-3 py-2.5 font-mono font-bold text-slate-400 dark:text-slate-500 text-center">
+                                                    <td className="px-4 py-3.5 font-mono font-bold text-slate-400 dark:text-slate-500 text-center text-xs sm:text-sm">
                                                         #{inv.invoice_number || inv.id}
                                                     </td>
-                                                    <td className="px-3 py-2.5">
-                                                        <span className="font-bold text-slate-800 dark:text-white">
+                                                    <td className="px-4 py-3.5">
+                                                        <span className="font-bold text-slate-900 dark:text-white text-sm sm:text-base">
                                                             {inv.customer?.name ?? 'زبون نقدي'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-slate-600 dark:text-[#8fa1b5]">
+                                                    <td className="px-4 py-3.5 text-slate-600 dark:text-[#8fa1b5] text-xs sm:text-sm font-medium">
                                                         {inv.user?.name ?? '—'}
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-left font-number font-black text-slate-900 dark:text-white whitespace-nowrap">
-                                                        {fmt(inv.total)} <span className="text-[10px] font-bold text-slate-400">د.ل</span>
+                                                    <td className="px-4 py-3.5 text-left font-number font-black text-slate-900 dark:text-white whitespace-nowrap text-sm sm:text-base">
+                                                        {fmt(inv.total)} <span className="text-xs font-bold text-slate-400">د.ل</span>
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-left font-number font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                                        {fmt(inv.paid_amount)} <span className="text-[10px] font-bold text-slate-400">د.ل</span>
+                                                    <td className="px-4 py-3.5 text-left font-number font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap text-sm sm:text-base">
+                                                        {fmt(inv.paid_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-left font-number font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                                                        {fmt(inv.due_amount)} <span className="text-[10px] font-bold text-slate-400">د.ل</span>
+                                                    <td className="px-4 py-3.5 text-left font-number font-black text-amber-600 dark:text-amber-400 whitespace-nowrap text-sm sm:text-base">
+                                                        {fmt(inv.due_amount)} <span className="text-xs font-bold text-slate-400">د.ل</span>
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-center font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                                    <td className="px-4 py-3.5 text-center font-mono text-xs sm:text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">
                                                         {fmtDate(inv.created_at)}
                                                     </td>
-                                                    <td className="px-3 py-2.5 text-center">
+                                                    <td className="px-4 py-3.5 text-center">
                                                         <div className="flex items-center justify-center gap-1.5">
                                                             <Link 
                                                                 href={`/invoices/${inv.id}`} 
-                                                                className="h-7 px-2.5 rounded-[2px] border border-sky-500/30 dark:border-sky-500/25 bg-sky-500/10 hover:bg-brand hover:text-white text-brand font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                                                                className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-sky-500/35 dark:border-sky-500/30 bg-sky-500/10 hover:bg-sky-600 hover:text-white! text-sky-700 dark:text-sky-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
                                                                 title="عرض الفاتورة"
                                                             >
-                                                                <Eye className="w-3 h-3" />
-                                                                <span>عرض</span>
+                                                                <Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 group-hover:text-white transition-colors" />
+                                                                <span className="group-hover:text-white transition-colors">عرض</span>
                                                             </Link>
                                                             {inv.deleted_at ? (
                                                                 <RestoreModal
@@ -664,11 +664,11 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                                     trigger={
                                                                         <button 
                                                                             type="button"
-                                                                            className="h-7 px-2 rounded-[2px] border border-emerald-500/30 dark:border-emerald-500/25 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                                                                            className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-emerald-500/35 dark:border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white! font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
                                                                             title="استعادة الفاتورة"
                                                                         >
-                                                                            <RotateCcw className="w-3 h-3" />
-                                                                            <span>استعادة</span>
+                                                                            <RotateCcw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
+                                                                            <span className="group-hover:text-white transition-colors">استعادة</span>
                                                                         </button>
                                                                     }
                                                                 />
@@ -676,11 +676,11 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                                 <button 
                                                                     type="button"
                                                                     onClick={() => setCancelTarget(inv)} 
-                                                                    className="h-7 px-2 rounded-[2px] border border-rose-500/30 dark:border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer shadow-2xs"
+                                                                    className="h-8 sm:h-9 px-3 sm:px-3.5 rounded-[2px] border border-rose-500/35 dark:border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white! font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs group"
                                                                     title="إلغاء الفاتورة"
                                                                 >
-                                                                    <Trash2 className="w-3 h-3" />
-                                                                    <span>إلغاء</span>
+                                                                    <Trash2 className="w-3.5 h-3.5 text-rose-500 group-hover:text-white transition-colors" />
+                                                                    <span className="group-hover:text-white transition-colors">إلغاء</span>
                                                                 </button>
                                                             )}
                                                         </div>
@@ -697,44 +697,45 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                 {displayInvoices.map(inv => {
                                     const status = inv.payment_status || (parseFloat(inv.due_amount) === 0 ? 'paid' : parseFloat(inv.paid_amount) > 0 ? 'partial' : 'unpaid');
                                     return (
-                                        <div key={inv.id} className={`p-3 flex flex-col gap-2 ${inv.deleted_at ? 'opacity-60 bg-rose-50/20' : ''}`}>
+                                        <div key={inv.id} className={`p-3.5 flex flex-col gap-2.5 ${inv.deleted_at ? 'opacity-60 bg-rose-50/20' : ''}`}>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-xs text-slate-800 dark:text-white">
+                                                    <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-white">
                                                         {inv.customer?.name ?? 'زبون نقدي'}
                                                     </span>
-                                                    <span className="font-mono text-[11px] text-slate-400">
+                                                    <span className="font-mono text-xs sm:text-sm text-slate-400">
                                                         #{inv.invoice_number || inv.id}
                                                     </span>
                                                 </div>
-                                                <span className={`px-2 py-0.5 rounded-[2px] text-[10px] font-bold ${statusClass[status] || statusClass.unpaid}`}>
+                                                <span className={`px-2 py-0.5 rounded-[2px] text-xs font-bold ${statusClass[status] || statusClass.unpaid}`}>
                                                     {statusLabel[status] || '—'}
                                                 </span>
                                             </div>
 
-                                            <div className="grid grid-cols-3 gap-2 py-1.5 px-2 rounded-[2px] bg-slate-50 dark:bg-[#0e1726] border border-slate-200/70 dark:border-[#1d2d42] text-[11px]">
+                                            <div className="grid grid-cols-3 gap-2 py-2 px-2.5 rounded-[2px] bg-slate-50 dark:bg-[#0e1726] border border-slate-200/70 dark:border-[#1d2d42] text-xs sm:text-sm">
                                                 <div>
-                                                    <div className="text-slate-400 text-[10px]">الإجمالي</div>
-                                                    <div className="font-number font-black text-slate-900 dark:text-white">{fmt(inv.total)}</div>
+                                                    <div className="text-slate-400 text-xs">الإجمالي</div>
+                                                    <div className="font-number font-black text-slate-900 dark:text-white text-sm sm:text-base">{fmt(inv.total)}</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-slate-400 text-[10px]">المدفوع</div>
-                                                    <div className="font-number font-bold text-emerald-600">{fmt(inv.paid_amount)}</div>
+                                                    <div className="text-slate-400 text-xs">المدفوع</div>
+                                                    <div className="font-number font-black text-emerald-600 text-sm sm:text-base">{fmt(inv.paid_amount)}</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-slate-400 text-[10px]">المتبقي</div>
-                                                    <div className="font-number font-bold text-amber-600">{fmt(inv.due_amount)}</div>
+                                                    <div className="text-slate-400 text-xs">المتبقي</div>
+                                                    <div className="font-number font-black text-amber-600 text-sm sm:text-base">{fmt(inv.due_amount)}</div>
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center justify-between pt-1">
-                                                <span className="font-mono text-[11px] text-slate-400">{fmtDate(inv.created_at)}</span>
-                                                <div className="flex items-center gap-1.5">
+                                                <span className="font-mono text-xs sm:text-sm text-slate-400">{fmtDate(inv.created_at)}</span>
+                                                <div className="flex items-center gap-2">
                                                     <Link 
                                                         href={`/invoices/${inv.id}`} 
-                                                        className="h-7 px-3 rounded-[2px] border border-sky-500/30 dark:border-sky-500/25 bg-sky-500/10 text-brand font-bold text-[11px] flex items-center gap-1"
+                                                        className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-sky-500/35 dark:border-sky-500/30 bg-sky-500/10 hover:bg-sky-600 hover:text-white! text-sky-700 dark:text-sky-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all group"
                                                     >
-                                                        <Eye className="w-3 h-3" /> عرض
+                                                        <Eye className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 group-hover:text-white transition-colors" />
+                                                        <span className="group-hover:text-white transition-colors">عرض</span>
                                                     </Link>
                                                     {inv.deleted_at ? (
                                                         <RestoreModal
@@ -742,17 +743,17 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                             description="هل أنت متأكد من استعادة هذه الفاتورة؟"
                                                             onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
                                                             trigger={
-                                                                <button className="h-7 px-2.5 rounded-[2px] border border-emerald-500/30 dark:border-emerald-500/25 bg-emerald-500/10 text-emerald-600 font-bold text-[11px] flex items-center gap-1">
-                                                                    <RotateCcw className="w-3 h-3" /> استعادة
+                                                                <button className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-emerald-500/35 dark:border-emerald-500/30 bg-emerald-500/10 text-emerald-600 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all">
+                                                                    <RotateCcw className="w-3.5 h-3.5" /> استعادة
                                                                 </button>
                                                             }
                                                         />
                                                     ) : (
                                                         <button 
                                                             onClick={() => setCancelTarget(inv)} 
-                                                            className="h-7 px-2.5 rounded-[2px] border border-rose-500/30 dark:border-rose-500/25 bg-rose-500/10 text-rose-500 font-bold text-[11px] flex items-center gap-1"
+                                                            className="h-8 sm:h-9 px-3.5 rounded-[2px] border border-rose-500/35 dark:border-rose-500/30 bg-rose-500/10 text-rose-600 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all"
                                                         >
-                                                            <Trash2 className="w-3 h-3" /> إلغاء
+                                                            <Trash2 className="w-3.5 h-3.5" /> إلغاء
                                                         </button>
                                                     )}
                                                 </div>

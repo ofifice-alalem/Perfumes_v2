@@ -440,32 +440,32 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                 )}
 
                 {/* ── شريط الملخص المالي المكتبي (Financial Summary Strip) ── */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">الإجمالي الكلي</span>
-                        <div className="text-lg sm:text-xl font-black font-number text-slate-900 dark:text-white tabular-nums">
-                            {fmt(invoice.total)} <span className="text-[11px] font-normal text-slate-400">د.ل</span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 sm:p-4 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-1">
+                        <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">الإجمالي الكلي</span>
+                        <div className="text-xl sm:text-2xl font-black font-number text-slate-900 dark:text-white tabular-nums">
+                            {fmt(invoice.total)} <span className="text-xs sm:text-sm font-bold text-slate-400">د.ل</span>
                         </div>
                     </div>
 
-                    <div className="p-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">المدفوع الفعلي</span>
-                        <div className="text-lg sm:text-xl font-black font-number text-emerald-600 dark:text-emerald-400 tabular-nums">
-                            {fmt(invoice.paid_amount)} <span className="text-[11px] font-normal text-slate-400">د.ل</span>
+                    <div className="p-3.5 sm:p-4 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-1">
+                        <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">المدفوع الفعلي</span>
+                        <div className="text-xl sm:text-2xl font-black font-number text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            {fmt(invoice.paid_amount)} <span className="text-xs sm:text-sm font-bold text-slate-400">د.ل</span>
                         </div>
                     </div>
 
-                    <div className="p-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">المتبقي الآجل</span>
-                        <div className={`text-lg sm:text-xl font-black font-number tabular-nums ${due > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                            {fmt(invoice.due_amount)} <span className="text-[11px] font-normal text-slate-400">د.ل</span>
+                    <div className="p-3.5 sm:p-4 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-1">
+                        <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">المتبقي الآجل</span>
+                        <div className={`text-xl sm:text-2xl font-black font-number tabular-nums ${due > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                            {fmt(invoice.due_amount)} <span className="text-xs sm:text-sm font-bold text-slate-400">د.ل</span>
                         </div>
                     </div>
 
-                    <div className="p-3 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-0.5">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">دين العميل الإجمالي</span>
-                        <div className={`text-lg sm:text-xl font-black font-number tabular-nums ${customerDebt > 0 ? 'text-rose-600 dark:text-rose-400' : customerDebt < 0 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                            {fmt(invoice.customer?.total_debt ?? '0')} <span className="text-[11px] font-normal text-slate-400">د.ل</span>
+                    <div className="p-3.5 sm:p-4 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shadow-2xs flex flex-col gap-1">
+                        <span className="text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400">دين العميل الإجمالي</span>
+                        <div className={`text-xl sm:text-2xl font-black font-number tabular-nums ${customerDebt > 0 ? 'text-rose-600 dark:text-rose-400' : customerDebt < 0 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                            {fmt(invoice.customer?.total_debt ?? '0')} <span className="text-xs sm:text-sm font-bold text-slate-400">د.ل</span>
                         </div>
                     </div>
                 </div>
@@ -530,9 +530,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                 <>
                                     {/* عرض الجدول المكتبي */}
                                     <div className="hidden lg:block overflow-x-auto">
-                                        <table className="w-full text-xs text-right">
+                                        <table className="w-full text-xs sm:text-sm text-right">
                                             <thead>
-                                                <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold">
+                                                <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-700 dark:text-slate-300 font-bold">
                                                     <th className="px-5 py-3.5">المنتج</th>
                                                     <th className="px-5 py-3.5 text-center">نوع البيع</th>
                                                     <th className="px-5 py-3.5 text-center">الحجم</th>
@@ -548,17 +548,17 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                         : (g.size_value && g.size_value > 0 ? Math.round(g.quantity / g.size_value) : g.count);
                                                     return (
                                                         <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors">
-                                                            <td className="px-5 py-4 font-bold text-slate-900 dark:text-white">
+                                                            <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                                                                 {g.name}
                                                             </td>
                                                             <td className="px-5 py-4 text-center">
-                                                                <span className="px-2.5 py-1 rounded-[2px] bg-slate-100 dark:bg-[#121c2c] text-slate-600 dark:text-slate-300 text-[11px] font-medium border border-slate-200 dark:border-[#1d2d42]">
+                                                                <span className="px-2.5 py-1 rounded-[2px] bg-slate-100 dark:bg-[#121c2c] text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-[#1d2d42]">
                                                                     {saleTypeLabel[g.sale_type] ?? g.sale_type}
                                                                 </span>
                                                             </td>
                                                             <td className="px-5 py-4 text-center">
                                                                 {g.size_label ? (
-                                                                    <span className="px-2.5 py-1 rounded-[2px] bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[11px] font-bold border border-sky-500/20">
+                                                                    <span className="px-2.5 py-1 rounded-[2px] bg-sky-500/10 text-sky-600 dark:text-sky-400 text-xs font-bold border border-sky-500/20">
                                                                         {g.size_label}
                                                                     </span>
                                                                 ) : (
@@ -566,15 +566,15 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                                 )}
                                                             </td>
                                                             <td className="px-5 py-4 text-center">
-                                                                <span className="font-mono font-bold text-slate-900 dark:text-white px-2.5 py-1 rounded-[2px] bg-slate-100 dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42]">
+                                                                <span className="font-mono font-bold text-slate-900 dark:text-white px-2.5 py-1 rounded-[2px] bg-slate-100 dark:bg-[#121c2c] border border-slate-200 dark:border-[#1d2d42] text-xs sm:text-sm">
                                                                     {displayCount}
                                                                 </span>
                                                             </td>
-                                                            <td className="px-5 py-4 text-left font-number font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
-                                                                {fmt(g.unit_price)} <span className="text-[10px] text-slate-400">د.ل</span>
+                                                            <td className="px-5 py-4 text-left font-number font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap text-xs sm:text-sm">
+                                                                {fmt(g.unit_price)} <span className="text-[11px] font-bold text-slate-400">د.ل</span>
                                                             </td>
-                                                            <td className="px-5 py-4 text-left font-number font-black text-slate-900 dark:text-white whitespace-nowrap">
-                                                                {fmt(g.total)} <span className="text-[10px] text-slate-400">د.ل</span>
+                                                            <td className="px-5 py-4 text-left font-number font-black text-slate-900 dark:text-white whitespace-nowrap text-xs sm:text-sm">
+                                                                {fmt(g.total)} <span className="text-[11px] font-bold text-slate-400">د.ل</span>
                                                             </td>
                                                         </tr>
                                                     );
@@ -739,9 +739,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-xs text-right">
+                                <table className="w-full text-xs sm:text-sm text-right">
                                     <thead>
-                                        <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold">
+                                        <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-700 dark:text-slate-300 font-bold">
                                             <th className="px-5 py-3.5">وسيلة الدفع</th>
                                             <th className="px-5 py-3.5 text-left font-mono">المبلغ</th>
                                             <th className="px-5 py-3.5">ملاحظة</th>
@@ -753,19 +753,19 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     <tbody className="divide-y divide-slate-200/90 dark:divide-[#1d2d42]">
                                         {invoice.payments.map(pay => (
                                             <tr key={pay.id} className="hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors">
-                                                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white">
+                                                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                                                     {pay.payment_method.name}
                                                 </td>
-                                                <td className="px-5 py-4 text-left font-number font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                                    {fmt(pay.amount)} <span className="text-[10px] text-slate-400">د.ل</span>
+                                                <td className="px-5 py-4 text-left font-number font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap text-xs sm:text-sm">
+                                                    {fmt(pay.amount)} <span className="text-[11px] font-bold text-slate-400">د.ل</span>
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
                                                     {pay.notes ?? '—'}
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
                                                     {pay.user?.name ?? '—'}
                                                 </td>
-                                                <td className="px-5 py-4 text-center font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                                                <td className="px-5 py-4 text-center font-mono text-xs text-slate-500 whitespace-nowrap">
                                                     {new Date(pay.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
@@ -773,8 +773,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                         <DeleteModal 
                                                             onConfirm={() => router.delete(`/payments/${pay.id}`, { preserveScroll: true })}
                                                             trigger={
-                                                                <button className="h-7 px-2.5 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer mx-auto">
-                                                                    <Trash2 className="w-3 h-3" />
+                                                                <button className="h-8 px-3 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer mx-auto">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
                                                                     <span>حذف</span>
                                                                 </button>
                                                             }
@@ -912,9 +912,9 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-xs text-right">
+                                <table className="w-full text-xs sm:text-sm text-right">
                                     <thead>
-                                        <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold">
+                                        <tr className="bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-700 dark:text-slate-300 font-bold">
                                             <th className="px-5 py-3.5">وسيلة التسوية</th>
                                             <th className="px-5 py-3.5 text-left font-mono">المبلغ</th>
                                             <th className="px-5 py-3.5">ملاحظة</th>
@@ -926,19 +926,19 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                     <tbody className="divide-y divide-slate-200/90 dark:divide-[#1d2d42]">
                                         {invoice.settlements.map(s => (
                                             <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors">
-                                                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white">
+                                                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white text-xs sm:text-sm">
                                                     {s.payment_method.name}
                                                 </td>
-                                                <td className="px-5 py-4 text-left font-number font-black text-purple-600 dark:text-purple-400 whitespace-nowrap">
-                                                    {fmt(s.amount)} <span className="text-[10px] text-slate-400">د.ل</span>
+                                                <td className="px-5 py-4 text-left font-number font-black text-purple-600 dark:text-purple-400 whitespace-nowrap text-xs sm:text-sm">
+                                                    {fmt(s.amount)} <span className="text-[11px] font-bold text-slate-400">د.ل</span>
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
                                                     {s.notes ?? '—'}
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                                                <td className="px-5 py-4 text-slate-600 dark:text-slate-300 text-xs sm:text-sm">
                                                     {s.user?.name ?? '—'}
                                                 </td>
-                                                <td className="px-5 py-4 text-center font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                                                <td className="px-5 py-4 text-center font-mono text-xs text-slate-500 whitespace-nowrap">
                                                     {new Date(s.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-')}
                                                 </td>
                                                 <td className="px-5 py-4 text-center">
@@ -946,8 +946,8 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
                                                         <DeleteModal 
                                                             onConfirm={() => router.delete(`/settlements/${s.id}`, { preserveScroll: true })}
                                                             trigger={
-                                                                <button className="h-7 px-2.5 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer mx-auto">
-                                                                    <Trash2 className="w-3 h-3" />
+                                                                <button className="h-8 px-3 rounded-[2px] border border-rose-500/25 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer mx-auto">
+                                                                    <Trash2 className="w-3.5 h-3.5" />
                                                                     <span>حذف</span>
                                                                 </button>
                                                             }
