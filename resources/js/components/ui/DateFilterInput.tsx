@@ -52,24 +52,24 @@ export function DateFilterInput({ label, value, onChange }: Props) {
         update(day, month, v);
     }
 
-    const fieldCls = `h-10 px-2 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] hover:border-brand/60 dark:hover:border-brand/60 transition-colors font-number font-bold text-sm text-center cursor-pointer flex items-center justify-center select-none shadow-2xs active:scale-[0.98] w-full text-slate-800 dark:text-slate-100`;
-    const placeholderCls = 'text-slate-400 dark:text-slate-500 font-medium text-xs tracking-wider';
+    const fieldCls = `h-11 sm:h-12 px-2.5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] hover:border-brand/60 dark:hover:border-brand/60 transition-colors font-number font-bold text-sm sm:text-base text-center cursor-pointer flex items-center justify-center select-none shadow-2xs active:scale-[0.98] w-full text-slate-800 dark:text-slate-100`;
+    const placeholderCls = 'text-slate-400 dark:text-slate-500 font-medium text-xs sm:text-sm tracking-wider';
 
     return (
         <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-brand" />
+                <span className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-brand" />
                     <span>{label}</span>
                 </span>
                 {value && (
                     <button
                         type="button"
                         onClick={() => onChange('')}
-                        className="text-[11px] font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/15 px-1.5 py-0.5 rounded-[2px] border border-rose-500/20 flex items-center gap-1 cursor-pointer transition-colors"
+                        className="text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/15 px-2 py-0.5 rounded-[2px] border border-rose-500/20 flex items-center gap-1 cursor-pointer transition-colors"
                         title="مسح التاريخ"
                     >
-                        <X className="w-3 h-3" />
+                        <X className="w-3.5 h-3.5" />
                         <span>مسح</span>
                     </button>
                 )}

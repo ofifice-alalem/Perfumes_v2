@@ -116,7 +116,7 @@ function WorkstationSearchableSelect({
 
     return (
         <div className="flex flex-col gap-1.5 relative" ref={containerRef}>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">
                 {label}
             </label>
 
@@ -124,7 +124,7 @@ function WorkstationSearchableSelect({
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className={`h-10 px-3 rounded-[2px] border text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${
+                className={`h-11 sm:h-12 px-3.5 rounded-[2px] border text-sm sm:text-base font-bold flex items-center justify-between cursor-pointer transition-colors ${
                     isOpen
                         ? 'border-brand bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs'
                         : value
@@ -133,23 +133,23 @@ function WorkstationSearchableSelect({
                 }`}
             >
                 <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
-                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 mr-1.5 ${isOpen ? 'rotate-180 text-brand' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 mr-1.5 ${isOpen ? 'rotate-180 text-brand' : ''}`} />
             </button>
 
             {/* القائمة المنسدلة الذكية */}
             {isOpen && (
-                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] flex flex-col overflow-hidden animate-in fade-in duration-100">
+                <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[1000] bg-white dark:bg-[#0c1421] border border-slate-200 dark:border-[#1d2d42] shadow-2xl rounded-[2px] flex flex-col overflow-hidden animate-in fade-in duration-100 min-w-[260px]">
                     {/* شريط البحث + زر لوحة المفاتيح للشاشات اللمسية */}
-                    <div className="p-2 border-b border-slate-100 dark:border-[#172437] bg-slate-50 dark:bg-[#0a121e] flex items-center gap-1.5">
+                    <div className="p-2.5 border-b border-slate-100 dark:border-[#172437] bg-slate-50 dark:bg-[#0a121e] flex items-center gap-2">
                         <div className="relative flex-1">
-                            <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                             <input
                                 ref={inputRef}
                                 type="text"
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="بحث بالاسم أو الكلمة..."
-                                className="w-full h-8 pr-8 pl-2.5 text-xs rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#070d18] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-brand"
+                                className="w-full h-10 pr-9 pl-3 text-sm rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#070d18] text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-hidden focus:border-brand font-medium"
                             />
                         </div>
 
@@ -160,37 +160,37 @@ function WorkstationSearchableSelect({
                                 e.stopPropagation();
                                 setShowKeyboard(!showKeyboard);
                             }}
-                            className={`h-8 px-2.5 rounded-[2px] border text-xs font-semibold flex items-center gap-1 transition-colors shrink-0 cursor-pointer ${
+                            className={`h-10 px-3 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer ${
                                 showKeyboard
                                     ? 'bg-amber-500 text-white border-amber-600'
                                     : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/25'
                             }`}
                             title="لوحة مفاتيح الشاشة"
                         >
-                            <Keyboard className="w-3.5 h-3.5" />
+                            <Keyboard className="w-4 h-4" />
                             <span className="hidden sm:inline">لوحة لمس</span>
                         </button>
                     </div>
 
-                    {/* خيارات القائمة */}
-                    <ul className="max-h-56 overflow-y-auto custom-scroll divide-y divide-slate-100 dark:divide-[#172437]">
+                    {/* خيارات القائمة بمربعات محددة وفاصل واضح ومريح للمس */}
+                    <ul className="max-h-72 sm:max-h-80 overflow-y-auto custom-scroll p-2 space-y-1.5">
                         <li
                             onClick={() => {
                                 onSelect('');
                                 setIsOpen(false);
                             }}
-                            className={`px-3 py-2 text-xs font-semibold cursor-pointer flex items-center justify-between transition-colors ${
+                            className={`px-4 py-3 sm:py-3.5 text-sm sm:text-base font-bold cursor-pointer flex items-center justify-between rounded-[2px] transition-all min-h-[48px] sm:min-h-[52px] ${
                                 !value
-                                    ? 'bg-brand/10 text-brand font-bold'
-                                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#121e30]'
+                                    ? 'bg-brand/10 border-2 border-brand text-brand font-black shadow-2xs'
+                                    : 'bg-slate-50 hover:bg-slate-100/90 dark:bg-[#0e1624] dark:hover:bg-[#142033] border border-slate-200 dark:border-[#1c2a3f] text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-[#2b3e5a]'
                             }`}
                         >
                             <span>{placeholder}</span>
-                            {!value && <span className="text-brand text-xs font-bold">✓</span>}
+                            {!value && <span className="text-brand text-sm sm:text-base font-bold">✓</span>}
                         </li>
 
                         {filtered.length === 0 ? (
-                            <li className="px-3 py-4 text-center text-xs text-slate-400 dark:text-slate-500">
+                            <li className="px-4 py-6 text-center text-sm font-medium text-slate-400 dark:text-slate-500 rounded-[2px] bg-slate-50/50 dark:bg-[#0a121e] border border-dashed border-slate-200 dark:border-[#1c2a3f]">
                                 لا توجد نتائج مطابقة
                             </li>
                         ) : (
@@ -203,17 +203,17 @@ function WorkstationSearchableSelect({
                                             onSelect(opt.id);
                                             setIsOpen(false);
                                         }}
-                                        className={`px-3 py-2 text-xs font-semibold cursor-pointer flex items-center justify-between transition-colors ${
+                                        className={`px-4 py-3 sm:py-3.5 text-sm sm:text-base font-bold cursor-pointer flex items-center justify-between rounded-[2px] transition-all min-h-[48px] sm:min-h-[52px] ${
                                             isSelected
-                                                ? 'bg-brand/10 text-brand font-bold'
-                                                : 'text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#121e30]'
+                                                ? 'bg-brand/10 border-2 border-brand text-brand font-black shadow-2xs'
+                                                : 'bg-slate-50 hover:bg-slate-100/90 dark:bg-[#0e1624] dark:hover:bg-[#142033] border border-slate-200 dark:border-[#1c2a3f] text-slate-800 dark:text-slate-200 hover:border-slate-300 dark:hover:border-[#2b3e5a]'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-2 truncate">
-                                            {opt.badge && <span className="text-xs">{opt.badge}</span>}
+                                        <div className="flex items-center gap-2.5 truncate">
+                                            {opt.badge && <span className="text-xs font-bold px-2 py-0.5 rounded-[2px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-[#243750] text-slate-600 dark:text-slate-400">{opt.badge}</span>}
                                             <span className="truncate">{opt.label}</span>
                                         </div>
-                                        {isSelected && <span className="text-brand text-xs font-bold">✓</span>}
+                                        {isSelected && <span className="text-brand text-sm sm:text-base font-bold">✓</span>}
                                     </li>
                                 );
                             })
@@ -388,48 +388,48 @@ function FilterDrawer({
             />
 
             {/* الحاوية الجانبية الانزلاقية */}
-            <div className="relative w-full sm:w-[460px] md:w-[480px] max-w-[95vw] h-full
+            <div className="relative w-full sm:w-[500px] md:w-[540px] max-w-[95vw] h-full
                 bg-white dark:bg-[#0a121e]
                 shadow-2xl border-l border-slate-200 dark:border-[#1d2d42] flex flex-col animate-in slide-in-from-right duration-200 z-10 cursor-default">
 
                 {/* الترويسة */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-[#19273b] shrink-0 bg-slate-50 dark:bg-[#0c1421]">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-[2px] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
-                            <SlidersHorizontal className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-[#19273b] shrink-0 bg-slate-50 dark:bg-[#0c1421]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-[2px] bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+                            <SlidersHorizontal className="w-4 h-4" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white text-sm">تصفية الفواتير المتقدمة</h3>
-                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">تخصيص معايير البحث والفلترة بدقة</p>
+                            <h3 className="font-bold text-slate-900 dark:text-white text-base">تصفية الفواتير المتقدمة</h3>
+                            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">تخصيص معايير البحث والفلترة بدقة</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-7 h-7 rounded-[2px] border border-slate-200 dark:border-[#223348] text-slate-500 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                        className="w-8 h-8 rounded-[2px] border border-slate-200 dark:border-[#223348] text-slate-500 dark:text-[#8fa1b5] hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                     >
                         <X className="w-4 h-4" />
                     </button>
                 </div>
 
                 {/* محتوى الحقول القابل للتمرير */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scroll">
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 custom-scroll">
                     {children}
                 </div>
 
                 {/* شريط الإجراءات السفلي */}
-                <div className="px-5 py-3 border-t border-slate-200 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421] flex items-center gap-2.5 shrink-0 shadow-lg">
+                <div className="px-6 py-3.5 border-t border-slate-200 dark:border-[#19273b] bg-slate-50 dark:bg-[#0c1421] flex items-center gap-3 shrink-0 shadow-lg">
                     <button
                         onClick={applyFilter}
-                        className="flex-1 h-10 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-xs transition-opacity flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                        className="flex-1 h-12 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-sm sm:text-base transition-opacity flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
-                        <Search className="w-3.5 h-3.5" /> تطبيق الفلتر
+                        <Search className="w-4 h-4" /> تطبيق الفلتر
                     </button>
                     {hasFilter && (
                         <button
                             onClick={resetFilter}
-                            className="h-10 px-4 rounded-[2px] border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="h-12 px-5 rounded-[2px] border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 font-bold text-sm sm:text-base transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                            <RotateCcw className="w-3.5 h-3.5" /> إعادة تعيين
+                            <RotateCcw className="w-4 h-4" /> إعادة تعيين
                         </button>
                     )}
                 </div>
@@ -792,29 +792,29 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
 
                         {/* رقم الفاتورة مع خيار النمبر باد المطور */}
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">رقم الفاتورة</label>
+                            <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">رقم الفاتورة</label>
                             <button
                                 type="button"
                                 onClick={() => setShowIdPad(true)}
-                                className={`h-10 px-3 rounded-[2px] border text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
+                                className={`h-11 sm:h-12 px-3.5 rounded-[2px] border text-xs sm:text-sm font-bold flex items-center justify-between cursor-pointer transition-colors ${
                                     fInvoiceId 
                                         ? 'border-brand/50 dark:border-brand/40 bg-brand/5 dark:bg-brand/10 text-slate-900 dark:text-white shadow-2xs' 
                                         : 'border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-[#2f486b]'
                                 }`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Hash className="w-3.5 h-3.5 text-brand" />
-                                    <span className="font-number font-bold text-xs sm:text-sm">{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة (لوحة أرقام)...'}</span>
+                                    <Hash className="w-4 h-4 text-brand" />
+                                    <span className="font-number font-bold text-sm sm:text-base">{fInvoiceId ? `#${fInvoiceId}` : 'ادخل رقم الفاتورة (لوحة أرقام)...'}</span>
                                 </div>
                                 {fInvoiceId ? (
                                     <span
                                         onClick={(e) => { e.stopPropagation(); setFInvoiceId(''); }}
-                                        className="px-1.5 py-0.5 rounded-[2px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-[11px] font-bold border border-rose-500/20 transition-colors"
+                                        className="px-2 py-1 rounded-[2px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-bold border border-rose-500/20 transition-colors"
                                     >
                                         مسح
                                     </span>
                                 ) : (
-                                    <span className="text-[11px] font-bold text-brand bg-brand/10 px-1.5 py-0.5 rounded-[2px]">
+                                    <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-1 rounded-[2px]">
                                         لوحة اللمس
                                     </span>
                                 )}
