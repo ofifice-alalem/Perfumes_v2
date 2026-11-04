@@ -403,10 +403,14 @@ class SetupWizardController extends Controller
                 @copy($keyFile, "{$sslDir}\\server-key.pem");
             }
 
-            // 2. تحديث ملف vhosts وفق المعايير المعتمدة في steps_v2/deployment_and_maintenance
+            // 2. تحديث أو إضافة VirtualHost لهذا النطاق مع الحفاظ على النطاقات والنسخ الأخرى
             if (file_exists($vhostsPath) && is_writable($vhostsPath)) {
-                $vhostConfig = <<<EOT
-# Virtual Hosts Configuration for Perfumes_v2 / Tajori Store (Standard Ports 80 & 443)
+                $currentContent = file_get_contents($vhostsPath) ?: '';
+
+                // إذا لم يكن هناك ترويسة عامة للاستماع والـ SSL
+                if (!str_contains($currentContent, 'Listen 0.0.0.0:443')) {
+                    $header = <<<EOT
+# Global Apache Virtual Hosts Configuration for Taqniya Cloud POS
 
 Listen 0.0.0.0:443
 Listen [::]:443
@@ -416,36 +420,39 @@ Listen [::]:443
     SSLSessionCacheTimeout 300
 </IfModule>
 
+# إعادة التوجيه الافتراضية لأي نطاق غير معروف
+<VirtualHost *:80>
+    ServerAlias *
+    RewriteEngine On
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</VirtualHost>
+
+EOT;
+                    $currentContent = $header . "\n" . $currentContent;
+                }
+
+                // كتلة الـ VirtualHost المخصصة لهذا النطاق والمسار المحدد
+                $newBlock = <<<EOT
+# ── Instance Domain: [{$domain}] ──
 <Directory "{$publicPath}">
     Options Indexes FollowSymLinks MultiViews
     AllowOverride All
     Require all granted
 </Directory>
 
-# 1. HTTP (Port 80) - إعادة التوجيه التلقائي الدائم إلى HTTPS
 <VirtualHost *:80>
-    ServerName tajori.store
-    ServerAlias www.tajori.store {$domain} www.{$domain} localhost 127.0.0.1
+    ServerName {$domain}
+    ServerAlias www.{$domain}
     DocumentRoot "{$publicPath}"
-
     RewriteEngine On
     RewriteCond %{HTTPS} off
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-
-    <Directory "{$publicPath}">
-        Options Indexes FollowSymLinks MultiViews
-        AllowOverride All
-        Require all granted
-    </Directory>
-
-    ErrorLog "logs/tajori.store-http-error.log"
-    CustomLog "logs/tajori.store-http-access.log" combined
 </VirtualHost>
 
-# 2. HTTPS (Port 443) - الموقع الآمن
 <VirtualHost *:443>
-    ServerName tajori.store
-    ServerAlias www.tajori.store {$domain} www.{$domain} localhost 127.0.0.1
+    ServerName {$domain}
+    ServerAlias www.{$domain}
     DocumentRoot "{$publicPath}"
 
     SSLEngine on
@@ -457,12 +464,19 @@ Listen [::]:443
         AllowOverride All
         Require all granted
     </Directory>
-
-    ErrorLog "logs/tajori.store-error.log"
-    CustomLog "logs/tajori.store-access.log" combined
 </VirtualHost>
+# ── End [{$domain}] ──
 EOT;
-                @file_put_contents($vhostsPath, $vhostConfig);
+
+                // إذا كان النطاق موجوداً مسبقاً في الملف، نستبدل كتلته بالمسار الجديد
+                $pattern = '/# ── Instance Domain: \[' . preg_quote($domain, '/') . '\] ──.*?# ── End \[' . preg_quote($domain, '/') . '\] ──/s';
+                if (preg_match($pattern, $currentContent)) {
+                    $updatedContent = preg_replace($pattern, $newBlock, $currentContent);
+                } else {
+                    $updatedContent = $currentContent . "\n\n" . $newBlock;
+                }
+
+                @file_put_contents($vhostsPath, $updatedContent);
             }
         } catch (\Throwable $e) {
             Log::warning('SSL and Vhosts update skipped: ' . $e->getMessage());

@@ -78,12 +78,16 @@ for (const dir of dirsToCopy) {
   const dest = path.join(serverTarget, dir);
   if (fs.existsSync(src)) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XD cache sessions logs backups storage /XF *.log *.tmp /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
+    if (dir === 'storage') {
+      execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XD cache sessions logs backups /XF *.log *.tmp /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
+    } else {
+      execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XF *.log *.tmp /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
+    }
   }
 }
 
 // نسخ ملفات الجذر المهمة
-const filesToCopy = ['artisan', '.env.example'];
+const filesToCopy = ['artisan', '.env.example', 'composer.json'];
 for (const file of filesToCopy) {
   const src = path.join(rootDir, file);
   const dest = path.join(serverTarget, file);
@@ -92,30 +96,19 @@ for (const file of filesToCopy) {
   }
 }
 
-// التأكد من وجود مجلدات storage الأساسية
-const storageDirs = [
+// التأكد من وجود مجلدات storage و bootstrap الأساسية
+const requiredDirs = [
+  'bootstrap/cache',
   'storage/app/public',
   'storage/framework/cache/data',
   'storage/framework/sessions',
   'storage/framework/views',
   'storage/logs',
 ];
-for (const sDir of storageDirs) {
-  fs.mkdirSync(path.join(serverTarget, sDir), { recursive: true });
+for (const rDir of requiredDirs) {
+  fs.mkdirSync(path.join(serverTarget, rDir), { recursive: true });
 }
 
 console.log('✅ Turnkey Server Payload folder ready at: ' + payloadDir);
-
-// 5. إنشاء ملف server_payload.zip مضغوط بجانب الـ Setup
-const zipPath = path.join(distDir, 'server_payload.zip');
-if (fs.existsSync(zipPath)) {
-  fs.unlinkSync(zipPath);
-}
-console.log('🗜️ Creating server_payload.zip archive using tar...');
-try {
-  execSync(`tar -cf "${zipPath}" -C "${distDir}" server_payload`, { stdio: 'inherit' });
-  console.log('🎉 Successfully generated: ' + zipPath);
-} catch (e) {
-  console.warn('Zip creation warning:', e.message);
-}
+console.log('⚡ Skipping server_payload.zip creation to ensure ultra-fast build times.');
 

@@ -33,11 +33,17 @@ class HandleInertiaRequests extends Middleware
                     'roles' => $user->roles->pluck('name'),
                 ] : null,
             ],
-            'globalPaymentMethods' => \Illuminate\Support\Facades\Cache::remember(
-                'global_payment_methods_list',
-                3600,
-                fn() => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()
-            ),
+            'globalPaymentMethods' => (function () {
+                try {
+                    return \Illuminate\Support\Facades\Cache::remember(
+                        'global_payment_methods_list',
+                        3600,
+                        fn() => \App\Models\PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()
+                    );
+                } catch (\Throwable $e) {
+                    return [];
+                }
+            })(),
             'storeBranding' => (function() {
                 try {
                     return [

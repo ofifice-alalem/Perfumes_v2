@@ -92,6 +92,21 @@
   ${If} ${FileExists} "C:\php-8.4.24\php.exe"
     ExecWait 'powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand JABwACAAPQAgAFsARQBuAHYAaQByAG8AbgBtAGUAbgB0AF0AOgA6AEcAZQB0AEUAbgB2AGkAcgBvAG4AbQBlAG4AdABWAGEAcgBpAGEAYgBsAGUAKAAnAFAAYQB0AGgAJwAsACAAJwBNAGEAYwBoAGkAbgBlACcAKQAKAGkAZgAgACgAJABwACAALQBuAG8AdABsAGkAawBlACAAJwAqAEMAOgBcAHAAaABwAC0AOAAuADQALgAyADQAKgAnACkAIAB7ACAAJABwACAAKwA9ACAAJwA7AEMAOgBcAHAAaABwAC0AOAAuADQALgAyADQAJwAgAH0ACgBpAGYAIAAoACQAcAAgAC0AbgBvAHQAbABpAGsAZQAgACcAKgBDADoAXABBAHAAYQBjAGgAZQAyADQAXABiAGkAbgAqACcAKQAgAHsAIAAkAHAAIAArAD0AIAAnADsAQwA6AFwAQQBwAGEAYwBoAGUAMgA0AFwAYgBpAG4AJwAgAH0ACgBbAEUAbgB2AGkAcgBvAG4AbQBlAG4AdABdADoAOgBTAGUAdABFAG4AdgBpAHIAbwBuAG0AZQBuAHQAVgBhAHIAaQBhAGIAbABlACgAJwBQAGEAdABoACcALAAgACQAcAAsACAAJwBNAGEAYwBoAGkAbgBlACcAKQA='
   ${EndIf}
+
+  ; 🛡️ 6. منح صلاحيات الكتابة الكاملة لملفات السيرفر (storage و bootstrap/cache) في مجلد التثبيت
+  ExecWait 'cmd.exe /c takeown /f "$INSTDIR\resources\server" /r /d y'
+  ExecWait 'cmd.exe /c icacls "$INSTDIR\resources\server" /grant Everyone:(OI)(CI)F /T /C'
+  ExecWait 'cmd.exe /c icacls "$INSTDIR\resources\server" /grant Users:(OI)(CI)F /T /C'
+
+  ; 🔑 7. تهيئة ملف .env وتوليد مفتاح التشفير APP_KEY إن لم يكن موجوداً
+  ${If} ${FileExists} "$INSTDIR\resources\server\.env.example"
+    ${IfNot} ${FileExists} "$INSTDIR\resources\server\.env"
+      CopyFiles /SILENT "$INSTDIR\resources\server\.env.example" "$INSTDIR\resources\server\.env"
+      ${If} ${FileExists} "C:\php-8.4.24\php.exe"
+        ExecWait '"C:\php-8.4.24\php.exe" "$INSTDIR\resources\server\artisan" key:generate --force'
+      ${EndIf}
+    ${EndIf}
+  ${EndIf}
 !macroend
 
 !macro customUnInstall
