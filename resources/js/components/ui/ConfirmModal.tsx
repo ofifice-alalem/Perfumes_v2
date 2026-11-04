@@ -20,59 +20,62 @@ export function ConfirmModal({
     onCancel,
     confirmText = 'تأكيد وحفظ',
     cancelText = 'إلغاء',
-    icon = <AlertCircle className="w-8 h-8 sm:w-10 sm:h-10 text-amber-500" />
+    icon = <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
 }: ConfirmModalProps) {
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150">
             {/* Touch Backdrop */}
             <div
-                className="absolute inset-0 bg-black/75 backdrop-blur-md cursor-pointer"
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
                 onClick={onCancel}
             />
 
             {/* Modal Container */}
-            <div className="relative z-10 w-full max-w-lg rounded-[32px] sm:rounded-[36px] p-6 sm:p-8 flex flex-col gap-6 animate-in zoom-in-95 duration-200
-                border-2 border-amber-500/40 dark:border-amber-400/50
-                bg-white dark:bg-slate-900
-                shadow-[0_25px_70px_rgba(0,0,0,0.6)]">
+            <div className="relative z-10 w-full max-w-md rounded-[2px] p-5 sm:p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-150
+                border border-slate-200 dark:border-[#1d2d42]
+                bg-white dark:bg-[#0c1421]
+                shadow-2xl">
 
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-[24px] bg-amber-500/15 border-2 border-amber-500/30 flex items-center justify-center shrink-0 shadow-inner">
-                        {icon}
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-[#19273b] pb-3">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-[2px] bg-amber-500/10 border border-amber-500/25 flex items-center justify-center shrink-0">
+                            {icon}
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-tight">{title}</h3>
                     </div>
                     <button
+                        type="button"
                         onClick={onCancel}
-                        className="w-12 h-12 sm:w-14 sm:h-14 rounded-[20px] bg-slate-100 dark:bg-slate-800 hover:bg-red-500 hover:text-white text-slate-500 dark:text-slate-300 flex items-center justify-center transition-all active:scale-90 shadow-sm"
+                        className="w-8 h-8 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273b] text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
                         title="إغلاق"
                     >
-                        <X className="w-6 h-6 sm:w-7 sm:h-7" />
+                        <X className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Title & Description */}
-                <div className="flex flex-col gap-3">
-                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">{title}</h3>
-                    <div className="text-base sm:text-lg font-bold text-slate-700 dark:text-slate-200 leading-relaxed bg-amber-500/10 dark:bg-amber-500/20 p-4 sm:p-5 rounded-[22px] border-2 border-amber-500/20">
-                        {description}
-                    </div>
+                {/* Description */}
+                <div className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300 leading-relaxed bg-amber-500/10 dark:bg-amber-500/15 p-3.5 rounded-[2px] border border-amber-500/25">
+                    {description}
                 </div>
 
                 {/* Touch-optimized Buttons */}
-                <div className="flex items-center gap-4 pt-2">
+                <div className="flex items-center gap-3 pt-2">
                     <button
+                        type="button"
                         onClick={onCancel}
-                        className="flex-1 h-16 sm:h-20 rounded-[24px] bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-black text-lg sm:text-xl transition-all border-2 border-slate-300 dark:border-slate-700 active:scale-95 shadow-sm"
+                        className="flex-1 h-11 sm:h-12 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#152238] dark:hover:bg-[#1c2e4c] text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm transition-colors border border-slate-200 dark:border-[#223654] cursor-pointer"
                     >
                         {cancelText}
                     </button>
                     <button
+                        type="button"
                         onClick={onConfirm}
-                        className="flex-1 h-16 sm:h-20 rounded-[24px] bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-black text-lg sm:text-xl transition-all flex items-center justify-center gap-3 shadow-xl shadow-amber-500/35 active:scale-95"
+                        className="flex-1 h-11 sm:h-12 rounded-[2px] bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
                     >
-                        <Check className="w-6 h-6 sm:w-7 sm:h-7 stroke-[3]" /> {confirmText}
+                        <Check className="w-4 h-4" /> {confirmText}
                     </button>
                 </div>
             </div>

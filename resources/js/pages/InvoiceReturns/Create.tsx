@@ -8,7 +8,7 @@ import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import {
     Plus, Trash2, Check, X, Package, ShoppingCart,
-    CreditCard, ChevronLeft, User, AlertCircle, Wallet, ChevronUp,
+    CreditCard, ChevronLeft, User, AlertCircle, Wallet, Edit,
     Search, ChevronDown, FileText, RotateCcw
 } from 'lucide-react';
 
@@ -510,7 +510,7 @@ export default function InvoiceReturnsCreate({
             {/* Desktop Layout - Exact Workstation Matching Invoices/Create.tsx */}
             <div className="hidden lg:flex flex-row gap-0 flex-1 min-h-0 rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421] mt-0.5">
 
-                {/* ══ LEFT WORKSTATION PANEL (لوحة المنتجات وجهة العمل) ══ */}
+                {/* ══ LEFT WORKSTATION PANEL (لوحة المنتجات وجهة العمل - مساحة أوسع) ══ */}
                 <div className="flex-1 flex flex-col overflow-hidden border-l border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421]">
 
                     {/* Top Bar */}
@@ -767,24 +767,15 @@ export default function InvoiceReturnsCreate({
                         </div>
                     </div>
 
-                    {/* Bottom Action Bar - Matching Invoices/Create.tsx */}
+                    {/* Bottom Action Bar - Exact Workstation Matching Invoices/Create.tsx */}
                     <div className="p-3 sm:p-4 border-t border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex items-center gap-2 sm:gap-3">
-                        {/* Cancel link button */}
-                        <Link
-                            href="/invoice-returns"
-                            className="h-20 sm:h-24 px-4 sm:px-5 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-100 hover:bg-slate-200 dark:bg-[#152238] dark:hover:bg-[#1c2e4c] text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm transition-colors shrink-0 flex items-center justify-center gap-1.5 shadow-sm"
-                        >
-                            <X className="w-4 h-4" />
-                            <span>إلغاء</span>
-                        </Link>
-
                         {/* Clear Return Items button */}
                         {items.length > 0 && (
                             <button
                                 type="button"
                                 onClick={() => setItems([])}
                                 disabled={items.length === 0}
-                                className="h-20 sm:h-24 px-4 sm:px-5 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 dark:text-rose-400 font-bold text-xs sm:text-sm transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
+                                className="h-20 sm:h-24 px-3.5 sm:px-4.5 rounded-[2px] border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500 hover:text-white text-rose-500 dark:text-rose-400 font-bold text-xs sm:text-sm transition-colors shrink-0 disabled:opacity-30 disabled:pointer-events-none cursor-pointer flex items-center justify-center shadow-sm"
                             >
                                 <span>مسح المرتجع</span>
                             </button>
@@ -795,40 +786,29 @@ export default function InvoiceReturnsCreate({
                             <div className="flex-1 h-20 sm:h-24 flex items-center justify-center gap-2 px-4 rounded-[2px] bg-slate-100 dark:bg-[#101a29] border border-slate-300 dark:border-[#22354e] text-slate-500 dark:text-slate-400 select-none shadow-sm">
                                 <ShoppingCart className="w-5 h-5 opacity-60" />
                                 <span className="text-base sm:text-lg font-bold">
-                                    سلة المرتجع فارغة
+                                    السلة فارغة
                                 </span>
                             </div>
                         ) : (
                             <button
                                 type="button"
                                 onClick={() => setShowPaymentDrawer(true)}
-                                className="flex-1 h-20 sm:h-24 flex items-center justify-between gap-3 px-6 sm:px-8 rounded-[2px] bg-brand hover:opacity-95 text-white font-black cursor-pointer shadow-lg active:scale-[0.99] transition-all"
+                                className="flex-1 h-20 sm:h-24 flex items-center justify-center gap-2.5 px-6 rounded-[2px] bg-brand hover:opacity-95 text-white font-black cursor-pointer shadow-lg active:scale-[0.99] transition-all"
                             >
-                                <div className="flex items-center gap-3">
-                                    <Wallet className="w-6 h-6 stroke-[2.2]" />
-                                    <span className="text-xl sm:text-2xl font-black tracking-wide">
-                                        إتمام تسوية المرتجع
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs sm:text-sm font-bold bg-white/20 px-2.5 py-1 rounded-[2px]">
-                                        {items.length} أصناف
-                                    </span>
-                                    <span className="text-xl sm:text-2xl font-black">
-                                        {fmt(grandTotal)} د.ل
-                                    </span>
-                                    <ChevronUp className="w-5 h-5 animate-bounce" />
-                                </div>
+                                <CreditCard className="w-6 h-6 stroke-[2.2]" />
+                                <span className="text-xl sm:text-2xl font-black tracking-wide">
+                                    إتمام الترجيع
+                                </span>
                             </button>
                         )}
                     </div>
                 </div>
 
-                {/* ══ RIGHT WORKSTATION PANEL (CUSTOMER, INVOICE & CART) ══ */}
-                <div className="w-full lg:w-[460px] xl:w-[480px] 2xl:w-[500px] flex flex-col overflow-hidden bg-white dark:bg-[#0c1421] shrink-0 border-r border-slate-200/90 dark:border-[#1d2d42]">
+                {/* ══ RIGHT WORKSTATION PANEL (CUSTOMER, INVOICE & CART - عرض مريح ومضغوط) ══ */}
+                <div className="w-full lg:w-[350px] xl:w-[370px] 2xl:w-[390px] flex flex-col overflow-hidden bg-white dark:bg-[#0c1421] shrink-0 border-r border-slate-200/90 dark:border-[#1d2d42]">
 
-                    {/* Customer & Reference Invoice Bar (IN THE CART PANEL AS REQUESTED) */}
-                    <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex flex-col gap-2.5">
+                    {/* Customer & Reference Invoice Bar */}
+                    <div className="p-3 border-b border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] shrink-0 flex flex-col gap-2">
                         {/* Customer Section */}
                         <div className="flex items-center justify-between gap-2">
                             <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">العميل</span>
@@ -850,7 +830,7 @@ export default function InvoiceReturnsCreate({
                         />
 
                         {/* Reference Invoice Section */}
-                        <div className="flex flex-col gap-1 pt-1">
+                        <div className="flex flex-col gap-1 pt-0.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
                                     رقم الفاتورة الأصلية (اختياري)
@@ -910,7 +890,7 @@ export default function InvoiceReturnsCreate({
                         )}
                     </div>
 
-                    {/* Cart Header */}
+                    {/* Cart Header with prominent Total Display */}
                     <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200/90 dark:border-[#1d2d42] bg-slate-50/75 dark:bg-[#0e1726] shrink-0">
                         <div className="flex items-center gap-2">
                             <ShoppingCart className="w-4 h-4 text-brand" />
@@ -923,13 +903,15 @@ export default function InvoiceReturnsCreate({
                                 </span>
                             )}
                         </div>
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                            {selectedCustomerLabel}
-                        </span>
+                        {/* Prominent Total Header Display */}
+                        <div className="flex items-center gap-1.5 font-bold text-xs">
+                            <span className="text-slate-500 dark:text-slate-400">الإجمالي:</span>
+                            <span className="text-brand font-black text-sm">{fmt(grandTotal)} د.ل</span>
+                        </div>
                     </div>
 
                     {/* Cart Items List / Table */}
-                    <div className="flex-1 overflow-y-auto p-3 custom-scroll">
+                    <div className="flex-1 overflow-y-auto p-2.5 custom-scroll">
                         {items.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400 dark:text-slate-500 py-12 rounded-[2px] border border-dashed border-slate-200 dark:border-[#1d2d42] bg-slate-50/30 dark:bg-[#0c1421]/30">
                                 <Package className="w-8 h-8 stroke-[1.5]" />
@@ -953,7 +935,7 @@ export default function InvoiceReturnsCreate({
                             return (
                                 <div className="rounded-[2px] border border-slate-200/90 dark:border-[#1d2d42] overflow-hidden bg-white dark:bg-[#0c1421]">
                                     {/* Table Grid Header */}
-                                    <div className="grid grid-cols-[54px_1fr_110px_80px_46px] gap-2 px-3 py-2 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
+                                    <div className="grid grid-cols-[48px_1fr_95px_70px_42px] gap-1.5 px-2.5 py-2 bg-slate-100/75 dark:bg-[#0e1726] border-b border-slate-200/90 dark:border-[#19273b] text-slate-600 dark:text-slate-400 font-bold text-[11px] items-center">
                                         <span className="text-center">العدد</span>
                                         <span>المنتج</span>
                                         <span className="text-center">الحجم والسعر</span>
@@ -968,7 +950,7 @@ export default function InvoiceReturnsCreate({
                                             return (
                                                 <div
                                                     key={idx}
-                                                    className="grid grid-cols-[54px_1fr_110px_80px_46px] gap-2 px-3 py-2.5 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
+                                                    className="grid grid-cols-[48px_1fr_95px_70px_42px] gap-1.5 px-2.5 py-2.5 items-center hover:bg-slate-50/80 dark:hover:bg-[#0e1828] transition-colors"
                                                 >
                                                     {/* Count keypad button */}
                                                     <div className="flex items-center justify-center">
@@ -987,7 +969,7 @@ export default function InvoiceReturnsCreate({
                                                                     });
                                                                 });
                                                             }}
-                                                            className="h-10 w-11 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand font-black text-sm text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors shadow-2xs active:scale-95"
+                                                            className="h-9 w-10 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#101a29] hover:border-brand font-black text-xs sm:text-sm text-slate-900 dark:text-white flex items-center justify-center cursor-pointer transition-colors shadow-2xs active:scale-95"
                                                             title="تعديل العدد"
                                                         >
                                                             {displayCount}
@@ -996,7 +978,7 @@ export default function InvoiceReturnsCreate({
 
                                                     {/* Product Details */}
                                                     <div className="min-w-0 flex flex-col justify-center py-0.5">
-                                                        <span className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm leading-tight truncate">
+                                                        <span className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate">
                                                             {g.product_name}
                                                         </span>
                                                         <span className="text-[10px] text-slate-500 dark:text-slate-400">
@@ -1007,11 +989,11 @@ export default function InvoiceReturnsCreate({
                                                     {/* Size & Price */}
                                                     <div className="flex flex-col items-center justify-center gap-0.5">
                                                         {g.size_label ? (
-                                                            <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.2 rounded-[2px] truncate max-w-full">
+                                                            <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 px-1 py-0.2 rounded-[2px] truncate max-w-full">
                                                                 {g.size_label}
                                                             </span>
                                                         ) : g.sale_type === 'full_bottle' ? (
-                                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1.5 py-0.2 rounded-[2px] truncate max-w-full">
+                                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-1 py-0.2 rounded-[2px] truncate max-w-full">
                                                                 {products.find(p => p.id === +g.product_id)?.original_perfume_detail?.bottle_volume} مل
                                                             </span>
                                                         ) : null}
@@ -1026,7 +1008,7 @@ export default function InvoiceReturnsCreate({
                                                                         : item
                                                                 ));
                                                             })}
-                                                            className="text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-brand cursor-pointer"
+                                                            className="text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:text-brand cursor-pointer"
                                                         >
                                                             {g.unit_price} د.ل
                                                         </button>
@@ -1039,15 +1021,15 @@ export default function InvoiceReturnsCreate({
                                                         </span>
                                                     </div>
 
-                                                    {/* Trash Action */}
+                                                    {/* Correct Sized Trash Action Button */}
                                                     <div className="flex items-center justify-center">
                                                         <button
                                                             type="button"
                                                             onClick={() => setItems(prev => prev.filter((_, i) => !g.indices.includes(i)))}
-                                                            title="حذف الصنف من المرتجع"
-                                                            className="w-8 h-8 rounded-[2px] hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
+                                                            title="حذف الصنف"
+                                                            className="h-8 w-8 sm:h-9 sm:w-9 rounded-[2px] bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -1403,67 +1385,75 @@ export default function InvoiceReturnsCreate({
             onCancel={() => setShowCreditConfirm(false)}
         />
 
-        {/* ══ WORKSTATION PAYMENT / SETTLEMENT DRAWER ══ */}
+        {/* ══ WORKSTATION PAYMENT / SETTLEMENT DRAWER (طِبق الأصل من صفحة إنشاء الفاتورة) ══ */}
         {showPaymentDrawer && createPortal(
-            <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="fixed inset-0 z-[9990] flex flex-col justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
                 <div onClick={() => setShowPaymentDrawer(false)} className="absolute inset-0 cursor-pointer" />
 
-                <div className="relative z-10 w-full max-w-5xl mx-auto bg-white dark:bg-[#0c1421] border-t-2 border-brand rounded-t-[4px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] animate-in slide-in-from-bottom duration-250">
+                {/* Workstation Sheet Container */}
+                <div className="relative z-10 w-full max-w-5xl mx-auto bg-white dark:bg-[#0c1421] border-t border-x border-slate-200/90 dark:border-[#1d2d42] rounded-t-[2px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom duration-200">
+                    
                     {/* Header */}
-                    <div className="flex items-center justify-between px-6 sm:px-8 py-4 border-b border-slate-200 dark:border-[#1d2d42] bg-slate-50/80 dark:bg-[#09111c]">
-                        <div className="flex items-center gap-3.5">
-                            <div className="w-11 h-11 rounded-[2px] bg-brand/10 text-brand flex items-center justify-center font-black shrink-0 border border-brand/20">
-                                <Wallet className="w-6 h-6" />
+                    <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] shrink-0">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-[2px] bg-brand/10 border border-brand/25 text-brand flex items-center justify-center shrink-0">
+                                <Wallet className="w-4.5 h-4.5" />
                             </div>
                             <div className="flex flex-col">
-                                <h3 className="font-black text-slate-900 dark:text-white text-lg sm:text-xl">
-                                    إتمام تسوية المرتجع والسداد
-                                </h3>
-                                <p className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400">
-                                    العميل: <span className="text-brand font-black">{selectedCustomerLabel}</span> ({isCash ? 'زبون نقدي' : 'زبون آجل'})
+                                <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-white">إتمام عملية تسوية المرتجع والسداد</h3>
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    العميل: <span className="text-slate-800 dark:text-slate-200 font-bold">{selectedCustomerLabel}</span> ({isCash ? 'زبون نقدي' : 'زبون آجل'})
                                 </p>
                             </div>
                         </div>
+
                         <button
                             type="button"
                             onClick={() => setShowPaymentDrawer(false)}
-                            className="w-10 h-10 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] hover:bg-slate-100 dark:hover:bg-[#152238] flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+                            className="w-9 h-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] hover:bg-slate-100 dark:hover:bg-[#19273b] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4.5 h-4.5" />
                         </button>
                     </div>
 
-                    {/* Summary Strip */}
-                    <div className="px-6 sm:px-8 py-3.5 bg-slate-100/70 dark:bg-[#0b1523] border-b border-slate-200 dark:border-[#1d2d42] grid grid-cols-2 sm:grid-cols-4 gap-3 text-right">
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">إجمالي المرتجع</span>
-                            <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{fmt(grandTotal)} د.ل</span>
+                    {/* Totals Summary Strip - 4 Cards Matching Invoice */}
+                    <div className="px-5 py-3.5 border-b border-slate-200/90 dark:border-[#19273b] bg-slate-100/70 dark:bg-[#09111c] grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="p-3 rounded-[2px] bg-white dark:bg-[#0c1421] border border-slate-200/90 dark:border-[#1d2d42] shadow-2xs flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">إجمالي المرتجع</span>
+                            <span className="text-sm sm:text-base font-number font-black text-slate-900 dark:text-white tabular-nums">{fmt(grandTotal)} د.ل</span>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">التسوية (المدفوع)</span>
-                            <span className="text-base sm:text-lg font-black text-emerald-600 dark:text-emerald-400">{fmt(totalRecovered)} د.ل</span>
+
+                        <div className="p-3 rounded-[2px] bg-brand/10 border border-brand/25 shadow-2xs flex flex-col gap-0.5">
+                            <span className="text-[10px] font-bold text-brand uppercase tracking-wider">التسوية (المدفوع)</span>
+                            <span className="text-sm sm:text-base font-number font-black text-brand tabular-nums">{fmt(totalRecovered)} د.ل</span>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">المتبقي</span>
-                            <span className={`text-base sm:text-lg font-black ${(grandTotal - totalRecovered) > 0.01 ? 'text-rose-500 dark:text-rose-400' : 'text-slate-400'}`}>
-                                {fmt(grandTotal - totalRecovered)} د.ل
+
+                        <div className={`p-3 rounded-[2px] border shadow-2xs flex flex-col gap-0.5 ${
+                            (grandTotal - totalRecovered) > 0.01
+                                ? 'bg-amber-500/10 dark:bg-amber-950/30 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                                : 'bg-white dark:bg-[#0c1421] border-slate-200/90 dark:border-[#1d2d42] text-slate-500 dark:text-slate-400'
+                        }`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider">المتبقي</span>
+                            <span className={`text-sm sm:text-base font-number font-black tabular-nums ${(grandTotal - totalRecovered) > 0.01 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
+                                {(grandTotal - totalRecovered) > 0.01 ? `${fmt(grandTotal - totalRecovered)} د.ل` : '0.00 د.ل (خالص)'}
                             </span>
                         </div>
+
                         {!isCash && grandTotal > 0 && originalDebt > 0 && (
-                            <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">الدين بعد المرتجع</span>
-                                <span className={`text-base sm:text-lg font-black ${debtAfterReturn > originalDebt ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            <div className="p-3 rounded-[2px] bg-rose-500/10 dark:bg-rose-950/20 border border-rose-500/30 shadow-2xs flex flex-col gap-0.5">
+                                <span className="text-[10px] font-bold text-rose-500 uppercase tracking-wider">الدين بعد الإرجاع</span>
+                                <span className={`text-sm sm:text-base font-number font-black tabular-nums ${debtAfterReturn > originalDebt ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                                     {fmt(debtAfterReturn)} د.ل
                                 </span>
                             </div>
                         )}
                     </div>
 
-                    {/* Body */}
-                    <div className="flex-1 overflow-y-auto p-6 sm:p-8 flex flex-col lg:flex-row gap-6 custom-scroll">
-                        {/* Left Col — Payment Method & Keypad */}
+                    {/* Body Grid */}
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col lg:flex-row gap-5 sm:gap-6 custom-scroll">
+                        {/* Left Col — Select Payment Method */}
                         <div className="flex flex-col gap-3.5 w-full lg:w-1/2">
-                            <label className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                                 اختر طريقة التسوية والمبلغ المسترد
                             </label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -1484,36 +1474,37 @@ export default function InvoiceReturnsCreate({
                                                     setSelAmount(rem > 0 ? rem.toFixed(2) : '');
                                                 }
                                             }}
-                                            className={`h-13 sm:h-14 rounded-[2px] font-bold text-sm sm:text-base border transition-all flex items-center justify-center cursor-pointer ${
+                                            className={`h-13 sm:h-14 rounded-[2px] font-bold text-xs sm:text-sm transition-all border flex items-center justify-center cursor-pointer shadow-2xs ${
                                                 isSelected
-                                                    ? 'bg-brand text-white border-brand shadow-sm'
-                                                    : 'bg-white dark:bg-[#111a29] border-slate-200 dark:border-[#1d2d42] text-slate-800 dark:text-slate-200 hover:border-brand'
+                                                    ? 'bg-brand text-white border-brand shadow-sm font-black'
+                                                    : 'bg-white dark:bg-[#101a29] border-slate-200/90 dark:border-[#1d2d42] text-slate-800 dark:text-slate-200 hover:border-brand/60 hover:bg-slate-50 dark:hover:bg-[#142032]'
                                             }`}
                                         >
-                                            {m.name}
+                                            <span>{m.name}</span>
                                         </button>
                                     );
                                 })}
                             </div>
 
-                            <div className="flex gap-2.5 mt-1">
+                            <div className="flex gap-2.5 items-center">
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const remaining = grandTotal - totalRecovered;
-                                        openPad('المبلغ', selAmount || remaining.toFixed(2), v => setSelAmount(v), remaining);
+                                        const rem = grandTotal - totalRecovered;
+                                        openPad('المبلغ المسترد', selAmount || (rem > 0 ? rem.toFixed(2) : '0.00'), v => setSelAmount(v), rem > 0 ? rem : undefined);
                                     }}
-                                    className="flex-1 h-13 sm:h-14 px-4 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#111a29] text-xl sm:text-2xl font-black text-center cursor-pointer hover:border-brand shadow-2xs transition-colors"
+                                    className="flex-1 h-13 sm:h-14 rounded-[2px] px-4 font-number font-black text-base sm:text-lg flex items-center justify-between cursor-pointer border border-slate-200/90 dark:border-[#1d2d42] bg-white dark:bg-[#101a29] text-slate-900 dark:text-white hover:border-brand transition-colors shadow-2xs"
                                 >
-                                    {selAmount || (grandTotal - totalRecovered).toFixed(2)} د.ل
+                                    <span className="text-slate-900 dark:text-white">{selAmount || (grandTotal - totalRecovered > 0 ? (grandTotal - totalRecovered).toFixed(2) : '0.00')} د.ل</span>
+                                    <span className="text-[10px] font-sans font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 border border-sky-300/40 dark:border-sky-800/60 px-2 py-0.5 rounded-[2px]">لوحة الأرقام</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => {
                                         if (!selMethod || !selAmount || +selAmount <= 0) return;
-                                        const remaining = grandTotal - totalRecovered;
-                                        if (+selAmount > remaining + 0.001) {
-                                            alert(`المبلغ يتجاوز المتبقي (${remaining.toFixed(2)} د.ل)`);
+                                        const rem = grandTotal - totalRecovered;
+                                        if (+selAmount > rem + 0.001) {
+                                            alert(`المبلغ يتجاوز المتبقي (${rem.toFixed(2)} د.ل)`);
                                             return;
                                         }
                                         const method = paymentMethods.find(m => m.id === +selMethod);
@@ -1521,10 +1512,7 @@ export default function InvoiceReturnsCreate({
                                         setSettlements(prev => {
                                             const existing = prev.findIndex(p => p.payment_method_id === selMethod);
                                             if (existing !== -1) {
-                                                return prev.map((p, i) => i === existing
-                                                    ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) }
-                                                    : p
-                                                );
+                                                return prev.map((p, i) => i === existing ? { ...p, amount: (+p.amount + +selAmount).toFixed(2) } : p);
                                             }
                                             return [...prev.filter(p => p.payment_method_id), { payment_method_id: selMethod, amount: selAmount, notes: '' }];
                                         });
@@ -1532,82 +1520,89 @@ export default function InvoiceReturnsCreate({
                                         setSelAmount('');
                                     }}
                                     disabled={!selMethod || !selAmount}
-                                    className="h-13 sm:h-14 px-6 rounded-[2px] bg-brand hover:opacity-95 text-white font-bold text-sm sm:text-base flex items-center justify-center gap-2 disabled:opacity-40 cursor-pointer shadow-sm shrink-0"
+                                    className="h-13 sm:h-14 px-5 sm:px-6 rounded-[2px] bg-brand hover:bg-brand/90 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 disabled:opacity-40 shadow-xs cursor-pointer transition-all shrink-0"
                                 >
-                                    <Plus className="w-5 h-5" /> إضافة تسوية
+                                    <Plus className="w-4 h-4" />
+                                    <span>إضافة تسوية</span>
                                 </button>
                             </div>
                         </div>
 
                         {/* Right Col — Registered Settlements Cards */}
-                        <div className="flex flex-col gap-3 w-full lg:w-1/2">
-                            <label className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                                <span>التسويات المسجلة</span>
-                                {settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).length > 0 && (
-                                    <span className="text-xs font-black px-2 py-0.5 rounded-[2px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                        {settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).length} تسوية
-                                    </span>
-                                )}
+                        <div className="flex flex-col gap-2.5 w-full lg:w-1/2">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                التسويات المسجلة في المرتجع
                             </label>
 
                             {settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).length === 0 ? (
-                                <div className="flex-1 flex items-center justify-center min-h-[140px] text-slate-400 dark:text-slate-500 font-bold text-sm border border-dashed border-slate-200 dark:border-[#1d2d42] bg-slate-50 dark:bg-[#09111c] rounded-[2px]">
-                                    لم يتم تسجيل أي تسوية بعد
+                                <div className="flex-1 flex flex-col items-center justify-center min-h-[140px] text-slate-400 dark:text-slate-500 text-xs font-bold border border-dashed border-slate-200 dark:border-[#1d2d42] bg-slate-50/50 dark:bg-[#09111c] rounded-[2px] p-6 text-center">
+                                    لم يتم تسجيل أي تسوية بعد — حدد طريقة التسوية والمبلغ ثم اضغط «إضافة تسوية»
                                 </div>
                             ) : (
-                                <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto custom-scroll pr-1">
-                                    {settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).map((p, idx) => {
-                                        const method = paymentMethods.find(m => String(m.id) === p.payment_method_id);
-                                        const originalIndex = settlements.findIndex(s => s === p);
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className="flex items-center justify-between px-4 py-3 rounded-[2px] bg-emerald-500/10 border border-emerald-500/30 transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <CreditCard className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-emerald-700 dark:text-emerald-400 text-xs sm:text-sm">
-                                                            {method?.name}
-                                                        </span>
-                                                        <span className="font-black text-slate-900 dark:text-white text-base sm:text-lg">
-                                                            {p.amount} د.ل
-                                                        </span>
-                                                    </div>
-                                                </div>
+                                settlements.filter(s => s.payment_method_id && parseFloat(s.amount || '0') > 0).map((p, idx) => {
+                                    const method = paymentMethods.find(m => String(m.id) === p.payment_method_id);
+                                    const originalIndex = settlements.findIndex(s => s === p);
+                                    return (
+                                        <div key={idx} className="p-3.5 rounded-[2px] bg-slate-50/80 dark:bg-[#0a121e] border border-slate-200/90 dark:border-[#1d2d42] flex items-center justify-between gap-3 shadow-2xs">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
                                                 <button
                                                     type="button"
-                                                    onClick={() => setSettlements(prev => prev.filter((_, i) => i !== originalIndex))}
-                                                    title="حذف التسوية"
-                                                    className="w-9 h-9 rounded-[2px] bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center transition-colors cursor-pointer"
+                                                    onClick={() => openPad(`تعديل مبلغ (${method?.name})`, p.amount, v => {
+                                                        setSettlements(prev => prev.map((s, i) => i === originalIndex ? { ...s, amount: v } : s));
+                                                    })}
+                                                    className="w-9 h-9 rounded-[2px] border border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#121c2c] text-slate-600 dark:text-slate-300 hover:border-brand hover:text-brand flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
+                                                    title="تعديل القيمة"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    <Edit className="w-4 h-4" />
                                                 </button>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                    <span className="font-bold text-sky-600 dark:text-sky-400 text-xs px-2 py-0.5 rounded-[2px] bg-sky-500/10 border border-sky-300/40 dark:border-sky-800/60 shrink-0">
+                                                        {method?.name}
+                                                    </span>
+                                                    <span className="font-number font-black text-slate-900 dark:text-white text-base sm:text-lg truncate">
+                                                        {p.amount} د.ل
+                                                    </span>
+                                                </div>
                                             </div>
-                                        );
-                                    })}
-                                </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setSettlements(prev => prev.filter((_, i) => i !== originalIndex))}
+                                                className="w-11 h-11 rounded-[2px] border border-rose-500/30 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-colors shrink-0 cursor-pointer shadow-2xs"
+                                                title="حذف التسوية"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
 
-                    {/* Footer Submit Buttons */}
-                    <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-[#1d2d42] bg-white dark:bg-[#0c1421] flex items-center justify-between gap-3">
-                        <button
-                            type="button"
-                            onClick={() => setShowPaymentDrawer(false)}
-                            className="h-12 sm:h-13 px-6 rounded-[2px] bg-slate-100 hover:bg-slate-200 dark:bg-[#152238] dark:hover:bg-[#1c2e4c] border border-slate-200 dark:border-[#223654] text-slate-700 dark:text-slate-200 font-bold text-sm sm:text-base cursor-pointer transition-colors"
-                        >
-                            رجوع للتعديل
-                        </button>
+                    {/* Footer / Submit CTA Matching Invoices/PaymentDrawer */}
+                    <div className="px-5 pt-3.5 pb-5 sm:pb-6 border-t border-slate-200/90 dark:border-[#19273b] bg-slate-50 dark:bg-[#0a121e] flex flex-col gap-2.5 shrink-0">
+                        {isCash && (grandTotal - totalRecovered) > 0.01 && (
+                            <div className="px-3.5 py-2 rounded-[2px] bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 font-bold text-xs text-center">
+                                ⚠️ زبون نقدي — يجب تسوية المبلغ بالكامل ({fmt(grandTotal - totalRecovered)} د.ل) قبل تأكيد المرتجع
+                            </div>
+                        )}
+
                         <button
                             type="button"
                             onClick={() => { setShowPaymentDrawer(false); submit(); }}
-                            disabled={form.processing || items.every(i => !i.product_id) || !form.data.customer_id || (isCash && settlements.filter(s => s.payment_method_id).length === 0)}
-                            className="h-12 sm:h-13 flex-1 rounded-[2px] bg-brand hover:opacity-95 text-white font-black text-base sm:text-lg flex items-center justify-center gap-2.5 shadow-md disabled:opacity-40 cursor-pointer transition-all"
+                            disabled={form.processing || items.length === 0 || (isCash && settlements.filter(s => s.payment_method_id).length === 0)}
+                            className="h-20 sm:h-22 mb-2 sm:mb-3 rounded-[2px] bg-brand hover:opacity-95 text-white font-black text-lg sm:text-xl w-full flex items-center justify-between px-8 shadow-md transition-all active:scale-[0.99] disabled:opacity-40 cursor-pointer"
                         >
-                            <Check className="w-5 h-5 sm:w-6 sm:h-6" />
-                            <span>تأكيد وحفظ المرتجع ({fmt(grandTotal)} د.ل)</span>
+                            <div className="flex items-center gap-3">
+                                <Wallet className="w-6 h-6" />
+                                <span>تأكيد وحفظ المرتجع</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm sm:text-base font-bold bg-white/20 px-3.5 py-1.5 rounded-[2px]">
+                                    المسوى: {fmt(totalRecovered)} د.ل
+                                </span>
+                                <Check className="w-6 h-6" />
+                            </div>
                         </button>
                     </div>
                 </div>
