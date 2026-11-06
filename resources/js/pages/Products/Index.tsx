@@ -1596,7 +1596,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
     // توليد QR لمنتج واحد
     function handleGenerate(p: Product) {
         const newQr = generateQrCode();
-        router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, { preserveScroll: true });
+        router.patch(`/products/${p.id}/qrcode`, { qrcode: newQr }, { preserveScroll: true, preserveState: true });
     }
 
     // توليد جماعي لكل المنتجات التي لا تحتوي على QR
@@ -1606,6 +1606,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         setGeneratingAll(true);
         router.post('/products/generate-all-qrcodes', {}, {
             preserveScroll: true,
+            preserveState: true,
             onFinish: () => {
                 setGeneratingAll(false);
             },
@@ -1707,6 +1708,8 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         }
 
         createForm.post('/products', {
+            preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 const defCat = getInitialDefaultCategory();
                 createForm.setData({
@@ -1729,12 +1732,17 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         }
 
         editForm.put(`/products/${id}`, {
+            preserveScroll: true,
+            preserveState: true,
             onSuccess: () => cancelEdit(),
         });
     }
 
     function deleteProduct(id: number) {
-        router.delete(`/products/${id}`);
+        router.delete(`/products/${id}`, {
+            preserveScroll: true,
+            preserveState: true,
+        });
     }
 
     const [currentPage, setCurrentPage] = useState(1);
