@@ -79,7 +79,7 @@ for (const dir of dirsToCopy) {
   if (fs.existsSync(src)) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     if (dir === 'storage') {
-      execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XD cache sessions logs backups /XF *.log *.tmp /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
+      execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XD cache sessions logs backups private thermal parallel_export /XF *.log *.tmp *.tsv *.xlsx license.json hwid.key /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
     } else {
       execSync(`robocopy "${src}" "${dest}" /E /XJ /R:1 /W:1 /MT:8 /XF *.log *.tmp /NFL /NDL /NJH /NJS /nc /ns /np || exit 0`, { shell: 'cmd.exe' });
     }
