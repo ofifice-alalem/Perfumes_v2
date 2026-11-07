@@ -39,12 +39,14 @@ interface Paginated<T> {
     links: { url: string | null; label: string; active: boolean }[];
 }
 interface Props {
-    invoices:       Paginated<Invoice>;
-    customers:      Customer[];
-    users:          User[];
-    products:       Product[];
-    paymentMethods: PaymentMethod[];
-    flash?: { success?: string; error?: string };
+    invoices:          Paginated<Invoice>;
+    counts?:           { active: number; deleted: number };
+    customers:         Customer[];
+    users:             User[];
+    products:          Product[];
+    paymentMethods:    PaymentMethod[];
+    canManageInvoices?: boolean;
+    flash?:            { success?: string; error?: string };
 }
 
 const statusLabel = { unpaid: 'غير مدفوع', partial: 'جزئي', paid: 'مدفوع' };
@@ -245,12 +247,23 @@ function FilterDrawer({ isOpen, onClose, children, applyFilter, resetFilter, has
     );
 }
 
-export default function InvoicesIndex({ invoices, customers, users, products, paymentMethods, flash }: Props) {
+export default function InvoicesIndex({
+    invoices,
+    counts,
+    customers,
+    users,
+    products,
+    paymentMethods,
+    canManageInvoices = false,
+    flash,
+}: Props) {
     const [cancelTarget, setCancelTarget] = useState<Invoice | null>(null);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-    const [activeTab,    setActiveTab]    = useState<'active' | 'deleted'>('active');
 
     const params = new URLSearchParams(window.location.search);
+    const currentTab = params.get('filter[tab]') === 'deleted' ? 'deleted' : 'active';
+    const [activeTab, setActiveTab] = useState<'active' | 'deleted'>(currentTab);
+
     const [fInvoiceId,  setFInvoiceId]  = useState(params.get('filter[id]') ?? '');
     const [showIdPad,   setShowIdPad]   = useState(false);
     const [fCustomer,   setFCustomer]   = useState(params.get('filter[customer_id]') ?? '');
@@ -264,12 +277,13 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
 
     const hasFilter = Boolean(fInvoiceId || fCustomer || fUser || fProduct || fDateFrom || fDateTo || fAmountFrom || fAmountTo || fPayMethod);
 
-    const activeInvoices = invoices.data.filter(inv => !inv.deleted_at);
-    const deletedInvoices = invoices.data.filter(inv => inv.deleted_at);
-    const displayInvoices = activeTab === 'active' ? activeInvoices : deletedInvoices;
+    const displayInvoices = invoices.data;
+    const activeCount = counts?.active ?? (activeTab === 'active' ? invoices.total : 0);
+    const deletedCount = counts?.deleted ?? (activeTab === 'deleted' ? invoices.total : 0);
 
-    function applyFilter() {
+    function getFilterParams(targetTab = activeTab) {
         const f: Record<string, string> = {};
+        if (targetTab === 'deleted')     f['filter[tab]']               = 'deleted';
         if (fInvoiceId)  f['filter[id]']                 = fInvoiceId;
         if (fCustomer)   f['filter[customer_id]']        = fCustomer;
         if (fUser)       f['filter[user_id]']            = fUser;
@@ -279,15 +293,26 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
         if (fAmountFrom) f['filter[amount_from]']        = fAmountFrom;
         if (fAmountTo)   f['filter[amount_to]']          = fAmountTo;
         if (fPayMethod)  f['filter[payment_method_id]']  = fPayMethod;
+        return f;
+    }
+
+    function applyFilter() {
         setFilterDrawerOpen(false);
-        router.get('/invoices', f, { preserveScroll: true });
+        router.get('/invoices', getFilterParams(), { preserveScroll: true });
     }
 
     function resetFilter() {
         setFInvoiceId(''); setFCustomer(''); setFUser(''); setFProduct('');
         setFDateFrom(''); setFDateTo(''); setFAmountFrom(''); setFAmountTo(''); setFPayMethod('');
         setFilterDrawerOpen(false);
-        router.get('/invoices', {}, { preserveScroll: true });
+        const f: Record<string, string> = {};
+        if (activeTab === 'deleted') f['filter[tab]'] = 'deleted';
+        router.get('/invoices', f, { preserveScroll: true });
+    }
+
+    function switchTab(tab: 'active' | 'deleted') {
+        setActiveTab(tab);
+        router.get('/invoices', getFilterParams(tab), { preserveScroll: true });
     }
 
     return (
@@ -311,24 +336,24 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                     {/* Tabs */}
                     <div className="flex gap-3.5">
                         <button
-                            onClick={() => setActiveTab('active')}
-                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
+                            onClick={() => switchTab('active')}
+                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 cursor-pointer ${
                                 activeTab === 'active'
                                     ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
                                     : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
                             }`}
                         >
-                            الفواتير النشطة ({activeInvoices.length})
+                            الفواتير النشطة ({activeCount})
                         </button>
                         <button
-                            onClick={() => setActiveTab('deleted')}
-                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 ${
+                            onClick={() => switchTab('deleted')}
+                            className={`px-8 h-16 sm:h-20 rounded-[22px] font-black text-lg sm:text-2xl transition-all border-2 cursor-pointer ${
                                 activeTab === 'deleted'
                                     ? 'bg-primary text-white border-primary shadow-xl scale-[1.02]'
                                     : 'bg-black/5 dark:bg-white/8 text-slate-600 dark:text-white/60 border-black/5 dark:border-white/5 hover:bg-black/10 dark:hover:bg-white/12'
                             }`}
                         >
-                            الفواتير الملغية ({deletedInvoices.length})
+                            الفواتير الملغية ({deletedCount})
                         </button>
                     </div>
 
@@ -398,21 +423,23 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                             <Link href={`/invoices/${inv.id}`} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
                                                                 <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
                                                             </Link>
-                                                            {inv.deleted_at ? (
-                                                                <RestoreModal
-                                                                    title="استعادة الفاتورة"
-                                                                    description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
-                                                                    onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
-                                                                    trigger={
-                                                                        <button className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                            <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
-                                                                        </button>
-                                                                    }
-                                                                />
-                                                            ) : (
-                                                                <button onClick={() => setCancelTarget(inv)} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
-                                                                    <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
-                                                                </button>
+                                                            {canManageInvoices && (
+                                                                inv.deleted_at ? (
+                                                                    <RestoreModal
+                                                                        title="استعادة الفاتورة"
+                                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                                        onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                                        trigger={
+                                                                            <button className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                                            </button>
+                                                                        }
+                                                                    />
+                                                                ) : (
+                                                                    <button onClick={() => setCancelTarget(inv)} className="flex items-center gap-2.5 px-7 sm:px-9 h-14 sm:h-16 rounded-[20px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-base sm:text-xl active:scale-95 shadow-md">
+                                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                                    </button>
+                                                                )
                                                             )}
                                                         </div>
                                                     </td>
@@ -459,21 +486,23 @@ export default function InvoicesIndex({ invoices, customers, users, products, pa
                                                 <Link href={`/invoices/${inv.id}`} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
                                                     <Eye className="w-6 h-6 sm:w-7 sm:h-7" /> عرض
                                                 </Link>
-                                                {inv.deleted_at ? (
-                                                    <RestoreModal
-                                                        title="استعادة الفاتورة"
-                                                        description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
-                                                        onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
-                                                        trigger={
-                                                            <button className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                                                                <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
-                                                            </button>
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <button onClick={() => setCancelTarget(inv)} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
-                                                        <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
-                                                    </button>
+                                                {canManageInvoices && (
+                                                    inv.deleted_at ? (
+                                                        <RestoreModal
+                                                            title="استعادة الفاتورة"
+                                                            description="هل أنت متأكد من استعادة هذه الفاتورة؟ سيتم استعادة الدفعات والتسويات المرتبطة بها."
+                                                            onConfirm={() => router.post(`/invoices/${inv.id}/restore`)}
+                                                            trigger={
+                                                                <button className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                                    <RotateCcw className="w-6 h-6 sm:w-7 sm:h-7" /> استعادة
+                                                                </button>
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        <button onClick={() => setCancelTarget(inv)} className="flex-1 flex items-center justify-center gap-2.5 h-16 sm:h-20 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-2xl active:scale-95 shadow-md">
+                                                            <Trash2 className="w-6 h-6 sm:w-7 sm:h-7" /> إلغاء
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </div>

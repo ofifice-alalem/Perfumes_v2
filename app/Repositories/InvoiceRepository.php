@@ -18,9 +18,22 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
     public function paginated(int $perPage = 20)
     {
         $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+        $tab = request()->input('filter.tab', 'active');
 
-        return QueryBuilder::for($this->model->withTrashed()->where('period_id', $periodId)->with(['customer', 'user'])->withSum('payments as paid_amount_sum', 'amount')->withSum('settlements as settlements_total', 'amount'))
+        $query = $this->model->where('period_id', $periodId)
+            ->with(['customer', 'user'])
+            ->withSum('payments as paid_amount_sum', 'amount')
+            ->withSum('settlements as settlements_total', 'amount');
+
+        if ($tab === 'deleted') {
+            $query->onlyTrashed();
+        } else {
+            $query->withoutTrashed();
+        }
+
+        return QueryBuilder::for($query)
             ->allowedFilters(
+                AllowedFilter::callback('tab', fn($q, $v) => $v === 'deleted' ? $q->onlyTrashed() : $q->withoutTrashed()),
                 AllowedFilter::callback('id', fn($q, $v) => $q->where(fn($sub) => $sub->where('id', $v)->orWhere('invoice_number', $v))),
                 AllowedFilter::exact('invoice_number'),
                 AllowedFilter::exact('customer_id'),
@@ -44,6 +57,17 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
             ->defaultSort('-created_at')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    public function getStatusCounts(): array
+    {
+        $periodId = app(\App\Services\RolloverService::class)->getCurrentPeriodId();
+        $base = $this->model->where('period_id', $periodId);
+
+        return [
+            'active'  => (clone $base)->withoutTrashed()->count(),
+            'deleted' => (clone $base)->onlyTrashed()->count(),
+        ];
     }
 
     public function findWithRelations(int $id)

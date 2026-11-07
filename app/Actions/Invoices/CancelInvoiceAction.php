@@ -45,20 +45,38 @@ class CancelInvoiceAction
                 'notes'   => "إلغاء فاتورة مبيعات رقم #{$invoice->id}",
             ]);
 
-            // 3. Restore stock and record reversal logs
+            // 3. Restore stock and record reversal logs efficiently
+            $groupedQuantities = [];
             foreach ($invoice->items as $item) {
-                $stockBefore = (float) Product::where('id', $item->product_id)->value('stock');
-                Product::where('id', $item->product_id)->increment('stock', $item->quantity);
-                $stockAfter = $stockBefore + (float) $item->quantity;
+                $pid = (int) $item->product_id;
+                $qty = (float) $item->quantity;
+                $groupedQuantities[$pid] = ($groupedQuantities[$pid] ?? 0) + $qty;
+            }
 
-                InventoryLogItem::create([
+            $logItems = [];
+            $now = now();
+
+            foreach ($groupedQuantities as $pid => $qtyToRestore) {
+                $prod = $products->get($pid);
+                $stockBefore = $prod ? (float) $prod->stock : 0;
+                $stockAfter = $stockBefore + $qtyToRestore;
+
+                Product::where('id', $pid)->increment('stock', $qtyToRestore);
+
+                $logItems[] = [
                     'inventory_log_id' => $inventoryLog->id,
-                    'product_id'       => $item->product_id,
+                    'product_id'       => $pid,
                     'system_stock'     => $stockBefore,
                     'actual_stock'     => $stockAfter,
-                    'difference'       => (float) $item->quantity,
+                    'difference'       => $qtyToRestore,
                     'reason'           => "إلغاء فاتورة #{$invoice->id}",
-                ]);
+                    'created_at'       => $now,
+                    'updated_at'       => $now,
+                ];
+            }
+
+            if (!empty($logItems)) {
+                InventoryLogItem::insert($logItems);
             }
 
             // 4. Handle dependent Payments & Settlements

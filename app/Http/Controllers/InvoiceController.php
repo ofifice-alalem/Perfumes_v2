@@ -34,11 +34,13 @@ class InvoiceController extends Controller
     public function index(): Response
     {
         return Inertia::render('Invoices/Index', [
-            'invoices'       => $this->invoices->paginated(20),
-            'customers'      => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
-            'users'          => User::orderBy('name')->get(['id', 'name']),
-            'products'       => Product::orderBy('name')->get(['id', 'name']),
-            'paymentMethods' => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'invoices'          => $this->invoices->paginated(20),
+            'counts'            => fn() => $this->invoices->getStatusCounts(),
+            'customers'         => fn() => Customer::withoutCash()->orderBy('name')->get(['id', 'name', 'is_active']),
+            'users'             => fn() => User::orderBy('name')->get(['id', 'name']),
+            'products'          => fn() => Product::orderBy('name')->get(['id', 'name']),
+            'paymentMethods'    => fn() => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'canManageInvoices' => auth()->user()?->hasAnyRole(['super-admin', 'admin']) ?? false,
         ]);
     }
 
@@ -119,6 +121,8 @@ class InvoiceController extends Controller
 
     public function destroy(int $id, CancelInvoiceAction $action): RedirectResponse
     {
+        abort_unless(auth()->user()?->hasAnyRole(['super-admin', 'admin']), 403, 'غير مصرح لك بإلغاء الفواتير.');
+
         $deletePayments    = request()->boolean('delete_payments', false);
         $deleteSettlements = request()->boolean('delete_settlements', false);
 
@@ -129,6 +133,8 @@ class InvoiceController extends Controller
 
     public function restore(int $id, RestoreInvoiceAction $action): RedirectResponse
     {
+        abort_unless(auth()->user()?->hasAnyRole(['super-admin', 'admin']), 403, 'غير مصرح لك باستعادة الفواتير.');
+
         $action->execute($id);
 
         return redirect()->route('invoices.show', $id)->with('success', 'تم استعادة الفاتورة بنجاح');
