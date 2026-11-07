@@ -71,8 +71,8 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
   };
 
   return (
-    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 md:p-2 lg:p-3 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent">
-      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none md:rounded-[28px] lg:rounded-[36px]">
+    <div className="h-[100dvh] w-screen flex items-center justify-center p-0 md:p-1.5 lg:p-2 transition-colors duration-500 overflow-hidden bg-slate-100 dark:bg-slate-950 lg:bg-transparent">
+      <div className="spatial-window w-full h-full flex relative overflow-hidden rounded-none md:rounded-[24px] lg:rounded-[32px]">
 
         {isSidebarOpen && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[998] lg:hidden animate-in fade-in duration-300"
@@ -82,7 +82,7 @@ export function AppShell({ children, pageTitle }: AppShellProps) {
 
         <AppSidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen((prev) => !prev)} />
 
-        <div className="flex-1 flex flex-col p-4 pb-12 md:p-8 md:pb-16 lg:p-10 lg:pb-16 overflow-y-auto min-w-0 h-full relative custom-scroll">
+        <div className="flex-1 flex flex-col p-3 pb-6 md:p-4 md:pb-8 lg:px-6 lg:pt-2.5 lg:pb-4 overflow-y-auto min-w-0 h-full relative custom-scroll">
 
           <div className="lg:hidden flex items-center mb-6">
             <button onClick={() => setIsSidebarOpen(true)} className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">

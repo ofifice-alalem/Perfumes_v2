@@ -268,39 +268,27 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
 
     return (
         <div className="flex flex-col gap-2.5 sm:gap-3">
-            {/* Row 1: product + sale type + qty */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 items-stretch sm:items-end">
-                <div className="flex items-center gap-2 flex-1 min-w-full sm:min-w-[180px]">
-                    <div className="flex-1 min-w-0">
-                        <ModernSelect
-                            key={`p-${resetKey}`}
-                            label=""
-                            placeholder="اختر المنتج..."
-                            options={products.map(p => ({
-                                label: p.name,
-                                badge: p.category.name,
-                                price: getProductDisplayPrice(p, isVip),
-                                meta: `المخزون: ${p.stock}`,
-                                searchKey: p.qrcode ?? undefined,
-                            }))}
-                            defaultValue={selectedProduct?.name ?? ""}
-                            onSelect={val => {
-                                const p = products.find(pr => pr.name === val);
-                                setSelProduct(p ? String(p.id) : '');
-                                setSelSaleType(''); setSelSize(''); setSelQty('1');
-                            }}
-                        />
-                    </div>
-                    {selectedProduct && (
-                        <button
-                            type="button"
-                            onClick={resetSelection}
-                            title="إلغاء الاختيار وتفريغ الحقول"
-                            className="h-16 sm:h-20 w-16 sm:w-20 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 flex items-center justify-center transition-all active:scale-95 shrink-0 cursor-pointer shadow-sm"
-                        >
-                            <X className="w-6 h-6 stroke-[2.5]" />
-                        </button>
-                    )}
+            {/* Row 1: product + sale type + cancel item button */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
+                <div className="flex-1 min-w-0">
+                    <ModernSelect
+                        key={`p-${resetKey}`}
+                        label=""
+                        placeholder="اختر المنتج..."
+                        options={products.map(p => ({
+                            label: p.name,
+                            badge: p.category.name,
+                            price: getProductDisplayPrice(p, isVip),
+                            meta: `المخزون: ${p.stock}`,
+                            searchKey: p.qrcode ?? undefined,
+                        }))}
+                        defaultValue={selectedProduct?.name ?? ""}
+                        onSelect={val => {
+                            const p = products.find(pr => pr.name === val);
+                            setSelProduct(p ? String(p.id) : '');
+                            setSelSaleType(''); setSelSize(''); setSelQty('1');
+                        }}
+                    />
                 </div>
 
                 {/* sale type toggle for non-tier with multiple options */}
@@ -308,7 +296,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                     <button
                         type="button"
                         onClick={() => setShowSaleTypeModal(true)}
-                        className="spatial-input h-16 sm:h-20 rounded-[22px] px-4 sm:px-5 text-base sm:text-lg font-black w-full sm:w-48 cursor-pointer hover:border-primary/40 border-2 transition-all flex items-center justify-between shadow-sm"
+                        className="spatial-input h-16 sm:h-20 rounded-[22px] px-4 sm:px-5 text-base sm:text-lg font-black w-full sm:w-48 cursor-pointer hover:border-primary/40 border-2 transition-all flex items-center justify-between shadow-sm shrink-0"
                     >
                         <span className="truncate">{saleTypeOptions().find(o => o.badge === selSaleType)?.label ?? 'نوع البيع'}</span>
                         <svg className="w-5 h-5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -317,14 +305,16 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                     </button>
                 )}
 
-                {/* qty / count input */}
-                {selectedProduct && (isTier || selSaleType) && (
+                {/* زر إلغاء اختيار العنصر الحالي */}
+                {selectedProduct && (
                     <button
                         type="button"
-                        onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
-                        className="spatial-input h-16 sm:h-20 rounded-[22px] px-4 sm:px-6 text-xl sm:text-[24px] font-black w-full sm:w-32 text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm"
+                        onClick={resetSelection}
+                        title="إلغاء اختيار هذا العنصر"
+                        className="h-16 sm:h-20 px-4 sm:px-6 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 font-black text-sm sm:text-base flex items-center justify-center gap-2 transition-all shrink-0 active:scale-95 cursor-pointer shadow-sm"
                     >
-                        {selQty || '1'}
+                        <X className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
+                        <span>إلغاء</span>
                     </button>
                 )}
             </div>
@@ -343,21 +333,22 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                 </div>
             )}
 
-            {/* Row 3: Unit price field & add button */}
+            {/* Row 3: Unit price field, Quantity & add button */}
             {showPriceField && (
-                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3.5 sm:p-4 rounded-[22px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md">
-                    <div className="flex flex-1 items-center justify-between gap-3">
-                        <div className="flex flex-col gap-1 shrink-0">
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end p-3.5 sm:p-4 rounded-[22px] bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 backdrop-blur-md">
+                    {/* حقل سعر الوحدة مع الليبل فوقه */}
+                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
                             <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
                                 سعر الوحدة
                             </span>
                             {selMinPrice > 0 && (
-                                <div className="inline-flex items-baseline gap-1.5 px-3 py-1 rounded-xl bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30">
-                                    <span className="text-xs font-bold text-amber-800/80 dark:text-amber-200/80">حد أدنى:</span>
-                                    <span className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-300 tracking-tight">
+                                <div className="inline-flex items-baseline gap-1 px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30 text-xs font-bold">
+                                    <span>حد أدنى:</span>
+                                    <span className="font-black text-amber-600 dark:text-amber-300">
                                         {selMinPrice.toFixed(2)}
                                     </span>
-                                    <span className="text-xs font-bold">د.ل</span>
+                                    <span>د.ل</span>
                                 </div>
                             )}
                         </div>
@@ -368,7 +359,7 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                                 selUnitPrice,
                                 v => setSelUnitPrice(v),
                             )}
-                            className={`h-16 sm:h-20 rounded-[20px] px-5 sm:px-6 text-xl sm:text-[24px] font-black flex-1 text-center cursor-pointer transition-all border-2 spatial-input active:scale-95 shadow-sm ${
+                            className={`h-16 sm:h-20 rounded-[20px] px-5 sm:px-6 text-xl sm:text-[24px] font-black w-full text-center cursor-pointer transition-all border-2 spatial-input active:scale-95 shadow-sm ${
                                 selUnitPrice && +selUnitPrice < selMinPrice
                                     ? 'border-red-500/60 text-red-500 bg-red-500/5'
                                     : 'hover:border-primary/40'
@@ -377,23 +368,33 @@ export const ProductSelector: React.FC<ProductSelectorProps> = ({
                             {selUnitPrice || '0.00'}
                         </button>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {selectedProduct && (
+
+                    {/* حقل العدد/الكمية مع الليبل فوقه */}
+                    {selectedProduct && (isTier || selSaleType) && (
+                        <div className="flex flex-col gap-1.5 shrink-0 w-28 sm:w-32">
+                            <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider text-center">
+                                {needsQty ? 'الكمية' : 'العدد'}
+                            </span>
                             <button
                                 type="button"
-                                onClick={resetSelection}
-                                title="إلغاء الاختيار وتفريغ الحقول"
-                                className="h-16 sm:h-20 px-4 rounded-[22px] bg-red-500/15 hover:bg-red-500/30 border-2 border-red-500/30 text-red-500 font-black text-sm sm:text-base flex items-center justify-center gap-1.5 transition-all shrink-0 active:scale-95 cursor-pointer shadow-sm"
+                                onClick={() => openPad(needsQty ? 'الكمية' : 'العدد', selQty || '1', v => setSelQty(v), maxCount)}
+                                className="spatial-input h-16 sm:h-20 rounded-[20px] px-4 sm:px-6 text-xl sm:text-[24px] font-black w-full text-center cursor-pointer hover:border-primary/40 border-2 transition-all active:scale-95 shadow-sm"
                             >
-                                <X className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
-                                <span>إلغاء</span>
+                                {selQty || '1'}
                             </button>
-                        )}
+                        </div>
+                    )}
+
+                    {/* زر الإضافة للسلة */}
+                    <div className="flex flex-col gap-1.5 shrink-0 w-full sm:w-auto">
+                        <span className="text-xs sm:text-sm font-black opacity-0 select-none hidden sm:block">
+                            إضافة
+                        </span>
                         <button
                             type="button"
                             onClick={handleAddToCart}
                             disabled={!canAdd || (!!selUnitPrice && +selUnitPrice < selMinPrice)}
-                            className="spatial-button flex-1 sm:flex-initial min-w-[140px] flex items-center justify-center gap-2.5 sm:gap-3 px-8 sm:px-12 h-16 sm:h-20 rounded-[22px] text-xl sm:text-[22px] font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] transition-transform shadow-lg"
+                            className="spatial-button min-w-[130px] sm:min-w-[150px] flex items-center justify-center gap-2.5 sm:gap-3 px-6 sm:px-8 h-16 sm:h-20 rounded-[22px] text-xl sm:text-[22px] font-black disabled:opacity-40 shrink-0 active:scale-95 hover:scale-[1.02] transition-transform shadow-lg cursor-pointer"
                         >
                             <Plus className="w-6 h-6 sm:w-7 sm:h-7" /> إضافة
                         </button>

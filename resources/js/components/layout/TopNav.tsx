@@ -60,7 +60,7 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
   const selectedPaymentName = globalPaymentMethods.find((m: any) => String(m.id) === defaultPaymentId)?.name || 'بطاقة';
 
   return (
-    <header className="flex justify-between items-center mb-6 lg:mb-10 shrink-0">
+    <header className="flex justify-between items-center mb-2.5 lg:mb-3 shrink-0">
       <div className="hidden sm:block">
         {pageTitle && (
           <p className="text-sm font-bold text-slate-400 dark:text-white/40 tracking-widest uppercase">
@@ -74,10 +74,10 @@ export function TopNav({ isDark, onToggleTheme, pageTitle }: TopNavProps) {
         {/* Default Payment Selector Button */}
         <button 
             onClick={() => setShowPaymentModal(true)}
-            className="flex items-center gap-2.5 h-12 lg:h-14 px-5 sm:px-6 rounded-[18px] sm:rounded-[22px] border-2 border-primary/30 bg-white dark:bg-slate-800 text-slate-800 dark:text-white hover:border-primary/60 transition-all font-black text-sm lg:text-base shrink-0 shadow-md active:scale-95 cursor-pointer"
+            className="flex items-center gap-2 h-10 lg:h-11 px-4 sm:px-5 rounded-[16px] sm:rounded-[18px] border-2 border-primary/30 bg-white dark:bg-slate-800 text-slate-800 dark:text-white hover:border-primary/60 transition-all font-black text-xs lg:text-sm shrink-0 shadow-md active:scale-95 cursor-pointer"
             title="طريقة الدفع الافتراضية"
         >
-          <Wallet className="w-5 h-5 text-primary shrink-0" />
+          <Wallet className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
           <span className="text-slate-500 dark:text-white/60 font-bold hidden sm:inline">الدفع الافتراضي:</span>
           <span className="font-black text-primary dark:text-primary-light">{selectedPaymentName}</span>
         </button>
