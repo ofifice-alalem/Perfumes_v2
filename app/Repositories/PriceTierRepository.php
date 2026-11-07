@@ -8,6 +8,11 @@ use Prettus\Repository\Eloquent\Repository;
 
 class PriceTierRepository extends Repository implements PriceTierRepositoryInterface
 {
+    public function allOrdered()
+    {
+        return $this->model->orderBy('name')->get();
+    }
+
     public function allWithPrices()
     {
         return $this->model

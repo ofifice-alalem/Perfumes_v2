@@ -3,36 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProductRequest;
-use App\Models\Category;
-use App\Models\PriceTier;
-use App\Models\Product;
 use App\Repositories\Contracts\ProductRepositoryInterface;
+use App\Repositories\Contracts\CategoryRepositoryInterface;
+use App\Repositories\Contracts\PriceTierRepositoryInterface;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function __construct(private ProductRepositoryInterface $products) {}
+    public function __construct(
+        private ProductRepositoryInterface $products,
+        private CategoryRepositoryInterface $categories,
+        private PriceTierRepositoryInterface $tiers
+    ) {}
 
     public function index(): Response
     {
         return Inertia::render('Products/Index', [
             'products'   => $this->products->allWithRelations(),
-            'categories' => Category::orderBy('name')->get(),
-            'tiers'      => PriceTier::orderBy('name')->get(),
+            'categories' => fn() => $this->categories->allOrdered(),
+            'tiers'      => fn() => $this->tiers->allOrdered(),
         ]);
     }
 
     public function store(ProductRequest $request)
     {
-        $name = trim($request->name);
-        $conflict = Product::where('name', $name)->first();
-        if ($conflict) {
-            return back()->withErrors([
-                'name' => 'اسم المنتج "' . $conflict->name . '" موجود مسبقاً في المنظومة، لا يمكن تكرار نفس الاسم.',
-            ])->withInput();
-        }
-
         $this->products->createWithRelations($request->validated());
 
         return back()->with('success', 'تم إضافة المنتج بنجاح');
@@ -40,26 +36,6 @@ class ProductController extends Controller
 
     public function update(ProductRequest $request, int $id)
     {
-        $name = trim($request->name);
-        $conflictName = Product::where('name', $name)->where('id', '!=', $id)->first();
-        if ($conflictName) {
-            return back()->withErrors([
-                'name' => 'اسم المنتج "' . $conflictName->name . '" موجود مسبقاً لمنتج آخر، يرجى اختيار اسم غير مكرر.',
-            ])->withInput();
-        }
-
-        // التحقق من تفرد QR عند وجوده
-        if (!empty($request->qrcode)) {
-            $conflict = Product::where('qrcode', $request->qrcode)
-                ->where('id', '!=', $id)
-                ->first();
-            if ($conflict) {
-                return back()->withErrors([
-                    'qrcode' => 'الكود موجود بالفعل للمنتج “' . $conflict->name . '”',
-                ])->withInput();
-            }
-        }
-
         $this->products->updateWithRelations($id, $request->validated());
 
         return back()->with('success', 'تم تحديث المنتج بنجاح');
@@ -67,21 +43,18 @@ class ProductController extends Controller
 
     public function updateQrcode(int $id)
     {
-        $qrcode = request('qrcode');
+        $data = request()->validate([
+            'qrcode' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('products', 'qrcode')->ignore($id),
+            ],
+        ], [
+            'qrcode.unique' => 'كود الباركود / QR موجود مسبقاً لمنتج آخر في المنظومة',
+        ]);
 
-        // التحقق من تفرد QR
-        if (!empty($qrcode)) {
-            $conflict = Product::where('qrcode', $qrcode)
-                ->where('id', '!=', $id)
-                ->first();
-            if ($conflict) {
-                return back()->with('error', 'الكود موجود بالفعل للمنتج "' . $conflict->name . '"');
-            }
-        }
-
-        request()->validate(['qrcode' => 'nullable|string|max:100']);
-
-        $this->products->update(['qrcode' => $qrcode], $id);
+        $this->products->update(['qrcode' => $data['qrcode'] ?? null], $id);
 
         return back()->with('success', 'تم تحديث QR Code بنجاح');
     }

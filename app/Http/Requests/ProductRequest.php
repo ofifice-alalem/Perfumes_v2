@@ -33,7 +33,12 @@ class ProductRequest extends FormRequest
                 'max:255',
                 Rule::unique('products', 'name')->ignore($productId),
             ],
-            'qrcode'                 => 'nullable|string|max:100',
+            'qrcode' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::unique('products', 'qrcode')->ignore($productId),
+            ],
             'category_id'            => 'required|exists:categories,id',
             'selling_type'           => 'required|in:tier_based,unit_priced',
             'price_tier_id'          => 'required_if:selling_type,tier_based|nullable|exists:price_tiers,id',
@@ -70,6 +75,7 @@ class ProductRequest extends FormRequest
         return [
             'name.required'              => 'اسم المنتج مطلوب',
             'name.unique'                => 'اسم المنتج موجود مسبقاً في المنظومة، يرجى اختيار اسم مختلف أو تعديل الصنف القائم',
+            'qrcode.unique'              => 'كود الباركود / QR موجود مسبقاً لمنتج آخر في المنظومة',
             'category_id.required'       => 'التصنيف مطلوب',
             'category_id.exists'         => 'التصنيف غير موجود',
             'selling_type.required'      => 'نوع البيع مطلوب',
