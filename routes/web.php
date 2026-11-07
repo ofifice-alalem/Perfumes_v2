@@ -44,9 +44,6 @@ Route::get('/license', [LicenseController::class, 'index'])->name('license.index
 Route::post('/license/activate', [LicenseController::class, 'activate'])->name('license.activate');
 Route::post('/license/deactivate', [LicenseController::class, 'deactivate'])->name('license.deactivate');
 
-// ─── POS Thermal Receipt Preview & Printing ─────────────────────────────────
-Route::get('/thermal-receipt/{id?}', [ThermalReceiptController::class, 'show'])->name('thermal-receipt');
-
 // ─── Auth (guest only) ───────────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
@@ -212,6 +209,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('customers', CustomerController::class)->except(['create', 'edit', 'show', 'destroy']);
 
         // Invoices
+        Route::get('/thermal-receipt/{id?}', [ThermalReceiptController::class, 'show'])->name('thermal-receipt');
         Route::post('invoices/refresh-catalog', [InvoiceController::class, 'refreshCatalog'])->name('invoices.refresh-catalog');
         Route::resource('invoices', InvoiceController::class)->except(['edit']);
         Route::get('invoices/{invoice}/edit', [InvoiceController::class, 'edit'])->name('invoices.edit');
