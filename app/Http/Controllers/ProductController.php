@@ -21,9 +21,20 @@ class ProductController extends Controller
     public function index(): Response
     {
         return Inertia::render('Products/Index', [
-            'products'   => $this->products->allWithRelations(),
-            'categories' => fn() => $this->categories->allOrdered(),
-            'tiers'      => fn() => $this->tiers->allOrdered(),
+            'products'       => $this->products->paginated(20),
+            'categories'     => fn() => $this->categories->allOrdered(),
+            'tiers'          => fn() => $this->tiers->allOrdered(),
+            'missingQrCount' => fn() => $this->products->getMissingQrcodesCount(),
+        ]);
+    }
+
+    public function printList(): \Illuminate\Http\JsonResponse
+    {
+        $products = $this->products->getFilteredProductsForPrint();
+        return response()->json([
+            'success'  => true,
+            'count'    => $products->count(),
+            'products' => $products,
         ]);
     }
 
@@ -92,6 +103,9 @@ class ProductController extends Controller
             } else {
                 $productIds = array_filter(array_map('intval', explode(',', (string)$rawIds)));
             }
+        } elseif ($request->has('filter')) {
+            $filtered = $this->products->getFilteredProductsForPrint();
+            $productIds = $filtered->pluck('id')->all();
         }
 
         $this->products->exportCatalogExcel($productIds);

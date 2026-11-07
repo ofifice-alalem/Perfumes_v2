@@ -30,11 +30,22 @@ export function NumberPadModal({ isOpen, onClose, onConfirm, initialValue = '', 
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (/^[0-9.]$/.test(e.key) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) e.preventDefault();
-      switch (e.key) {
+      // Support both ASCII 0-9 and Arabic/Indic ٠-٩ and Persian ۰-۹
+      const arabicIndicMap: Record<string, string> = {
+        '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
+        '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+        '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
+        '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+        '٫': '.', '،': '.'
+      };
+
+      const normalizedKey = arabicIndicMap[e.key] || e.key;
+
+      if (/^[0-9.]$/.test(normalizedKey) || ['Backspace', 'Delete', 'Enter', 'Escape'].includes(e.key)) e.preventDefault();
+      switch (normalizedKey) {
         case '0': case '1': case '2': case '3': case '4':
         case '5': case '6': case '7': case '8': case '9':
-          handleNumberClick(e.key); break;
+          handleNumberClick(normalizedKey); break;
         case '.': case ',': handleNumberClick('.'); break;
         case 'Backspace': case 'Delete': if (hasStartedTyping) handleDelete(); break;
         case 'Enter': handleConfirm(); break;

@@ -36,10 +36,26 @@ export interface Product {
     original_perfume_detail: OriginalPerfumeDetail | null;
 }
 
+export interface PaginatedData<T> {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
+    links: {
+        url: string | null;
+        label: string;
+        active: boolean;
+    }[];
+}
+
 export interface ProductsIndexProps {
-    products: Product[];
+    products: PaginatedData<Product>;
     categories: Category[];
     tiers: PriceTier[];
+    missingQrCount?: number;
     flash?: { success?: string; error?: string; info?: string };
 }
 
@@ -72,6 +88,17 @@ export const emptyProductForm: ProductFormData = {
 };
 
 export const unitLabels = { ml: 'مليلتر', pcs: 'قطعة', g: 'غرام' };
+
+/**
+ * تحويل الأرقام المكتوبة بالأشكال المشرقية (١، ٢، ٣...) أو الفارسية (۱، ۲...)
+ * إلى أرقام غربية/إنجليزية قياسية (1, 2, 3...) لضمان التوافق مع الحقول الرقمية
+ */
+export function toAsciiDigits(str: string | number | null | undefined): string {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/[٠-٩]/g, d => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
+        .replace(/[۰-۹]/g, d => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)));
+}
 
 export function fmt(val: string | null | undefined): string {
     if (!val) return '';

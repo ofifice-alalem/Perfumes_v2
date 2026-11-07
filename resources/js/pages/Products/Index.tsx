@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, Pagination, matchesSearchText } from '@/components/ui/SpatialComponents';
+import { SpatialCard, Pagination } from '@/components/ui/SpatialComponents';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import {
@@ -16,6 +16,7 @@ import {
     RotateCcw,
     Download,
     FileUp,
+    RefreshCw,
 } from 'lucide-react';
 import { Product, ProductsIndexProps, fmt, unitLabels, generateQrCode } from './types';
 import { QrModal } from './components/QrModal';
@@ -23,21 +24,35 @@ import { ExcelCatalogModal } from './components/ExcelCatalogModal';
 import { ProductFilterDrawer } from './components/ProductFilterDrawer';
 import { ProductFormDrawer } from './components/ProductFormDrawer';
 
-export default function ProductsIndex({ products, categories, tiers, flash }: ProductsIndexProps) {
+export default function ProductsIndex({ products, categories, tiers, missingQrCount = 0, flash }: ProductsIndexProps) {
     // Form Drawer State
     const [showCreate, setShowCreate] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-    // Filter State
-    const [filterCat, setFilterCat] = useState<number | null>(null);
-    const [filterTier, setFilterTier] = useState<number | null>(null);
-    const [searchKeywords, setSearchKeywords] = useState<string[]>([]);
-    const [lowStockOnly, setLowStockOnly] = useState<boolean>(false);
+    // Initial Filter Parsing from URL
+    const parseUrlFilters = () => {
+        if (typeof window === 'undefined') return { cat: null, tier: null, keywords: [], lowStock: false };
+        const params = new URLSearchParams(window.location.search);
+        const cat = params.get('filter[category_id]') ? Number(params.get('filter[category_id]')) : null;
+        const tier = params.get('filter[price_tier_id]') ? Number(params.get('filter[price_tier_id]')) : null;
+        const lowStock = params.get('filter[low_stock]') === '1';
+        const rawSearch = params.get('filter[search]') || '';
+        const keywords = rawSearch ? rawSearch.split(',').map(s => s.trim()).filter(Boolean) : [];
+        return { cat, tier, keywords, lowStock };
+    };
+
+    const initialFilters = parseUrlFilters();
+    const [filterCat, setFilterCat] = useState<number | null>(initialFilters.cat);
+    const [filterTier, setFilterTier] = useState<number | null>(initialFilters.tier);
+    const [searchKeywords, setSearchKeywords] = useState<string[]>(initialFilters.keywords);
+    const [lowStockOnly, setLowStockOnly] = useState<boolean>(initialFilters.lowStock);
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
 
     // Modal State
     const [qrProduct, setQrProduct] = useState<Product | null>(null);
     const [bulkPrintOpen, setBulkPrintOpen] = useState(false);
+    const [bulkPrintItems, setBulkPrintItems] = useState<Product[]>([]);
+    const [loadingBulkPrint, setLoadingBulkPrint] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [generatingAll, setGeneratingAll] = useState(false);
 
@@ -57,6 +72,42 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     const hasActiveFilter = searchKeywords.length > 0 || !!filterCat || !!filterTier || lowStockOnly;
 
+    // Apply Filters to Server via Inertia Visit
+    const applyFiltersToServer = (cat: number | null, tier: number | null, keywords: string[], lowStock: boolean) => {
+        setFilterCat(cat);
+        setFilterTier(tier);
+        setSearchKeywords(keywords);
+        setLowStockOnly(lowStock);
+
+        const filterObj: Record<string, any> = {};
+        if (cat) filterObj.category_id = cat;
+        if (tier) filterObj.price_tier_id = tier;
+        if (lowStock) filterObj.low_stock = 1;
+        if (keywords.length > 0) filterObj.search = keywords.join(',');
+
+        router.get('/products', Object.keys(filterObj).length > 0 ? { filter: filterObj } : {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const clearAllFilters = () => {
+        setFilterCat(null);
+        setFilterTier(null);
+        setSearchKeywords([]);
+        setLowStockOnly(false);
+
+        router.get('/products', {}, {
+            preserveState: true,
+            preserveScroll: true,
+        });
+    };
+
+    const removeSingleKeyword = (kwToRemove: string) => {
+        const nextKeywords = searchKeywords.filter(k => k !== kwToRemove);
+        applyFiltersToServer(filterCat, filterTier, nextKeywords, lowStockOnly);
+    };
+
     // Single QR code generation
     const handleGenerate = (p: Product) => {
         const newQr = generateQrCode();
@@ -65,14 +116,39 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
     // Bulk QR code generation for missing products
     const handleGenerateAll = () => {
-        const missingCount = products.filter(p => !p.qrcode).length;
-        if (missingCount === 0) return;
+        if (missingQrCount === 0) return;
         setGeneratingAll(true);
         router.post('/products/generate-all-qrcodes', {}, {
             preserveScroll: true,
             preserveState: true,
             onFinish: () => setGeneratingAll(false),
         });
+    };
+
+    // Bulk Label Printing: Fetch minimal fields for all matching filter items
+    const handleBulkPrint = async () => {
+        setLoadingBulkPrint(true);
+        try {
+            const query = typeof window !== 'undefined' ? window.location.search : '';
+            const res = await fetch(`/products/print-list${query}`);
+            const data = await res.json();
+            if (data.products && data.products.length > 0) {
+                setBulkPrintItems(data.products);
+                setBulkPrintOpen(true);
+            } else {
+                alert('لا توجد منتجات مطابقة لطباعة ملصقاتها');
+            }
+        } catch (e) {
+            console.error('Failed to fetch print list', e);
+        } finally {
+            setLoadingBulkPrint(false);
+        }
+    };
+
+    // Excel Export: Respects active filters
+    const handleExportExcel = () => {
+        const query = typeof window !== 'undefined' ? window.location.search : '';
+        window.location.href = `/products/export/excel${query}`;
     };
 
     const deleteProduct = (id: number) => {
@@ -82,84 +158,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
         });
     };
 
-    // Pagination & Search
-    const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 20;
-
-    const matchesSearchKeywords = (p: Product, kws: string[]) => {
-        if (!kws || kws.length === 0) return true;
-        return kws.some(kw => {
-            const trimmed = kw.trim();
-            if (!trimmed) return false;
-
-            if (!isNaN(Number(trimmed))) {
-                const numId = Number(trimmed);
-                if (products.some(prod => prod.id === numId)) {
-                    return p.id === numId;
-                }
-            }
-
-            if (p.qrcode && p.qrcode.toLowerCase() === trimmed.toLowerCase()) {
-                return true;
-            }
-
-            const extraKey = p.qrcode ? `${p.qrcode}` : '';
-            return matchesSearchText(trimmed, p.name, extraKey);
-        });
-    };
-
-    const filtered = products.filter(p => {
-        if (!matchesSearchKeywords(p, searchKeywords)) return false;
-        if (filterCat && p.category.id !== filterCat) return false;
-        if (filterTier && (p.price_tier?.id !== filterTier && p.price_tier_id !== filterTier)) return false;
-        if (lowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
-        return true;
-    });
-
-    const handleExportExcel = () => {
-        if (filtered.length === 0) return;
-
-        if (hasActiveFilter && filtered.length < products.length) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/products/export/excel';
-            form.style.display = 'none';
-
-            const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = '_token';
-            csrfInput.value = csrfToken;
-            form.appendChild(csrfInput);
-
-            const idsInput = document.createElement('input');
-            idsInput.type = 'hidden';
-            idsInput.name = 'ids';
-            idsInput.value = filtered.map(p => p.id).join(',');
-            form.appendChild(idsInput);
-
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-        } else {
-            window.location.href = '/products/export/excel';
-        }
-    };
-
-    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
-    const safeCurrentPage = Math.min(currentPage, totalPages);
-    const paginatedProducts = filtered.slice((safeCurrentPage - 1) * pageSize, safeCurrentPage * pageSize);
-
-    const paginationLinks = [
-        { url: safeCurrentPage > 1 ? '#' : null, label: 'السابق', active: false, page: safeCurrentPage - 1 },
-        ...Array.from({ length: totalPages }, (_, i) => ({
-            url: '#',
-            label: String(i + 1),
-            active: i + 1 === safeCurrentPage,
-            page: i + 1,
-        })),
-        { url: safeCurrentPage < totalPages ? '#' : null, label: 'التالي', active: false, page: safeCurrentPage + 1 },
-    ];
+    const productItems = products.data || [];
 
     return (
         <AppShell title="إدارة المنتجات">
@@ -167,9 +166,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">إدارة المنتجات</h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">إدارة المنتجات</h1>
+                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-black text-xs border border-primary/20">
+                                إجمالي: {products.total} منتج
+                            </span>
+                        </div>
                         <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400 mt-1">
-                            إدارة منتجات العطور والتسعير والتصنيفات بأحدث واجهة باللمس
+                            إدارة منتجات العطور والتسعير والتصنيفات بنظام ترقيم خادم سريع وموفر للبيانات
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
@@ -188,12 +192,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                         {hasActiveFilter && (
                             <button
-                                onClick={() => {
-                                    setSearchKeywords([]);
-                                    setFilterCat(null);
-                                    setFilterTier(null);
-                                    setLowStockOnly(false);
-                                }}
+                                onClick={clearAllFilters}
                                 className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white active:scale-95 transition-all font-black text-base border-2 border-red-500/30 shrink-0 shadow-sm touch-manipulation select-none cursor-pointer"
                                 title="إعادة تعيين الفلاتر"
                             >
@@ -202,30 +201,34 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             </button>
                         )}
 
-                        {products.some(p => !p.qrcode) && (
+                        {missingQrCount > 0 && (
                             <button
                                 onClick={handleGenerateAll}
                                 disabled={generatingAll}
                                 className="flex items-center justify-center gap-2.5 px-6 h-14 rounded-[20px] border-2 border-violet-500/30 bg-violet-500/15 text-violet-700 dark:text-violet-300 hover:bg-violet-600 hover:text-white active:scale-95 transition-all font-black text-base disabled:opacity-50 shrink-0 cursor-pointer"
                             >
                                 <QrCode className="w-5 h-5" />
-                                {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${products.filter(p => !p.qrcode).length})`}
+                                {generatingAll ? 'جاري التوليد...' : `توليد QR للكل (${missingQrCount})`}
                             </button>
                         )}
 
-                        {/* زر طباعة جماعية */}
+                        {/* زر طباعة جماعية يجلب بيانات كل المنتجات المفلترة للطباعة فقط */}
                         <button
                             type="button"
-                            onClick={() => setBulkPrintOpen(true)}
-                            disabled={filtered.length === 0}
+                            onClick={handleBulkPrint}
+                            disabled={products.total === 0 || loadingBulkPrint}
                             className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-primary/15 border-2 border-primary/30 text-primary dark:text-primary-foreground hover:bg-primary hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
-                            title={filtered.length > 0 ? `طباعة جماعية لملصقات النتائج المعروضة (${filtered.length} منتج)` : 'لا توجد منتجات مطابقة لطباعتها'}
+                            title={products.total > 0 ? `طباعة جماعية لملصقات النتائج (${products.total} منتج)` : 'لا توجد منتجات مطابقة لطباعتها'}
                         >
-                            <Printer className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
-                            <span>طباعة جماعية</span>
-                            {filtered.length > 0 && (
+                            {loadingBulkPrint ? (
+                                <RefreshCw className="w-5 h-5 animate-spin text-primary" />
+                            ) : (
+                                <Printer className="w-5 h-5 text-primary group-hover:text-white transition-colors" />
+                            )}
+                            <span>{loadingBulkPrint ? 'جاري الجلب...' : 'طباعة جماعية'}</span>
+                            {products.total > 0 && (
                                 <span className="px-2 py-0.5 rounded-full bg-primary/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-primary transition-all">
-                                    {filtered.length}
+                                    {products.total}
                                 </span>
                             )}
                         </button>
@@ -234,21 +237,12 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                         <button
                             type="button"
                             onClick={handleExportExcel}
-                            disabled={filtered.length === 0}
+                            disabled={products.total === 0}
                             className="flex items-center justify-center gap-2.5 px-5 h-14 rounded-[20px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-600 hover:text-white active:scale-95 transition-all font-black text-base shrink-0 shadow-sm touch-manipulation select-none disabled:opacity-40 disabled:cursor-not-allowed group cursor-pointer"
-                            title={
-                                hasActiveFilter && filtered.length < products.length
-                                    ? `تصدير شيت إكسل للمنتجات المفلترة حالياً (${filtered.length} منتج)`
-                                    : 'تصدير شيت إكسل كامل يشمل المنتجات والتصنيفات والأحجام والتيرات والأسعار'
-                            }
+                            title="تصدير شيت إكسل للمنتجات المفلترة حالياً"
                         >
                             <Download className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:text-white transition-colors" />
                             <span>تصدير Excel</span>
-                            {hasActiveFilter && filtered.length < products.length && (
-                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/25 text-xs font-mono font-black group-hover:bg-white group-hover:text-emerald-700 transition-all">
-                                    {filtered.length}
-                                </span>
-                            )}
                         </button>
 
                         {/* زر استيراد Excel */}
@@ -293,27 +287,23 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             <span className="text-slate-500 dark:text-slate-400 flex items-center gap-2">
                                 <SlidersHorizontal className="w-4 h-4 text-primary" /> الفلاتر المفعلة:
                             </span>
-                            {searchKeywords.map((kw) => {
-                                const prod = !isNaN(Number(kw)) ? products.find(p => p.id === Number(kw)) : null;
-                                const displayText = prod ? prod.name : `بحث: "${kw}"`;
-                                return (
-                                    <span key={kw} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-                                        <span>{displayText}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSearchKeywords(prev => prev.filter(k => k !== kw))}
-                                            className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
-                                            title="إزالة هذا البحث"
-                                        >
-                                            <X className="w-3.5 h-3.5 hover:text-red-500" />
-                                        </button>
-                                    </span>
-                                );
-                            })}
+                            {searchKeywords.map((kw) => (
+                                <span key={kw} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+                                    <span>بحث: "{kw}"</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeSingleKeyword(kw)}
+                                        className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
+                                        title="إزالة هذا البحث"
+                                    >
+                                        <X className="w-3.5 h-3.5 hover:text-red-500" />
+                                    </button>
+                                </span>
+                            ))}
                             {filterCat && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30">
                                     التصنيف: {categories.find(c => c.id === filterCat)?.name}
-                                    <button onClick={() => { setFilterCat(null); setFilterTier(null); }} className="cursor-pointer">
+                                    <button onClick={() => applyFiltersToServer(null, filterTier, searchKeywords, lowStockOnly)} className="cursor-pointer">
                                         <X className="w-3.5 h-3.5 hover:text-red-500" />
                                     </button>
                                 </span>
@@ -321,7 +311,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             {filterTier && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-300 border border-violet-500/30">
                                     التير: {tiers.find(t => t.id === filterTier)?.name}
-                                    <button onClick={() => setFilterTier(null)} className="cursor-pointer">
+                                    <button onClick={() => applyFiltersToServer(filterCat, null, searchKeywords, lowStockOnly)} className="cursor-pointer">
                                         <X className="w-3.5 h-3.5 hover:text-red-500" />
                                     </button>
                                 </span>
@@ -329,19 +319,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                             {lowStockOnly && (
                                 <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-300 border border-amber-500/30">
                                     أوشكت على النفاد
-                                    <button onClick={() => setLowStockOnly(false)} className="cursor-pointer">
+                                    <button onClick={() => applyFiltersToServer(filterCat, filterTier, searchKeywords, false)} className="cursor-pointer">
                                         <X className="w-3.5 h-3.5 hover:text-red-500" />
                                     </button>
                                 </span>
                             )}
                         </div>
                         <button
-                            onClick={() => {
-                                setSearchKeywords([]);
-                                setFilterCat(null);
-                                setFilterTier(null);
-                                setLowStockOnly(false);
-                            }}
+                            onClick={clearAllFilters}
                             className="text-xs font-black text-red-500 hover:underline shrink-0 cursor-pointer"
                         >
                             إلغاء الكل
@@ -349,12 +334,15 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                     </div>
                 )}
 
-                {/* القائمة والجدول */}
-                <SpatialCard title={`المنتجات (${filtered.length})`} icon={<Package className="w-5 h-5" />}>
-                    {filtered.length === 0 ? (
+                {/* القائمة والجدول بنظام 20 عنصر فقط للصفحة */}
+                <SpatialCard
+                    title={`المنتجات المعروضة (${productItems.length} من إجمالي ${products.total})`}
+                    icon={<Package className="w-5 h-5" />}
+                >
+                    {productItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
                             <span className="text-4xl">📦</span>
-                            <span className="font-black text-base">لا توجد منتجات مطابقة</span>
+                            <span className="font-black text-base">لا توجد منتجات مطابقة في هذه الصفحة</span>
                         </div>
                     ) : (
                         <>
@@ -369,7 +357,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y-2 divide-slate-200/80 dark:divide-slate-700/60">
-                                        {paginatedProducts.map((product) => (
+                                        {productItems.map((product) => (
                                             <tr key={product.id} className="hover:bg-slate-100/70 dark:hover:bg-slate-800/60 transition-colors group">
                                                 <td className="px-5 py-5">
                                                     <div className="flex items-center gap-2.5">
@@ -470,7 +458,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
 
                             {/* كاردات — Mobile Touch */}
                             <div className="flex flex-col gap-5 lg:hidden">
-                                {paginatedProducts.map(product => {
+                                {productItems.map(product => {
                                     const hasPrice = product.selling_type === 'unit_priced' && product.product_price;
                                     const hasBottle = !!product.product_price?.full_bottle_regular;
                                     const lowStock = Number(product.stock) <= Number(product.min_stock) && Number(product.min_stock) > 0;
@@ -530,9 +518,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                                                 ⚠️ {fmt(product.stock)} {unitLabels[product.category.unit]}
                                                             </span>
                                                         ) : (
-                                                            <span className="font-black text-xl text-slate-900 dark:text-white">
-                                                                {fmt(product.stock)} <span className="text-base font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span>
-                                                            </span>
+                                                            <span className="font-black text-xl text-slate-900 dark:text-white">{fmt(product.stock)} <span className="text-base font-black text-slate-500 dark:text-slate-400">{unitLabels[product.category.unit]}</span></span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -588,15 +574,11 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                                 })}
                             </div>
 
-                            {/* الترقيم */}
+                            {/* الترقيم الحقيقي من السيرفر */}
                             <Pagination
-                                links={paginationLinks}
-                                currentPage={safeCurrentPage}
-                                lastPage={totalPages}
-                                onPageChange={(p) => {
-                                    setCurrentPage(p);
-                                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                                }}
+                                links={products.links}
+                                currentPage={products.current_page}
+                                lastPage={products.last_page}
                             />
                         </>
                     )}
@@ -608,9 +590,9 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 <QrModal product={qrProduct} onClose={() => setQrProduct(null)} />
             )}
 
-            {/* QR Modal (طباعة جماعية) */}
-            {bulkPrintOpen && filtered.length > 0 && (
-                <QrModal productsList={filtered} onClose={() => setBulkPrintOpen(false)} />
+            {/* QR Modal (طباعة جماعية لكل نتائج الفلترة المجلوبة) */}
+            {bulkPrintOpen && bulkPrintItems.length > 0 && (
+                <QrModal productsList={bulkPrintItems} onClose={() => setBulkPrintOpen(false)} />
             )}
 
             {/* NumberPad Modal للأرقام والأسعار اللمسية */}
@@ -643,7 +625,7 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
                 }}
                 categories={categories}
                 tiers={tiers}
-                products={products}
+                products={productItems}
                 defaultCatId={defaultCatId}
                 onSetDefaultCategory={handleSetDefaultCategory}
                 openPad={(title, initial, cb) => setPadConfig({ title, initial, cb })}
@@ -653,20 +635,14 @@ export default function ProductsIndex({ products, categories, tiers, flash }: Pr
             <ProductFilterDrawer
                 open={filterDrawerOpen}
                 onClose={() => setFilterDrawerOpen(false)}
-                products={products}
+                products={productItems}
                 categories={categories}
                 tiers={tiers}
                 appliedCat={filterCat}
                 appliedTier={filterTier}
                 appliedKeywords={searchKeywords}
                 appliedLowStock={lowStockOnly}
-                onApply={(cat, tier, keywords, lowStock) => {
-                    setFilterCat(cat);
-                    setFilterTier(tier);
-                    setSearchKeywords(keywords);
-                    setLowStockOnly(lowStock);
-                    setCurrentPage(1);
-                }}
+                onApply={applyFiltersToServer}
             />
         </AppShell>
     );

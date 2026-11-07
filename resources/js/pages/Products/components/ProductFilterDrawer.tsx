@@ -7,7 +7,7 @@ import { Product, Category, PriceTier, fmt } from '../types';
 interface ProductFilterDrawerProps {
     open: boolean;
     onClose: () => void;
-    products: Product[];
+    products?: Product[];
     categories: Category[];
     tiers: PriceTier[];
     appliedCat: number | null;
@@ -20,7 +20,7 @@ interface ProductFilterDrawerProps {
 export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     open,
     onClose,
-    products,
+    products = [],
     categories,
     tiers,
     appliedCat,
@@ -290,7 +290,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                         className="flex-1 spatial-button h-16 sm:h-18 rounded-[22px] text-lg sm:text-xl font-black flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-primary/30 touch-manipulation cursor-pointer"
                     >
                         <Check className="w-6 h-6" />
-                        عرض النتائج ({draftFilteredCount})
+                        تطبيق الفلتر وعرض النتائج
                     </button>
                     {hasDraftFilter && (
                         <button

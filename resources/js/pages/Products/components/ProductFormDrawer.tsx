@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from '@inertiajs/react';
 import { Plus, Pencil, X, Check, AlertTriangle, Calculator, Star, QrCode } from 'lucide-react';
-import { Product, Category, PriceTier, ProductFormData, emptyProductForm, unitLabels, resolveSellingType, generateQrCode } from '../types';
+import { Product, Category, PriceTier, ProductFormData, emptyProductForm, unitLabels, resolveSellingType, generateQrCode, toAsciiDigits } from '../types';
 
 interface ProductFormDrawerProps {
     show: boolean;
@@ -10,7 +10,7 @@ interface ProductFormDrawerProps {
     onClose: () => void;
     categories: Category[];
     tiers: PriceTier[];
-    products: Product[];
+    products?: Product[];
     defaultCatId: string | null;
     onSetDefaultCategory: (catId: number) => void;
     openPad: (title: string, initial: string, cb: (v: string) => void) => void;
@@ -71,7 +71,7 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
     const selectedCat = categories.find(c => String(c.id) === String(form.data.category_id));
     const isOriginalPerfume = selectedCat?.unit === 'ml' && form.data.selling_type === 'unit_priced' && !selectedCat?.is_operational;
 
-    const isDuplicateName = !!form.data.name?.trim() && products.some(p =>
+    const isDuplicateName = !!form.data.name?.trim() && (products || []).some(p =>
         p.name.trim().toLowerCase() === form.data.name.trim().toLowerCase() &&
         (!isEdit || p.id !== editingProduct?.id)
     );
@@ -89,7 +89,7 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
 
     const handleSubmit = () => {
         const trimmed = form.data.name?.trim() || '';
-        const exists = products.some(p =>
+        const exists = (products || []).some(p =>
             p.name.trim().toLowerCase() === trimmed.toLowerCase() &&
             (!isEdit || p.id !== editingProduct?.id)
         );
@@ -350,17 +350,16 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                                 <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[selectedCat.unit]} — عادي</label>
                                                 <div className="relative flex items-center">
                                                     <input
-                                                        type="number"
+                                                        type="text"
                                                         inputMode="decimal"
-                                                        min="0"
-                                                        step="0.01"
+                                                        dir="ltr"
                                                         value={form.data.price_per_unit_regular}
-                                                        onChange={e => form.setData('price_per_unit_regular', e.target.value)}
-                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                        onChange={e => form.setData('price_per_unit_regular', toAsciiDigits(e.target.value))}
+                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                                     />
                                                     <button
                                                         type="button"
-                                                        onClick={() => openPad(`سعر ${unitLabels[selectedCat.unit]} — عادي`, String(form.data.price_per_unit_regular || ''), v => form.setData('price_per_unit_regular', v))}
+                                                        onClick={() => openPad(`سعر ${unitLabels[selectedCat.unit]} — عادي`, String(form.data.price_per_unit_regular || ''), v => form.setData('price_per_unit_regular', toAsciiDigits(v)))}
                                                         className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                                         title="فتح لوحة الأرقام اللمسية"
                                                     >
@@ -372,17 +371,16 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                                 <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر {unitLabels[selectedCat.unit]} — VIP</label>
                                                 <div className="relative flex items-center">
                                                     <input
-                                                        type="number"
+                                                        type="text"
                                                         inputMode="decimal"
-                                                        min="0"
-                                                        step="0.01"
+                                                        dir="ltr"
                                                         value={form.data.price_per_unit_vip}
-                                                        onChange={e => form.setData('price_per_unit_vip', e.target.value)}
-                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                        onChange={e => form.setData('price_per_unit_vip', toAsciiDigits(e.target.value))}
+                                                        className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                                     />
                                                     <button
                                                         type="button"
-                                                        onClick={() => openPad(`سعر ${unitLabels[selectedCat.unit]} — VIP`, String(form.data.price_per_unit_vip || ''), v => form.setData('price_per_unit_vip', v))}
+                                                        onClick={() => openPad(`سعر ${unitLabels[selectedCat.unit]} — VIP`, String(form.data.price_per_unit_vip || ''), v => form.setData('price_per_unit_vip', toAsciiDigits(v)))}
                                                         className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                                         title="فتح لوحة الأرقام اللمسية"
                                                     >
@@ -398,18 +396,17 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                                     <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">حجم العبوة الأصلية (مليلتر)</label>
                                                     <div className="relative flex items-center">
                                                         <input
-                                                            type="number"
+                                                            type="text"
                                                             inputMode="decimal"
-                                                            min="0.01"
-                                                            step="0.01"
+                                                            dir="ltr"
                                                             value={form.data.bottle_volume}
-                                                            onChange={e => form.setData('bottle_volume', e.target.value)}
+                                                            onChange={e => form.setData('bottle_volume', toAsciiDigits(e.target.value))}
                                                             placeholder="200"
-                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                            className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                                         />
                                                         <button
                                                             type="button"
-                                                            onClick={() => openPad('حجم العبوة الأصلية (مليلتر)', String(form.data.bottle_volume || ''), v => form.setData('bottle_volume', v))}
+                                                            onClick={() => openPad('حجم العبوة الأصلية (مليلتر)', String(form.data.bottle_volume || ''), v => form.setData('bottle_volume', toAsciiDigits(v)))}
                                                             className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                                             title="فتح لوحة الأرقام اللمسية"
                                                         >
@@ -422,17 +419,16 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                                         <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — عادي</label>
                                                         <div className="relative flex items-center">
                                                             <input
-                                                                type="number"
+                                                                type="text"
                                                                 inputMode="decimal"
-                                                                min="0"
-                                                                step="0.01"
+                                                                dir="ltr"
                                                                 value={form.data.full_bottle_regular}
-                                                                onChange={e => form.setData('full_bottle_regular', e.target.value)}
-                                                                className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                onChange={e => form.setData('full_bottle_regular', toAsciiDigits(e.target.value))}
+                                                                className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => openPad('سعر العبوة كاملة — عادي', String(form.data.full_bottle_regular || ''), v => form.setData('full_bottle_regular', v))}
+                                                                onClick={() => openPad('سعر العبوة كاملة — عادي', String(form.data.full_bottle_regular || ''), v => form.setData('full_bottle_regular', toAsciiDigits(v)))}
                                                                 className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                                                 title="فتح لوحة الأرقام اللمسية"
                                                             >
@@ -444,17 +440,16 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                                         <label className="text-xs sm:text-sm font-black text-slate-700 dark:text-slate-300">سعر العبوة كاملة — VIP</label>
                                                         <div className="relative flex items-center">
                                                             <input
-                                                                type="number"
+                                                                type="text"
                                                                 inputMode="decimal"
-                                                                min="0"
-                                                                step="0.01"
+                                                                dir="ltr"
                                                                 value={form.data.full_bottle_vip}
-                                                                onChange={e => form.setData('full_bottle_vip', e.target.value)}
-                                                                className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                                                onChange={e => form.setData('full_bottle_vip', toAsciiDigits(e.target.value))}
+                                                                className="spatial-input h-14 rounded-[16px] px-4 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => openPad('سعر العبوة كاملة — VIP', String(form.data.full_bottle_vip || ''), v => form.setData('full_bottle_vip', v))}
+                                                                onClick={() => openPad('سعر العبوة كاملة — VIP', String(form.data.full_bottle_vip || ''), v => form.setData('full_bottle_vip', toAsciiDigits(v)))}
                                                                 className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                                                 title="فتح لوحة الأرقام اللمسية"
                                                             >
@@ -480,18 +475,17 @@ export const ProductFormDrawer: React.FC<ProductFormDrawerProps> = ({
                                     <label className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">حد تنبيه نقصان المخزون</label>
                                     <div className="relative flex items-center">
                                         <input
-                                            type="number"
+                                            type="text"
                                             inputMode="decimal"
-                                            min="0"
-                                            step="0.01"
+                                            dir="ltr"
                                             value={form.data.min_stock}
-                                            onChange={e => form.setData('min_stock', e.target.value)}
+                                            onChange={e => form.setData('min_stock', toAsciiDigits(e.target.value))}
                                             placeholder="0"
-                                            className="spatial-input h-14 rounded-[18px] px-5 pl-12 text-lg font-bold border-2 w-full cursor-pointer"
+                                            className="spatial-input h-14 rounded-[18px] px-5 pl-12 text-lg font-bold border-2 w-full font-mono cursor-pointer"
                                         />
                                         <button
                                             type="button"
-                                            onClick={() => openPad('حد تنبيه نقصان المخزون', String(form.data.min_stock || ''), v => form.setData('min_stock', v))}
+                                            onClick={() => openPad('حد تنبيه نقصان المخزون', String(form.data.min_stock || ''), v => form.setData('min_stock', toAsciiDigits(v)))}
                                             className="absolute left-2 w-10 h-10 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary flex items-center justify-center font-black active:scale-95 transition-all cursor-pointer"
                                             title="فتح لوحة الأرقام اللمسية"
                                         >

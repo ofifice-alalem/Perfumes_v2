@@ -18,6 +18,82 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductRepository extends Repository implements ProductRepositoryInterface
 {
+    public function paginated(int $perPage = 20)
+    {
+        return QueryBuilder::for($this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail']))
+            ->allowedFilters(
+                AllowedFilter::exact('category_id'),
+                AllowedFilter::exact('selling_type'),
+                AllowedFilter::exact('price_tier_id'),
+                AllowedFilter::callback('low_stock', fn($q, $val) => $val ? $q->whereColumn('stock', '<=', 'min_stock')->where('min_stock', '>', 0) : $q),
+                AllowedFilter::callback('search', function ($query, $value) {
+                    if (empty($value)) return;
+                    $terms = is_array($value) ? $value : explode(',', (string)$value);
+                    $query->where(function ($q) use ($terms) {
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if (empty($term)) continue;
+                            if (is_numeric($term)) {
+                                $q->orWhere('id', (int)$term)
+                                  ->orWhere('qrcode', 'like', "%{$term}%");
+                            } else {
+                                $q->orWhere('name', 'like', "%{$term}%")
+                                  ->orWhere('qrcode', 'like', "%{$term}%");
+                            }
+                        }
+                    });
+                }),
+                AllowedFilter::partial('name'),
+                AllowedFilter::exact('qrcode'),
+            )
+            ->allowedSorts('name', 'stock', 'created_at')
+            ->defaultSort('name')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    public function getFilteredProductsForPrint()
+    {
+        return QueryBuilder::for($this->model->with([
+            'category:id,name,unit,is_operational',
+            'productPrice:id,product_id,price_per_unit_regular,full_bottle_regular',
+            'priceTier:id,name',
+        ]))
+            ->allowedFilters(
+                AllowedFilter::exact('category_id'),
+                AllowedFilter::exact('selling_type'),
+                AllowedFilter::exact('price_tier_id'),
+                AllowedFilter::callback('low_stock', fn($q, $val) => $val ? $q->whereColumn('stock', '<=', 'min_stock')->where('min_stock', '>', 0) : $q),
+                AllowedFilter::callback('search', function ($query, $value) {
+                    if (empty($value)) return;
+                    $terms = is_array($value) ? $value : explode(',', (string)$value);
+                    $query->where(function ($q) use ($terms) {
+                        foreach ($terms as $term) {
+                            $term = trim($term);
+                            if (empty($term)) continue;
+                            if (is_numeric($term)) {
+                                $q->orWhere('id', (int)$term)
+                                  ->orWhere('qrcode', 'like', "%{$term}%");
+                            } else {
+                                $q->orWhere('name', 'like', "%{$term}%")
+                                  ->orWhere('qrcode', 'like', "%{$term}%");
+                            }
+                        }
+                    });
+                }),
+                AllowedFilter::partial('name'),
+                AllowedFilter::exact('qrcode'),
+            )
+            ->allowedSorts('name', 'stock', 'created_at')
+            ->defaultSort('name')
+            ->get(['id', 'name', 'qrcode', 'category_id', 'price_tier_id', 'selling_type', 'stock', 'min_stock']);
+    }
+
+    public function getMissingQrcodesCount(): int
+    {
+        return $this->model->whereNull('qrcode')->orWhere('qrcode', '')->count();
+    }
+
     public function allWithRelations(array $filters = [])
     {
         return QueryBuilder::for($this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail']))
