@@ -2,18 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from '@inertiajs/react';
 import { History, X, Printer, Eye, CheckCircle2, User, Clock, Package, RefreshCw } from 'lucide-react';
-
-export interface RecentInvoiceItem {
-    id: number;
-    invoice_number?: string | null;
-    customer_name: string;
-    user_name: string;
-    total: number;
-    paid_amount: number;
-    created_at: string;
-    items_count: number;
-    items_summary: string;
-}
+import { RecentInvoiceItem } from '@/types/pos';
 
 interface RecentInvoicesDrawerProps {
     isOpen: boolean;

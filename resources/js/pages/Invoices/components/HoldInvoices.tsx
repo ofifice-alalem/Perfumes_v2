@@ -1,21 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Clock, X, Play, Trash2 } from 'lucide-react';
-import { CartItem } from './Cart';
-import { PaymentEntry } from './PaymentDrawer';
-
-export interface HoldInvoice {
-    id: string;
-    customerId: string;
-    customerType: 'regular' | 'vip';
-    customerName: string;
-    notes: string;
-    cart: CartItem[];
-    payments: PaymentEntry[];
-    debtPayment: PaymentEntry | null;
-    timestamp: number;
-    total: number;
-}
+import { HoldInvoice } from '@/types/pos';
 
 interface HoldInvoicesProps {
     showHoldList: boolean;

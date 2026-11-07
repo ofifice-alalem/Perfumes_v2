@@ -3,34 +3,15 @@ import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { SizeSelect } from '@/components/ui/SizeSelect';
 import { SaleTypeModal } from '@/components/ui/SaleTypeModal';
 import { Plus, X, AlertCircle, RefreshCw } from 'lucide-react';
-
-export interface Category { id: number; name: string; unit: string; }
-export interface ProductPrice {
-    price_per_unit_regular: string; price_per_unit_vip: string;
-    full_bottle_regular: string | null; full_bottle_vip: string | null;
-}
-export interface OriginalDetail { bottle_volume: string; }
-export interface TierPrice { size_id: number; price_regular: string; price_vip: string; }
-export interface PriceTier { id: number; name: string; tier_prices?: TierPrice[]; }
-export interface Product {
-    id: number; name: string; stock: string; selling_type: string; qrcode?: string | null;
-    category: Category;
-    price_tier: PriceTier | null;
-    product_price: ProductPrice | null;
-    original_perfume_detail: OriginalDetail | null;
-}
-export interface Size { id: number; label: string; value: string; }
-
-export interface CartItem {
-    product_id: number;
-    product_name: string;
-    sale_type: string;
-    size_id: string;
-    size_label: string;
-    quantity: string;
-    unit_price: number;
-    line_total: number;
-}
+import { Product, Size, CartItem } from '@/types/pos';
+import {
+    fmt,
+    getProductDisplayPrice,
+    resolvePrice,
+    resolveQuantity,
+    resolveLineTotal,
+    resolveDefaultAndMin,
+} from '@/lib/posMath';
 
 export interface ProductSelectorProps {
     products?: Product[];
@@ -43,63 +24,6 @@ export interface ProductSelectorProps {
     openPad: (title: string, initial: string, cb: (v: string) => void, max?: number) => void;
     onRefreshCatalog?: () => void;
     isRefreshing?: boolean;
-}
-
-function fmt(n: number) {
-    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function getProductDisplayPrice(p: Product, isVip: boolean): string {
-    const pp = p.product_price;
-    if (!pp) return '';
-    const unitPrice = parseFloat(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular);
-    const fullPrice = pp.full_bottle_regular ? parseFloat(isVip ? (pp.full_bottle_vip ?? '0') : pp.full_bottle_regular) : 0;
-
-    if (unitPrice > 0) return `${fmt(unitPrice)} د.ل`;
-    if (fullPrice > 0) return `${fmt(fullPrice)} د.ل`;
-    if (p.price_tier?.tier_prices?.length) {
-        const prices = p.price_tier.tier_prices.map(t => parseFloat(isVip ? t.price_vip : t.price_regular)).filter(n => !isNaN(n) && n > 0);
-        if (prices.length > 0) {
-            const min = Math.min(...prices);
-            const max = Math.max(...prices);
-            return min === max ? `${fmt(min)} د.ل` : `${fmt(min)} - ${fmt(max)} د.ل`;
-        }
-    }
-    return '';
-}
-
-function resolvePrice(product: Product, saleType: string, sizeId: string, isVip: boolean): number {
-    const pp = product.product_price;
-    switch (saleType) {
-        case 'tier_decant': {
-            if (sizeId.startsWith('-custom-')) {
-                return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
-            }
-            const tp = product.price_tier?.tier_prices?.find(t => t.size_id === +sizeId);
-            return tp ? +(isVip ? tp.price_vip : tp.price_regular) : 0;
-        }
-        case 'unit_decant': return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
-        case 'full_bottle': return pp ? +(isVip ? (pp.full_bottle_vip ?? 0) : (pp.full_bottle_regular ?? 0)) : 0;
-        case 'unit_based': return pp ? +(isVip ? pp.price_per_unit_vip : pp.price_per_unit_regular) : 0;
-        default: return 0;
-    }
-}
-
-function resolveQuantity(product: Product, saleType: string, sizeId: string, manualQty: string, sizes: Size[]): number {
-    switch (saleType) {
-        case 'tier_decant':
-        case 'unit_decant': {
-            if (sizeId.startsWith('-custom-')) return +(sizeId.replace('-custom-', '')) || 0;
-            return +(sizes.find(s => s.id === +sizeId)?.value ?? 0);
-        }
-        case 'full_bottle': return product.original_perfume_detail ? +product.original_perfume_detail.bottle_volume : 0;
-        case 'unit_based': return +manualQty || 0;
-        default: return 0;
-    }
-}
-
-function resolveLineTotal(saleType: string, price: number, quantity: number): number {
-    return (saleType === 'full_bottle' || saleType === 'tier_decant') ? price : price * quantity;
 }
 
 export const ProductSelector: React.FC<ProductSelectorProps> = ({

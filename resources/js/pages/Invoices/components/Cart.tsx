@@ -1,40 +1,21 @@
 import React from 'react';
 import { ShoppingCart, Trash2, Package } from 'lucide-react';
-import { Product } from './ProductSelector';
-
-export interface CartItem {
-    product_id: number;
-    product_name: string;
-    sale_type: string;
-    size_id: string;
-    size_label: string;
-    quantity: string;
-    unit_price: number;
-    line_total: number;
-}
-
-export interface Size { id: number; label: string; value: string; }
+import { CartItem, Product, Size, PaymentMethod, PaymentEntry } from '@/types/pos';
+import { saleTypeLabels } from '@/lib/posMath';
 
 interface CartProps {
     cart: CartItem[];
     products: Product[];
     sizes: Size[];
-    paymentMethods: any[];
-    payments: any[];
+    paymentMethods: PaymentMethod[];
+    payments: PaymentEntry[];
     paymentManuallySet: boolean;
     setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    setPayments: React.Dispatch<React.SetStateAction<any[]>>;
+    setPayments: React.Dispatch<React.SetStateAction<PaymentEntry[]>>;
     openPad: (title: string, initial: string, cb: (v: string) => void, max?: number) => void;
     resolveQuantity: (product: Product, saleType: string, sizeId: string, manualQty: string, sizes: Size[]) => number;
     resolveLineTotal: (saleType: string, price: number, quantity: number) => number;
 }
-
-const saleTypeLabels: Record<string, string> = {
-    tier_decant: 'زيتي',
-    unit_decant: 'أصلي - تقسيم',
-    full_bottle: 'عبوة كاملة',
-    unit_based: 'بالوحدة',
-};
 
 export const Cart: React.FC<CartProps> = ({
     cart,

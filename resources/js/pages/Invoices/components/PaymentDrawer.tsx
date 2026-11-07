@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Wallet, X, Plus, Edit, Trash2, Check, Printer, ChevronDown, RefreshCw } from 'lucide-react';
-import { CartItem } from './Cart';
-
-export interface PaymentEntry {
-    payment_method_id: string;
-    method_name: string;
-    amount: string;
-}
-
-export interface PaymentMethod {
-    id: number;
-    name: string;
-}
+import { CartItem, Customer, EditInvoice, PaymentEntry, PaymentMethod } from '@/types/pos';
 
 interface PaymentDrawerProps {
     showPaymentDrawer: boolean;
@@ -22,12 +11,12 @@ interface PaymentDrawerProps {
     debtPayment: PaymentEntry | null;
     paymentMethods: PaymentMethod[];
     customerId: string;
-    selectedCustomer: any;
+    selectedCustomer: Customer | null;
     originalDebt: number;
     isCashCustomer: boolean;
     customerType: string;
     isEditMode: boolean;
-    editInvoice: any;
+    editInvoice?: EditInvoice;
     total: number;
     grandTotal: number;
     totalPaid: number;

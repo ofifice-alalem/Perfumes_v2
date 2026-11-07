@@ -46,10 +46,10 @@ class InvoiceController extends Controller
     {
         return Inertia::render('Invoices/Create', [
             'customers'      => fn() => Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'total_debt']),
-            'products'       => fn() => $this->getCatalogWithLiveStock(),
+            'products'       => fn() => $this->invoices->getPosCatalog(),
             'sizes'          => fn() => \Illuminate\Support\Facades\Cache::remember('pos_sizes_list', 86400, fn() => Size::orderBy('label')->get(['id', 'label', 'value', 'unit'])->toArray()),
             'paymentMethods' => fn() => \Illuminate\Support\Facades\Cache::remember('pos_payment_methods_list', 86400, fn() => PaymentMethod::where('is_active', true)->orderBy('name')->get(['id', 'name'])->toArray()),
-            'recentInvoices' => fn() => $this->getFormattedRecentInvoices(),
+            'recentInvoices' => fn() => $this->invoices->getRecentInvoicesFormatted(4),
         ]);
     }
 
@@ -59,7 +59,7 @@ class InvoiceController extends Controller
         \Illuminate\Support\Facades\Cache::forget('pos_sizes_list');
         \Illuminate\Support\Facades\Cache::forget('pos_payment_methods_list');
 
-        $catalog = $this->getCatalogWithLiveStock();
+        $catalog = $this->invoices->getPosCatalog();
 
         return response()->json([
             'success'  => true,
@@ -67,78 +67,6 @@ class InvoiceController extends Controller
             'count'    => count($catalog),
             'products' => $catalog,
         ]);
-    }
-
-    protected function getCatalogWithLiveStock(): array
-    {
-        $catalog = \Illuminate\Support\Facades\Cache::get('pos_products_catalog_base');
-
-        if (empty($catalog)) {
-            $catalog = Product::with([
-                'category:id,name,unit,is_operational',
-                'priceTier:id,name',
-                'priceTier.tierPrices:id,tier_id,size_id,price_regular,price_vip',
-                'priceTier.tierPrices.size:id,label,value,unit',
-                'productPrice:id,product_id,price_per_unit_regular,price_per_unit_vip,full_bottle_regular,full_bottle_vip',
-                'originalPerfumeDetail:id,product_id,bottle_volume',
-            ])
-            ->whereHas('category', fn($q) => $q->where('is_operational', false))
-            ->orderBy('name')
-            ->get(['id', 'name', 'category_id', 'price_tier_id', 'selling_type', 'qrcode'])
-            ->toArray();
-
-            if (!empty($catalog)) {
-                \Illuminate\Support\Facades\Cache::put('pos_products_catalog_base', $catalog, 86400);
-            }
-        }
-
-        $liveStocks = Product::pluck('stock', 'id');
-        foreach ($catalog as &$p) {
-            $p['stock'] = (string)($liveStocks[$p['id']] ?? 0);
-        }
-        unset($p);
-
-        return $catalog;
-    }
-
-    protected function getFormattedRecentInvoices(): array
-    {
-        $recentInvoices = DB::select("
-            SELECT 
-                i.id,
-                i.invoice_number,
-                COALESCE(c.name, 'زبون نقدي') as customer_name,
-                COALESCE(u.name, 'الكاشير') as user_name,
-                CAST(i.total AS DOUBLE) as total,
-                CAST(i.paid_amount AS DOUBLE) as paid_amount,
-                DATE_FORMAT(i.created_at, '%Y-%m-%d %h:%i %p') as created_at
-            FROM invoices i
-            LEFT JOIN customers c ON c.id = i.customer_id
-            LEFT JOIN users u ON u.id = i.user_id
-            WHERE i.deleted_at IS NULL
-            ORDER BY i.id DESC
-            LIMIT 4
-        ");
-
-        $invoiceIds = array_column($recentInvoices, 'id');
-        if (empty($invoiceIds)) {
-            return [];
-        }
-
-        $items = DB::table('invoice_items as ii')
-            ->leftJoin('products as p', 'p.id', '=', 'ii.product_id')
-            ->leftJoin('sizes as s', 's.id', '=', 'ii.size_id')
-            ->whereIn('ii.invoice_id', $invoiceIds)
-            ->select('ii.invoice_id', 'p.name as product_name', 's.label as size_label')
-            ->get()
-            ->groupBy('invoice_id');
-
-        return array_map(function($inv) use ($items) {
-            $invItems = $items->get($inv->id, collect());
-            $inv->items_count = $invItems->count();
-            $inv->items_summary = $invItems->take(2)->map(fn($it) => ($it->product_name ?? 'منتج') . ($it->size_label ? " ({$it->size_label})" : ''))->join('، ');
-            return (array)$inv;
-        }, $recentInvoices);
     }
 
     public function store(StoreInvoiceRequest $request, CreateInvoiceAction $action): RedirectResponse

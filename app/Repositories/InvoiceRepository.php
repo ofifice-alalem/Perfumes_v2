@@ -83,4 +83,82 @@ class InvoiceRepository extends Repository implements InvoiceRepositoryInterface
 
         return $invoice;
     }
+
+    public function getRecentInvoicesFormatted(int $limit = 4): array
+    {
+        $recentInvoices = \Illuminate\Support\Facades\DB::select("
+            SELECT 
+                i.id,
+                i.invoice_number,
+                COALESCE(c.name, 'زبون نقدي') as customer_name,
+                COALESCE(u.name, 'الكاشير') as user_name,
+                CAST(i.total AS DOUBLE) as total,
+                CAST(i.paid_amount AS DOUBLE) as paid_amount,
+                DATE_FORMAT(i.created_at, '%Y-%m-%d %h:%i %p') as created_at
+            FROM invoices i
+            LEFT JOIN customers c ON c.id = i.customer_id
+            LEFT JOIN users u ON u.id = i.user_id
+            WHERE i.deleted_at IS NULL
+            ORDER BY i.id DESC
+            LIMIT ?
+        ", [$limit]);
+
+        $invoiceIds = array_column($recentInvoices, 'id');
+        if (empty($invoiceIds)) {
+            return [];
+        }
+
+        $items = \Illuminate\Support\Facades\DB::table('invoice_items as ii')
+            ->leftJoin('products as p', 'p.id', '=', 'ii.product_id')
+            ->leftJoin('sizes as s', 's.id', '=', 'ii.size_id')
+            ->whereIn('ii.invoice_id', $invoiceIds)
+            ->select('ii.invoice_id', 'p.name as product_name', 's.label as size_label')
+            ->get()
+            ->groupBy('invoice_id');
+
+        return array_map(function($inv) use ($items) {
+            $invItems = $items->get($inv->id, collect());
+            $inv->items_count = $invItems->count();
+            $inv->items_summary = $invItems->take(2)->map(fn($it) => ($it->product_name ?? 'منتج') . ($it->size_label ? " ({$it->size_label})" : ''))->join('، ');
+            return (array)$inv;
+        }, $recentInvoices);
+    }
+
+    public function getPosCatalog(): array
+    {
+        $catalog = \Illuminate\Support\Facades\Cache::get('pos_products_catalog_base');
+
+        if (empty($catalog)) {
+            $catalog = \App\Models\Product::with([
+                'category:id,name,unit,is_operational',
+                'priceTier:id,name',
+                'priceTier.tierPrices:id,tier_id,size_id,price_regular,price_vip',
+                'priceTier.tierPrices.size:id,label,value,unit',
+                'productPrice:id,product_id,price_per_unit_regular,price_per_unit_vip,full_bottle_regular,full_bottle_vip',
+                'originalPerfumeDetail:id,product_id,bottle_volume',
+            ])
+            ->whereHas('category', fn($q) => $q->where('is_operational', false))
+            ->orderBy('name')
+            ->get(['id', 'name', 'category_id', 'price_tier_id', 'selling_type', 'qrcode'])
+            ->toArray();
+
+            if (!empty($catalog)) {
+                \Illuminate\Support\Facades\Cache::put('pos_products_catalog_base', $catalog, 86400);
+            }
+        }
+
+        if (empty($catalog)) {
+            return [];
+        }
+
+        // Targeted stock pluck only for the catalog products
+        $catalogIds = array_column($catalog, 'id');
+        $liveStocks = \App\Models\Product::whereIn('id', $catalogIds)->pluck('stock', 'id');
+        foreach ($catalog as &$p) {
+            $p['stock'] = (string)($liveStocks[$p['id']] ?? 0);
+        }
+        unset($p);
+
+        return $catalog;
+    }
 }
