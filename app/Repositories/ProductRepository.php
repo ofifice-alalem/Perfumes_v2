@@ -597,15 +597,20 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
             $prodSheet = $spreadsheet->getSheetByName('المنتجات') ?: $spreadsheet->getSheet(0);
             if ($prodSheet) {
                 $rows = $prodSheet->toArray();
+                $batchQrcodes = [];
+
                 for ($i = 1; $i < count($rows); $i++) {
                     $row = $rows[$i];
-                    $name = trim($row[1] ?? '');
+                    $name = trim(preg_replace('/\s+/u', ' ', (string)($row[1] ?? '')));
                     if (empty($name)) continue;
 
                     $catName = trim($row[2] ?? '');
                     $sellingTypeStr = trim($row[3] ?? '');
                     $tierName = trim($row[4] ?? '');
-                    $qrcode = trim($row[5] ?? '') ?: null;
+
+                    $rawQr = trim((string)($row[5] ?? ''));
+                    $qrcode = (!empty($rawQr) && !in_array(strtolower($rawQr), ['null', 'none', '-', 'undefined', '0'], true)) ? $rawQr : null;
+
                     $stock = isset($row[6]) && $row[6] !== '' ? (float)$row[6] : 0;
                     $minStock = isset($row[7]) && $row[7] !== '' ? (float)$row[7] : 0;
 
@@ -658,20 +663,41 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                     $existingProduct = \App\Models\Product::where('name', $name)->first();
                     if ($mode === 'add_only' && $existingProduct) {
                         $stats['skipped']++;
+                        if (!empty($existingProduct->qrcode)) {
+                            $batchQrcodes[$existingProduct->qrcode] = $existingProduct->id;
+                        }
                         continue; // تخطي المنتجات المشتركة تماماً، وإضافة المنتجات الجديدة فقط
                     }
 
                     $product = $existingProduct;
 
-                    // التعامل الذكي مع QR: إذا تُرك فارغاً وكان المنتج موجوداً مسبقاً يحتفظ بكوده، وإن كان جديداً يُولّد له كود فريد
+                    // دالة التحقق من أن كود QR مستخدم مسبقاً في قاعدة البيانات أو في نفس دفعة الاستيراد
+                    $isQrTaken = function (?string $code, ?int $ignoreProductId = null) use (&$batchQrcodes): bool {
+                        if (empty($code)) return false;
+                        if (isset($batchQrcodes[$code]) && $batchQrcodes[$code] !== $ignoreProductId) {
+                            return true;
+                        }
+                        return \App\Models\Product::where('qrcode', $code)
+                            ->when($ignoreProductId, fn($q) => $q->where('id', '!=', $ignoreProductId))
+                            ->exists();
+                    };
+
+                    // التعامل الذكي مع QR: منع التكرار وتوليد كود فريد عند وجود تضارب (SQLSTATE 1062)
                     $finalQr = $qrcode;
                     if (empty($finalQr)) {
-                        if ($product && !empty($product->qrcode)) {
+                        if ($product && !empty($product->qrcode) && !$isQrTaken($product->qrcode, $product->id)) {
                             $finalQr = $product->qrcode;
                         } else {
                             do {
                                 $finalQr = (string)random_int(1000000000, 9999999999);
-                            } while (\App\Models\Product::where('qrcode', $finalQr)->exists());
+                            } while ($isQrTaken($finalQr, $product?->id));
+                        }
+                    } else {
+                        // إذا زُوّد كود QR من ملف الإكسل ولكنه متضارب مع منتج آخر مسجل أو مكرر في الشيت
+                        if ($isQrTaken($finalQr, $product?->id)) {
+                            do {
+                                $finalQr = (string)random_int(1000000000, 9999999999);
+                            } while ($isQrTaken($finalQr, $product?->id));
                         }
                     }
 
@@ -689,6 +715,10 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                         $product->update($productData);
                     } else {
                         $product = \App\Models\Product::create($productData);
+                    }
+
+                    if (!empty($finalQr)) {
+                        $batchQrcodes[$finalQr] = $product->id;
                     }
 
                     // Handle Unit Priced Product Details
