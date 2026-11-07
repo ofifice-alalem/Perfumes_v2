@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ModernMultiSelect } from '@/components/ui/SpatialComponents';
-import { SlidersHorizontal, X, AlertTriangle, Check } from 'lucide-react';
-import { Product, Category, PriceTier, fmt } from '../types';
+import { SlidersHorizontal, X, AlertTriangle, Check, Search } from 'lucide-react';
+import { Category, PriceTier } from '../types';
 
 interface ProductFilterDrawerProps {
     open: boolean;
     onClose: () => void;
-    products?: Product[];
     categories: Category[];
     tiers: PriceTier[];
     appliedCat: number | null;
@@ -20,7 +18,6 @@ interface ProductFilterDrawerProps {
 export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     open,
     onClose,
-    products = [],
     categories,
     tiers,
     appliedCat,
@@ -33,6 +30,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     const [draftTier, setDraftTier] = useState<number | null>(appliedTier);
     const [draftSearchKeywords, setDraftSearchKeywords] = useState<string[]>(appliedKeywords);
     const [draftLowStockOnly, setDraftLowStockOnly] = useState<boolean>(appliedLowStock);
+    const [keywordInput, setKeywordInput] = useState<string>('');
 
     useEffect(() => {
         if (open) {
@@ -40,6 +38,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
             setDraftTier(appliedTier);
             setDraftSearchKeywords([...appliedKeywords]);
             setDraftLowStockOnly(appliedLowStock);
+            setKeywordInput('');
         }
     }, [open, appliedCat, appliedTier, appliedKeywords, appliedLowStock]);
 
@@ -47,13 +46,17 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
 
     const hasDraftFilter = !!draftCat || !!draftTier || draftSearchKeywords.length > 0 || draftLowStockOnly;
 
-    // Filter preview calculation
-    const draftFilteredCount = products.filter(p => {
-        if (draftCat && p.category.id !== draftCat) return false;
-        if (draftTier && (p.price_tier?.id !== draftTier && p.price_tier_id !== draftTier)) return false;
-        if (draftLowStockOnly && !(Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0)) return false;
-        return true;
-    }).length;
+    const handleAddKeyword = () => {
+        const trimmed = keywordInput.trim();
+        if (trimmed && !draftSearchKeywords.includes(trimmed)) {
+            setDraftSearchKeywords([...draftSearchKeywords, trimmed]);
+            setKeywordInput('');
+        }
+    };
+
+    const handleRemoveKeyword = (kw: string) => {
+        setDraftSearchKeywords(draftSearchKeywords.filter(k => k !== kw));
+    };
 
     return createPortal(
         <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
@@ -84,50 +87,67 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
 
                 {/* Drawer Content */}
                 <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-7 flex flex-col gap-6 scrollbar-none">
-                    {/* حاوية 1: البحث والمعلومات الأساسية */}
+                    {/* حاوية 1: البحث بالكلمات المفتاحية وكود QR */}
                     <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
                         <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
                             <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
-                            <span className="text-slate-900 dark:text-white tracking-wide">البحث والمعلومات الأساسية</span>
+                            <span className="text-slate-900 dark:text-white tracking-wide">البحث بالاسم أو كود QR</span>
                         </h4>
 
                         <div className="flex flex-col gap-3">
-                            <label className="text-sm sm:text-base font-black text-slate-700 dark:text-slate-300 select-none">
-                                البحث بالمنتج (اختيار متعدد / كلمات مفتاحية / كود QR)
-                            </label>
-                            <div className="flex flex-col gap-3">
-                                <ModernMultiSelect
-                                    label=""
-                                    placeholder="اختر منتجات أو اكتب كلمة مثل «لويس» أو كود QR..."
-                                    values={draftSearchKeywords}
-                                    options={products.map(p => ({
-                                        value: String(p.id),
-                                        label: p.name,
-                                        badge: p.category.name,
-                                        meta: fmt(p.stock),
-                                        searchKey: p.qrcode ? `${p.name} ${p.qrcode} ${p.id}` : `${p.name} ${p.id}`,
-                                    }))}
-                                    onSelect={setDraftSearchKeywords}
-                                    allowFreeText={true}
-                                />
-                                {draftSearchKeywords.length > 0 && (
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                            تم تحديد {draftSearchKeywords.length} عنصر للبحث
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => setDraftSearchKeywords([])}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all font-black text-xs border border-red-500/30 cursor-pointer"
-                                        >
-                                            <X className="w-3.5 h-3.5" /> مسح محددات البحث
-                                        </button>
-                                    </div>
-                                )}
+                            <div className="relative flex items-center gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        value={keywordInput}
+                                        onChange={e => setKeywordInput(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleAddKeyword();
+                                            }
+                                        }}
+                                        placeholder="اكتب كلمة بحث أو كود الـ QR واضغط إضافة..."
+                                        className="spatial-input h-14 rounded-[18px] px-5 pr-12 text-base font-bold border-2 w-full"
+                                    />
+                                    <Search className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleAddKeyword}
+                                    disabled={!keywordInput.trim()}
+                                    className="h-14 px-5 rounded-[18px] bg-primary text-white font-black text-sm active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                                >
+                                    إضافة +
+                                </button>
                             </div>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 select-none">
-                                💡 يمكنك النقر على العطور لاختيار أكثر من منتج (Checkboxes)، أو كتابة أي كلمة مثل "لويس" والضغط على إضافة للبحث عن كل المنتجات المطابقة.
-                            </p>
+
+                            {draftSearchKeywords.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 pt-2">
+                                    {draftSearchKeywords.map(kw => (
+                                        <span
+                                            key={kw}
+                                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-black text-sm"
+                                        >
+                                            <span>{kw}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveKeyword(kw)}
+                                                className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
+                                            >
+                                                <X className="w-3.5 h-3.5 text-red-500" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => setDraftSearchKeywords([])}
+                                        className="text-xs font-black text-red-500 hover:underline px-2 cursor-pointer"
+                                    >
+                                        مسح الكل
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -140,6 +160,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button
+                                type="button"
                                 onClick={() => { setDraftCat(null); setDraftTier(null); }}
                                 className={`flex items-center justify-between px-5 h-16 sm:h-18 rounded-[20px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation shadow-sm ${
                                     !draftCat
@@ -148,16 +169,13 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                                 }`}
                             >
                                 <span>جميع التصنيفات</span>
-                                <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                    !draftCat ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                }`}>{products.length}</span>
                             </button>
                             {categories.map(cat => {
-                                const count = products.filter(p => p.category.id === cat.id).length;
                                 const active = draftCat === cat.id;
                                 return (
                                     <button
                                         key={cat.id}
+                                        type="button"
                                         onClick={() => {
                                             setDraftCat(cat.id);
                                             if (!cat.name.includes('زيت')) {
@@ -171,9 +189,6 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                                         }`}
                                     >
                                         <span className="truncate">{cat.name}</span>
-                                        <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                            active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                        }`}>{count}</span>
                                     </button>
                                 );
                             })}
@@ -183,10 +198,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                     {/* حاوية فرعية: اختيار فئة السعر (Tier) */}
                     {(() => {
                         const selectedDraftCat = categories.find(c => c.id === draftCat);
-                        const isOilOrTierCat = !!selectedDraftCat && (
-                            selectedDraftCat.name.includes('زيت') ||
-                            products.some(p => p.category.id === draftCat && (p.price_tier !== null || p.price_tier_id !== null))
-                        );
+                        const isOilOrTierCat = !!selectedDraftCat && selectedDraftCat.name.includes('زيت');
                         if (!isOilOrTierCat) return null;
 
                         return (
@@ -218,14 +230,8 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                                         }`}
                                     >
                                         <span>جميع التيرات</span>
-                                        <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                            !draftTier ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                        }`}>
-                                            {products.filter(p => p.category.id === draftCat).length}
-                                        </span>
                                     </button>
                                     {tiers.map(tier => {
-                                        const count = products.filter(p => p.category.id === draftCat && (p.price_tier?.id === tier.id || p.price_tier_id === tier.id)).length;
                                         const active = draftTier === tier.id;
                                         return (
                                             <button
@@ -239,11 +245,6 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                                                 }`}
                                             >
                                                 <span className="truncate">{tier.name}</span>
-                                                <span className={`text-xs sm:text-sm font-black px-3 py-1.5 rounded-xl ${
-                                                    active ? 'bg-white/30 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300'
-                                                }`}>
-                                                    {count}
-                                                </span>
                                             </button>
                                         );
                                     })}
@@ -260,6 +261,7 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                         </h4>
 
                         <button
+                            type="button"
                             onClick={() => setDraftLowStockOnly(!draftLowStockOnly)}
                             className={`flex items-center justify-between px-6 h-18 sm:h-20 rounded-[22px] font-black text-base sm:text-lg transition-all active:scale-[0.98] border-2 cursor-pointer select-none touch-manipulation ${
                                 draftLowStockOnly
@@ -271,11 +273,6 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                                 <AlertTriangle className={`w-6 h-6 ${draftLowStockOnly ? 'text-white' : 'text-amber-500'}`} />
                                 <span>المنتجات التي أوشكت على النفاد</span>
                             </div>
-                            <span className={`text-xs sm:text-sm font-black px-3.5 py-1.5 rounded-xl ${
-                                draftLowStockOnly ? 'bg-white/30 text-white' : 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                            }`}>
-                                {products.filter(p => Number(p.stock) <= Number(p.min_stock) && Number(p.min_stock) > 0).length} منتج
-                            </span>
                         </button>
                     </div>
                 </div>

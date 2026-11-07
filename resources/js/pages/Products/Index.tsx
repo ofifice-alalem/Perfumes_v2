@@ -168,8 +168,19 @@ export default function ProductsIndex({ products, categories, tiers, missingQrCo
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">إدارة المنتجات</h1>
-                            <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-black text-xs border border-primary/20">
-                                إجمالي: {products.total} منتج
+                            <span className="px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-black text-sm border border-primary/20 flex items-center gap-1.5">
+                                {hasActiveFilter ? (
+                                    <>
+                                        <span>نتائج الفلترة:</span>
+                                        <strong className="text-base font-mono">{products.total}</strong>
+                                        <span className="text-xs opacity-75">منتج مطابِق</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>إجمالي المنتجات:</span>
+                                        <strong className="text-base font-mono">{products.total}</strong>
+                                    </>
+                                )}
                             </span>
                         </div>
                         <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-slate-400 mt-1">
@@ -635,7 +646,6 @@ export default function ProductsIndex({ products, categories, tiers, missingQrCo
             <ProductFilterDrawer
                 open={filterDrawerOpen}
                 onClose={() => setFilterDrawerOpen(false)}
-                products={productItems}
                 categories={categories}
                 tiers={tiers}
                 appliedCat={filterCat}
