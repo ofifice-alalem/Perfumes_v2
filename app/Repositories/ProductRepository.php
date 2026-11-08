@@ -94,6 +94,28 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
         return $this->model->whereNull('qrcode')->orWhere('qrcode', '')->count();
     }
 
+    public function searchSuggestions(string $query, int $limit = 12)
+    {
+        $term = trim($query);
+        if ($term === '') {
+            return collect();
+        }
+
+        return $this->model
+            ->select(['id', 'name', 'qrcode', 'category_id'])
+            ->with('category:id,name')
+            ->where(function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                  ->orWhere('qrcode', 'like', "%{$term}%");
+                if (is_numeric($term)) {
+                    $q->orWhere('id', (int)$term);
+                }
+            })
+            ->orderBy('name')
+            ->limit($limit)
+            ->get();
+    }
+
     public function allWithRelations(array $filters = [])
     {
         return QueryBuilder::for($this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail']))

@@ -9,6 +9,7 @@ interface ProductRepositoryInterface extends Repository
     public function paginated(int $perPage = 20);
     public function getFilteredProductsForPrint();
     public function getMissingQrcodesCount(): int;
+    public function searchSuggestions(string $query, int $limit = 12);
     public function allWithRelations(array $filters = []);
     public function findWithRelations(int $id);
     public function createWithRelations(array $data);

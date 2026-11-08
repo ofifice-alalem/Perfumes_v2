@@ -31,6 +31,9 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     const [draftSearchKeywords, setDraftSearchKeywords] = useState<string[]>(appliedKeywords);
     const [draftLowStockOnly, setDraftLowStockOnly] = useState<boolean>(appliedLowStock);
     const [keywordInput, setKeywordInput] = useState<string>('');
+    const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; qrcode: string | null; category?: { name: string } }>>([]);
+    const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
+    const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
 
     useEffect(() => {
         if (open) {
@@ -39,18 +42,51 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
             setDraftSearchKeywords([...appliedKeywords]);
             setDraftLowStockOnly(appliedLowStock);
             setKeywordInput('');
+            setSuggestions([]);
+            setShowSuggestions(false);
         }
     }, [open, appliedCat, appliedTier, appliedKeywords, appliedLowStock]);
+
+    // Live suggestion fetch with debounce
+    useEffect(() => {
+        const query = keywordInput.trim();
+        if (query.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setLoadingSuggestions(true);
+            try {
+                const res = await fetch(`/products/search-suggestions?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if (data.success && Array.isArray(data.suggestions)) {
+                    setSuggestions(data.suggestions);
+                    setShowSuggestions(data.suggestions.length > 0);
+                }
+            } catch (err) {
+                console.error('Failed to fetch search suggestions', err);
+            } finally {
+                setLoadingSuggestions(false);
+            }
+        }, 250);
+
+        return () => clearTimeout(timer);
+    }, [keywordInput]);
 
     if (!open) return null;
 
     const hasDraftFilter = !!draftCat || !!draftTier || draftSearchKeywords.length > 0 || draftLowStockOnly;
 
-    const handleAddKeyword = () => {
-        const trimmed = keywordInput.trim();
+    const handleAddKeyword = (val?: string) => {
+        const raw = val !== undefined ? val : keywordInput;
+        const trimmed = raw.trim();
         if (trimmed && !draftSearchKeywords.includes(trimmed)) {
             setDraftSearchKeywords([...draftSearchKeywords, trimmed]);
             setKeywordInput('');
+            setSuggestions([]);
+            setShowSuggestions(false);
         }
     };
 
@@ -95,31 +131,72 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
                         </h4>
 
                         <div className="flex flex-col gap-3">
-                            <div className="relative flex items-center gap-2">
-                                <div className="relative flex-1">
-                                    <input
-                                        type="text"
-                                        value={keywordInput}
-                                        onChange={e => setKeywordInput(e.target.value)}
-                                        onKeyDown={e => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                handleAddKeyword();
-                                            }
-                                        }}
-                                        placeholder="اكتب كلمة بحث أو كود الـ QR واضغط إضافة..."
-                                        className="spatial-input h-14 rounded-[18px] px-5 pr-12 text-base font-bold border-2 w-full"
-                                    />
-                                    <Search className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                            <div className="relative">
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="text"
+                                            value={keywordInput}
+                                            onChange={e => setKeywordInput(e.target.value)}
+                                            onFocus={() => {
+                                                if (suggestions.length > 0) setShowSuggestions(true);
+                                            }}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    handleAddKeyword();
+                                                }
+                                            }}
+                                            placeholder="اكتب اسم العطر أو كود الـ QR للبحث المباشر..."
+                                            className="spatial-input h-14 rounded-[18px] px-5 pr-12 text-base font-bold border-2 w-full"
+                                        />
+                                        <Search className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAddKeyword()}
+                                        disabled={!keywordInput.trim()}
+                                        className="h-14 px-5 rounded-[18px] bg-primary text-white font-black text-sm active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                                    >
+                                        إضافة +
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAddKeyword}
-                                    disabled={!keywordInput.trim()}
-                                    className="h-14 px-5 rounded-[18px] bg-primary text-white font-black text-sm active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
-                                >
-                                    إضافة +
-                                </button>
+
+                                {/* قائمة الاقتراحات المنسدلة الحية */}
+                                {showSuggestions && suggestions.length > 0 && (
+                                    <div className="absolute top-full mt-2 left-0 right-0 z-50 bg-white dark:bg-slate-800 rounded-[20px] border-2 border-slate-300 dark:border-slate-700 shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <div className="p-2 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40 text-xs font-black text-slate-500 flex justify-between items-center">
+                                            <span>المنتجات المطابقة (اضغط للإضافة):</span>
+                                            {loadingSuggestions && <span className="animate-pulse text-primary">جاري البحث...</span>}
+                                        </div>
+                                        <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                                            {suggestions.map(s => (
+                                                <button
+                                                    key={s.id}
+                                                    type="button"
+                                                    onClick={() => handleAddKeyword(s.name)}
+                                                    className="w-full text-right px-4 py-3 hover:bg-primary/10 dark:hover:bg-primary/20 flex items-center justify-between transition-colors cursor-pointer group"
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors text-base">
+                                                            {s.name}
+                                                        </span>
+                                                        {s.category && (
+                                                            <span className="text-xs px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold">
+                                                                {s.category.name}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {s.qrcode && (
+                                                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500 dir-ltr bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                                            {s.qrcode}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {draftSearchKeywords.length > 0 && (

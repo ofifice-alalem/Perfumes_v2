@@ -38,6 +38,16 @@ class ProductController extends Controller
         ]);
     }
 
+    public function searchSuggestions(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    {
+        $q = (string)$request->query('q', '');
+        $items = $this->products->searchSuggestions($q, 15);
+        return response()->json([
+            'success'     => true,
+            'suggestions' => $items,
+        ]);
+    }
+
     public function store(ProductRequest $request)
     {
         $this->products->createWithRelations($request->validated());
