@@ -5,9 +5,12 @@ namespace Tests\Unit;
 use Tests\TestCase;
 use App\Repositories\ReportRepository;
 use App\Repositories\Contracts\ReportRepositoryInterface;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 class ReportRepositoryTest extends TestCase
 {
+    use RefreshDatabase;
+
     private ReportRepositoryInterface $repository;
 
     protected function setUp(): void

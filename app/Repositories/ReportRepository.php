@@ -3,52 +3,22 @@
 namespace App\Repositories;
 
 use App\Repositories\Contracts\ReportRepositoryInterface;
+use App\Services\Reports\ReportExcelExportService;
+use App\Services\Reports\ReportPdfExportService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportRepository implements ReportRepositoryInterface
 {
-    private function tryCppExport(string $title, string $dateFrom, string $dateTo, string $productsStr, string $entityLabel, string $mode, array $lines, string $filename): bool
-    {
-        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx.exe') : base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx');
-        if (!file_exists($cppExe)) return false;
+    protected ReportExcelExportService $excelExporter;
+    protected ReportPdfExportService $pdfExporter;
 
-        $storageDir = storage_path('app');
-        if (!file_exists($storageDir)) { @mkdir($storageDir, 0777, true); }
-
-        $tmpTsv  = $storageDir . DIRECTORY_SEPARATOR . 'cpp_db_' . uniqid() . '.tsv';
-        $tmpXlsx = $storageDir . DIRECTORY_SEPARATOR . 'cpp_exp_' . uniqid() . '.xlsx';
-
-        $f = fopen($tmpTsv, 'w');
-        fwrite($f, "#META\t" . $dateFrom . "\t" . $dateTo . "\t" . $productsStr . "\t" . now()->format('Y-m-d H:i') . "\t" . $title . "\t" . $entityLabel . "\t" . $mode . "\n");
-
-        foreach ($lines as $line) {
-            fwrite($f, (is_array($line) ? implode("\t", $line) : $line) . "\n");
-        }
-        fclose($f);
-
-        $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpTsv . '"';
-        exec($cmdCpp, $out, $code);
-
-        if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
-            header('X-Export-Engine: C++ Static Binary Exporter');
-            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Content-Length: ' . filesize($tmpXlsx));
-            readfile($tmpXlsx);
-            @unlink($tmpTsv);
-            @unlink($tmpXlsx);
-            exit;
-        }
-
-        @unlink($tmpTsv);
-        @unlink($tmpXlsx);
-        return false;
+    public function __construct(
+        ?ReportExcelExportService $excelExporter = null,
+        ?ReportPdfExportService $pdfExporter = null
+    ) {
+        $this->excelExporter = $excelExporter ?? app(ReportExcelExportService::class);
+        $this->pdfExporter = $pdfExporter ?? app(ReportPdfExportService::class);
     }
 
     public function productMovement(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 30): array
@@ -282,6 +252,7 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function loadMoreProductMovements(
         int $productId,
         int $offset = 30,
@@ -306,178 +277,16 @@ class ReportRepository implements ReportRepositoryInterface
 
     // ─── Excel ───────────────────────────────────────────────────────────────
 
+
     public function exportProductMovementExcel(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $product = DB::table('products')
-            ->join('categories', 'categories.id', '=', 'products.category_id')
-            ->where('products.id', $productId)
-            ->select('products.name', 'categories.unit')
-            ->first();
-
-        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
-
-        $typeLabels = [
-            'purchase'   => 'شراء',
-            'sale'       => 'بيع',
-            'return_in'  => 'مرتجع عميل',
-            'return_out' => 'مرتجع مورد',
-            'waste'      => 'تالف',
-            'opening_balance' => 'رصيد افتتاحي',
-        ];
-
-        $filename = 'product-movement-' . now()->format('Y-m-d') . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(10, 1);
-        $options->setColumnWidth(25, 2);
-        $options->setColumnWidth(25, 3);
-        $options->setColumnWidth(25, 4);
-        $options->setColumnWidth(25, 5);
-        $options->setColumnWidth(25, 6);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير حركة الصنف والمنتج'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتج', $product->name ?? ''], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['رصيد أول الفترة', $data['opening_stock'] . ' ' . ($product->unit ?? '')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['رصيد آخر الفترة', $data['closing_stock'] . ' ' . ($product->unit ?? '')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $headers = ['#', 'التاريخ', 'النوع', 'الكمية', 'السعر (د.ل)', 'المرجع', 'الرصيد'];
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle($headers, $tblHeaderStyle));
-
-        foreach ($data['movements'] as $i => $m) {
-            $isIn = $m['quantity'] > 0;
-            $qty  = ($isIn ? '+' : '') . $m['quantity'];
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                $i + 1,
-                \Carbon\Carbon::parse($m['date'])->format('Y-m-d'),
-                $typeLabels[$m['type']] ?? $m['type'],
-                $qty,
-                $m['unit_price'] ?? '—',
-                $m['reference'],
-                $m['balance'],
-            ], $rowStyle));
-        }
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['رصيد آخر الفترة', '', '', '', '', '', $data['closing_stock'] . ' ' . ($product->unit ?? '')], $titleStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportProductMovementExcel($this, $productId, $dateFrom, $dateTo, $type);
     }
-
-    // ─── PDF ─────────────────────────────────────────────────────────────────
 
     public function exportProductMovementPdf(int $productId, ?string $dateFrom, ?string $dateTo, ?string $type, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $product = DB::table('products')
-            ->join('categories', 'categories.id', '=', 'products.category_id')
-            ->where('products.id', $productId)
-            ->select('products.name', 'categories.unit')
-            ->first();
-
-        $data = $this->productMovement($productId, $dateFrom, $dateTo, $type, null);
-        $allMovements = $data['movements'] ?? [];
-        $totalMovements = count($allMovements);
-
-        $limitVal = ($limit && $limit > 0) ? $limit : 500;
-        $offsetVal = ($offset && $offset >= 0) ? $offset : 0;
-        $slicedMovements = array_slice($allMovements, $offsetVal, $limitVal);
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $typeLabels = [
-            'purchase'   => 'شراء',
-            'sale'       => 'بيع',
-            'return_in'  => 'مرتجع عميل',
-            'return_out' => 'مرتجع مورد',
-            'waste'      => 'تالف',
-            'opening_balance' => 'رصيد افتتاحي',
-        ];
-
-        $batchText = $totalMovements > $limitVal 
-            ? $g('الدفعة: ' . ($offsetVal + 1) . ' - ' . min($offsetVal + count($slicedMovements), $totalMovements) . ' من إجمالي ' . $totalMovements . ' حركة')
-            : null;
-
-        $labels = [
-            'title'               => $g('تقرير حركة المنتج'),
-            'product_name'        => $g($product->name ?? ''),
-            'unit'                => $product->unit ?? '',
-            'date_from'           => $dateFrom,
-            'date_to'             => $dateTo,
-            'all_dates'           => $g('جميع التواريخ'),
-            'opening_stock'       => $g('رصيد أول الفترة'),
-            'closing_stock'       => $g('رصيد آخر الفترة'),
-            'movements_count'     => $g('عدد حركات الدفعة'),
-            'opening_val'         => $fmtN($data['opening_stock']),
-            'closing_val'         => $fmtN($data['closing_stock']),
-            'movements_val'       => count($slicedMovements),
-            'filter_info'         => $g('معلومات التقرير'),
-            'label_product'       => $g('المنتج'),
-            'label_period'        => $g('الفترة'),
-            'label_type'          => $g('نوع الحركة'),
-            'summary_label'       => $g('ملخص'),
-            'movement_type_label' => $g($type ? ($typeLabels[$type] ?? 'جميع الحركات') : 'جميع الحركات'),
-            'col_date'            => $g('التاريخ'),
-            'col_type'            => $g('النوع'),
-            'col_qty'             => $g('الكمية'),
-            'col_price'           => $g('السعر'),
-            'col_ref'             => $g('المرجع'),
-            'col_balance'         => $g('الرصيد'),
-            'batch_info'          => $batchText,
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.product-movement-pdf', [
-            'labels'     => $labels,
-            'movements'  => $slicedMovements,
-            'offset'     => $offsetVal,
-            'typeLabels' => $typeLabels,
-            'g'          => $g,
-        ])
-        ->setPaper('a4')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        $suffix = $batchText ? '-batch-' . (floor($offsetVal / $limitVal) + 1) : '';
-        return $pdf->stream('product-movement-' . now()->format('Y-m-d') . $suffix . '.pdf');
+        return $this->pdfExporter->exportProductMovementPdf($this, $productId, $dateFrom, $dateTo, $type, $limit, $offset);
     }
-
-    // ─── Stock Status ──────────────────────────────────────────────────────────
 
     public function stockStatus(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
@@ -774,351 +583,26 @@ class ReportRepository implements ReportRepositoryInterface
         })->values()->toArray();
     }
 
+
     public function exportStockStatusExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds, null, $searchName);
-        if ($compactView) {
-            $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));
-        }
-
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-        $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
-
-        if ($showPurchased) {
-            if ($compactView) {
-                $headers = ['#', 'المنتج', 'متوسط شراء (د.ل)', 'متوسط بيع (د.ل)', 'صافي كمية المبيعات', 'الربح (د.ل)'];
-            } else {
-                $headers = ['#', 'المنتج', 'إجمالي المشتراه', 'إجمالي المخزون', 'إجمالي المبيعات', 'إجمالي التالف', 'مرتجع مورد', 'متوسط ارجاع المورد', 'مرتجع زبائن', 'متوسط ارجاع الزبائن', 'متوسط شراء', 'متوسط بيع', 'الربح (د.ل)'];
-            }
-        } else {
-            $headers = ['#', 'المنتج', 'التصنيف', 'المخزون', 'الحد الأدنى', 'الحالة', 'آخر شراء (د.ل)', 'متوسط شراء (د.ل)', 'آخر بيع (د.ل)', 'متوسط بيع (د.ل)'];
-            if ($showSold)   $headers[] = 'إجمالي المبيع';
-            if ($showWasted) $headers[] = 'إجمالي التالف';
-        }
-
-        $cppLines = [];
-        if ($showPurchased) {
-            $totalProfit = array_reduce($data, fn($carry, $item) => $carry + (float)($item['profit'] ?? 0), 0.0);
-            $cppLines[] = ["#SUMMARY", "إجمالي الربح الكلي", $fmtN($totalProfit) . " د.ل"];
-        }
-        $cppLines[] = array_merge(["#TABLE_HEADER"], $headers);
-
-        foreach ($data as $i => $p) {
-            if ($showPurchased) {
-                if ($compactView) {
-                    $rowData = [
-                        $i + 1, $p['name'], $fmtN($p['avg_purchase_cost']), $fmtN($p['avg_sale_price']),
-                        $fmtN($p['net_sale_qty']) . ' ' . $p['unit'], $fmtN($p['profit'])
-                    ];
-                } else {
-                    $rowData = [
-                        $i + 1, $p['name'], $fmtN($p['total_purchased']) . ' ' . $p['unit'], $fmtN($p['stock']) . ' ' . $p['unit'],
-                        $fmtN($p['total_sold']) . ' ' . $p['unit'], $fmtN($p['total_wasted']) . ' ' . $p['unit'],
-                        $fmtN($p['total_return_out']) . ' ' . $p['unit'], $fmtN($p['avg_return_out_price']),
-                        $fmtN($p['total_return_in']) . ' ' . $p['unit'], $fmtN($p['avg_return_in_price']),
-                        $fmtN($p['avg_purchase_cost']), $fmtN($p['avg_sale_price']), $fmtN($p['profit'])
-                    ];
-                }
-            } else {
-                $rowData = [
-                    $i + 1, $p['name'], $p['category'], $fmtN($p['stock']) . ' ' . $p['unit'],
-                    $fmtN($p['min_stock']) . ' ' . $p['unit'], $statusLabels[$p['status']] ?? $p['status'],
-                    $fmtN($p['last_purchase_cost']), $fmtN($p['avg_purchase_cost']),
-                    $fmtN($p['last_sale_price']), $fmtN($p['avg_sale_price'])
-                ];
-                if ($showSold)   $rowData[] = $fmtN($p['total_sold'])   . ' ' . $p['unit'];
-                if ($showWasted) $rowData[] = $fmtN($p['total_wasted']) . ' ' . $p['unit'];
-            }
-            $cppLines[] = array_merge(["#TABLE_ROW"], $rowData);
-        }
-
-        $filename = ($showPurchased ? 'profit-report-' : 'stock-status-') . now()->format('Y-m-d') . '.xlsx';
-
-        if ($this->tryCppExport($showPurchased ? 'تقرير أرباح المنتجات' : 'تقرير المخزون الحالي', $dateFrom ?? 'البداية', $dateTo ?? now()->format('Y-m-d'), !empty($productNames) ? implode(', ', $productNames) : 'الكل', 'المخزون', 'table', $cppLines, $filename)) {
-            return;
-        }
-
-        // OpenSpout Stream Fallback
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(10, 1);
-        $options->setColumnWidth(40, 2);
-        $options->setColumnWidth(25, 3);
-        $options->setColumnWidth(25, 4);
-        $options->setColumnWidth(25, 5);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$showPurchased ? 'تقرير أرباح المنتجات' : 'تقرير المخزون الحالي'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['التصنيف', $categoryName ?: 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-
-        if ($showPurchased) {
-            $totalProfit = array_reduce($data, fn($carry, $item) => $carry + (float)($item['profit'] ?? 0), 0.0);
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي الربح الكلي', $fmtN($totalProfit) . ' د.ل'], $grandTotalStyle));
-        }
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle($headers, $tblHeaderStyle));
-
-        foreach ($data as $i => $p) {
-            if ($showPurchased) {
-                if ($compactView) {
-                    $rowData = [
-                        $i + 1, $p['name'], $fmtN($p['avg_purchase_cost']), $fmtN($p['avg_sale_price']),
-                        $fmtN($p['net_sale_qty']) . ' ' . $p['unit'], $fmtN($p['profit'])
-                    ];
-                } else {
-                    $rowData = [
-                        $i + 1, $p['name'], $fmtN($p['total_purchased']) . ' ' . $p['unit'], $fmtN($p['stock']) . ' ' . $p['unit'],
-                        $fmtN($p['total_sold']) . ' ' . $p['unit'], $fmtN($p['total_wasted']) . ' ' . $p['unit'],
-                        $fmtN($p['total_return_out']) . ' ' . $p['unit'], $fmtN($p['avg_return_out_price']),
-                        $fmtN($p['total_return_in']) . ' ' . $p['unit'], $fmtN($p['avg_return_in_price']),
-                        $fmtN($p['avg_purchase_cost']), $fmtN($p['avg_sale_price']), $fmtN($p['profit'])
-                    ];
-                }
-            } else {
-                $rowData = [
-                    $i + 1, $p['name'], $p['category'], $fmtN($p['stock']) . ' ' . $p['unit'],
-                    $fmtN($p['min_stock']) . ' ' . $p['unit'], $statusLabels[$p['status']] ?? $p['status'],
-                    $fmtN($p['last_purchase_cost']), $fmtN($p['avg_purchase_cost']),
-                    $fmtN($p['last_sale_price']), $fmtN($p['avg_sale_price'])
-                ];
-                if ($showSold)   $rowData[] = $fmtN($p['total_sold'])   . ' ' . $p['unit'];
-                if ($showWasted) $rowData[] = $fmtN($p['total_wasted']) . ' ' . $p['unit'];
-            }
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle($rowData, $rowStyle));
-        }
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportStockStatusExcel($this, $categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $compactView, $filterProductIds, $searchName);
     }
 
     public function exportStockStatusPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly, bool $showSold = false, bool $showWasted = false, bool $showPurchased = false, ?string $dateFrom = null, ?string $dateTo = null, bool $compactView = false, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $filterProductIds, null, $searchName);
-        
-        if ($compactView) {
-            $data = array_values(array_filter($data, fn($item) => $item['profit'] !== null));
-        }
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-
-        $statusLabels = ['ok' => 'جيد', 'warning' => 'تحذير', 'critical' => 'حرج'];
-
-        $productNames = (!empty($filterProductIds) || !empty($searchName) || $compactView) ? collect($data)->pluck('name')->toArray() : [];
-        $categoryName = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $totalProfit = null;
-        if ($showPurchased) {
-            $totalProfit = array_reduce($data, fn($carry, $item) => $carry + (float)($item['profit'] ?? 0), 0.0);
-        }
-
-        $labels = [
-            'title'          => $g($showPurchased ? 'تقرير الأرباح' : 'تقرير المخزون الحالي'),
-            'generated_at'   => now()->format('Y-m-d H:i'),
-            'date_from_val'  => $dateFrom ?: $g('البداية'),
-            'date_to_val'    => $dateTo ?: $g('النهاية'),
-            'products_val'   => !empty($productNames) ? array_map($g, $productNames) : [],
-            'category_val'   => $categoryName ? $g($categoryName) : $g('الكل'),
-            'label_category' => $g('التصنيف'),
-            'label_type'     => $g('نوع المنتج'),
-            'label_filter'   => $g('الفلتر'),
-            'all_label'      => $g('الكل'),
-            'low_stock_label'=> $g($lowStockOnly ? 'تحت الحد الأدنى فقط' : 'جميع المنتجات'),
-            'summary_label'  => $g('ملخص'),
-            'total_products' => count($data),
-            'ok_count'       => count(array_filter($data, fn($p) => $p['status'] === 'ok')),
-            'warning_count'  => count(array_filter($data, fn($p) => $p['status'] === 'warning')),
-            'critical_count' => count(array_filter($data, fn($p) => $p['status'] === 'critical')),
-            'col_name'       => $g('المنتج'),
-            'col_category'   => $g('التصنيف'),
-            'col_stock'      => $g('المخزون'),
-            'col_min'        => $g('الحد الأدنى'),
-            'col_status'     => $g('الحالة'),
-            'col_cost'       => $g('آخر شراء'),
-            'col_avg_cost'   => $g('متوسط شراء'),
-            'col_price'      => $g('آخر بيع'),
-            'col_avg_price'  => $g('متوسط بيع'),
-            'col_sold'       => $g('إجمالي المبيع'),
-            'col_wasted'     => $g('إجمالي التالف'),
-            'col_profit'     => $g('الربح'),
-            'col_net_qty'    => $g('صافي البيع'),
-            'show_sold'      => $showSold,
-            'show_wasted'    => $showWasted,
-            'show_purchased' => $showPurchased,
-            'compact_view'   => $compactView,
-            'total_profit'   => $totalProfit,
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.stock-status-pdf', [
-            'labels'       => $labels,
-            'data'         => $data,
-            'statusLabels' => $statusLabels,
-            'g'            => $g,
-            'fmtN'         => $fmtN,
-        ])
-        ->setPaper($showPurchased && !$compactView ? 'a4' : 'a4', $showPurchased && !$compactView ? 'landscape' : 'portrait')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('stock-status-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportStockStatusPdf($this, $categoryId, $sellingType, $lowStockOnly, $showSold, $showWasted, $showPurchased, $dateFrom, $dateTo, $compactView, $filterProductIds, $searchName);
     }
 
-    // ─── Inventory Count (الجرد) ────────────────────────────────────────────────
-    
     public function exportInventoryCountExcel(?int $categoryId, ?string $sellingType, bool $lowStockOnly): void
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $data = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
-
-        $spreadsheet = new Spreadsheet();
-        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setRightToLeft(true);
-        $sheet->setTitle('نموذج الجرد');
-
-        $row = 1;
-        $headers = ['#', 'المنتج', 'التصنيف', 'المخزون النظامي', 'المخزون الفعلي', 'ملاحظات'];
-
-        $lastCol = chr(ord('A') + count($headers) - 1);
-        $sheet->fromArray($headers, null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-        ]);
-        $row++;
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-
-        foreach ($data as $i => $p) {
-            $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-            $rowData = [
-                $i + 1,
-                $p['name'],
-                $p['category'],
-                $fmtN($p['stock']) . ' ' . $p['unit'],
-                '', // المخزون الفعلي فارغ
-                '', // ملاحظات فارغ
-            ];
-
-            $sheet->fromArray($rowData, null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $sheet->getStyle('D' . $row)->applyFromArray([
-                'font' => ['bold' => true],
-            ]);
-            $row++;
-        }
-
-        foreach (range('A', $lastCol) as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-        $sheet->getColumnDimension('E')->setWidth(20);
-        $sheet->getColumnDimension('F')->setWidth(30);
-
-        $filename = 'inventory-count-' . now()->format('Y-m-d') . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($spreadsheet))->save('php://output');
-        exit;
+        $this->excelExporter->exportInventoryCountExcel($this, $categoryId, $sellingType, $lowStockOnly);
     }
 
     public function exportInventoryCountPdf(?int $categoryId, ?string $sellingType, bool $lowStockOnly): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data    = $this->stockStatus($categoryId, $sellingType, $lowStockOnly, false, false, false);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-
-        $labels = [
-            'title'          => $g('نموذج الجرد الفعلي'),
-            'generated_at'   => now()->format('Y-m-d H:i'),
-            'filter_info'    => $g('معلومات التقرير'),
-            'label_category' => $g('التصنيف'),
-            'label_type'     => $g('نوع المنتج'),
-            'label_filter'   => $g('الفلتر'),
-            'all_label'      => $g('الكل'),
-            'low_stock_label'=> $g($lowStockOnly ? 'تحت الحد الأدنى فقط' : 'جميع المنتجات'),
-            'summary_label'  => $g('ملخص'),
-            'total_products' => count($data),
-            'col_name'       => $g('المنتج'),
-            'col_category'   => $g('التصنيف'),
-            'col_stock'      => $g('المخزون النظامي'),
-            'col_actual'     => $g('المخزون الفعلي'),
-            'col_notes'      => $g('ملاحظات'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.inventory-count-pdf', [
-            'labels'       => $labels,
-            'data'         => $data,
-            'g'            => $g,
-            'fmtN'         => $fmtN,
-        ])
-        ->setPaper('a4')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('inventory-count-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportInventoryCountPdf($this, $categoryId, $sellingType, $lowStockOnly);
     }
-
-    // ─── Customer Aging ────────────────────────────────────────────────────────
 
     public function customerAging(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerCustomer = 30): array
     {
@@ -1384,6 +868,7 @@ class ReportRepository implements ReportRepositoryInterface
         })->filter()->values()->toArray();
     }
 
+
     public function loadMoreCustomerMovements(
         int $customerId,
         int $offset = 30,
@@ -1410,172 +895,16 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportCustomerAgingExcel(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory, null);
-        $customerName = $customerId
-            ? DB::table('customers')->where('id', $customerId)->value('name')
-            : 'جميع العملاء';
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-        $typeLabels = ['invoice' => 'فاتورة', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
-
-        $filename = 'customer-aging-' . now()->format('Y-m-d') . '.xlsx';
-
-        $cppLines = [];
-        foreach ($data as $c) {
-            $cppLines[] = ["#SUMMARY", "العميل: " . $c['customer_name'], "إجمالي الدين: " . $fmtN($c['total_debt']) . " د.ل"];
-            $cppLines[] = ["#TABLE_HEADER", "", "المرجع", "النوع", "التاريخ", "المبلغ (د.ل)", "الرصيد (د.ل)"];
-            foreach ($c['movements'] as $m) {
-                $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
-                $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
-                $cppLines[] = ["#TABLE_ROW", "", $m['ref'], $typeLabels[$m['type']] ?? $m['type'], $dateFmt, $amountFmt, $fmtN($m['balance'])];
-            }
-        }
-        $totalDebt = array_sum(array_column($data, 'total_debt'));
-        $cppLines[] = ["#SUMMARY", "الإجمالي الكلي", "إجمالي الديون: " . $fmtN($totalDebt) . " د.ل"];
-
-        if ($this->tryCppExport('تقرير ديون العملاء', $dateFrom ? substr($dateFrom, 0, 10) : 'البداية', $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'), $customerName, 'العميل', 'aging', $cppLines, $filename)) {
-            return;
-        }
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(10, 1);
-        $options->setColumnWidth(40, 2);
-        $options->setColumnWidth(25, 3);
-        $options->setColumnWidth(25, 4);
-        $options->setColumnWidth(25, 5);
-        $options->setColumnWidth(25, 6);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $custHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
-
-        $movHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
-            ->withBackgroundColor('BBDEFB');
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير ديون العملاء'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العميل', $customerName], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ? substr($dateFrom, 0, 10) : 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        foreach ($data as $i => $c) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                'العميل: ' . $c['customer_name'] . ' — إجمالي الدين: ' . $fmtN($c['total_debt']) . ' د.ل'
-            ], $custHeaderStyle));
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ (د.ل)', 'الرصيد (د.ل)'], $movHeaderStyle));
-
-            foreach ($c['movements'] as $m) {
-                $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
-                $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                    '',
-                    $m['ref'],
-                    $typeLabels[$m['type']] ?? $m['type'],
-                    $dateFmt,
-                    $amountFmt,
-                    $fmtN($m['balance'])
-                ], $rowStyle));
-            }
-            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        }
-
-        $totalDebt = array_sum(array_column($data, 'total_debt'));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', 'إجمالي الديون: ' . $fmtN($totalDebt) . ' د.ل'], $grandTotalStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportCustomerAgingExcel($this, $customerId, $dateFrom, $dateTo, $showAllHistory);
     }
 
     public function exportCustomerAgingPdf(?int $customerId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data    = $this->customerAging($customerId, $dateFrom, $dateTo, $showAllHistory, null);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $totalDebt   = array_sum(array_column($data, 'total_debt'));
-        $totalOver90 = array_sum(array_column($data, 'over_90'));
-
-        $customerName = $customerId
-            ? DB::table('customers')->where('id', $customerId)->value('name')
-            : null;
-
-        $labels = [
-            'title'          => $g('تقرير ديون العملاء'),
-            'generated_at'   => now()->format('Y-m-d H:i'),
-            'filter_info'    => $g('معلومات التقرير'),
-            'summary_label'  => $g('ملخص'),
-            'label_customer' => $g('العميل'),
-            'customer_val'   => $customerName ? $g($customerName) : $g('جميع العملاء'),
-            'label_date_from'=> $g('من تاريخ'),
-            'date_from_val'  => $dateFrom ? substr($dateFrom, 0, 10) : '—',
-            'date_to_label'  => $g('إلى تاريخ'),
-            'date_to_val'    => $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'),
-            'customers_count'=> count($data),
-            'total_debt'     => $fmtN($totalDebt),
-            'total_over90'   => $fmtN($totalOver90),
-            'col_customer'   => $g('العميل'),
-            'col_total'      => $g('إجمالي الدين'),
-            'col_breakdown'  => $g('فواتير/دفعات/مرتجعات'),
-            'col_current'    => $g('أقل') . ' 30 ' . $g('يوم'),
-            'col_30_60'      => '30-60 ' . $g('يوم'),
-            'col_60_90'      => '60-90 ' . $g('يوم'),
-            'col_over90'     => $g('أكثر') . ' 90 ' . $g('يوم'),
-            'col_invoices'   => $g('الحركات'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.customer-aging-pdf', [
-            'labels' => $labels,
-            'data'   => $data,
-            'g'      => $g,
-            'fmtN'   => $fmtN,
-        ])
-        ->setPaper('a4')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('customer-aging-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportCustomerAgingPdf($this, $customerId, $dateFrom, $dateTo, $showAllHistory);
     }
-
-    // ─── Supplier Aging ────────────────────────────────────────────────────
 
     public function supplierAging(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false, ?int $movementsLimitPerSupplier = 30): array
     {
@@ -1837,6 +1166,7 @@ class ReportRepository implements ReportRepositoryInterface
         })->filter()->values()->toArray();
     }
 
+
     public function loadMoreSupplierMovements(
         int $supplierId,
         int $offset = 30,
@@ -1863,168 +1193,15 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportSupplierAgingExcel(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory, null);
-        $supplierName = $supplierId
-            ? DB::table('suppliers')->where('id', $supplierId)->value('name')
-            : 'جميع الموردين';
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-        $typeLabels = ['purchase' => 'شراء', 'payment' => 'دفعة', 'settlement' => 'تسوية', 'return' => 'مرتجع'];
-
-        $filename = 'supplier-aging-' . now()->format('Y-m-d') . '.xlsx';
-
-        $cppLines = [];
-        foreach ($data as $s) {
-            $cppLines[] = ["#SUMMARY", "المورد: " . $s['supplier_name'], "إجمالي الدين: " . $fmtN($s['total_debt']) . " د.ل"];
-            $cppLines[] = ["#TABLE_HEADER", "", "المرجع", "النوع", "التاريخ", "المبلغ (د.ل)", "الرصيد (د.ل)"];
-            foreach ($s['movements'] as $m) {
-                $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
-                $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
-                $cppLines[] = ["#TABLE_ROW", "", $m['ref'], $typeLabels[$m['type']] ?? $m['type'], $dateFmt, $amountFmt, $fmtN($m['balance'])];
-            }
-        }
-        $totalDebt = array_sum(array_column($data, 'total_debt'));
-        $cppLines[] = ["#SUMMARY", "الإجمالي الكلي", "إجمالي الديون: " . $fmtN($totalDebt) . " د.ل"];
-
-        if ($this->tryCppExport('تقرير ديون الموردين', $dateFrom ? substr($dateFrom, 0, 10) : 'البداية', $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'), $supplierName, 'المورد', 'aging', $cppLines, $filename)) {
-            return;
-        }
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(10, 1);
-        $options->setColumnWidth(40, 2);
-        $options->setColumnWidth(25, 3);
-        $options->setColumnWidth(25, 4);
-        $options->setColumnWidth(25, 5);
-        $options->setColumnWidth(25, 6);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $suppHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
-
-        $movHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
-            ->withBackgroundColor('BBDEFB');
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير ديون الموردين'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المورد', $supplierName], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ? substr($dateFrom, 0, 10) : 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        foreach ($data as $i => $s) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                'المورد: ' . $s['supplier_name'] . ' — إجمالي الدين: ' . $fmtN($s['total_debt']) . ' د.ل'
-            ], $suppHeaderStyle));
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['', 'المرجع', 'النوع', 'التاريخ', 'المبلغ (د.ل)', 'الرصيد (د.ل)'], $movHeaderStyle));
-
-            foreach ($s['movements'] as $m) {
-                $amountFmt = ($m['amount'] > 0 ? '+' : '') . $fmtN($m['amount']);
-                $dateFmt   = $m['date'] ? \Carbon\Carbon::parse($m['date'])->format('Y-m-d') : '--';
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                    '',
-                    $m['ref'],
-                    $typeLabels[$m['type']] ?? $m['type'],
-                    $dateFmt,
-                    $amountFmt,
-                    $fmtN($m['balance'])
-                ], $rowStyle));
-            }
-            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        }
-
-        $totalDebt = array_sum(array_column($data, 'total_debt'));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', 'إجمالي الديون: ' . $fmtN($totalDebt) . ' د.ل'], $grandTotalStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportSupplierAgingExcel($this, $supplierId, $dateFrom, $dateTo, $showAllHistory);
     }
 
     public function exportSupplierAgingPdf(?int $supplierId, ?string $dateFrom, ?string $dateTo, bool $showAllHistory = false): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data    = $this->supplierAging($supplierId, $dateFrom, $dateTo, $showAllHistory, null);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $totalDebt   = array_sum(array_column($data, 'total_debt'));
-        $totalOver90 = array_sum(array_column($data, 'over_90'));
-
-        $supplierName = $supplierId
-            ? DB::table('suppliers')->where('id', $supplierId)->value('name')
-            : null;
-
-        $labels = [
-            'title'           => $g('تقرير ديون الموردين'),
-            'generated_at'    => now()->format('Y-m-d H:i'),
-            'filter_info'     => $g('معلومات التقرير'),
-            'summary_label'   => $g('ملخص'),
-            'label_supplier'  => $g('المورد'),
-            'supplier_val'    => $supplierName ? $g($supplierName) : $g('جميع الموردين'),
-            'label_date_from' => $g('من تاريخ'),
-            'date_from_val'   => $dateFrom ? substr($dateFrom, 0, 10) : '—',
-            'date_to_label'   => $g('إلى تاريخ'),
-            'date_to_val'     => $dateTo ? substr($dateTo, 0, 10) : now()->format('Y-m-d'),
-            'suppliers_count' => count($data),
-            'total_debt'      => $fmtN($totalDebt),
-            'total_over90'    => $fmtN($totalOver90),
-            'col_supplier'    => $g('المورد'),
-            'col_total'       => $g('إجمالي الدين'),
-            'col_current'     => $g('أقل') . ' 30 ' . $g('يوم'),
-            'col_30_60'       => '30-60 ' . $g('يوم'),
-            'col_60_90'       => '60-90 ' . $g('يوم'),
-            'col_over90'      => $g('أكثر') . ' 90 ' . $g('يوم'),
-            'col_invoices'    => $g('الحركات'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.supplier-aging-pdf', [
-            'labels' => $labels,
-            'data'   => $data,
-            'g'      => $g,
-            'fmtN'   => $fmtN,
-        ])
-        ->setPaper('a4')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('supplier-aging-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportSupplierAgingPdf($this, $supplierId, $dateFrom, $dateTo, $showAllHistory);
     }
 
     public function getIncludedProducts(?array $filterProductIds, ?string $searchName): array
@@ -2049,6 +1226,7 @@ class ReportRepository implements ReportRepositoryInterface
     }
 
     // ─── Sales ─────────────────────────────────────────────────────────────────
+
 
     private function salesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null)
     {
@@ -2098,6 +1276,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $query;
     }
+
 
     public function sales(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
     {
@@ -2173,6 +1352,7 @@ class ReportRepository implements ReportRepositoryInterface
         return compact('totalSales', 'invoicesCount', 'avgInvoice', 'totalPaid', 'totalDue', 'daily', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
     }
 
+
     public function getSalesPaymentMethodsBreakdown(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?float $totalPaid = null): array
     {
         $base = $this->salesQuery($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
@@ -2206,206 +1386,16 @@ class ReportRepository implements ReportRepositoryInterface
             ->toArray();
     }
 
+
     public function exportSalesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
-        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
-        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
-        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $filename = 'sales-' . now()->format('Y-m-d') . '.xlsx';
-
-        $cppLines = [];
-        $cppLines[] = ["#SUMMARY", "إجمالي المبيعات", $fmtN($data['totalSales']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "عدد الفواتير", $data['invoicesCount']];
-        $cppLines[] = ["#SUMMARY", "متوسط الفاتورة", $fmtN($data['avgInvoice']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "إجمالي المدفوع", $fmtN($data['totalPaid']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "إجمالي المتبقي", $fmtN($data['totalDue']) . " د.ل"];
-        $cppLines[] = ["#TABLE_HEADER", "الشهر / التاريخ", "عدد الفواتير", "إجمالي المبيعات (د.ل)"];
-        foreach ($data['monthly'] as $m) {
-            $cppLines[] = ["#TABLE_ROW", $m['month'], $m['count'], $fmtN($m['total']) . " د.ل"];
-            foreach ($m['days'] as $d) {
-                $cppLines[] = ["#TABLE_ROW", "  " . $d['date'], $d['count'], $fmtN($d['total']) . " د.ل"];
-            }
-        }
-        $this->tryCppExport('تقرير المبيعات العامة', $dateFrom ?? 'البداية', $dateTo ?? now()->format('Y-m-d'), !empty($productNames) ? implode(', ', $productNames) : 'الكل', 'المبيعات', 'summary', $cppLines, $filename);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(30, 1);
-        $options->setColumnWidth(25, 2);
-        $options->setColumnWidth(30, 3);
-        $options->setColumnWidth(25, 4);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $sectionHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('2E7D32')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $monthHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('BBDEFB');
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        // ترويسة التقرير ومعلومات الفلاتر المحددة
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير المبيعات العامة'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['البائع', $userName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العميل', $customerName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', $paymentMethodName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['التصنيف', $categoryName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : ($searchName ? $searchName : 'الكل')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        // كروت الملخص المالي
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المبيعات', $fmtN($data['totalSales']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $data['invoicesCount'] . ' فاتورة'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['متوسط الفاتورة', $fmtN($data['avgInvoice']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع (المحصل)', $fmtN($data['totalPaid']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي (الآجل)', $fmtN($data['totalDue']) . ' د.ل'], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        // جدول تفصيل وسائل الدفع والتحصيل
-        if (!empty($data['paymentMethodsBreakdown'])) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تفصيل وسائل الدفع والتحصيل'], $sectionHeaderStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', 'عدد العمليات', 'إجمالي المبلغ (د.ل)', 'النسبة المئوية'], $tblHeaderStyle));
-            foreach ($data['paymentMethodsBreakdown'] as $pm) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                    $pm['name'],
-                    $pm['count'] . ' عملية',
-                    $fmtN($pm['total_amount']) . ' د.ل',
-                    $pm['percentage'] . '%'
-                ], $rowStyle));
-            }
-            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        }
-
-        // جدول الحركة الشهرية واليومية
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الشهر / التاريخ', 'عدد الفواتير', 'إجمالي المبيعات (د.ل)'], $tblHeaderStyle));
-
-        foreach ($data['monthly'] as $m) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$m['month'], $m['count'], $fmtN($m['total']) . ' د.ل'], $monthHeaderStyle));
-            foreach ($m['days'] as $d) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['  ' . $d['date'], $d['count'], $fmtN($d['total']) . ' د.ل'], $rowStyle));
-            }
-        }
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', $data['invoicesCount'] . ' فاتورة', $fmtN($data['totalSales']) . ' د.ل'], $grandTotalStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportSalesExcel($this, $dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function exportSalesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data    = $this->sales($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $productNames = collect($data['includedProducts'] ?? [])->pluck('name')->toArray();
-
-        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
-        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
-        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
-        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $labels = [
-            'title'                => $g('تقرير المبيعات'),
-            'generated_at'         => now()->format('Y-m-d H:i'),
-            'filter_info'          => $g('معلومات وفلاتر التقرير'),
-            'summary_label'        => $g('الملخص المالي'),
-            'products_val'         => !empty($productNames) ? array_map($g, $productNames) : [],
-            'search_name_val'      => $searchName ? $g($searchName) : null,
-            'label_date_from'      => $g('من تاريخ'),
-            'date_from_val'        => $dateFrom ?: '—',
-            'date_to_label'        => $g('إلى تاريخ'),
-            'date_to_val'          => $dateTo ?? now()->format('Y-m-d'),
-            'label_user'           => $g('البائع'),
-            'user_val'             => $userName ? $g($userName) : $g('الكل'),
-            'label_customer'       => $g('العميل'),
-            'customer_val'         => $customerName ? $g($customerName) : $g('الكل'),
-            'label_payment_method' => $g('وسيلة الدفع'),
-            'payment_method_val'   => $paymentMethodName ? $g($paymentMethodName) : $g('الكل'),
-            'label_category'       => $g('التصنيف'),
-            'category_val'         => $categoryName ? $g($categoryName) : $g('الكل'),
-            'total_sales'          => $fmtN($data['totalSales']),
-            'invoices_count'       => $data['invoicesCount'],
-            'avg_invoice'          => $fmtN($data['avgInvoice']),
-            'total_paid'           => $fmtN($data['totalPaid']),
-            'total_due'            => $fmtN($data['totalDue']),
-            'pm_section_title'     => $g('تفصيل وسائل الدفع والتحصيل'),
-            'pm_col_name'          => $g('وسيلة الدفع'),
-            'pm_col_count'         => $g('عدد العمليات'),
-            'pm_col_amount'        => $g('إجمالي المبلغ'),
-            'pm_col_pct'           => $g('النسبة %'),
-            'col_date'             => $g('التاريخ'),
-            'col_month'            => $g('الشهر'),
-            'col_count'            => $g('عدد الفواتير'),
-            'col_total'            => $g('إجمالي المبيعات'),
-            'lbl_total'            => $g('إجمالي المبيعات'),
-            'lbl_count'            => $g('عدد الفواتير'),
-            'lbl_avg'              => $g('متوسط الفاتورة'),
-            'lbl_paid'             => $g('إجمالي المدفوع'),
-            'lbl_due'              => $g('إجمالي المتبقي'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-pdf', [
-            'labels' => $labels,
-            'data'   => $data,
-            'g'      => $g,
-            'fmtN'   => $fmtN,
-        ])
-        ->setPaper('a4')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('sales-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportSalesPdf($this, $dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
     }
-
-    // ─── Sales Customer Invoices ───────────────────────────────────────────────
 
     public function salesCustomerInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerCustomer = 30): array
     {
@@ -2581,6 +1571,7 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
+
     public function loadMoreCustomerInvoices(
         int $customerId,
         int $offset = 30,
@@ -2741,275 +1732,16 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportSalesCustomerInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '2048M');
-        @set_time_limit(600);
-
-        $data = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, null);
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-
-        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
-        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
-        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
-        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $totalInvoices = array_sum(array_column($data, 'invoice_count'));
-        $grandAmount   = array_sum(array_column($data, 'total_amount'));
-        $totalPaid     = array_sum(array_column($data, 'total_paid'));
-        $totalDue      = array_sum(array_column($data, 'total_due'));
-
-        $paymentMethodsBreakdown = $this->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, (float)$totalPaid);
-
-        $filename = 'sales-customer-invoices-' . now()->format('Y-m-d') . '.xlsx';
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        
-        $options = $writer->getOptions();
-        $options->setColumnWidth(48, 1);
-        $options->setColumnWidth(42, 2);
-        $options->setColumnWidth(22, 3);
-        $options->setColumnWidth(22, 4);
-        $options->setColumnWidth(26, 5);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $sectionHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('2E7D32')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $customerStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
-
-        $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('BBDEFB');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
-            ->withBackgroundColor('F5F5F5')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-            ->withBackgroundColor('E8EAF6');
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        // ترويسة التقرير ومعلومات الفلاتر
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير المبيعات حسب العملاء'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['البائع', $userName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العميل', $customerName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', $paymentMethodName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['التصنيف', $categoryName ?? 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : ($searchName ? $searchName : 'الكل')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        // كروت الملخص المالي
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المبيعات', $fmtN($grandAmount) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع (المحصل)', $fmtN($totalPaid) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي (الآجل)', $fmtN($totalDue) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $totalInvoices . ' فاتورة'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد العملاء', count($data) . ' عميل'], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        // جدول تفصيل وسائل الدفع والتحصيل
-        if (!empty($paymentMethodsBreakdown)) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تفصيل وسائل الدفع والتحصيل'], $sectionHeaderStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['وسيلة الدفع', 'عدد العمليات', 'إجمالي المبلغ (د.ل)', 'النسبة المئوية'], $tblHeaderStyle));
-            foreach ($paymentMethodsBreakdown as $pm) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                    $pm['name'],
-                    $pm['count'] . ' عملية',
-                    $fmtN($pm['total_amount']) . ' د.ل',
-                    $pm['percentage'] . '%'
-                ], $rowStyle));
-            }
-            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        }
-
-        // تفاصيل فواتير العملاء
-        foreach ($data as $entry) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['customer_name'] . ' — ' . $entry['invoice_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']) . ' د.ل (مدفوع: ' . $fmtN($entry['total_paid'] ?? 0) . ' / متبقي: ' . $fmtN($entry['total_due'] ?? 0) . ')'], $customerStyle));
-            
-            foreach ($entry['invoices'] as $inv) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), 'الإجمالي: ' . $fmtN($inv['total']) . ' د.ل', 'المدفوع: ' . $fmtN($inv['paid_amount'] ?? 0), 'المتبقي: ' . $fmtN($inv['due_amount'] ?? 0)], $invHeaderStyle));
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
-
-                foreach ($inv['items'] as $item) {
-                    $item = (array) $item;
-                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                        $item['count'] > 1 ? $item['count'] : '',
-                        (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
-                        $fmtN($item['quantity']),
-                        $fmtN($item['unit_price']),
-                        $fmtN($item['line_total']),
-                    ], $rowStyle));
-                }
-            }
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي العميل', '', '', '', $fmtN($entry['total_amount']) . ' د.ل'], $subtotalStyle));
-            $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        }
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount) . ' د.ل'], $grandTotalStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportSalesCustomerInvoicesExcel($this, $dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function exportSalesCustomerInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g  = fn($text) => $arabic->utf8Glyphs($text);
-        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-
-        $data    = $this->salesCustomerInvoices($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $limit ?? 500, $offset ?? 0);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-
-        $userName          = $userId ? DB::table('users')->where('id', $userId)->value('name') : null;
-        $customerName      = $customerId ? DB::table('customers')->where('id', $customerId)->value('name') : null;
-        $paymentMethodName = $paymentMethodId ? DB::table('payment_methods')->where('id', $paymentMethodId)->value('name') : null;
-        $categoryName      = $categoryId ? DB::table('categories')->where('id', $categoryId)->value('name') : null;
-
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $grandCount  = array_sum(array_column($data, 'invoice_count'));
-        $totalPaid   = array_sum(array_column($data, 'total_paid'));
-        $totalDue    = array_sum(array_column($data, 'total_due'));
-
-        $paymentMethodsBreakdown = $this->getSalesPaymentMethodsBreakdown($dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, (float)$totalPaid);
-
-        $entries = array_map(function ($entry) use ($g, $en, $fmtN) {
-            return [
-                'name'          => $en($g($entry['customer_name'])),
-                'invoice_count' => $entry['invoice_count'],
-                'total_amount'  => $entry['total_amount'],
-                'total_paid'    => $entry['total_paid'] ?? 0,
-                'total_due'     => $entry['total_due'] ?? 0,
-                'invoices'      => array_map(fn($inv) => [
-                    'id'          => $inv['id'],
-                    'date'        => substr($inv['date'], 0, 10),
-                    'total'       => $inv['total'],
-                    'paid_amount' => $inv['paid_amount'] ?? 0,
-                    'due_amount'  => $inv['due_amount'] ?? 0,
-                    'items'       => array_map(fn($i) => [
-                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
-                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
-                        'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
-                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
-                        'line_total'   => is_array($i) ? $i['line_total'] : $i->line_total,
-                        'is_matched'   => is_array($i) ? ($i['is_matched'] ?? false) : ($i->is_matched ?? false),
-                    ], $inv['items']),
-                ], $entry['invoices']),
-            ];
-        }, $data);
-
-        $matchedTotal = 0;
-        foreach ($data as $entry) {
-            foreach ($entry['invoices'] as $inv) {
-                foreach ($inv['items'] as $item) {
-                    $itemArray = (array) $item;
-                    if (!empty($itemArray['is_matched'])) {
-                        $matchedTotal += (float) $itemArray['line_total'];
-                    }
-                }
-            }
-        }
-
-        $labels = [
-            'title'                => $g('فواتير العملاء التفصيلية'),
-            'dateFrom'             => $dateFrom ?: '—',
-            'dateTo'               => $dateTo ?? now()->format('Y-m-d'),
-            'products_val'         => !empty($productNames) ? array_map($g, $productNames) : [],
-            'search_name_val'      => $searchName ? $g($searchName) : null,
-            'labelFrom'            => $g('من تاريخ'),
-            'labelTo'              => $g('إلى تاريخ'),
-            'generatedAt'          => now()->format('Y-m-d H:i'),
-            'generatedLabel'       => $g('تاريخ الإنشاء'),
-            'filterUser'           => $userName ? $en($g($userName)) : $g('الكل'),
-            'filterCustomer'       => $customerName ? $en($g($customerName)) : $g('الكل'),
-            'filterPayment'        => $paymentMethodName ? $en($g($paymentMethodName)) : $g('الكل'),
-            'filterCategory'       => $categoryName ? $en($g($categoryName)) : $g('الكل'),
-            'labelUser'            => $g('البائع'),
-            'labelCustomer'        => $g('العميل'),
-            'labelPayment'         => $g('وسيلة الدفع'),
-            'labelCategory'        => $g('التصنيف'),
-            'grandAmount'          => $grandAmount,
-            'grandCount'           => $grandCount,
-            'totalPaid'            => $totalPaid,
-            'totalDue'             => $totalDue,
-            'customersCount'       => count($data),
-            'avgInvoice'           => $grandCount > 0 ? $grandAmount / $grandCount : 0,
-            'pm_section_title'     => $g('تفصيل وسائل الدفع والتحصيل'),
-            'pm_col_name'          => $g('وسيلة الدفع'),
-            'pm_col_count'         => $g('عدد العمليات'),
-            'pm_col_amount'        => $g('إجمالي المبلغ'),
-            'pm_col_pct'           => $g('النسبة %'),
-            'product'              => $g('المنتج'),
-            'qty'                  => $g('الحجم'),
-            'count_label'          => $g('العدد'),
-            'price'                => $g('السعر'),
-            'amount'               => $g('المبلغ'),
-            'total'                => $g('الإجمالي'),
-            'paid_label'           => $g('المدفوع'),
-            'due_label'            => $g('المتبقي'),
-            'invoices_label'       => $g('عدد الفواتير'),
-            'customers_label'      => $g('عدد العملاء'),
-            'date_label'           => $g('التاريخ'),
-            'matchedTotal'         => $matchedTotal,
-            'matchedTotalLabel'    => $g('إجمالي نتائج البحث'),
-            'totalPages'           => 1,
-        ];
-
-        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g', 'paymentMethodsBreakdown'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-        $pdf->render();
-        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-customer-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g', 'paymentMethodsBreakdown'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-
-        return $pdf->stream('sales-customer-invoices-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportSalesCustomerInvoicesPdf($this, $dateFrom, $dateTo, $userId, $customerId, $paymentMethodId, $categoryId, $filterProductIds, $searchName, $limit, $offset);
     }
-
-    // ─── Purchases ───────────────────────────────────────────────────────────────────────
 
     private function purchasesQuery(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null)
     {
@@ -3059,6 +1791,7 @@ class ReportRepository implements ReportRepositoryInterface
 
         return $query;
     }
+
 
     public function purchases(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, bool $compare = false, ?array $filterProductIds = null, ?string $searchName = null): array
     {
@@ -3127,6 +1860,7 @@ class ReportRepository implements ReportRepositoryInterface
         return compact('totalPurchases', 'purchasesCount', 'avgPurchase', 'totalPaid', 'totalDue', 'monthly', 'comparison', 'includedProducts', 'paymentMethodsBreakdown');
     }
 
+
     public function getPurchasesPaymentMethodsBreakdown(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?float $totalPaid = null): array
     {
         $base = $this->purchasesQuery($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
@@ -3160,148 +1894,15 @@ class ReportRepository implements ReportRepositoryInterface
             ->toArray();
     }
 
+
     public function exportPurchasesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $filename = 'purchases-' . now()->format('Y-m-d') . '.xlsx';
-
-        $cppLines = [];
-        $cppLines[] = ["#SUMMARY", "إجمالي المشتريات", $fmtN($data['totalPurchases']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "عدد الفواتير", $data['purchasesCount']];
-        $cppLines[] = ["#SUMMARY", "متوسط الفاتورة", $fmtN($data['avgPurchase']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "إجمالي المدفوع", $fmtN($data['totalPaid']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "إجمالي المتبقي", $fmtN($data['totalDue']) . " د.ل"];
-        $cppLines[] = ["#TABLE_HEADER", "الشهر / التاريخ", "عدد الفواتير", "إجمالي المشتريات (د.ل)"];
-        foreach ($data['monthly'] as $m) {
-            $cppLines[] = ["#TABLE_ROW", $m['month'], $m['count'], $fmtN($m['total']) . " د.ل"];
-            foreach ($m['days'] as $d) {
-                $cppLines[] = ["#TABLE_ROW", "  " . $d['date'], $d['count'], $fmtN($d['total']) . " د.ل"];
-            }
-        }
-        $this->tryCppExport('تقرير المشتريات العامة', $dateFrom ?? 'البداية', $dateTo ?? now()->format('Y-m-d'), !empty($productNames) ? implode(', ', $productNames) : 'الكل', 'المشتريات', 'summary', $cppLines, $filename);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(30, 1);
-        $options->setColumnWidth(25, 2);
-        $options->setColumnWidth(30, 3);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $monthHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('BBDEFB');
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير المشتريات العامة'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المشتريات', $fmtN($data['totalPurchases']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['عدد الفواتير', $data['purchasesCount']], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['متوسط الفاتورة', $fmtN($data['avgPurchase']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المدفوع', $fmtN($data['totalPaid']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المتبقي', $fmtN($data['totalDue']) . ' د.ل'], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الشهر / التاريخ', 'عدد الفواتير', 'إجمالي المشتريات (د.ل)'], $tblHeaderStyle));
-
-        foreach ($data['monthly'] as $m) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$m['month'], $m['count'], $fmtN($m['total']) . ' د.ل'], $monthHeaderStyle));
-            foreach ($m['days'] as $d) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['  ' . $d['date'], $d['count'], $fmtN($d['total']) . ' د.ل'], $rowStyle));
-            }
-        }
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', $data['purchasesCount'] . ' فاتورة', $fmtN($data['totalPurchases']) . ' د.ل'], $grandTotalStyle));
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportPurchasesExcel($this, $dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function exportPurchasesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $paymentMethodId = null, ?int $categoryId = null, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-        $data    = $this->purchases($dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, false, $filterProductIds, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-
-        $labels = [
-            'title'          => $g('تقرير المشتريات'),
-            'generated_at'   => now()->format('Y-m-d H:i'),
-            'filter_info'    => $g('معلومات التقرير'),
-            'summary_label'  => $g('ملخص'),
-            'products_val'   => !empty($productNames) ? array_map($g, $productNames) : [],
-            'label_date_from'=> $g('من تاريخ'),
-            'date_from_val'  => $dateFrom ?: '—',
-            'date_to_label'  => $g('إلى تاريخ'),
-            'date_to_val'    => $dateTo ?? now()->format('Y-m-d'),
-            'total_purchases'=> $fmtN($data['totalPurchases']),
-            'purchases_count'=> $data['purchasesCount'],
-            'invoices_count' => $data['purchasesCount'],
-            'avg_purchase'   => $fmtN($data['avgPurchase']),
-            'avg_invoice'    => $fmtN($data['avgPurchase']),
-            'total_paid'     => $fmtN($data['totalPaid']),
-            'total_due'      => $fmtN($data['totalDue']),
-            'col_month'      => $g('الشهر'),
-            'col_count'      => $g('عدد الفواتير'),
-            'col_total'      => $g('إجمالي المشتريات'),
-            'lbl_total'      => $g('إجمالي المشتريات'),
-            'lbl_count'      => $g('عدد الفواتير'),
-            'lbl_avg'        => $g('متوسط الفاتورة'),
-            'lbl_paid'       => $g('إجمالي المدفوع'),
-            'lbl_due'        => $g('إجمالي المتبقي'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-pdf', [
-            'labels' => $labels, 'data' => $data, 'g' => $g, 'fmtN' => $fmtN,
-        ])->setPaper('a4')
-          ->setOption('isHtml5ParserEnabled', true)
-          ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('purchases-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportPurchasesPdf($this, $dateFrom, $dateTo, $userId, $supplierId, $paymentMethodId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function purchasesSupplierInvoices(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $invoicesLimitPerSupplier = 30): array
@@ -3437,6 +2038,7 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
+
     public function loadMoreSupplierInvoices(
         int $supplierId,
         int $offset = 30,
@@ -3563,378 +2165,16 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportPurchasesSupplierInvoicesExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '2048M');
-        @set_time_limit(600);
-
-        $cppExe = PHP_OS_FAMILY === 'Windows' ? base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx.exe') : base_path('bin' . DIRECTORY_SEPARATOR . 'export_xlsx');
-        if (file_exists($cppExe)) {
-            $storageDir = storage_path('app');
-            if (!file_exists($storageDir)) { @mkdir($storageDir, 0777, true); }
-
-            $tmpTsv  = $storageDir . DIRECTORY_SEPARATOR . 'cpp_db_' . uniqid() . '.tsv';
-            $tmpXlsx = $storageDir . DIRECTORY_SEPARATOR . 'cpp_exp_' . uniqid() . '.xlsx';
-
-            $dfStr = $dateFrom ? $dateFrom . ' 00:00:00' : '1970-01-01 00:00:00';
-            $dtStr = $dateTo   ? $dateTo   . ' 23:59:59' : '2099-12-31 23:59:59';
-
-            $sql = "SELECT COALESCE(sp.name, 'مورد عام'), p.id, DATE_FORMAT(p.created_at, '%Y-%m-%d'), p.total, COUNT(pi.id) AS item_count, COALESCE(pr.name, 'منتج'), '-', SUM(pi.quantity), pi.unit_cost, SUM(pi.line_total) FROM purchases p LEFT JOIN suppliers sp ON sp.id = p.supplier_id LEFT JOIN purchase_items pi ON pi.purchase_id = p.id LEFT JOIN products pr ON pr.id = pi.product_id WHERE p.deleted_at IS NULL AND p.created_at >= '{$dfStr}' AND p.created_at <= '{$dtStr}' GROUP BY p.id, sp.name, p.created_at, p.total, pi.product_id, pi.unit_cost, pr.name ORDER BY sp.name ASC, p.id DESC";
-
-            $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-            $productNames = collect($includedProducts)->pluck('name')->toArray();
-            $productNamesStr = !empty($productNames) ? implode(', ', $productNames) : 'الكل';
-            $createdAtStr = now()->format('Y-m-d H:i');
-
-            $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
-            $f = fopen($tmpTsv, 'w');
-
-            fwrite($f, "#META\t" . ($dateFrom ?? 'البداية') . "\t" . ($dateTo ?? now()->format('Y-m-d')) . "\t" . $productNamesStr . "\t" . $createdAtStr . "\tتقرير فواتير المشتريات حسب الموردين\tالمورد\n");
-
-            $stmt = $pdo->query($sql);
-            while ($row = $stmt->fetch(\PDO::FETCH_NUM)) {
-                fwrite($f, implode("\t", $row) . "\n");
-            }
-            fclose($f);
-
-            $cmdCpp = '"' . $cppExe . '" "' . $tmpXlsx . '" "' . $tmpTsv . '"';
-            exec($cmdCpp, $out, $code);
-
-            if ($code === 0 && file_exists($tmpXlsx) && filesize($tmpXlsx) > 0) {
-                $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-                header('X-Export-Engine: C++ Static Binary Exporter');
-                header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                header('Content-Disposition: attachment; filename="' . $filename . '"');
-                header('Content-Length: ' . filesize($tmpXlsx));
-                readfile($tmpXlsx);
-                @unlink($tmpTsv);
-                @unlink($tmpXlsx);
-                exit;
-            }
-            @unlink($tmpTsv);
-            @unlink($tmpXlsx);
-        }
-
-        $data = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, null);
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $totalPurchases = array_sum(array_column($data, 'purchase_count'));
-
-        // Use OpenSpout Ultra-Fast Streamed XLSX Writer for large datasets to prevent memory exhaustion and browser timeouts
-        if ($totalPurchases > 2000) {
-            $filename = 'فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx';
-            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-            header('Content-Disposition: attachment; filename="' . $filename . '"');
-            header('Cache-Control: max-age=0');
-
-            $writer = new \OpenSpout\Writer\XLSX\Writer();
-
-            // Set Natural Wide Column Widths to prevent text compression
-            $options = $writer->getOptions();
-            $options->setColumnWidth(48, 1); // Column A: Supplier / Title
-            $options->setColumnWidth(42, 2); // Column B: Product Name / Date
-            $options->setColumnWidth(22, 3); // Column C: Size / Quantity
-            $options->setColumnWidth(22, 4); // Column D: Cost
-            $options->setColumnWidth(26, 5); // Column E: Line Total
-
-            $writer->openToFile('php://output');
-
-            // Set Sheet Orientation Right-To-Left (RTL) for Arabic Excel layout
-            $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-            // Style definitions with Tajawal font, colors, bolding, and alignment
-            $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-                ->withBackgroundColor('E3F2FD');
-
-            $supplierStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0');
-
-            $invHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-                ->withBackgroundColor('BBDEFB');
-
-            $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(12)->withFontBold(true)
-                ->withBackgroundColor('F5F5F5')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(12);
-
-            $subtotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(14)->withFontBold(true)
-                ->withBackgroundColor('E8EAF6');
-
-            $grandTotalStyle = (new \OpenSpout\Common\Entity\Style\Style())
-                ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-                ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-                ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير فواتير الموردين'], $titleStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
-
-            foreach ($data as $entry) {
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount'])], $supplierStyle));
-                
-                foreach ($entry['purchases'] as $inv) {
-                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['INV#' . $inv['id'], substr($inv['date'], 0, 10), $fmtN($inv['total'])], $invHeaderStyle));
-                    $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['العدد', 'المنتج', 'الحجم', 'السعر', 'الإجمالي'], $tblHeaderStyle));
-
-                    foreach ($inv['items'] as $item) {
-                        $item = (array) $item;
-                        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([
-                            $item['count'] > 1 ? $item['count'] : '',
-                            (!empty($item['is_matched']) ? '★ ' : '') . $item['product_name'],
-                            $fmtN($item['quantity']),
-                            $fmtN($item['unit_cost']),
-                            $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
-                        ], $rowStyle));
-                    }
-                }
-
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], $subtotalStyle));
-                $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues([]));
-            }
-
-            $grandAmount = array_sum(array_column($data, 'total_amount'));
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], $grandTotalStyle));
-
-            $writer->close();
-            exit;
-        }
-
-        $spreadsheet = new Spreadsheet();
-        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setRightToLeft(true);
-        $sheet->setTitle('فواتير الموردين');
-
-        $row = 1;
-        $infoRows = [
-            ['تقرير فواتير الموردين', ''],
-            ['من تاريخ', $dateFrom ?? 'البداية'],
-            ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب', !empty($productNames) ? $productNames : 'الكل'],
-            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
-        ];
-
-        foreach ($infoRows as $info) {
-            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
-            $sheet->fromArray($cells, null, 'A' . $row);
-            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
-            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
-        $row++;
-
-        foreach ($data as $entry) {
-            $sheet->setCellValue('A' . $row, $entry['supplier_name'] . ' — ' . $entry['purchase_count'] . ' فاتورة — ' . $fmtN($entry['total_amount']));
-            $sheet->mergeCells('A' . $row . ':E' . $row);
-            $sheet->getStyle('A' . $row)->applyFromArray([
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ]);
-            $row++;
-
-            foreach ($entry['purchases'] as $p) {
-                $sheet->fromArray(['PO#' . $p['id'], substr($p['date'], 0, 10), $fmtN($p['total'])], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
-                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'BBDEFB']],
-                    'font'    => ['bold' => true],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                ]);
-                $row++;
-
-                $sheet->fromArray(['العدد', 'المنتج', 'الحجم', 'التكلفة', 'المبلغ'], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
-                    'font'      => ['bold' => true],
-                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                ]);
-                $row++;
-
-                foreach ($p['items'] as $item) {
-                    $item = (array) $item;
-                    $sheet->fromArray([
-                        $item['count'] > 1 ? $item['count'] : '',
-                        ($item['is_matched'] ? '★ ' : '') . $item['product_name'],
-                        $fmtN($item['quantity']),
-                        $fmtN($item['unit_cost']),
-                        $fmtN($item['quantity'] * $item['count'] * $item['unit_cost']),
-                    ], null, 'A' . $row);
-                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    ]);
-                    if ($item['count'] > 1) {
-                        $sheet->getStyle('A' . $row)->applyFromArray([
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E3F2FD']],
-                            'font' => ['bold' => true, 'color' => ['rgb' => '1565C0']],
-                            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                        ]);
-                    }
-                    if ($item['is_matched']) {
-                        $sheet->getStyle('B' . $row)->applyFromArray([
-                            'font' => ['color' => ['rgb' => 'D97706']],
-                        ]);
-                        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
-                        ]);
-                    }
-                    $row++;
-                }
-            }
-
-            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row += 2;
-        }
-
-        if ($matchedTotal > 0) {
-            $sheet->fromArray(['إجمالي نتائج البحث', '', '', '', $fmtN($matchedTotal)], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']],
-                'font'    => ['bold' => true, 'color' => ['rgb' => 'D97706'], 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
-
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $sheet->fromArray(['الإجمالي الكلي', '', '', '', $fmtN($grandAmount)], null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-            'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1565C0']],
-            'font'    => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        ]);
-        $row++;
-
-        foreach (range('A', 'E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="فواتير_الموردين_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($spreadsheet))->save('php://output');
-        exit;
+        $this->excelExporter->exportPurchasesSupplierInvoicesExcel($this, $dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function exportPurchasesSupplierInvoicesPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null, ?int $limit = 500, ?int $offset = 0): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g  = fn($text) => $arabic->utf8Glyphs($text);
-        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-        
-        $data    = $this->purchasesSupplierInvoices($dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, $limit ?? 500, $offset ?? 0);
-
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $entries = array_map(function ($entry) use ($g, $en) {
-            return [
-                'name'           => $en($g($entry['supplier_name'])),
-                'purchase_count' => $entry['purchase_count'],
-                'total_amount'   => $entry['total_amount'],
-                'purchases'      => array_map(fn($p) => [
-                    'id'    => $p['id'],
-                    'date'  => substr($p['date'], 0, 10),
-                    'total' => $p['total'],
-                    'items' => array_map(fn($i) => [
-                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
-                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
-                        'unit_cost'    => is_array($i) ? $i['unit_cost'] : $i->unit_cost,
-                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
-                        'is_matched'   => is_array($i) ? ($i['is_matched'] ?? false) : ($i->is_matched ?? false),
-                    ], $p['items']),
-                ], $entry['purchases']),
-            ];
-        }, $data);
-
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $grandCount  = array_sum(array_column($data, 'purchase_count'));
-
-        $matchedTotal = 0;
-        foreach ($data as $entry) {
-            foreach ($entry['purchases'] as $inv) {
-                foreach ($inv['items'] as $item) {
-                    $itemArray = (array) $item;
-                    if (!empty($itemArray['is_matched'])) {
-                        $matchedTotal += (float) ($itemArray['quantity'] * $itemArray['count'] * $itemArray['unit_cost']);
-                    }
-                }
-            }
-        }
-
-        $labels = [
-            'title'           => $g('فواتير الموردين التفصيلية'),
-            'dateFrom'        => $dateFrom ?? $g('البداية'),
-            'dateTo'          => $dateTo ?? now()->format('Y-m-d'),
-            'products_val'    => !empty($productNames) ? array_map($g, $productNames) : [],
-            'labelFrom'       => $g('من'),
-            'labelTo'         => $g('إلى'),
-            'generatedAt'     => now()->format('Y-m-d H:i'),
-            'generatedLabel'  => $g('تاريخ الإنشاء'),
-            'filterUser'      => $userId     ? $en($g(DB::table('users')->where('id', $userId)->value('name') ?? ''))             : null,
-            'filterSupplier'  => $supplierId ? $en($g(DB::table('suppliers')->where('id', $supplierId)->value('name') ?? ''))     : null,
-            'filterCategory'  => $categoryId ? $en($g(DB::table('categories')->where('id', $categoryId)->value('name') ?? ''))   : null,
-            'labelUser'       => $g('المستخدم'),
-            'labelSupplier'   => $g('المورد'),
-            'labelCategory'   => $g('التصنيف'),
-            'grandAmount'     => $grandAmount,
-            'grandCount'      => $grandCount,
-            'product'         => $g('المنتج'),
-            'qty'             => $g('الحجم'),
-            'count_label'     => $g('العدد'),
-            'cost'            => $g('التكلفة'),
-            'amount'          => $g('المبلغ'),
-            'total'           => $g('الإجمالي'),
-            'purchases_label' => $g('عدد الفواتير'),
-            'suppliers_label' => $g('عدد الموردين'),
-            'totalPages'      => 1,
-        ];
-
-        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-        $pdf->render();
-        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.purchases-supplier-invoices-pdf', compact('entries', 'labels', 'fmtN', 'g'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-
-        return $pdf->stream('purchases-supplier-invoices-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportPurchasesSupplierInvoicesPdf($this, $dateFrom, $dateTo, $userId, $supplierId, $categoryId, $filterProductIds, $searchName, $limit, $offset);
     }
-
-    // ─── Returns ───────────────────────────────────────────────────────────────────────
 
     public function returns(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): array
     {
@@ -4085,148 +2325,15 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportReturnsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '1024M');
-        @set_time_limit(300);
-
-        $data = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $filename = 'returns-' . now()->format('Y-m-d') . '.xlsx';
-
-        $cppLines = [];
-        $cppLines[] = ["#SUMMARY", "مرتجعات العملاء (إجمالي)", $fmtN($data['customerReturnsTotal']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "مرتجعات العملاء (عدد)", $data['customerReturnsCount']];
-        $cppLines[] = ["#SUMMARY", "مرتجعات الموردين (إجمالي)", $fmtN($data['supplierReturnsTotal']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "مرتجعات الموردين (عدد)", $data['supplierReturnsCount']];
-        $cppLines[] = ["#SUMMARY", "إجمالي المبيعات", $fmtN($data['totalSales']) . " د.ل"];
-        $cppLines[] = ["#SUMMARY", "نسبة المرتجعات", $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—'];
-
-        $cppLines[] = ["#TABLE_HEADER", "مرتجعات العملاء"];
-        $cppLines[] = ["#TABLE_HEADER", "الشهر", "عدد الفواتير", "الإجمالي (د.ل)"];
-        foreach ($data['customerMonthly'] as $m) {
-            $cppLines[] = ["#TABLE_ROW", $m['month'], $m['count'], $fmtN($m['total']) . " د.ل"];
-        }
-
-        $cppLines[] = ["#TABLE_HEADER", "مرتجعات الموردين"];
-        $cppLines[] = ["#TABLE_HEADER", "الشهر", "عدد الفواتير", "الإجمالي (د.ل)"];
-        foreach ($data['supplierMonthly'] as $m) {
-            $cppLines[] = ["#TABLE_ROW", $m['month'], $m['count'], $fmtN($m['total']) . " د.ل"];
-        }
-
-        if ($this->tryCppExport('تقرير المرتجعات العامة', $dateFrom ?? 'البداية', $dateTo ?? now()->format('Y-m-d'), !empty($productNames) ? implode(', ', $productNames) : 'الكل', 'المرتجعات', 'summary', $cppLines, $filename)) {
-            return;
-        }
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Cache-Control: max-age=0');
-
-        $writer = new \OpenSpout\Writer\XLSX\Writer();
-        $options = $writer->getOptions();
-        $options->setColumnWidth(30, 1);
-        $options->setColumnWidth(25, 2);
-        $options->setColumnWidth(30, 3);
-
-        $writer->openToFile('php://output');
-        $writer->getCurrentSheet()->setSheetView((new \OpenSpout\Writer\XLSX\Entity\SheetView())->withRightToLeft(true));
-
-        $titleStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(15)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $infoStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withBackgroundColor('E3F2FD');
-
-        $tblHeaderStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(13)->withFontBold(true)
-            ->withFontColor('FFFFFF')->withBackgroundColor('1565C0')
-            ->withCellAlignment(\OpenSpout\Common\Entity\Style\CellAlignment::CENTER);
-
-        $rowStyle = (new \OpenSpout\Common\Entity\Style\Style())
-            ->withFontName('Tajawal')->withFontSize(12);
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تقرير المرتجعات'], $titleStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['من تاريخ', $dateFrom ?? 'البداية'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['المنتجات المشمولة في الحساب', !empty($productNames) ? implode(', ', $productNames) : 'الكل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['تاريخ الإنشاء', now()->format('Y-m-d H:i')], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات العملاء (إجمالي)', $fmtN($data['customerReturnsTotal']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات العملاء (عدد)', $data['customerReturnsCount']], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات الموردين (إجمالي)', $fmtN($data['supplierReturnsTotal']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات الموردين (عدد)', $data['supplierReturnsCount']], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['إجمالي المبيعات', $fmtN($data['totalSales']) . ' د.ل'], $infoStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['نسبة المرتجعات', $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—'], $infoStyle));
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات العملاء'], $tblHeaderStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الشهر', 'عدد الفواتير', 'الإجمالي (د.ل)'], $tblHeaderStyle));
-        foreach ($data['customerMonthly'] as $m) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$m['month'], $m['count'], $fmtN($m['total']) . ' د.ل'], $rowStyle));
-        }
-
-        $writer->addRow(new \OpenSpout\Common\Entity\Row([]));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['مرتجعات الموردين'], $tblHeaderStyle));
-        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle(['الشهر', 'عدد الفواتير', 'الإجمالي (د.ل)'], $tblHeaderStyle));
-        foreach ($data['supplierMonthly'] as $m) {
-            $writer->addRow(\OpenSpout\Common\Entity\Row::fromValuesWithStyle([$m['month'], $m['count'], $fmtN($m['total']) . ' د.ل'], $rowStyle));
-        }
-
-        $writer->close();
-        exit;
+        $this->excelExporter->exportReturnsExcel($this, $dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function exportReturnsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g    = fn(string $text) => $arabic->utf8Glyphs($text);
-        $data    = $this->returns($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $includedProducts = $this->getIncludedProducts($filterProductIds, $searchName);
-        $productNames = collect($includedProducts)->pluck('name')->toArray();
-
-        $labels = [
-            'title'                => $g('تقرير المرتجعات'),
-            'generated_at'         => now()->format('Y-m-d H:i'),
-            'products_val'         => !empty($productNames) ? array_map($g, $productNames) : [],
-            'label_date_from'      => $g('من تاريخ'),
-            'date_from_val'        => $dateFrom ?: '—',
-            'date_to_label'        => $g('إلى تاريخ'),
-            'date_to_val'          => $dateTo ?? now()->format('Y-m-d'),
-            'cr_total'             => $fmtN($data['customerReturnsTotal']),
-            'cr_count'             => $data['customerReturnsCount'],
-            'pr_total'             => $fmtN($data['supplierReturnsTotal']),
-            'pr_count'             => $data['supplierReturnsCount'],
-            'sales_total'          => $fmtN($data['totalSales']),
-            'return_rate'          => $data['returnRate'] !== null ? $data['returnRate'] . '%' : '—',
-            'lbl_cr'               => $g('مرتجعات العملاء'),
-            'lbl_pr'               => $g('مرتجعات الموردين'),
-            'lbl_sales'            => $g('إجمالي المبيعات'),
-            'lbl_rate'             => $g('نسبة المرتجعات'),
-            'col_month'            => $g('الشهر'),
-            'col_count'            => $g('عدد'),
-            'col_total'            => $g('الإجمالي'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-pdf', [
-            'labels' => $labels, 'data' => $data, 'g' => $g, 'fmtN' => $fmtN,
-        ])->setPaper('a4')
-          ->setOption('isHtml5ParserEnabled', true)
-          ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('returns-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportReturnsPdf($this, $dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $filterProductIds, $searchName);
     }
 
     public function returnsDetails(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): array
@@ -4388,192 +2495,16 @@ class ReportRepository implements ReportRepositoryInterface
         return $result;
     }
 
+
     public function exportReturnsDetailsExcel(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $spreadsheet = new Spreadsheet();
-        $spreadsheet->getDefaultStyle()->getFont()->setName('Tajawal')->setSize(13);
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setRightToLeft(true);
-        $sheet->setTitle('تفاصيل المرتجعات');
-
-        $row = 1;
-        foreach ([
-            ['تقرير تفاصيل المرتجعات', ''],
-            ['من تاريخ', $dateFrom ?? 'البداية'],
-            ['إلى تاريخ', $dateTo ?? now()->format('Y-m-d')],
-            ['النوع', match($type) { 'customer' => 'مرتجعات العملاء', 'supplier' => 'مرتجعات الموردين', default => 'الكل' }],
-            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
-        ] as $info) {
-            $sheet->setCellValue('A' . $row, $info[0]);
-            $sheet->setCellValue('B' . $row, $info[1]);
-            $sheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF2F2']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
-        $row++;
-
-        foreach ($data as $entry) {
-            $color = $entry['entity_type'] === 'customer' ? 'DC2626' : 'D97706';
-            $bg    = $entry['entity_type'] === 'customer' ? 'FEE2E2' : 'FEF3C7';
-
-            $sheet->setCellValue('A' . $row, $entry['entity_name'] . ' — ' . $entry['return_count'] . ' مرتجع — ' . $fmtN($entry['total_amount']));
-            $sheet->mergeCells('A' . $row . ':E' . $row);
-            $sheet->getStyle('A' . $row)->applyFromArray([
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $color]],
-                'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            ]);
-            $row++;
-
-            foreach ($entry['returns'] as $r) {
-                $prefix = $entry['entity_type'] === 'customer' ? 'RET#' : 'PRET#';
-                $sheet->fromArray([$prefix . $r['id'], substr($r['date'], 0, 10), $fmtN($r['total'])], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
-                    'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
-                    'font'    => ['bold' => true],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                ]);
-                $row++;
-
-                $sheet->fromArray(['عدد', 'المنتج', 'حجم', 'سعر', 'الإجمالي'], null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                    'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
-                    'font'      => ['bold' => true],
-                    'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                ]);
-                $row++;
-
-                foreach ($r['items'] as $item) {
-                    $item = (array) $item;
-                    $sheet->fromArray([
-                        $item['count'],
-                        $item['product_name'],
-                        $item['size_label'] ?? '—',
-                        $fmtN($item['unit_price']),
-                        $fmtN($item['line_total']),
-                    ], null, 'A' . $row);
-                    $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-                    ]);
-                    $sheet->getStyle('A' . $row)->applyFromArray([
-                        'font'      => ['bold' => true, 'color' => ['rgb' => '1565C0']],
-                        'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                    ]);
-                    $row++;
-                }
-            }
-
-            $sheet->fromArray(['الإجمالي', '', '', '', $fmtN($entry['total_amount'])], null, 'A' . $row);
-            $sheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
-                'fill'    => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8EAF6']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-            ]);
-            $row += 2;
-        }
-
-        foreach (range('A', 'E') as $col) $sheet->getColumnDimension($col)->setAutoSize(true);
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="تفاصيل_المرتجعات_' . ($dateFrom ?? 'all') . '_' . ($dateTo ?? now()->format('Y-m-d')) . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        (new Xlsx($spreadsheet))->save('php://output');
-        exit;
+        $this->excelExporter->exportReturnsDetailsExcel($this, $dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
     }
 
     public function exportReturnsDetailsPdf(?string $dateFrom, ?string $dateTo, ?int $userId, ?int $customerId, ?int $supplierId, ?int $categoryId, string $type, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g  = fn($text) => $arabic->utf8Glyphs($text);
-        $en = fn($str)  => str_replace(['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'], ['0','1','2','3','4','5','6','7','8','9'], $str);
-        $data    = $this->returnsDetails($dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $isWhole($n) ? number_format($n, 0) : number_format($n, 2);
-
-        $entries = array_map(function ($entry) use ($g, $en) {
-            return [
-                'name'         => $en($g($entry['entity_name'])),
-                'entity_type'  => $entry['entity_type'],
-                'return_count' => $entry['return_count'],
-                'total_amount' => $entry['total_amount'],
-                'returns'      => array_map(fn($r) => [
-                    'id'    => $r['id'],
-                    'date'  => substr($r['date'], 0, 10),
-                    'total' => $r['total'],
-                    'items' => array_map(fn($i) => [
-                        'product_name' => $en($g(is_array($i) ? $i['product_name'] : $i->product_name)),
-                        'quantity'     => is_array($i) ? $i['quantity'] : $i->quantity,
-                        'unit_price'   => is_array($i) ? $i['unit_price'] : $i->unit_price,
-                        'size_label'   => is_array($i) ? ($i['size_label'] ?? null) : ($i->size_label ?? null),
-                        'count'        => is_array($i) ? ($i['count'] ?? 1) : ($i->count ?? 1),
-                        'line_total'   => is_array($i) ? ($i['line_total'] ?? 0) : ($i->line_total ?? 0),
-                    ], $r['items']),
-                ], $entry['returns']),
-            ];
-        }, $data);
-
-        $grandAmount = array_sum(array_column($data, 'total_amount'));
-        $grandCount  = array_sum(array_column($data, 'return_count'));
-        $typeLabel   = match($type) { 'customer' => $g('مرتجعات العملاء'), 'supplier' => $g('مرتجعات الموردين'), default => $g('جميع المرتجعات') };
-
-        $labels = [
-            'title'          => $g('تفاصيل المرتجعات'),
-            'type_label'     => $typeLabel,
-            'dateFrom'       => $dateFrom ?: '—',
-            'dateTo'         => $dateTo ?? now()->format('Y-m-d'),
-            'labelFrom'      => $g('من'),
-            'labelTo'        => $g('إلى'),
-            'generatedAt'    => now()->format('Y-m-d H:i'),
-            'generatedLabel' => $g('تاريخ الإنشاء'),
-            'filterUser'     => $userId     ? $en($g(DB::table('users')->where('id', $userId)->value('name') ?? ''))         : null,
-            'filterCustomer' => $customerId ? $en($g(DB::table('customers')->where('id', $customerId)->value('name') ?? '')) : null,
-            'filterSupplier' => $supplierId ? $en($g(DB::table('suppliers')->where('id', $supplierId)->value('name') ?? '')) : null,
-            'filterCategory' => $categoryId ? $en($g(DB::table('categories')->where('id', $categoryId)->value('name') ?? '')) : null,
-            'labelUser'      => $g('المستخدم'),
-            'labelCustomer'  => $g('العميل'),
-            'labelSupplier'  => $g('المورد'),
-            'labelCategory'  => $g('التصنيف'),
-            'labelType'      => $g('النوع'),
-            'grandAmount'    => $grandAmount,
-            'grandCount'     => $grandCount,
-            'product'        => $g('المنتج'),
-            'qty'            => $g('الحجم'),
-            'count_label'    => $g('العدد'),
-            'price'          => $g('السعر'),
-            'amount'         => $g('المبلغ'),
-            'total'          => $g('الإجمالي'),
-            'returns_label'  => $g('عدد المرتجعات'),
-            'entities_label' => $g('عدد الجهات'),
-            'totalPages'     => 1,
-        ];
-
-        $options = ['isRemoteEnabled' => false, 'isHtml5ParserEnabled' => true, 'isFontSubsettingEnabled' => true, 'compress' => 1, 'dpi' => 96];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-details-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-        $pdf->render();
-        $labels['totalPages'] = $pdf->getDomPDF()->getCanvas()->get_page_count();
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.returns-details-pdf', compact('entries', 'labels', 'fmtN'))->setPaper('a4');
-        foreach ($options as $k => $v) $pdf->setOption($k, $v);
-
-        return $pdf->stream('returns-details-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportReturnsDetailsPdf($this, $dateFrom, $dateTo, $userId, $customerId, $supplierId, $categoryId, $type, $searchName);
     }
-
-    // ─── Profit Analysis ────────────────────────────────────────────────────────
 
     public function profitAnalysis(array $productIds, ?string $dateFrom, ?string $dateTo, ?int $categoryId = null): array
     {
@@ -4689,6 +2620,7 @@ class ReportRepository implements ReportRepositoryInterface
             ];
         })->values()->toArray();
     }
+
 
     public function dailyProfitSummary(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?int $periodId = null, ?string $searchName = null): array
     {
@@ -4911,136 +2843,14 @@ class ReportRepository implements ReportRepositoryInterface
         ];
     }
 
+
     public function exportProfitAnalysisExcel(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): void
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
-
-        $productNames = collect($data['included_products'])->pluck('name')->toArray();
-
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setRightToLeft(true);
-        $sheet->setTitle('تحليل الأرباح الشامل');
-
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-
-        $row = 1;
-        $infoRows = [
-            ['تحليل الأرباح الشامل', ''],
-            ['من تاريخ',   $dateFrom ?? 'البداية'],
-            ['إلى تاريخ',   $dateTo   ?? now()->format('Y-m-d')],
-            ['المنتجات المشمولة في الحساب',    !empty($productNames) ? $productNames : 'الكل'],
-            ['تاريخ الإنشاء', now()->format('Y-m-d H:i')],
-            ['', ''],
-            ['إجمالي صافي المبيعات', $fmtN(array_sum(array_column($data['monthly'], 'net_sales')))],
-            ['إجمالي الربح', $fmtN($data['total_profit'])],
-        ];
-        
-        foreach ($infoRows as $info) {
-            $cells = is_array($info[1]) ? array_merge([$info[0]], $info[1]) : [$info[0], $info[1]];
-            $sheet->fromArray($cells, null, 'A' . $row);
-            $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($cells));
-            $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-                'fill'    => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'EFF6FF']],
-                'font'    => ['bold' => true, 'size' => 15],
-                'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            ]);
-            $row++;
-        }
-        $row++;
-
-        $headers = ['#', 'التاريخ', 'الشهر', 'المبيعات', 'المرتجعات', 'صافي المبيعات', 'الربح'];
-        
-        $lastCol = chr(ord('A') + count($headers) - 1);
-        $sheet->fromArray($headers, null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '1E3A5F']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 15],
-            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-        ]);
-        $row++;
-
-        $i = 0;
-        foreach ($data['monthly'] as $m) {
-            foreach ($m['days'] as $d) {
-                $bg = $i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
-                $rowData = [
-                    $i + 1,
-                    $d['date'],
-                    $m['month'],
-                    $fmtN($d['sales']),
-                    $fmtN($d['returns']),
-                    $fmtN($d['net_sales']),
-                    $fmtN($d['profit'])
-                ];
-
-                $sheet->fromArray($rowData, null, 'A' . $row);
-                $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-                    'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => $bg]],
-                    'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
-                    'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-                ]);
-                $row++;
-                $i++;
-            }
-        }
-
-        // Add Total Row
-        $sheet->fromArray(['', '', 'الإجمالي', '', '', $fmtN(array_sum(array_column($data['monthly'], 'net_sales'))), $fmtN($data['total_profit'])], null, 'A' . $row);
-        $sheet->getStyle('A' . $row . ':' . $lastCol . $row)->applyFromArray([
-            'fill'      => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
-            'font'      => ['bold' => true, 'color' => ['rgb' => '1E293B']],
-            'borders'   => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
-        ]);
-
-        foreach (range('A', $lastCol) as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="profit-analysis-' . now()->format('Y-m-d') . '.xlsx"');
-        header('Cache-Control: max-age=0');
-        $writer->save('php://output');
-        exit;
+        $this->excelExporter->exportProfitAnalysisExcel($this, $dateFrom, $dateTo, $filterProductIds, $searchName);
     }
 
     public function exportProfitAnalysisPdf(?string $dateFrom, ?string $dateTo, ?array $filterProductIds = null, ?string $searchName = null): \Illuminate\Http\Response
     {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(180);
-        $arabic = new \ArPHP\I18N\Arabic();
-        $g = fn(string $text) => $arabic->utf8Glyphs($text);
-
-        $data = $this->dailyProfitSummary($dateFrom, $dateTo, $filterProductIds, null, $searchName);
-        $isWhole = fn($n) => $n == floor($n);
-        $fmtN    = fn($n) => $n !== null ? ($isWhole($n) ? number_format($n, 0) : number_format($n, 2)) : '—';
-
-        $productNames = collect($data['included_products'])->pluck('name')->toArray();
-
-        $labels = [
-            'title'        => $g('تحليل الأرباح الشامل'),
-            'generated_at' => now()->format('Y-m-d H:i'),
-        ];
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.profit-analysis-pdf', [
-            'labels'       => $labels,
-            'data'         => $data,
-            'g'            => $g,
-            'fmtN'         => $fmtN,
-            'dateFrom'     => $dateFrom,
-            'dateTo'       => $dateTo,
-            'productNames' => $productNames,
-        ])
-        ->setPaper('a4', 'portrait')
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isFontSubsettingEnabled', true);
-
-        return $pdf->stream('profit-analysis-' . now()->format('Y-m-d') . '.pdf');
+        return $this->pdfExporter->exportProfitAnalysisPdf($this, $dateFrom, $dateTo, $filterProductIds, $searchName);
     }
 }
