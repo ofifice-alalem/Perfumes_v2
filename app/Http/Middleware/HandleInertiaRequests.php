@@ -11,7 +11,7 @@ class HandleInertiaRequests extends Middleware
 
     public function version(Request $request): ?string
     {
-        return null;
+        return parent::version($request);
     }
 
     public function share(Request $request): array
