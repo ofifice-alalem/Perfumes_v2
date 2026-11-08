@@ -39,7 +39,8 @@ class PeriodController extends Controller
 
         abort_unless($current, 404, 'لا توجد فترة مفتوحة');
 
-        $dateFrom = $current->started_at->toDateString();
+        // Comprehensive check across ALL tables with period_id to ensure full coverage
+        $dateFrom = $this->rollover->getEffectivePeriodStartDate($current);
         $dateTo   = now()->toDateString();
 
         return Inertia::render('Periods/Rollover', [

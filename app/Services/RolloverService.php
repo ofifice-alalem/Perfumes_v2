@@ -25,6 +25,23 @@ use Illuminate\Support\Facades\Schema;
 
 class RolloverService
 {
+    public const DAILY_TABLES = [
+        'invoices',
+        'invoice_items',
+        'payments',
+        'settlements',
+        'purchases',
+        'purchase_items',
+        'supplier_payments',
+        'supplier_settlements',
+        'invoice_returns',
+        'invoice_return_items',
+        'purchase_returns',
+        'purchase_return_items',
+        'waste_logs',
+        'waste_items',
+    ];
+
     public function __construct(private ReportRepositoryInterface $reports) {}
 
     public function getCurrentPeriodId(): ?int
@@ -49,13 +66,19 @@ class RolloverService
         return DB::transaction(function () use ($name, $userId) {
             $isMysql = DB::connection()->getDriverName() === 'mysql';
 
-            // 1. Fast O(1) indexed lookup for earliest transaction date via primary key
-            $earliestInvoice = DB::table('invoices')->orderBy('id', 'asc')->value('created_at');
-            $earliestPurchase = DB::table('purchases')->orderBy('id', 'asc')->value('created_at');
+            // 1. True earliest transaction date across ALL daily tables containing period_id
+            $dates = [];
+            foreach (self::DAILY_TABLES as $t) {
+                if (Schema::hasTable($t) && Schema::hasColumn($t, 'created_at')) {
+                    $minDate = DB::table($t)->min('created_at');
+                    if ($minDate) {
+                        $dates[] = Carbon::parse($minDate);
+                    }
+                }
+            }
 
-            $dates = array_filter([$earliestInvoice, $earliestPurchase]);
             if (!empty($dates)) {
-                $startedAt = Carbon::parse(min($dates))->subDay()->startOfDay();
+                $startedAt = min($dates)->copy()->subDay()->startOfDay();
             } else {
                 $startedAt = now()->startOfYear();
             }
@@ -69,20 +92,12 @@ class RolloverService
             ]);
 
             // 3. Fast direct batch update without redundant schema inspection
-            $dailyTables = [
-                'invoices', 'invoice_items', 'payments', 'settlements',
-                'purchases', 'purchase_items', 'supplier_payments', 'supplier_settlements',
-                'invoice_returns', 'invoice_return_items',
-                'purchase_returns', 'purchase_return_items',
-                'waste_logs', 'waste_items',
-            ];
-
             if ($isMysql) {
                 DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             }
 
             try {
-                foreach ($dailyTables as $tbl) {
+                foreach (self::DAILY_TABLES as $tbl) {
                     if (Schema::hasTable($tbl)) {
                         DB::table($tbl)->whereNull('period_id')->update(['period_id' => $period->id]);
                     }
@@ -105,7 +120,7 @@ class RolloverService
         $periodId = $this->getCurrentPeriodId();
         $current  = $this->getCurrentPeriod();
 
-        $dateFrom = $current?->started_at->toDateString();
+        $dateFrom = $current ? $this->getEffectivePeriodStartDate($current) : now()->startOfYear()->toDateString();
         $dateTo   = now()->toDateString();
 
         return [
@@ -197,7 +212,7 @@ class RolloverService
             PeriodSnapshotItem::insert($items);
 
             // Save daily profit data
-            $dateFrom     = $current->started_at->toDateString();
+            $dateFrom     = $this->getEffectivePeriodStartDate($current);
             $dateTo       = now()->toDateString();
             $profitSummary = $this->reports->dailyProfitSummary($dateFrom, $dateTo, null, $periodId);
             $dailyRows = [];
@@ -457,6 +472,28 @@ class RolloverService
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────
+
+    public function getEffectivePeriodStartDate(AccountingPeriod $period): string
+    {
+        $dates = [];
+        foreach (self::DAILY_TABLES as $table) {
+            if (Schema::hasTable($table) && Schema::hasColumn($table, 'created_at') && Schema::hasColumn($table, 'period_id')) {
+                $minDate = DB::table($table)->where('period_id', $period->id)->min('created_at');
+                if ($minDate) {
+                    $dates[] = Carbon::parse($minDate);
+                }
+            }
+        }
+
+        if (!empty($dates)) {
+            $earliest = min($dates);
+            if ($earliest->lt($period->started_at)) {
+                return $earliest->copy()->subDay()->startOfDay()->toDateString();
+            }
+        }
+
+        return $period->started_at->toDateString();
+    }
 
     private function buildCustomerBalances(?int $periodId): array
     {
