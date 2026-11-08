@@ -43,10 +43,7 @@ class ReportController extends Controller
         if ($hasDailySearch) {
             $dFrom = $dateFrom ?: now()->startOfMonth()->toDateString();
             $dTo   = $dateTo   ?: now()->endOfMonth()->toDateString();
-            $cacheKeyDaily = 'profit_daily_' . md5(json_encode([$dFrom, $dTo, $productIds, $searchName]));
-            $profitSummary = \Illuminate\Support\Facades\Cache::remember($cacheKeyDaily, now()->addHours(1), function() use ($dFrom, $dTo, $productIds, $searchName) {
-                return $this->reports->dailyProfitSummary($dFrom, $dTo, $productIds, null, $searchName);
-            });
+            $profitSummary = $this->reports->dailyProfitSummary($dFrom, $dTo, $productIds, null, $searchName);
         } else {
             $profitSummary = ['total_profit' => 0, 'monthly' => [], 'daily' => [], 'included_products' => []];
         }
@@ -54,10 +51,7 @@ class ReportController extends Controller
         if ($hasStockSearch) {
             $sFrom = $stockDateFrom ?: now()->startOfMonth()->toDateString();
             $sTo   = $stockDateTo   ?: now()->endOfMonth()->toDateString();
-            $cacheKeyStock = 'profit_stock_' . md5(json_encode([$stockCategoryId, $sFrom, $sTo, $stockProductIds, $stockSearchName]));
-            $stockProfitData = \Illuminate\Support\Facades\Cache::remember($cacheKeyStock, now()->addHours(1), function() use ($stockCategoryId, $sFrom, $sTo, $stockProductIds, $stockSearchName) {
-                return $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $sFrom, $sTo, $stockProductIds, null, $stockSearchName);
-            });
+            $stockProfitData = $this->reports->stockStatus($stockCategoryId, null, false, true, true, true, $sFrom, $sTo, $stockProductIds, null, $stockSearchName);
         } else {
             $stockProfitData = [];
         }
