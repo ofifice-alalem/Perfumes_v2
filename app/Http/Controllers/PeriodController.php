@@ -70,9 +70,14 @@ class PeriodController extends Controller
 
     public function startFirst(StartPeriodRequest $request): RedirectResponse
     {
+        @set_time_limit(300);
+
         try {
             $this->rollover->startFirstPeriod($request->validated('name'), Auth::id());
         } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Start first period error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
             return back()->with('error', $e->getMessage());
         }
 

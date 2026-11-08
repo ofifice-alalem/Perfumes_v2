@@ -39,34 +39,28 @@ class RolloverService
 
     public function startFirstPeriod(string $name, ?int $userId = null): AccountingPeriod
     {
+        @set_time_limit(300);
+
         $current = $this->getCurrentPeriod();
         if ($current) {
             throw new \RuntimeException('يوجد بالفعل فترة محاسبية مفتوحة.');
         }
 
         return DB::transaction(function () use ($name, $userId) {
-            // 1. البحث عن أقدم تاريخ حركة موجود في قاعدة البيانات
-            $tables = ['invoices', 'purchases', 'payments', 'supplier_payments', 'waste_logs'];
-            $earliestDates = [];
+            $isMysql = DB::connection()->getDriverName() === 'mysql';
 
-            foreach ($tables as $table) {
-                if (Schema::hasTable($table)) {
-                    $minDate = DB::table($table)->min('created_at');
-                    if ($minDate) {
-                        $earliestDates[] = Carbon::parse($minDate);
-                    }
-                }
-            }
+            // 1. Fast O(1) indexed lookup for earliest transaction date via primary key
+            $earliestInvoice = DB::table('invoices')->orderBy('id', 'asc')->value('created_at');
+            $earliestPurchase = DB::table('purchases')->orderBy('id', 'asc')->value('created_at');
 
-            // 2. إذا وجدت حركات، نبدأ قبل أقدم حركة بيوم كامل لضمان شموليتها
-            if (!empty($earliestDates)) {
-                $earliest = min($earliestDates);
-                $startedAt = $earliest->copy()->subDay()->startOfDay();
+            $dates = array_filter([$earliestInvoice, $earliestPurchase]);
+            if (!empty($dates)) {
+                $startedAt = Carbon::parse(min($dates))->subDay()->startOfDay();
             } else {
                 $startedAt = now()->startOfYear();
             }
 
-            // 3. إنشاء الفترة المحاسبية الأولى
+            // 2. Create the first accounting period
             $period = AccountingPeriod::create([
                 'name'       => $name,
                 'started_at' => $startedAt,
@@ -74,7 +68,7 @@ class RolloverService
                 'created_by' => $userId ?? Auth::id() ?? 1,
             ]);
 
-            // 4. ربط أي سجلات سابقة لا تملك period_id بهذه الفترة تلقائياً
+            // 3. Fast direct batch update without redundant schema inspection
             $dailyTables = [
                 'invoices', 'invoice_items', 'payments', 'settlements',
                 'purchases', 'purchase_items', 'supplier_payments', 'supplier_settlements',
@@ -83,9 +77,19 @@ class RolloverService
                 'waste_logs', 'waste_items',
             ];
 
-            foreach ($dailyTables as $tbl) {
-                if (Schema::hasTable($tbl) && Schema::hasColumn($tbl, 'period_id')) {
-                    DB::table($tbl)->whereNull('period_id')->update(['period_id' => $period->id]);
+            if ($isMysql) {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            }
+
+            try {
+                foreach ($dailyTables as $tbl) {
+                    if (Schema::hasTable($tbl)) {
+                        DB::table($tbl)->whereNull('period_id')->update(['period_id' => $period->id]);
+                    }
+                }
+            } finally {
+                if ($isMysql) {
+                    DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 }
             }
 
