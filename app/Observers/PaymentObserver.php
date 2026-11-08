@@ -50,6 +50,14 @@ class PaymentObserver
         }
     }
 
+    /**
+     * إعادة تعيين حالة الكتم بأمان لضمان عدم بقاء المتغير معلقاً
+     */
+    public static function resetMute(): void
+    {
+        static::$muteSync = false;
+    }
+
     private function syncInvoice(Payment $payment): void
     {
         if (static::$muteSync) return;

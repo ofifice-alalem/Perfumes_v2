@@ -55,6 +55,14 @@ class InvoiceItemObserver
         }
     }
 
+    /**
+     * إعادة تعيين حالة الكتم بأمان لضمان عدم بقاء المتغير معلقاً
+     */
+    public static function resetMute(): void
+    {
+        static::$muteSync = false;
+    }
+
     private function syncInvoice(InvoiceItem $item): void
     {
         if (static::$muteSync) return;
