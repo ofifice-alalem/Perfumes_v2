@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, router } from '@inertiajs/react';
 import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
-import { SpatialCard, DraggableOnScreenKeyboard } from '@/components/ui/SpatialComponents';
+import { SpatialCard, DraggableOnScreenKeyboard, Pagination } from '@/components/ui/SpatialComponents';
+import { AdminKpiCard, AdminFlashAlert } from '@/components/admin';
 import {
     RefreshCw,
     Eye,
@@ -11,12 +12,12 @@ import {
     X,
     Play,
     Calendar,
-    CheckCircle2,
-    Clock,
     Keyboard,
     Sparkles,
     ShieldAlert,
-    FileText
+    FileText,
+    CheckCircle2,
+    Archive
 } from 'lucide-react';
 
 interface Period {
@@ -51,12 +52,16 @@ function fmtDate(v: string | null): string {
 }
 
 /* =========================================================================
-   1. PURGE PERIOD MODAL
+   1. PURGE PERIOD MODAL (with Safety Confirmation Text)
    ========================================================================= */
 function PurgeModal({ period, onClose }: { period: Period; onClose: () => void }) {
     const [loading, setLoading] = useState(false);
+    const [confirmText, setConfirmText] = useState('');
+
+    const isConfirmed = confirmText.trim() === 'تأكيد' || confirmText.trim() === period.name.trim();
 
     function confirm() {
+        if (!isConfirmed) return;
         setLoading(true);
         router.delete(`/periods/${period.id}/purge`, {
             onSuccess: onClose,
@@ -80,9 +85,9 @@ function PurgeModal({ period, onClose }: { period: Period; onClose: () => void }
                             <AlertTriangle className="w-8 h-8" />
                         </div>
                         <div>
-                            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">حذف بيانات الفترة</h3>
+                            <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">حذف وتطهير بيانات الفترة</h3>
                             <p className="text-base font-bold text-red-600 dark:text-red-400 mt-0.5">
-                                تطهير البيانات التشغيلية
+                                تطهير السجلات التشغيلية نهائياً
                             </p>
                         </div>
                     </div>
@@ -94,27 +99,42 @@ function PurgeModal({ period, onClose }: { period: Period; onClose: () => void }
                     </button>
                 </div>
 
-                <div className="p-5 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-slate-800 dark:text-slate-200 flex flex-col gap-2">
+                <div className="p-5 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 text-slate-800 dark:text-slate-200 flex flex-col gap-2.5">
                     <p className="text-lg font-bold leading-relaxed">
-                        سيتم حذف جميع الحركات التشغيلية للفترة <strong className="text-red-600 dark:text-red-400 text-xl font-black">"{period.name}"</strong>.
+                        سيتم تطهير جميع الفواتير والمشتريات والمرتجعات وحركات الخزينة الخاصة بالفترة <strong className="text-red-600 dark:text-red-400 text-xl font-black">"{period.name}"</strong>.
                     </p>
-                    <p className="text-base font-black text-slate-500 dark:text-slate-400">
-                        ملاحظة: الـ Snapshot الإحصائي سيبقى محفوظاً للأبد ولن يتأثر.
+                    <p className="text-sm font-black text-slate-500 dark:text-slate-400">
+                        🛡️ ملاحظة: الـ Snapshot الإحصائي سيبقى محفوظاً للأبد ولن تتأثر تقارير الأرباح التراكمية.
                     </p>
+                </div>
+
+                {/* Confirmation input to prevent accidental purge */}
+                <div className="flex flex-col gap-2">
+                    <label className="text-sm font-black text-slate-700 dark:text-slate-300">
+                        اكتب كلمة <strong className="text-red-500 font-black">تأكيد</strong> للمتابعة:
+                    </label>
+                    <input
+                        type="text"
+                        value={confirmText}
+                        onChange={(e) => setConfirmText(e.target.value)}
+                        placeholder="اكتب تأكيد هنا..."
+                        className="spatial-input h-14 rounded-[18px] px-5 text-lg font-black border-2 border-red-500/30 w-full"
+                        autoFocus
+                    />
                 </div>
 
                 <div className="flex items-center gap-4 pt-2">
                     <button
                         onClick={confirm}
-                        disabled={loading}
-                        className="h-16 sm:h-18 rounded-[22px] bg-red-600 hover:bg-red-700 text-white font-black text-lg sm:text-xl flex items-center justify-center gap-3 flex-1 shadow-xl shadow-red-600/30 active:scale-95 cursor-pointer border-2 border-red-400/30"
+                        disabled={loading || !isConfirmed}
+                        className="h-16 sm:h-18 rounded-[22px] bg-red-600 hover:bg-red-700 text-white font-black text-lg sm:text-xl flex items-center justify-center gap-3 flex-1 shadow-xl shadow-red-600/30 active:scale-95 cursor-pointer border-2 border-red-400/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                         {loading ? (
                             <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
                             <Trash2 className="w-6 h-6" />
                         )}
-                        <span>{loading ? 'جارٍ الحذف...' : 'تأكيد الحذف النهائي'}</span>
+                        <span>{loading ? 'جارٍ التطهير...' : 'تأكيد التطهير النهائي'}</span>
                     </button>
 
                     <button
@@ -209,6 +229,7 @@ function StartFirstPeriodModal({ onClose }: { onClose: () => void }) {
                         onChange={e => setName(e.target.value)}
                         placeholder="مثلاً: الفترة المحاسبية 2026 أو الفترة الافتتاحية"
                         className="spatial-input rounded-[22px] h-18 px-5 text-xl font-black w-full"
+                        autoFocus
                     />
                 </div>
 
@@ -257,9 +278,12 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
     const [purgeTarget, setPurgeTarget] = useState<Period | null>(null);
     const [showStartModal, setShowStartModal] = useState(false);
 
+    const closedPeriodsCount = useMemo(() => periods.data.filter(p => p.status === 'closed').length, [periods.data]);
+    const snapshotsCount = useMemo(() => periods.data.filter(p => p.snapshot !== null).length, [periods.data]);
+
     return (
         <AppShell pageTitle="الإقفال والجرد">
-            <div className="flex flex-col gap-8 pb-32 lg:pb-0 dir-rtl">
+            <div className="flex flex-col gap-8 pb-32 lg:pb-0 dir-rtl select-none">
 
                 {/* Header Banner */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-slate-100/80 dark:bg-slate-800/40 p-6 sm:p-8 rounded-[30px] border-2 border-slate-200/80 dark:border-slate-700/60 shadow-lg">
@@ -288,6 +312,7 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                             </Link>
                         ) : (
                             <button
+                                type="button"
                                 onClick={() => setShowStartModal(true)}
                                 className="h-16 sm:h-18 px-8 sm:px-10 rounded-[22px] bg-emerald-600 hover:bg-emerald-700 text-white font-black text-base sm:text-xl flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-emerald-600/30 border-2 border-emerald-400/30 touch-manipulation cursor-pointer"
                             >
@@ -299,18 +324,31 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                 </div>
 
                 {/* Flash Notifications */}
-                {flash?.success && (
-                    <div className="p-5 rounded-[22px] bg-emerald-500/15 border-2 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 font-black text-lg sm:text-xl flex items-center gap-3 shadow-md">
-                        <CheckCircle2 className="w-7 h-7 text-emerald-500 shrink-0" />
-                        <span>{flash.success}</span>
-                    </div>
-                )}
-                {flash?.error && (
-                    <div className="p-5 rounded-[22px] bg-red-500/15 border-2 border-red-500/30 text-red-700 dark:text-red-300 font-black text-lg sm:text-xl flex items-center gap-3 shadow-md">
-                        <AlertTriangle className="w-7 h-7 text-red-500 shrink-0" />
-                        <span>{flash.error}</span>
-                    </div>
-                )}
+                <AdminFlashAlert flash={flash} />
+
+                {/* KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                    <AdminKpiCard
+                        title="الفترة المحاسبية النشطة"
+                        value={currentPeriod ? currentPeriod.name : 'لا توجد'}
+                        icon={<CheckCircle2 className="w-5 h-5 text-emerald-500" />}
+                        highlightColor={currentPeriod ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}
+                        subtitle={currentPeriod ? `مفتوحة منذ ${fmtDate(currentPeriod.started_at)}` : 'يتطلب بدء فترة لتسجيل العمليات'}
+                    />
+                    <AdminKpiCard
+                        title="إجمالي الفترات المسجلة"
+                        value={periods.total}
+                        icon={<Calendar className="w-5 h-5 text-primary" />}
+                        subtitle="تاريخ الفترات المحاسبية"
+                    />
+                    <AdminKpiCard
+                        title="الفترات المغلقة والمؤرشفة"
+                        value={closedPeriodsCount}
+                        icon={<Archive className="w-5 h-5 text-blue-500" />}
+                        highlightColor="text-blue-600 dark:text-blue-400"
+                        subtitle={`${snapshotsCount} فترة تملك Snapshot إحصائي`}
+                    />
+                </div>
 
                 {/* Current Status Box */}
                 {currentPeriod ? (
@@ -425,6 +463,7 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
 
                                                         {period.status === 'closed' && period.snapshot && (
                                                             <button
+                                                                type="button"
                                                                 onClick={() => setPurgeTarget(period)}
                                                                 className="h-14 px-5 rounded-[18px] border-2 border-red-500/40 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
                                                             >
@@ -485,6 +524,7 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
 
                                             {period.status === 'closed' && period.snapshot && (
                                                 <button
+                                                    type="button"
                                                     onClick={() => setPurgeTarget(period)}
                                                     className="flex-1 h-14 rounded-[18px] border-2 border-red-500/40 bg-red-500/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 font-black text-base flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm touch-manipulation cursor-pointer"
                                                 >
@@ -497,31 +537,12 @@ export default function PeriodsIndex({ periods, currentPeriod, flash }: Props) {
                                 ))}
                             </div>
 
-                            {/* Pagination */}
-                            {periods.last_page > 1 && (
-                                <div className="flex items-center justify-center gap-2 pt-6 flex-wrap">
-                                    {periods.links.map((link, i) => (
-                                        link.url ? (
-                                            <Link
-                                                key={i}
-                                                href={link.url}
-                                                className={`px-5 h-12 rounded-[16px] font-black text-base flex items-center transition-all cursor-pointer ${
-                                                    link.active
-                                                        ? 'bg-primary text-white shadow-md'
-                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                                                }`}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        ) : (
-                                            <span
-                                                key={i}
-                                                className="px-5 h-12 rounded-[16px] font-black text-base flex items-center text-slate-300 dark:text-slate-700"
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
-                                        )
-                                    ))}
-                                </div>
-                            )}
+                            {/* Standard Reusable Pagination Component */}
+                            <Pagination
+                                links={periods.links}
+                                currentPage={periods.current_page}
+                                lastPage={periods.last_page}
+                            />
                         </>
                     )}
                 </SpatialCard>
