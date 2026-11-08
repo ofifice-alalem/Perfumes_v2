@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CategoryRequest;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,14 +19,9 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(CategoryRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name'           => 'required|string|max:255|unique:categories,name',
-            'unit'           => 'required|in:ml,pcs,g',
-            'is_operational' => 'boolean',
-        ]);
-
+        $data = $request->validated();
         $data['is_operational'] = $request->boolean('is_operational');
 
         $this->categories->create($data);
@@ -33,14 +29,9 @@ class CategoryController extends Controller
         return back()->with('success', 'تم إضافة التصنيف بنجاح');
     }
 
-    public function update(Request $request, int $id)
+    public function update(CategoryRequest $request, int $id): RedirectResponse
     {
-        $data = $request->validate([
-            'name'           => 'required|string|max:255|unique:categories,name,' . $id,
-            'unit'           => 'required|in:ml,pcs,g',
-            'is_operational' => 'boolean',
-        ]);
-
+        $data = $request->validated();
         $data['is_operational'] = $request->boolean('is_operational');
 
         $this->categories->update($data, $id);
@@ -48,7 +39,7 @@ class CategoryController extends Controller
         return back()->with('success', 'تم تحديث التصنيف بنجاح');
     }
 
-    public function destroy(int $id)
+    public function destroy(int $id): RedirectResponse
     {
         if ($this->categories->hasProducts($id)) {
             return back()->with('error', 'لا يمكن حذف تصنيف مرتبط بمنتجات');

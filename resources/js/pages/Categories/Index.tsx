@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { AppShell } from '@/components/layout/AppShell';
 import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
-import { Plus, Pencil, Trash2, X, Check, Tag, AlertTriangle, Layers } from 'lucide-react';
+import { DeleteModal } from '@/components/ui/DeleteModal';
+import { AdminKpiCard, AdminFlashAlert } from '@/components/admin';
+import { matchesSearchText } from '@/lib/textUtils';
+import { Plus, Pencil, Trash2, X, Check, Tag, Layers, Search } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 interface Category {
@@ -17,77 +20,38 @@ interface Props {
   flash?: { success?: string; error?: string };
 }
 
-const unitLabels = { ml: 'مليلتر', pcs: 'قطعة', g: 'غرام' };
-const unitColors = {
+const unitLabels: Record<string, string> = { ml: 'مليلتر', pcs: 'قطعة', g: 'غرام' };
+const unitColors: Record<string, string> = {
   ml:  'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-2 border-blue-500/20',
   pcs: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-2 border-purple-500/20',
   g:   'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-2 border-amber-500/20',
 };
 
-const unitIconColors = {
+const unitIconColors: Record<string, string> = {
   ml:  'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-2 border-blue-500/20',
   pcs: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-2 border-purple-500/20',
   g:   'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-2 border-amber-500/20',
 };
 
-function DeleteCategoryModal({ category, onClose }: { category: Category; onClose: () => void }) {
-  function confirm() {
-    router.delete(`/categories/${category.id}`, {
-      onSuccess: onClose,
-    });
-  }
-
-  return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 select-none">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md rounded-[28px] p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200
-        border-2 border-red-500/30
-        bg-white dark:bg-slate-900
-        shadow-2xl shadow-black/40">
-
-        <div className="flex items-center justify-between">
-          <div className="w-16 h-16 rounded-[22px] bg-red-500/10 border-2 border-red-500/20 flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-          <button onClick={onClose}
-            className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">حذف التصنيف "{category.name}"</h3>
-          <p className="text-base font-bold text-slate-500 dark:text-white/60 leading-relaxed">
-            هل أنت تأكد من رغبتك في حذف هذا التصنيف؟ لا يمكن التراجع عن هذا الإجراء.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 pt-2">
-          <button onClick={onClose}
-            className="flex-1 h-16 rounded-[20px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-lg transition-all hover:bg-black/10 active:scale-95">
-            إلغاء
-          </button>
-          <button onClick={confirm}
-            className="flex-1 h-16 rounded-[20px] bg-red-500 hover:bg-red-600 text-white font-black text-lg transition-all flex items-center justify-center gap-2.5 shadow-lg active:scale-95">
-            <Trash2 className="w-6 h-6" /> تأكيد الحذف
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
-export default function CategoriesIndex({ categories, flash }: Props) {
+export default function CategoriesIndex({ categories = [], flash }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [search, setSearch] = useState('');
 
   const form = useForm({
     name: '',
     unit: 'ml' as 'ml' | 'pcs' | 'g',
     is_operational: false,
   });
+
+  const operationalCount = useMemo(() => categories.filter(c => c.is_operational).length, [categories]);
+  const standardCount = categories.length - operationalCount;
+
+  const filteredCategories = useMemo(() => {
+    if (!search.trim()) return categories;
+    return categories.filter(cat => matchesSearchText(search, cat.name, unitLabels[cat.unit]));
+  }, [categories, search]);
 
   function openCreate() {
     setEditingCategory(null);
@@ -122,19 +86,26 @@ export default function CategoriesIndex({ categories, flash }: Props) {
     }
   }
 
+  function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    router.delete(`/categories/${deleteTarget.id}`, {
+      onSuccess: () => setDeleteTarget(null),
+    });
+  }
+
   return (
     <AppShell pageTitle="التصنيفات والبنية التحتية">
-      <div className="flex flex-col gap-6 pb-32 lg:pb-0 select-none">
+      <div className="flex flex-col gap-6 pb-32 lg:pb-0 select-none dir-rtl">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">إدارة التصنيفات</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white tracking-tight">إدارة التصنيفات</h1>
             <p className="text-base font-bold text-slate-400 dark:text-white/40 mt-1">تحديد تصنيفات المنتجات ووحدات القياس والنواحي التشغيلية</p>
           </div>
           <button
             onClick={openCreate}
-            className="spatial-button h-16 px-8 rounded-[22px] font-black text-lg sm:text-xl flex items-center justify-center gap-3 bg-primary text-white shadow-xl shadow-primary/25 active:scale-95 transition-all"
+            className="spatial-button h-16 sm:h-20 px-8 rounded-[22px] font-black text-lg sm:text-xl flex items-center justify-center gap-3 bg-primary text-white shadow-xl shadow-primary/25 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="w-7 h-7" />
             إضافة تصنيف جديد
@@ -142,32 +113,60 @@ export default function CategoriesIndex({ categories, flash }: Props) {
         </div>
 
         {/* Flash Notifications */}
-        {flash?.success && (
-          <div className="px-6 py-4 rounded-[20px] bg-emerald-500/10 border-2 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-black text-lg">
-            {flash.success}
-          </div>
-        )}
-        {flash?.error && (
-          <div className="px-6 py-4 rounded-[20px] bg-red-500/10 border-2 border-red-500/20 text-red-600 dark:text-red-400 font-black text-lg">
-            {flash.error}
-          </div>
-        )}
+        <AdminFlashAlert flash={flash} />
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <AdminKpiCard
+            title="إجمالي التصنيفات"
+            value={categories.length}
+            icon={<Layers className="w-5 h-5 text-primary" />}
+            subtitle="كافة التصنيفات المعتمدة بالنظام"
+          />
+          <AdminKpiCard
+            title="التصنيفات التشغيلية"
+            value={operationalCount}
+            icon={<Tag className="w-5 h-5 text-emerald-500" />}
+            highlightColor="text-emerald-600 dark:text-emerald-400"
+            subtitle="تدخل في عمليات التصنيع والخلط"
+          />
+          <AdminKpiCard
+            title="التصنيفات القياسية"
+            value={standardCount}
+            icon={<Tag className="w-5 h-5 text-blue-500" />}
+            highlightColor="text-blue-600 dark:text-blue-400"
+            subtitle="منتجات تجارية جاهزة للبيع المباشر"
+          />
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="البحث في التصنيفات..."
+            className="spatial-input h-16 sm:h-20 rounded-[22px] px-6 pl-14 text-lg sm:text-xl font-bold border-2 w-full"
+          />
+          <Search className="w-6 h-6 text-slate-400 absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
 
         {/* Main Category List */}
-        <SpatialCard title={`قائمة التصنيفات المعتمدة (${categories.length})`} icon={<Layers className="w-6 h-6 text-primary" />}>
-          {categories.length === 0 ? (
+        <SpatialCard title={`قائمة التصنيفات (${filteredCategories.length})`} icon={<Layers className="w-6 h-6 text-primary" />}>
+          {filteredCategories.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-white/30 gap-4">
               <span className="text-6xl">📂</span>
-              <span className="font-black text-xl">لا توجد تصنيفات معرفة حتى الآن</span>
+              <span className="font-black text-xl">
+                {search ? 'لا توجد تصنيفات تطابق بحثك' : 'لا توجد تصنيفات معرفة حتى الآن'}
+              </span>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {categories.map(cat => (
+              {filteredCategories.map(cat => (
                 <div key={cat.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-[24px] bg-black/3 dark:bg-white/3 border-2 border-black/5 dark:border-white/8 hover:border-primary/30 transition-all shadow-sm">
                   
                   {/* Category Info */}
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center shrink-0 shadow-sm ${unitIconColors[cat.unit]}`}>
+                    <div className={`w-16 h-16 rounded-[22px] flex items-center justify-center shrink-0 shadow-sm ${unitIconColors[cat.unit] ?? 'bg-primary/10 text-primary'}`}>
                       <span className="font-black text-lg uppercase">{cat.unit}</span>
                     </div>
 
@@ -182,8 +181,8 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-sm font-bold text-slate-400 dark:text-white/40">وحدة القياس:</span>
-                        <span className={`text-xs sm:text-sm font-black px-3 py-0.5 rounded-[12px] ${unitColors[cat.unit]}`}>
-                          {unitLabels[cat.unit]} ({cat.unit})
+                        <span className={`text-xs sm:text-sm font-black px-3 py-0.5 rounded-[12px] ${unitColors[cat.unit] ?? 'bg-black/5'}`}>
+                          {unitLabels[cat.unit] ?? cat.unit} ({cat.unit})
                         </span>
                       </div>
                     </div>
@@ -193,7 +192,7 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                   <div className="flex items-center gap-3 sm:shrink-0 pt-2 sm:pt-0">
                     <button
                       onClick={() => openEdit(cat)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 sm:px-9 h-16 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-xl active:scale-95 shadow-md"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 sm:px-9 h-16 rounded-[22px] border-2 border-primary/30 bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all font-black text-lg sm:text-xl active:scale-95 shadow-md cursor-pointer"
                     >
                       <Pencil className="w-6 h-6" />
                       تعديل
@@ -201,7 +200,7 @@ export default function CategoriesIndex({ categories, flash }: Props) {
 
                     <button
                       onClick={() => setDeleteTarget(cat)}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 sm:px-9 h-16 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-xl active:scale-95 shadow-md"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2.5 px-7 sm:px-9 h-16 rounded-[22px] border-2 border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all font-black text-lg sm:text-xl active:scale-95 shadow-md cursor-pointer"
                     >
                       <Trash2 className="w-6 h-6" />
                       حذف
@@ -235,8 +234,10 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                   {editingCategory ? `تعديل تصنيف "${editingCategory.name}"` : 'إضافة تصنيف جديد'}
                 </h2>
               </div>
-              <button onClick={closeDrawer}
-                className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10">
+              <button
+                onClick={closeDrawer}
+                className="w-12 h-12 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 text-slate-400 dark:text-white/40 flex items-center justify-center transition-all active:scale-90 border border-black/5 dark:border-white/10 cursor-pointer"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -277,7 +278,7 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                 {form.errors.unit && <p className="text-xs text-red-500 font-bold mt-1.5">{form.errors.unit}</p>}
               </div>
 
-              {/* Large Operational Toggle Component */}
+              {/* Operational Toggle */}
               <div>
                 <label className="block text-xs font-black text-slate-500 dark:text-white/50 uppercase tracking-widest mb-2.5">الحالة التشغيلية</label>
                 <div
@@ -288,7 +289,6 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                     <span className="font-black text-slate-800 dark:text-white text-xl sm:text-2xl">تصنيف تشغيلي</span>
                     <span className="text-xs sm:text-sm font-bold text-slate-400 dark:text-white/40">تحديد ما إذا كان التصنيف يدخل في العمليات التشغيلية</span>
                   </div>
-                  {/* Extra Large Ergonomic Toggle */}
                   <div
                     className={`w-20 h-11 rounded-full transition-colors duration-300 flex items-center px-1.5 shrink-0 shadow-inner ${
                       form.data.is_operational ? 'bg-primary' : 'bg-black/20 dark:bg-white/20'
@@ -301,21 +301,21 @@ export default function CategoriesIndex({ categories, flash }: Props) {
                 </div>
               </div>
 
-              {/* Large Touch Action Buttons */}
+              {/* Action Buttons */}
               <div className="flex flex-col gap-3.5 mt-auto pt-6 border-t border-black/5 dark:border-white/5">
                 <button
                   type="submit"
                   disabled={form.processing}
-                  className="w-full h-18 sm:h-20 rounded-[24px] bg-primary text-white font-black text-xl sm:text-2xl hover:bg-primary/90 transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-95 disabled:opacity-50"
+                  className="w-full h-18 sm:h-20 rounded-[24px] bg-primary text-white font-black text-xl sm:text-2xl hover:bg-primary/90 transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/25 active:scale-95 disabled:opacity-50 cursor-pointer"
                 >
                   <Check className="w-7 h-7" />
-                  {form.processing ? 'جاري الحفظ...' : editingCategory ? 'تعديل التصنيف' : 'حفظ التصنيف جديد'}
+                  {form.processing ? 'جاري الحفظ...' : editingCategory ? 'تعديل التصنيف' : 'حفظ التصنيف الجديد'}
                 </button>
 
                 <button
                   type="button"
                   onClick={closeDrawer}
-                  className="w-full h-16 sm:h-18 rounded-[22px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-black/10 transition-all flex items-center justify-center active:scale-95 border border-black/5 dark:border-white/5"
+                  className="w-full h-16 sm:h-18 rounded-[22px] bg-black/5 dark:bg-white/10 text-slate-600 dark:text-white/70 font-black text-lg sm:text-xl hover:bg-black/10 transition-all flex items-center justify-center active:scale-95 border border-black/5 dark:border-white/5 cursor-pointer"
                 >
                   إلغاء
                 </button>
@@ -327,9 +327,13 @@ export default function CategoriesIndex({ categories, flash }: Props) {
         document.body
       )}
 
-      {/* Delete Confirmation Modal Portal */}
+      {/* Delete Confirmation Modal */}
       {deleteTarget && (
-        <DeleteCategoryModal category={deleteTarget} onClose={() => setDeleteTarget(null)} />
+        <DeleteModal
+          title={`حذف التصنيف "${deleteTarget.name}"`}
+          description="هل أنت متأكد من رغبتك في حذف هذا التصنيف؟ لا يمكن حذف تصنيف مرتبط بمنتجات."
+          onConfirm={handleDeleteConfirm}
+        />
       )}
 
     </AppShell>
