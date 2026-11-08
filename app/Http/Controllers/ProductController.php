@@ -21,10 +21,11 @@ class ProductController extends Controller
     public function index(): Response
     {
         return Inertia::render('Products/Index', [
-            'products'       => $this->products->paginated(20),
-            'categories'     => fn() => $this->categories->allOrdered(),
-            'tiers'          => fn() => $this->tiers->allOrdered(),
-            'missingQrCount' => fn() => $this->products->getMissingQrcodesCount(),
+            'products'          => $this->products->paginated(20),
+            'catalogNames'      => fn() => $this->products->getCatalogNamesOnly(),
+            'categories'        => fn() => $this->categories->allOrdered(),
+            'tiers'             => fn() => $this->tiers->allOrdered(),
+            'missingQrCount'    => fn() => $this->products->getMissingQrcodesCount(),
         ]);
     }
 

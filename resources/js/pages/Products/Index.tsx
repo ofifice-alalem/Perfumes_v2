@@ -24,7 +24,7 @@ import { ExcelCatalogModal } from './components/ExcelCatalogModal';
 import { ProductFilterDrawer } from './components/ProductFilterDrawer';
 import { ProductFormDrawer } from './components/ProductFormDrawer';
 
-export default function ProductsIndex({ products, categories, tiers, missingQrCount = 0, flash }: ProductsIndexProps) {
+export default function ProductsIndex({ products, catalogNames = [], categories, tiers, missingQrCount = 0, flash }: ProductsIndexProps) {
     // Form Drawer State
     const [showCreate, setShowCreate] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -636,6 +636,7 @@ export default function ProductsIndex({ products, categories, tiers, missingQrCo
             <ProductFilterDrawer
                 open={filterDrawerOpen}
                 onClose={() => setFilterDrawerOpen(false)}
+                catalogNames={catalogNames}
                 categories={categories}
                 tiers={tiers}
                 appliedCat={filterCat}

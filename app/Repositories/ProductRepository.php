@@ -18,18 +18,43 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ProductRepository extends Repository implements ProductRepositoryInterface
 {
+    /**
+     * تطبيع وتوحيد النصوص العربية للبحث (الهمزات أ/إ/آ إلى ا، ة إلى ه، ى إلى ي)
+     */
+    private function normalizeArabicText(string $text): string
+    {
+        $patterns = [
+            '/[أإآٱ]/u' => 'ا',
+            '/ة/u'      => 'ه',
+            '/[ىي]/u'   => 'ي',
+            '/ؤ/u'      => 'و',
+            '/ئ/u'      => 'ي',
+        ];
+        return preg_replace(array_keys($patterns), array_values($patterns), trim($text));
+    }
+
+    /**
+     * تعبير SQL الموحد لتطبيع عمود الاسم في MySQL لمطابقة الأخطاء الإملائية
+     */
+    private function getNormalizedNameSql(): string
+    {
+        return "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(name, 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ة', 'ه'), 'ى', 'ي'), 'ئ', 'ي')";
+    }
+
     public function paginated(int $perPage = 20)
     {
+        $normNameSql = $this->getNormalizedNameSql();
+
         return QueryBuilder::for($this->model->with(['category', 'priceTier', 'productPrice', 'originalPerfumeDetail']))
             ->allowedFilters(
                 AllowedFilter::exact('category_id'),
                 AllowedFilter::exact('selling_type'),
                 AllowedFilter::exact('price_tier_id'),
                 AllowedFilter::callback('low_stock', fn($q, $val) => $val ? $q->whereColumn('stock', '<=', 'min_stock')->where('min_stock', '>', 0) : $q),
-                AllowedFilter::callback('search', function ($query, $value) {
+                AllowedFilter::callback('search', function ($query, $value) use ($normNameSql) {
                     if (empty($value)) return;
                     $terms = is_array($value) ? $value : explode(',', (string)$value);
-                    $query->where(function ($q) use ($terms) {
+                    $query->where(function ($q) use ($terms, $normNameSql) {
                         foreach ($terms as $term) {
                             $term = trim($term);
                             if (empty($term)) continue;
@@ -37,7 +62,9 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                                 $q->orWhere('id', (int)$term)
                                   ->orWhere('qrcode', 'like', "%{$term}%");
                             } else {
+                                $normTerm = $this->normalizeArabicText($term);
                                 $q->orWhere('name', 'like', "%{$term}%")
+                                  ->orWhereRaw("{$normNameSql} LIKE ?", ["%{$normTerm}%"])
                                   ->orWhere('qrcode', 'like', "%{$term}%");
                             }
                         }
@@ -54,6 +81,8 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
 
     public function getFilteredProductsForPrint()
     {
+        $normNameSql = $this->getNormalizedNameSql();
+
         return QueryBuilder::for($this->model->with([
             'category:id,name,unit,is_operational',
             'productPrice:id,product_id,price_per_unit_regular,full_bottle_regular',
@@ -64,10 +93,10 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                 AllowedFilter::exact('selling_type'),
                 AllowedFilter::exact('price_tier_id'),
                 AllowedFilter::callback('low_stock', fn($q, $val) => $val ? $q->whereColumn('stock', '<=', 'min_stock')->where('min_stock', '>', 0) : $q),
-                AllowedFilter::callback('search', function ($query, $value) {
+                AllowedFilter::callback('search', function ($query, $value) use ($normNameSql) {
                     if (empty($value)) return;
                     $terms = is_array($value) ? $value : explode(',', (string)$value);
-                    $query->where(function ($q) use ($terms) {
+                    $query->where(function ($q) use ($terms, $normNameSql) {
                         foreach ($terms as $term) {
                             $term = trim($term);
                             if (empty($term)) continue;
@@ -75,7 +104,9 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
                                 $q->orWhere('id', (int)$term)
                                   ->orWhere('qrcode', 'like', "%{$term}%");
                             } else {
+                                $normTerm = $this->normalizeArabicText($term);
                                 $q->orWhere('name', 'like', "%{$term}%")
+                                  ->orWhereRaw("{$normNameSql} LIKE ?", ["%{$normTerm}%"])
                                   ->orWhere('qrcode', 'like', "%{$term}%");
                             }
                         }
@@ -92,6 +123,15 @@ class ProductRepository extends Repository implements ProductRepositoryInterface
     public function getMissingQrcodesCount(): int
     {
         return $this->model->whereNull('qrcode')->orWhere('qrcode', '')->count();
+    }
+
+    public function getCatalogNamesOnly()
+    {
+        return $this->model
+            ->select(['id', 'name', 'qrcode', 'category_id'])
+            ->with('category:id,name')
+            ->orderBy('name')
+            ->get();
     }
 
     public function searchSuggestions(string $query, int $limit = 12)

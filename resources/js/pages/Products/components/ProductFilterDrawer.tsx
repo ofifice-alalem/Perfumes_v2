@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { SlidersHorizontal, X, AlertTriangle, Check, Search } from 'lucide-react';
-import { Category, PriceTier } from '../types';
+import { ModernMultiSelect } from '@/components/ui/SpatialComponents';
+import { SlidersHorizontal, X, AlertTriangle, Check } from 'lucide-react';
+import { Category, PriceTier, CatalogNameItem } from '../types';
 
 interface ProductFilterDrawerProps {
     open: boolean;
     onClose: () => void;
+    catalogNames?: CatalogNameItem[];
     categories: Category[];
     tiers: PriceTier[];
     appliedCat: number | null;
@@ -18,6 +20,7 @@ interface ProductFilterDrawerProps {
 export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     open,
     onClose,
+    catalogNames = [],
     categories,
     tiers,
     appliedCat,
@@ -30,10 +33,6 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
     const [draftTier, setDraftTier] = useState<number | null>(appliedTier);
     const [draftSearchKeywords, setDraftSearchKeywords] = useState<string[]>(appliedKeywords);
     const [draftLowStockOnly, setDraftLowStockOnly] = useState<boolean>(appliedLowStock);
-    const [keywordInput, setKeywordInput] = useState<string>('');
-    const [suggestions, setSuggestions] = useState<Array<{ id: number; name: string; qrcode: string | null; category?: { name: string } }>>([]);
-    const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
-    const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
 
     useEffect(() => {
         if (open) {
@@ -41,58 +40,12 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
             setDraftTier(appliedTier);
             setDraftSearchKeywords([...appliedKeywords]);
             setDraftLowStockOnly(appliedLowStock);
-            setKeywordInput('');
-            setSuggestions([]);
-            setShowSuggestions(false);
         }
     }, [open, appliedCat, appliedTier, appliedKeywords, appliedLowStock]);
-
-    // Live suggestion fetch with debounce
-    useEffect(() => {
-        const query = keywordInput.trim();
-        if (query.length < 2) {
-            setSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
-
-        const timer = setTimeout(async () => {
-            setLoadingSuggestions(true);
-            try {
-                const res = await fetch(`/products/search-suggestions?q=${encodeURIComponent(query)}`);
-                const data = await res.json();
-                if (data.success && Array.isArray(data.suggestions)) {
-                    setSuggestions(data.suggestions);
-                    setShowSuggestions(data.suggestions.length > 0);
-                }
-            } catch (err) {
-                console.error('Failed to fetch search suggestions', err);
-            } finally {
-                setLoadingSuggestions(false);
-            }
-        }, 250);
-
-        return () => clearTimeout(timer);
-    }, [keywordInput]);
 
     if (!open) return null;
 
     const hasDraftFilter = !!draftCat || !!draftTier || draftSearchKeywords.length > 0 || draftLowStockOnly;
-
-    const handleAddKeyword = (val?: string) => {
-        const raw = val !== undefined ? val : keywordInput;
-        const trimmed = raw.trim();
-        if (trimmed && !draftSearchKeywords.includes(trimmed)) {
-            setDraftSearchKeywords([...draftSearchKeywords, trimmed]);
-            setKeywordInput('');
-            setSuggestions([]);
-            setShowSuggestions(false);
-        }
-    };
-
-    const handleRemoveKeyword = (kw: string) => {
-        setDraftSearchKeywords(draftSearchKeywords.filter(k => k !== kw));
-    };
 
     return createPortal(
         <div className="fixed inset-0 z-[99999] flex justify-start dir-rtl">
@@ -123,108 +76,46 @@ export const ProductFilterDrawer: React.FC<ProductFilterDrawerProps> = ({
 
                 {/* Drawer Content */}
                 <div className="flex-1 overflow-y-auto overscroll-contain p-6 sm:p-7 flex flex-col gap-6 scrollbar-none">
-                    {/* حاوية 1: البحث بالكلمات المفتاحية وكود QR */}
+                    {/* حاوية 1: البحث بالمنتج والأسماء المطابقة */}
                     <div className="p-6 rounded-[24px] bg-slate-100/90 dark:bg-slate-800/80 border-2 border-slate-200 dark:border-slate-700/80 flex flex-col gap-4 shadow-sm">
                         <h4 className="text-base sm:text-lg font-black flex items-center gap-3 border-b-2 border-slate-200 dark:border-slate-700/80 pb-3 select-none">
                             <span className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center text-lg shrink-0 border border-primary/30">🔍</span>
-                            <span className="text-slate-900 dark:text-white tracking-wide">البحث بالاسم أو كود QR</span>
+                            <span className="text-slate-900 dark:text-white tracking-wide">البحث بالمنتج (اختيار متعدد / تطابق ذكي / كود QR)</span>
                         </h4>
 
                         <div className="flex flex-col gap-3">
-                            <div className="relative">
-                                <div className="flex items-center gap-2">
-                                    <div className="relative flex-1">
-                                        <input
-                                            type="text"
-                                            value={keywordInput}
-                                            onChange={e => setKeywordInput(e.target.value)}
-                                            onFocus={() => {
-                                                if (suggestions.length > 0) setShowSuggestions(true);
-                                            }}
-                                            onKeyDown={e => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    handleAddKeyword();
-                                                }
-                                            }}
-                                            placeholder="اكتب اسم العطر أو كود الـ QR للبحث المباشر..."
-                                            className="spatial-input h-14 rounded-[18px] px-5 pr-12 text-base font-bold border-2 w-full"
-                                        />
-                                        <Search className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2" />
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAddKeyword()}
-                                        disabled={!keywordInput.trim()}
-                                        className="h-14 px-5 rounded-[18px] bg-primary text-white font-black text-sm active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shrink-0"
-                                    >
-                                        إضافة +
-                                    </button>
-                                </div>
-
-                                {/* قائمة الاقتراحات المنسدلة الحية */}
-                                {showSuggestions && suggestions.length > 0 && (
-                                    <div className="absolute top-full mt-2 left-0 right-0 z-50 bg-white dark:bg-slate-800 rounded-[20px] border-2 border-slate-300 dark:border-slate-700 shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
-                                        <div className="p-2 border-b border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-900/40 text-xs font-black text-slate-500 flex justify-between items-center">
-                                            <span>المنتجات المطابقة (اضغط للإضافة):</span>
-                                            {loadingSuggestions && <span className="animate-pulse text-primary">جاري البحث...</span>}
-                                        </div>
-                                        <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                                            {suggestions.map(s => (
-                                                <button
-                                                    key={s.id}
-                                                    type="button"
-                                                    onClick={() => handleAddKeyword(s.name)}
-                                                    className="w-full text-right px-4 py-3 hover:bg-primary/10 dark:hover:bg-primary/20 flex items-center justify-between transition-colors cursor-pointer group"
-                                                >
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-black text-slate-900 dark:text-white group-hover:text-primary transition-colors text-base">
-                                                            {s.name}
-                                                        </span>
-                                                        {s.category && (
-                                                            <span className="text-xs px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold">
-                                                                {s.category.name}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {s.qrcode && (
-                                                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500 dir-ltr bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                                                            {s.qrcode}
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                            <ModernMultiSelect
+                                label=""
+                                placeholder="ابحث باسم العطر، كود الـ QR، أو اكتب أي كلمة..."
+                                values={draftSearchKeywords}
+                                options={catalogNames.map(p => ({
+                                    value: p.name,
+                                    label: p.name,
+                                    badge: p.category?.name,
+                                    searchKey: p.qrcode ? `${p.name} ${p.qrcode} ${p.id}` : `${p.name} ${p.id}`,
+                                }))}
+                                onSelect={setDraftSearchKeywords}
+                                allowFreeText={true}
+                            />
 
                             {draftSearchKeywords.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-2 pt-2">
-                                    {draftSearchKeywords.map(kw => (
-                                        <span
-                                            key={kw}
-                                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/15 text-primary border border-primary/30 font-black text-sm"
-                                        >
-                                            <span>{kw}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveKeyword(kw)}
-                                                className="hover:bg-primary/20 rounded-full p-0.5 cursor-pointer"
-                                            >
-                                                <X className="w-3.5 h-3.5 text-red-500" />
-                                            </button>
-                                        </span>
-                                    ))}
+                                <div className="flex items-center justify-between pt-1">
+                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                        تم تحديد {draftSearchKeywords.length} محدد للبحث
+                                    </span>
                                     <button
                                         type="button"
                                         onClick={() => setDraftSearchKeywords([])}
-                                        className="text-xs font-black text-red-500 hover:underline px-2 cursor-pointer"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-red-500/15 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all font-black text-xs border border-red-500/30 cursor-pointer"
                                     >
-                                        مسح الكل
+                                        <X className="w-3.5 h-3.5" /> مسح محددات البحث
                                     </button>
                                 </div>
                             )}
+
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 select-none">
+                                💡 يدعم التطابق الذكي للأخطاء الإملائية (الهمزات أ/إ/آ، التاء المربوطة والهاء، الياء والألف المقصورة، وأل التعريف).
+                            </p>
                         </div>
                     </div>
 

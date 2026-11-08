@@ -51,8 +51,16 @@ export interface PaginatedData<T> {
     }[];
 }
 
+export interface CatalogNameItem {
+    id: number;
+    name: string;
+    qrcode: string | null;
+    category?: { id: number; name: string };
+}
+
 export interface ProductsIndexProps {
     products: PaginatedData<Product>;
+    catalogNames?: CatalogNameItem[];
     categories: Category[];
     tiers: PriceTier[];
     missingQrCount?: number;
