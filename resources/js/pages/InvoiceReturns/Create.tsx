@@ -373,7 +373,7 @@ export default function InvoiceReturnsCreate({ customers, products, sizes, payme
         <>
         <AppShell pageTitle="مرتجع جديد">
             {/* Desktop Layout */}
-            <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
+            <div className="hidden lg:flex flex-row gap-0 -m-3 lg:-mx-6 lg:-mb-4 lg:mt-0 h-[calc(100dvh-95px)] overflow-hidden">
 
                 {/* ══ LEFT PANEL ══ */}
                 <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">

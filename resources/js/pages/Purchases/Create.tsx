@@ -262,7 +262,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
         <>
         <AppShell pageTitle="فاتورة شراء جديدة">
             {/* Desktop Layout */}
-            <div className="hidden lg:flex flex-row gap-0 -m-4 lg:-m-10 h-[calc(100dvh-155px)] overflow-hidden">
+            <div className="hidden lg:flex flex-row gap-0 -m-3 lg:-mx-6 lg:-mb-4 lg:mt-0 h-[calc(100dvh-95px)] overflow-hidden">
 
                 {/* ══ LEFT PANEL ══ */}
                 <div className="flex-1 flex flex-col overflow-hidden border-r border-black/5 dark:border-white/5">
@@ -481,7 +481,7 @@ export default function PurchasesCreate({ suppliers, products, paymentMethods, f
             </div>
 
             {/* Mobile Layout with Tabs */}
-            <div className="lg:hidden flex flex-col -m-4 h-[calc(100vh-80px)] overflow-hidden">
+            <div className="lg:hidden flex flex-col -m-3 md:-m-4 h-[calc(100dvh-80px)] overflow-hidden">
                 
                 {/* Top Bar - Supplier Selection */}
                 <div className="flex flex-col border-b border-black/5 dark:border-white/5 bg-black/2 dark:bg-white/2 shrink-0">
