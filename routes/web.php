@@ -32,12 +32,14 @@ use App\Http\Controllers\NodeThermalPrinterController;
 use App\Http\Controllers\SetupWizardController;
 
 // ─── Setup Wizard (First-Run Configuration) ──────────────────────────────────
-Route::get('/setup', [SetupWizardController::class, 'index'])->name('setup.index');
-Route::post('/setup/test-db', [SetupWizardController::class, 'testDatabase'])->name('setup.test-db');
-Route::post('/setup/test-host', [SetupWizardController::class, 'testHost'])->name('setup.test-host');
-Route::post('/setup/apply-master', [SetupWizardController::class, 'applyMaster'])->name('setup.apply-master');
-Route::post('/setup/apply-client', [SetupWizardController::class, 'applyClient'])->name('setup.apply-client');
-Route::post('/setup/create-pos-shortcut', [SetupWizardController::class, 'createPosShortcutEndpoint'])->name('setup.create-pos-shortcut');
+Route::middleware('ensure.setup.incomplete')->group(function () {
+    Route::get('/setup', [SetupWizardController::class, 'index'])->name('setup.index');
+    Route::post('/setup/test-db', [SetupWizardController::class, 'testDatabase'])->name('setup.test-db');
+    Route::post('/setup/test-host', [SetupWizardController::class, 'testHost'])->name('setup.test-host');
+    Route::post('/setup/apply-master', [SetupWizardController::class, 'applyMaster'])->name('setup.apply-master');
+    Route::post('/setup/apply-client', [SetupWizardController::class, 'applyClient'])->name('setup.apply-client');
+    Route::post('/setup/create-pos-shortcut', [SetupWizardController::class, 'createPosShortcutEndpoint'])->name('setup.create-pos-shortcut');
+});
 
 // ─── License ─────────────────────────────────────────────────────────────────
 Route::get('/license', [LicenseController::class, 'index'])->name('license.index');
