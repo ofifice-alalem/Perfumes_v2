@@ -56,10 +56,10 @@ opcache.validate_timestamps=0
 realpath_cache_size=4096k
 realpath_cache_ttl=600
 
-; ── الذاكرة ──────────────────────────────────────────────────
+; ── الذاكرة ورفع الملفات والنسخ الاحتياطية ─────────────────
 memory_limit=512M
-upload_max_filesize=64M
-post_max_size=64M
+upload_max_filesize=512M
+post_max_size=512M
 ```
 
 ---
