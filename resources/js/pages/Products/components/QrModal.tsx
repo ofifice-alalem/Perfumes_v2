@@ -131,25 +131,24 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
     const [selectedPrinter, setSelectedPrinter] = useState<string>(() => localStorage.getItem('label_printer_name') || '');
     const [loadingPrinters, setLoadingPrinters] = useState<boolean>(false);
 
-    const loadPrinters = (preferCurrent: boolean = true) => {
+    const loadPrinters = (preferCurrent: boolean = true, forceRefresh: boolean = false) => {
         setLoadingPrinters(true);
-        fetch('/settings/node-printer/printers')
+        fetch(`/settings/node-printer/printers${forceRefresh ? '?refresh=1' : ''}`)
             .then(r => r.json())
             .then(res => {
                 if (res.success && Array.isArray(res.printers)) {
                     setPrintersList(res.printers);
-                    const currentSelected = selectedPrinter || localStorage.getItem('label_printer_name');
+                    const currentSelected = selectedPrinter || localStorage.getItem('label_printer_name') || '';
                     const exists = currentSelected && res.printers.some((p: any) => p.name === currentSelected);
                     let target = '';
                     if (preferCurrent && currentSelected && exists) {
                         target = currentSelected;
                     } else if (res.label_configured && res.printers.some((p: any) => p.name === res.label_configured)) {
                         target = res.label_configured;
-                    } else {
-                        const labelP = res.printers.find((p: any) => /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name))
-                            || res.printers.find((p: any) => !/80|58|pos|receipt|pdf|xps|onenote/i.test(p.name))
-                            || res.printers[0];
-                        if (labelP) target = labelP.name;
+                    } else if (res.label_configured) {
+                        target = res.label_configured;
+                    } else if (res.printers.length > 0) {
+                        target = res.printers[0].name;
                     }
 
                     if (target) {
@@ -182,6 +181,10 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
     };
 
     const handleNodePrint = async () => {
+        if (!selectedPrinter) {
+            setNodePrintMsg({ success: false, text: 'يرجى اختيار طابعة الملصقات أولاً من القائمة' });
+            return;
+        }
         setPrintingNode(true);
         setNodePrintMsg(null);
         try {
@@ -199,7 +202,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                     },
                     body: JSON.stringify({
-                        printer_name: selectedPrinter || 'Xprinter XP-365B',
+                        printer_name: selectedPrinter,
                         width_mm: widthMm,
                         height_mm: heightMm,
                         rotation: rotation,
@@ -218,7 +221,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    setNodePrintMsg({ success: true, text: data.message || `تم إرسال ${items.length} ملصق بنجاح إلى الطابعة!` });
+                    setNodePrintMsg({ success: true, text: data.message || `تم إرسال ${items.length} ملصق بنجاح إلى الطابعة (${selectedPrinter})!` });
                 } else {
                     setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة الجماعية' });
                 }
@@ -230,7 +233,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                         'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
                     },
                     body: JSON.stringify({
-                        printer_name: selectedPrinter || 'Xprinter XP-365B',
+                        printer_name: selectedPrinter,
                         width_mm: widthMm,
                         height_mm: heightMm,
                         rotation: rotation,
@@ -251,7 +254,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    setNodePrintMsg({ success: true, text: data.message || 'تم إرسال الملصق بنجاح إلى الطابعة!' });
+                    setNodePrintMsg({ success: true, text: data.message || `تم إرسال الملصق بنجاح إلى الطابعة (${selectedPrinter})!` });
                 } else {
                     setNodePrintMsg({ success: false, text: data.message || 'فشلت عملية الطباعة' });
                 }
@@ -305,9 +308,6 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
     };
 
     function handlePrint() {
-        const win = window.open('', '_blank', 'width=550,height=550');
-        if (!win) return;
-
         const isRotated = rotation === 90 || rotation === 270;
         // الأبعاد الحقيقية للمحتوى الداخلي عند التدوير
         const innerW = isRotated ? heightMm : widthMm;
@@ -353,7 +353,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
 
                         <div class="classic-body">
                             <div class="info-side">
-                                ${showCodeText && p.qrcode ? `<div class="p-code">${p.qrcode}</div>` : ''}
+                                ${showCodeText && p.qrcode ? `<div class="p-code">${toAsciiDigits(p.qrcode)}</div>` : ''}
                                 ${showPrice && pPrice ? `<div class="p-price">${pPrice}</div>` : ''}
                             </div>
 
@@ -382,243 +382,278 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
             return Array.from({ length: Math.max(1, copies) }).map(() => singleHtml).join('');
         }).join('');
 
-        win.document.write(`
-            <!DOCTYPE html>
-            <html dir="ltr">
-            <head>
-                <meta charset="utf-8" />
-                <title>${isBulk ? `طباعة ملصقات جماعية (${items.length} منتج)` : `طباعة ملصق - ${activeProduct.name}`}</title>
-                <link rel="preconnect" href="https://fonts.googleapis.com">
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-                <style>
-                    @page {
-                        size: ${widthMm}mm ${heightMm}mm;
-                        margin: 0 !important;
-                    }
-                    * {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        box-sizing: border-box !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                    html {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: ${widthMm}mm !important;
-                        height: ${heightMm}mm !important;
-                        overflow: hidden !important;
-                    }
-                    body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #fff;
-                        overflow: hidden !important;
-                        direction: ltr !important;
-                        font-size: 0 !important;
-                        line-height: 0 !important;
-                        font-family: 'Tajawal', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-                    }
-                    .label-page {
-                        width: ${widthMm}mm !important;
-                        height: ${heightMm - 1}mm !important;
-                        max-width: ${widthMm}mm !important;
-                        max-height: ${heightMm - 1}mm !important;
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        overflow: hidden !important;
-                        background: #fff;
-                        margin: 0 auto !important;
-                        text-align: center !important;
-                        box-sizing: border-box !important;
-                        page-break-inside: avoid !important;
-                        break-inside: avoid !important;
-                    }
-                    .label-page:not(:last-child) {
-                        page-break-after: always !important;
-                        break-after: page !important;
-                    }
-                    .label-page:last-child {
-                        page-break-after: avoid !important;
-                        break-after: avoid !important;
-                    }
-                    
-                    /* تنسيق ملصق الـ QR المربع الحديث (اسم كامل بالعرض، الرمز بالجانب وتحته السعر، محاذاة في المنتصف ومسافات متقاربة) */
-                    .label-content.classic-layout {
-                        width: ${innerW}mm !important;
-                        height: ${innerH - 1.2}mm !important;
-                        max-width: ${innerW}mm !important;
-                        max-height: ${innerH - 1.2}mm !important;
-                        padding: 1.2mm 1.5mm !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        justify-content: center !important;
-                        align-items: center !important;
-                        gap: 0.8mm !important;
-                        box-sizing: border-box !important;
-                        overflow: hidden !important;
-                        transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
-                        transform-origin: center center;
-                    }
-                    .classic-layout .p-name.full-width {
-                        font-family: 'Tajawal', sans-serif !important;
-                        width: 100% !important;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        font-size: ${activeTitleFontSizePt}pt !important;
-                        font-weight: 900;
-                        color: #000;
-                        display: -webkit-box !important;
-                        -webkit-line-clamp: 2 !important;
-                        -webkit-box-orient: vertical !important;
-                        overflow: hidden !important;
-                        word-break: break-word !important;
-                        white-space: normal !important;
-                        line-height: 1.15 !important;
-                        margin: 0 !important;
-                        padding: 0 1mm !important;
-                    }
-                    .classic-body {
-                        width: 100% !important;
-                        display: flex !important;
-                        flex-direction: row !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        direction: rtl !important;
-                        gap: 2.5mm !important;
-                        overflow: hidden !important;
-                        margin: 0 auto !important;
-                    }
-                    .classic-body .info-side {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        gap: 0.8mm !important;
-                        text-align: center !important;
-                        flex: 1 1 auto !important;
-                        overflow: hidden !important;
-                        direction: rtl !important;
-                    }
-                    .classic-body .info-side .p-code {
-                        font-family: monospace, sans-serif !important;
-                        font-size: 6.5pt !important;
-                        font-weight: 800;
-                        color: #111;
-                        letter-spacing: 0.6px;
-                        direction: ltr !important;
-                        text-align: center !important;
-                    }
-                    .classic-body .info-side .p-price {
-                        font-family: 'Tajawal', sans-serif !important;
-                        font-size: 10pt !important;
-                        font-weight: 900;
-                        color: #000;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        white-space: nowrap;
-                    }
-                    .classic-body .qr-side {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        flex-shrink: 0 !important;
-                    }
-                    .graphic-wrap.qr-wrap {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        width: ${qrBoxSizeMm}mm !important;
-                        height: ${qrBoxSizeMm}mm !important;
-                        margin: 0 auto !important;
-                    }
-                    .graphic-wrap.qr-wrap svg {
-                        display: block !important;
-                        width: ${qrBoxSizeMm}mm !important;
-                        height: ${qrBoxSizeMm}mm !important;
-                        max-width: ${qrBoxSizeMm}mm !important;
-                        max-height: ${qrBoxSizeMm}mm !important;
-                    }
+        const fullHtml = `<!DOCTYPE html>
+<html dir="ltr">
+<head>
+    <meta charset="utf-8" />
+    <title>${isBulk ? `طباعة ملصقات (${items.length} منتج)` : `طباعة ملصق - ${activeProduct.name}`}</title>
+    <style>
+        @page {
+            size: ${widthMm}mm ${heightMm}mm;
+            margin: 0 !important;
+        }
+        * {
+            margin: 0 !important;
+            padding: 0 !important;
+            box-sizing: border-box !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        html {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: ${widthMm}mm !important;
+            height: ${heightMm}mm !important;
+            overflow: hidden !important;
+        }
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #fff;
+            overflow: hidden !important;
+            direction: ltr !important;
+            font-size: 0 !important;
+            line-height: 0 !important;
+            font-family: 'Tajawal', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+        }
+        .label-page {
+            width: ${widthMm}mm !important;
+            height: ${heightMm - 1}mm !important;
+            max-width: ${widthMm}mm !important;
+            max-height: ${heightMm - 1}mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            overflow: hidden !important;
+            background: #fff;
+            margin: 0 auto !important;
+            text-align: center !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+        .label-page:not(:last-child) {
+            page-break-after: always !important;
+            break-after: page !important;
+        }
+        .label-page:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+        }
+        .label-content.classic-layout {
+            width: ${innerW}mm !important;
+            height: ${innerH - 1.2}mm !important;
+            max-width: ${innerW}mm !important;
+            max-height: ${innerH - 1.2}mm !important;
+            padding: 1.2mm 1.5mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 0.8mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
+            transform-origin: center center;
+        }
+        .classic-layout .p-name.full-width {
+            font-family: inherit !important;
+            width: 100% !important;
+            direction: rtl !important;
+            text-align: center !important;
+            font-size: ${activeTitleFontSizePt}pt !important;
+            font-weight: 900;
+            color: #000;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            line-height: 1.15 !important;
+            margin: 0 !important;
+            padding: 0 1mm !important;
+        }
+        .classic-body {
+            width: 100% !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: center !important;
+            direction: rtl !important;
+            gap: 2.5mm !important;
+            overflow: hidden !important;
+            margin: 0 auto !important;
+        }
+        .classic-body .info-side {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.8mm !important;
+            text-align: center !important;
+            flex: 1 1 auto !important;
+            overflow: hidden !important;
+            direction: rtl !important;
+        }
+        .classic-body .info-side .p-code {
+            font-family: monospace, sans-serif !important;
+            font-size: 6.5pt !important;
+            font-weight: 800;
+            color: #111;
+            letter-spacing: 0.6px;
+            direction: ltr !important;
+            text-align: center !important;
+        }
+        .classic-body .info-side .p-price {
+            font-family: inherit !important;
+            font-size: 10pt !important;
+            font-weight: 900;
+            color: #000;
+            direction: rtl !important;
+            text-align: center !important;
+            white-space: nowrap;
+        }
+        .classic-body .qr-side {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            flex-shrink: 0 !important;
+        }
+        .graphic-wrap.qr-wrap {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: ${qrBoxSizeMm}mm !important;
+            height: ${qrBoxSizeMm}mm !important;
+            margin: 0 auto !important;
+        }
+        .graphic-wrap.qr-wrap svg {
+            display: block !important;
+            width: ${qrBoxSizeMm}mm !important;
+            height: ${qrBoxSizeMm}mm !important;
+            max-width: ${qrBoxSizeMm}mm !important;
+            max-height: ${qrBoxSizeMm}mm !important;
+        }
+        .label-content.bar-layout {
+            width: ${innerW}mm !important;
+            height: ${innerH - 1.2}mm !important;
+            max-width: ${innerW}mm !important;
+            max-height: ${innerH - 1.2}mm !important;
+            padding: 1.2mm 1.2mm 0.8mm 1.2mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.6mm !important;
+            text-align: center !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+            transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
+            transform-origin: center center;
+        }
+        .bar-layout .p-name {
+            font-family: inherit !important;
+            direction: rtl !important;
+            text-align: center !important;
+            font-size: ${activeTitleFontSizePt}pt !important;
+            font-weight: 900;
+            color: #000;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            word-break: break-word !important;
+            white-space: normal !important;
+            width: 100% !important;
+            line-height: 1.15 !important;
+            margin: 0 !important;
+            padding: 0 1mm !important;
+        }
+        .graphic-wrap.bar-wrap {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+            max-height: ${availableBarH}mm !important;
+            overflow: hidden !important;
+            margin: 0 auto !important;
+        }
+        .graphic-wrap.bar-wrap svg {
+            display: block !important;
+            margin: 0 auto !important;
+            width: 92% !important;
+            max-height: ${availableBarH}mm !important;
+            height: auto !important;
+            object-fit: contain !important;
+        }
+        .bar-layout .p-price {
+            font-family: inherit !important;
+            font-size: 10.5pt !important;
+            font-weight: 900;
+            color: #000;
+            direction: rtl !important;
+            text-align: center !important;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>${labelsHtml}</body>
+</html>`;
 
-                    /* تنسيق ملصق الباركود العادي */
-                    .label-content.bar-layout {
-                        width: ${innerW}mm !important;
-                        height: ${innerH - 1.2}mm !important;
-                        max-width: ${innerW}mm !important;
-                        max-height: ${innerH - 1.2}mm !important;
-                        padding: 1.2mm 1.2mm 0.8mm 1.2mm !important;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        gap: 0.6mm !important;
-                        text-align: center !important;
-                        box-sizing: border-box !important;
-                        overflow: hidden !important;
-                        transform: translate(${offsetX}mm, ${offsetY}mm) ${rotation !== 0 ? `rotate(${rotation}deg)` : ''};
-                        transform-origin: center center;
+        // استخدام iframe مخفي لضمان عمل الطباعة فوراً وتفادي حظر النوافذ المنبثقة (Popup Blockers) في الأجهزة الأخرى
+        let iframe = document.getElementById('perfume-label-print-frame') as HTMLIFrameElement | null;
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'perfume-label-print-frame';
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            iframe.style.visibility = 'hidden';
+            document.body.appendChild(iframe);
+        }
+
+        try {
+            const doc = iframe.contentWindow?.document || iframe.contentDocument;
+            if (doc) {
+                doc.open();
+                doc.write(fullHtml);
+                doc.close();
+                setTimeout(() => {
+                    try {
+                        iframe?.contentWindow?.focus();
+                        iframe?.contentWindow?.print();
+                    } catch (err) {
+                        console.warn('Iframe print failed, falling back to window.open', err);
+                        fallbackWindowPrint(fullHtml);
                     }
-                    .bar-layout .p-name {
-                        font-family: 'Tajawal', sans-serif !important;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        font-size: ${activeTitleFontSizePt}pt !important;
-                        font-weight: 900;
-                        color: #000;
-                        display: -webkit-box !important;
-                        -webkit-line-clamp: 2 !important;
-                        -webkit-box-orient: vertical !important;
-                        overflow: hidden !important;
-                        word-break: break-word !important;
-                        white-space: normal !important;
-                        width: 100% !important;
-                        line-height: 1.15 !important;
-                        margin: 0 !important;
-                        padding: 0 1mm !important;
-                    }
-                    .graphic-wrap.bar-wrap {
-                        display: flex !important;
-                        align-items: center !important;
-                        justify-content: center !important;
-                        width: 100% !important;
-                        max-height: ${availableBarH}mm !important;
-                        overflow: hidden !important;
-                        margin: 0 auto !important;
-                    }
-                    .graphic-wrap.bar-wrap svg {
-                        display: block !important;
-                        margin: 0 auto !important;
-                        width: 92% !important;
-                        max-height: ${availableBarH}mm !important;
-                        height: auto !important;
-                        object-fit: contain !important;
-                    }
-                    .bar-layout .p-price {
-                        font-family: 'Tajawal', sans-serif !important;
-                        font-size: 10.5pt !important;
-                        font-weight: 900;
-                        color: #000;
-                        direction: rtl !important;
-                        text-align: center !important;
-                        line-height: 1.1;
-                        white-space: nowrap;
-                    }
-                </style>
-                <script>
-                    window.onload = function() {
-                        setTimeout(function() {
-                            window.print();
-                            window.close();
-                        }, 250);
-                    };
-                </script>
-            </head>
-            <body>${labelsHtml}</body>
-            </html>
-        `);
+                }, 100);
+                return;
+            }
+        } catch (e) {
+            console.warn('Iframe setup error, falling back to window.open', e);
+        }
+
+        fallbackWindowPrint(fullHtml);
+    }
+
+    function fallbackWindowPrint(html: string) {
+        const win = window.open('', '_blank', 'width=550,height=550');
+        if (!win) {
+            alert('تم حظر نافذة الطباعة من قبل المتصفح، يرجى السماح بالنوافذ المنبثقة لهذا الموقع.');
+            return;
+        }
+        win.document.open();
+        win.document.write(html);
         win.document.close();
+        setTimeout(() => {
+            win.focus();
+            win.print();
+        }, 200);
     }
 
     return createPortal(
@@ -1158,7 +1193,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     </label>
                                     <button
                                         type="button"
-                                        onClick={() => loadPrinters(false)}
+                                        onClick={() => loadPrinters(false, true)}
                                         disabled={loadingPrinters}
                                         className="text-[11px] font-bold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary flex items-center gap-1 cursor-pointer transition-colors px-2 py-0.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
                                         title="إعادة فحص طابعات الويندوز"
@@ -1173,17 +1208,14 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                                     className="w-full h-10 px-3 rounded-[12px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-black text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-primary shadow-xs cursor-pointer"
                                 >
                                     {printersList.length > 0 ? (
-                                        printersList.map(p => {
-                                            const isRecommended = /365|235|barcode|label|tsc|zebra|xprinter\s+xp-[23]/i.test(p.name);
-                                            return (
-                                                <option key={p.name} value={p.name}>
-                                                    {p.name} {isRecommended ? '⭐ (موصى بها للباركود)' : ''}
-                                                </option>
-                                            );
-                                        })
+                                        printersList.map(p => (
+                                            <option key={p.name} value={p.name}>
+                                                {p.name}
+                                            </option>
+                                        ))
                                     ) : (
-                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>
-                                            {selectedPrinter || 'Xprinter XP-365B'}
+                                        <option value={selectedPrinter || ''}>
+                                            {selectedPrinter || (loadingPrinters ? 'جاري فحص الطابعات...' : 'اختر طابعة الملصقات...')}
                                         </option>
                                     )}
                                 </select>
@@ -1416,7 +1448,7 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                                             <option key={p.name} value={p.name}>{p.name}</option>
                                         ))
                                     ) : (
-                                        <option value={selectedPrinter || 'Xprinter XP-365B'}>{selectedPrinter || 'Xprinter XP-365B'}</option>
+                                        <option value={selectedPrinter || ''}>{selectedPrinter || (loadingPrinters ? 'جاري الفحص...' : 'اختر طابعة...')}</option>
                                     )}
                                 </select>
                             </div>
@@ -1449,8 +1481,8 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                     </div>
                 </div>
 
-                {/* عناصر مخفية لتوليد باركود و QR كل منتجات الدفعة بدقة 100% لطباعة المتصفح */}
-                {isBulk && (
+                {/* عناصر مخفية لتوليد باركود و QR بدقة 100% لطباعة المتصفح */}
+                {items.length > 0 && (
                     <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', visibility: 'hidden' }} aria-hidden="true">
                         {items.map(p => (
                             <div key={p.id} id={`bulk-barcode-item-${p.id}`}>

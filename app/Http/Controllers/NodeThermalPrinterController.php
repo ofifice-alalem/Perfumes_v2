@@ -81,6 +81,11 @@ class NodeThermalPrinterController extends Controller
                     'feedLinesAfterPrint' => 1,
                     'cutPaper' => true
                 ],
+                'labelPrinter' => [
+                    'name' => (string)($this->settingRepo->get('label_printer_name') ?: ''),
+                    'widthMm' => (float)$this->settingRepo->get('label_width_mm', 50),
+                    'heightMm' => (float)$this->settingRepo->get('label_height_mm', 25),
+                ],
                 'store' => [
                     'name' => $storeName,
                     'subname' => $storeSubname,
@@ -100,44 +105,61 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Resolves label printer name dynamically from request or database settings
+     */
+    protected function resolveLabelPrinterName(?string $requestedName): string
+    {
+        $name = trim($requestedName ?: '');
+        if (!empty($name)) {
+            return $name;
+        }
+
+        return (string)($this->settingRepo->get('label_printer_name') ?: '');
+    }
+
+    /**
      * Get installed printers on Windows via embedded printer engine
      */
-    public function getPrinters()
+    public function getPrinters(Request $request)
     {
         try {
-            $cmd = sprintf('cd /d "%s" && node list-printers.js', $this->getEnginePath());
-            $output = shell_exec("powershell -NoProfile -Command \"$cmd\"");
-            
-            $printers = [];
-            $psDirect = shell_exec('powershell -NoProfile -Command "Get-CimInstance Win32_Printer | ForEach-Object { [PSCustomObject]@{ Name = $_.Name; DriverName = $_.DriverName; PortName = $_.PortName; PrinterPaperNames = $_.PrinterPaperNames } } | ConvertTo-Json -Depth 3"');
-            
-            if ($psDirect) {
-                $decoded = json_decode($psDirect, true);
-                if (is_array($decoded)) {
-                    if (isset($decoded['Name'])) {
-                        $decoded = [$decoded];
-                    }
-                    foreach ($decoded as $p) {
-                        $forms = [];
-                        if (isset($p['PrinterPaperNames'])) {
-                            $forms = is_array($p['PrinterPaperNames']) ? $p['PrinterPaperNames'] : [$p['PrinterPaperNames']];
+            $forceRefresh = $request->boolean('refresh', false);
+
+            $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 60, function () {
+                $printersList = [];
+                $psDirect = shell_exec('powershell -NoProfile -Command "Get-CimInstance Win32_Printer | ForEach-Object { [PSCustomObject]@{ Name = $_.Name; DriverName = $_.DriverName; PortName = $_.PortName; PrinterPaperNames = $_.PrinterPaperNames } } | ConvertTo-Json -Depth 3"');
+
+                if ($psDirect) {
+                    $decoded = json_decode($psDirect, true);
+                    if (is_array($decoded)) {
+                        if (isset($decoded['Name'])) {
+                            $decoded = [$decoded];
                         }
-                        $printers[] = [
-                            'name' => $p['Name'] ?? 'Unknown',
-                            'driver' => $p['DriverName'] ?? '',
-                            'port' => $p['PortName'] ?? '',
-                            'status' => 'Ready',
-                            'forms' => $forms,
-                        ];
+                        foreach ($decoded as $p) {
+                            $forms = [];
+                            if (isset($p['PrinterPaperNames'])) {
+                                $forms = is_array($p['PrinterPaperNames']) ? $p['PrinterPaperNames'] : [$p['PrinterPaperNames']];
+                            }
+                            $printersList[] = [
+                                'name' => $p['Name'] ?? 'Unknown',
+                                'driver' => $p['DriverName'] ?? '',
+                                'port' => $p['PortName'] ?? '',
+                                'status' => 'Ready',
+                                'forms' => $forms,
+                            ];
+                        }
                     }
                 }
-            }
+                return $printersList;
+            });
+
+            $labelConfigured = (string)($this->settingRepo->get('label_printer_name') ?: '');
 
             return response()->json([
                 'success' => true,
                 'printers' => $printers,
                 'configured' => $this->settingRepo->get('node_printer_name', 'XP-80'),
-                'label_configured' => $this->settingRepo->get('label_printer_name', 'Xprinter XP-365B')
+                'label_configured' => $labelConfigured
             ]);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController getPrinters error: " . $e->getMessage());
@@ -504,10 +526,12 @@ class NodeThermalPrinterController extends Controller
     public function printLabelDirect(Request $request)
     {
         try {
-            $defaultPrinter = $this->settingRepo->get('label_printer_name') ?: 'Xprinter XP-365B';
-            $printerName = $request->input('printer_name') ?: $defaultPrinter;
-            if ($printerName === 'XP-80') {
-                $printerName = $defaultPrinter;
+            $printerName = $this->resolveLabelPrinterName($request->input('printer_name'));
+            if (empty($printerName)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'يرجى تحديد طابعة الملصقات أولاً من القائمة'
+                ], 400);
             }
 
             $labelData = [
@@ -602,10 +626,12 @@ class NodeThermalPrinterController extends Controller
     public function printBatchLabelsDirect(Request $request)
     {
         try {
-            $defaultPrinter = $this->settingRepo->get('label_printer_name') ?: 'Xprinter XP-365B';
-            $printerName = $request->input('printer_name') ?: $defaultPrinter;
-            if ($printerName === 'XP-80') {
-                $printerName = $defaultPrinter;
+            $printerName = $this->resolveLabelPrinterName($request->input('printer_name'));
+            if (empty($printerName)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'يرجى تحديد طابعة الملصقات أولاً من القائمة'
+                ], 400);
             }
 
             $items = $request->input('items', []);

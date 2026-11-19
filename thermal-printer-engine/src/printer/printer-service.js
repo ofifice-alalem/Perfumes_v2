@@ -11,29 +11,58 @@ const { findPrinter } = require('./printer-detection');
  * @returns {Promise<{success: boolean, message: string, printerUsed: string}>}
  */
 async function printRawBuffer(printerName, rawBuffer) {
-    // 1. Detect printer
-    const detection = findPrinter(printerName);
-
-    if (!detection.found) {
-        const availableNames = detection.allPrinters.map(p => `  - "${p.name}" (${p.driver}, ${p.port})`).join('\n');
-        const errorMessage = `Printer "${printerName}" was not found.\n\nAvailable Printers in Windows:\n${availableNames || '  None found'}`;
-        throw new Error(errorMessage);
+    let targetName = (printerName || '').trim();
+    if (!targetName) {
+        throw new Error('لم يتم تحديد اسم الطابعة لإرسال أمر الطباعة');
     }
-
-    const actualPrinterName = detection.matchedName;
-    console.log(`Printing RAW job to printer: "${actualPrinterName}"...`);
 
     // 2. Save raw buffer to temporary binary file
     const tempDir = path.join(__dirname, '../../temp');
     if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
     }
-    const tempFilePath = path.join(tempDir, `print_job_${Date.now()}.bin`);
+    const tempFilePath = path.join(tempDir, `print_job_${Date.now()}_${Math.random().toString(36).substring(7)}.bin`);
     fs.writeFileSync(tempFilePath, rawBuffer);
 
+    const exePath = path.join(__dirname, '../../bin/raw-print.exe');
+
+    // 3. Ultra-fast direct attempt with raw-print.exe (< 10ms, ZERO PowerShell overhead)
+    if (fs.existsSync(exePath) && targetName) {
+        try {
+            const command = `"${exePath}" "${targetName}" "${tempFilePath}"`;
+            const output = execSync(command, { encoding: 'utf8', timeout: 5000 });
+            if (fs.existsSync(tempFilePath)) {
+                try { fs.unlinkSync(tempFilePath); } catch (e) {}
+            }
+            if (output && output.includes('SUCCESS')) {
+                return {
+                    success: true,
+                    message: `Printed successfully to "${targetName}".`,
+                    printerUsed: targetName
+                };
+            }
+        } catch (fastErr) {
+            console.warn(`Direct print attempt to "${targetName}" failed, falling back to printer detection:`, fastErr.message);
+        }
+    }
+
+    // 4. Fallback: only if direct attempt failed, query Windows printers
+    const detection = findPrinter(targetName);
+
+    if (!detection.found) {
+        if (fs.existsSync(tempFilePath)) {
+            try { fs.unlinkSync(tempFilePath); } catch (e) {}
+        }
+        const availableNames = detection.allPrinters.map(p => `  - "${p.name}" (${p.driver}, ${p.port})`).join('\n');
+        const errorMessage = `Printer "${targetName}" was not found.\n\nAvailable Printers in Windows:\n${availableNames || '  None found'}`;
+        throw new Error(errorMessage);
+    }
+
+    const actualPrinterName = detection.matchedName;
+    console.log(`Printing RAW job to resolved printer: "${actualPrinterName}"...`);
+
     try {
-        // 3. Execute Windows RAW print via ultra-fast native compiled raw-print.exe
-        const exePath = path.join(__dirname, '../../bin/raw-print.exe');
+        // 5. Execute Windows RAW print via native raw-print.exe or ps1 fallback
         let output = '';
 
         if (fs.existsSync(exePath)) {
@@ -57,7 +86,7 @@ async function printRawBuffer(printerName, rawBuffer) {
         if (output && output.includes('SUCCESS')) {
             return {
                 success: true,
-                message: `Invoice printed successfully to "${actualPrinterName}".`,
+                message: `Printed successfully to "${actualPrinterName}".`,
                 printerUsed: actualPrinterName
             };
         } else {

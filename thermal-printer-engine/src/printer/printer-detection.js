@@ -37,21 +37,23 @@ function findPrinter(targetPrinterName) {
         return { found: false, matchedName: null, allPrinters: [] };
     }
 
-    // Exact match search
+    // Exact match search (case-insensitive)
     const exact = printers.find(p => p.name.toLowerCase() === targetPrinterName.toLowerCase());
     if (exact) {
         return { found: true, matchedName: exact.name, printerInfo: exact, allPrinters: printers };
     }
 
-    // Partial/Fuzzy match search (e.g. "POS-80", "XP-80", "80")
-    const fuzzy = printers.find(p => 
-        p.name.toLowerCase().includes(targetPrinterName.toLowerCase()) || 
-        targetPrinterName.toLowerCase().includes(p.name.toLowerCase()) ||
-        p.name.toLowerCase().includes('80')
-    );
+    // Dynamic partial / fuzzy match
+    const cleanTarget = targetPrinterName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cleanTarget) {
+        const fuzzy = printers.find(p => {
+            const cleanP = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            return cleanP.includes(cleanTarget) || cleanTarget.includes(cleanP);
+        });
 
-    if (fuzzy) {
-        return { found: true, matchedName: fuzzy.name, printerInfo: fuzzy, allPrinters: printers };
+        if (fuzzy) {
+            return { found: true, matchedName: fuzzy.name, printerInfo: fuzzy, allPrinters: printers };
+        }
     }
 
     return { found: false, matchedName: null, allPrinters: printers };

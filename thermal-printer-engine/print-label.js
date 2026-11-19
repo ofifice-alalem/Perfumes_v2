@@ -48,9 +48,13 @@ async function main() {
     const labelData = loadLabelData();
 
     const printerArg = process.argv.find(arg => arg.startsWith('--printer='));
-    const printerName = printerArg 
-        ? printerArg.replace('--printer=', '').replace(/^["']|["']$/g, '') 
-        : (labelData.printerName || config.labelPrinter?.name || config.printer?.name || "XP-365B");
+    let printerName = printerArg 
+        ? printerArg.replace('--printer=', '').replace(/^["']|["']$/g, '').trim()
+        : ((labelData.printerName || config.labelPrinter?.name || '').trim());
+
+    if (!printerName) {
+        throw new Error("No printer name specified for label printing");
+    }
 
     const labelsList = Array.isArray(labelData.labels) && labelData.labels.length > 0
         ? labelData.labels

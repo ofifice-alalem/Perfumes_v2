@@ -184,7 +184,10 @@ const server = http.createServer(async (req, res) => {
                     try { payload = JSON.parse(bodyStr); } catch (e) {}
                 }
 
-                const printerName = payload.printerName || config.labelPrinter?.name || 'Xprinter XP-365B';
+                let printerName = (payload.printerName || config.labelPrinter?.name || '').trim();
+                if (!printerName) {
+                    throw new Error("No printer name specified for label printing");
+                }
                 const labelsList = Array.isArray(payload.labels) && payload.labels.length > 0
                     ? payload.labels
                     : [payload.label || payload];
