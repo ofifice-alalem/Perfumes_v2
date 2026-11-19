@@ -125,7 +125,18 @@ class NodeThermalPrinterController extends Controller
         try {
             $forceRefresh = $request->boolean('refresh', false);
 
-            $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 60, function () {
+            $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 180, function () {
+                $exePath = base_path('thermal-printer-engine' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'list-printers.exe');
+                if (file_exists($exePath)) {
+                    $rawJson = shell_exec("\"$exePath\"");
+                    if ($rawJson) {
+                        $decoded = json_decode(trim($rawJson), true);
+                        if (is_array($decoded) && !empty($decoded)) {
+                            return $decoded;
+                        }
+                    }
+                }
+
                 $printersList = [];
                 $psDirect = shell_exec('powershell -NoProfile -Command "Get-CimInstance Win32_Printer | ForEach-Object { [PSCustomObject]@{ Name = $_.Name; DriverName = $_.DriverName; PortName = $_.PortName; PrinterPaperNames = $_.PrinterPaperNames } } | ConvertTo-Json -Depth 3"');
 

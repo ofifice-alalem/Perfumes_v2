@@ -175,8 +175,46 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
         const pObj = printersList.find(p => p.name === name);
         if (pObj && Array.isArray(pObj.forms)) {
             setStockForms(pObj.forms);
+            if (selectedStock && !pObj.forms.includes(selectedStock)) {
+                setSelectedStock('');
+                localStorage.removeItem('label_printer_stock');
+            }
         } else {
             setStockForms([]);
+            setSelectedStock('');
+        }
+    };
+
+    const handleStockChange = (val: string) => {
+        setSelectedStock(val);
+        localStorage.setItem('label_printer_stock', val);
+        if (!val) return;
+
+        // 1. استخراج الأبعاد تلقائياً إذا كانت موجودة بالاسم مثل: size (40*25) أو 50x30 أو 40x25 mm
+        const match = val.match(/(\d+(?:\.\d+)?)\s*[*xX×]\s*(\d+(?:\.\d+)?)/);
+        if (match) {
+            let w = parseFloat(match[1]);
+            let h = parseFloat(match[2]);
+            // إذا كانت الأبعاد بالإنش (مثل 2 x 4)
+            if (w <= 8 && h <= 15 && !val.toLowerCase().includes('mm')) {
+                w = Math.round(w * 25.4);
+                h = Math.round(h * 25.4);
+            }
+            if (w >= 10 && w <= 200 && h >= 10 && h <= 300) {
+                updateSize(w, h);
+                return;
+            }
+        }
+
+        // 2. قوالب شائعة إضافية
+        if (val.includes('BIG') || val.includes('2.36')) {
+            updateSize(58, 40);
+        } else if (val.includes('XP-365B') || val.includes('1.97')) {
+            updateSize(50, 30);
+        } else if (val.includes('40')) {
+            updateSize(40, 25);
+        } else if (val.includes('50')) {
+            updateSize(50, 25);
         }
     };
 
@@ -1305,25 +1343,14 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
                                                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                                                 قالب ورق الطابعة بالويندوز (Stock):
                                             </span>
-                                            <span className="text-[9px] font-mono text-slate-400">Seagull Presets</span>
+                                            <span className="text-[9px] font-mono text-slate-400">{stockForms.length} قالب متوفر</span>
                                         </div>
                                         <select
                                             value={selectedStock}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                setSelectedStock(val);
-                                                localStorage.setItem('label_printer_stock', val);
-                                                if (val.includes('BIG') || val.includes('2.36')) {
-                                                    updateSize(58, 40);
-                                                } else if (val.includes('XP-365B') || val.includes('1.97')) {
-                                                    updateSize(50, 30);
-                                                } else if (val.includes('2 x 4')) {
-                                                    updateSize(50, 100);
-                                                }
-                                            }}
-                                            className="w-full px-2.5 py-1.5 rounded-[10px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary"
+                                            onChange={e => handleStockChange(e.target.value)}
+                                            className="w-full px-2.5 py-1.5 rounded-[10px] bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 font-bold text-xs text-slate-800 dark:text-white focus:outline-none focus:border-primary cursor-pointer"
                                         >
-                                            <option value="">-- اختيار قالب Stock من الطابعة (مثل XP-365-BIG) --</option>
+                                            <option value="">-- اختيار قالب ورق مسجل في الطابعة --</option>
                                             {stockForms.map(f => (
                                                 <option key={f} value={f}>
                                                     {f}
