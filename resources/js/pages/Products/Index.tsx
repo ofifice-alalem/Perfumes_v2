@@ -108,6 +108,21 @@ export default function ProductsIndex({ products, catalogNames = [], categories,
         applyFiltersToServer(filterCat, filterTier, nextKeywords, lowStockOnly);
     };
 
+    // Pre-warm printer list in background on page load so QrModal opens instantly with zero delay
+    useEffect(() => {
+        fetch('/settings/node-printer/printers')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success && Array.isArray(res.printers)) {
+                    localStorage.setItem('label_printers_cache', JSON.stringify(res.printers));
+                    if (res.label_configured && !localStorage.getItem('label_printer_name')) {
+                        localStorage.setItem('label_printer_name', res.label_configured);
+                    }
+                }
+            })
+            .catch(() => {});
+    }, []);
+
     // Single QR code generation
     const handleGenerate = (p: Product) => {
         const newQr = generateQrCode();

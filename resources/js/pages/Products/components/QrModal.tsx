@@ -125,19 +125,41 @@ export function QrModal({ product, productsList, onClose }: QrModalProps) {
     });
     const [printingNode, setPrintingNode] = useState<boolean>(false);
     const [nodePrintMsg, setNodePrintMsg] = useState<{ success: boolean; text: string } | null>(null);
-    const [stockForms, setStockForms] = useState<string[]>([]);
-    const [selectedStock, setSelectedStock] = useState<string>(() => localStorage.getItem('label_printer_stock') || '');
-    const [printersList, setPrintersList] = useState<{ name: string; forms?: string[] }[]>([]);
+    const [printersList, setPrintersList] = useState<{ name: string; forms?: string[] }[]>(() => {
+        try {
+            const cached = localStorage.getItem('label_printers_cache');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
     const [selectedPrinter, setSelectedPrinter] = useState<string>(() => localStorage.getItem('label_printer_name') || '');
+    const [stockForms, setStockForms] = useState<string[]>(() => {
+        try {
+            const cachedPrinters = localStorage.getItem('label_printers_cache');
+            const savedPrinter = localStorage.getItem('label_printer_name');
+            if (cachedPrinters && savedPrinter) {
+                const list = JSON.parse(cachedPrinters);
+                const p = list.find((item: any) => item.name === savedPrinter);
+                if (p && Array.isArray(p.forms)) return p.forms;
+            }
+        } catch {}
+        return [];
+    });
+    const [selectedStock, setSelectedStock] = useState<string>(() => localStorage.getItem('label_printer_stock') || '');
     const [loadingPrinters, setLoadingPrinters] = useState<boolean>(false);
 
     const loadPrinters = (preferCurrent: boolean = true, forceRefresh: boolean = false) => {
-        setLoadingPrinters(true);
+        // إذا كانت الطابعات محملة مسبقاً في الكاش، لا نُظهر مؤشر تحميل يعيق المستخدم
+        if (forceRefresh || printersList.length === 0) {
+            setLoadingPrinters(true);
+        }
         fetch(`/settings/node-printer/printers${forceRefresh ? '?refresh=1' : ''}`)
             .then(r => r.json())
             .then(res => {
                 if (res.success && Array.isArray(res.printers)) {
                     setPrintersList(res.printers);
+                    localStorage.setItem('label_printers_cache', JSON.stringify(res.printers));
                     const currentSelected = selectedPrinter || localStorage.getItem('label_printer_name') || '';
                     const exists = currentSelected && res.printers.some((p: any) => p.name === currentSelected);
                     let target = '';

@@ -125,7 +125,7 @@ class NodeThermalPrinterController extends Controller
         try {
             $forceRefresh = $request->boolean('refresh', false);
 
-            $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 180, function () {
+            $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 86400, function () {
                 $exePath = base_path('thermal-printer-engine' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'list-printers.exe');
                 if (file_exists($exePath)) {
                     $rawJson = shell_exec("\"$exePath\"");
