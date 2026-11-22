@@ -24,6 +24,33 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Get printer bridge HTTP base URL
+     */
+    protected function getBridgeUrl(): string
+    {
+        return rtrim(config('services.printer_bridge.url', 'http://127.0.0.1:9124'), '/');
+    }
+
+    /**
+     * Check if printer bridge daemon is reachable via rapid socket probe
+     */
+    protected function isBridgeDaemonActive(): bool
+    {
+        $url = $this->getBridgeUrl();
+        $parts = parse_url($url);
+        $host = $parts['host'] ?? '127.0.0.1';
+        $port = (int)($parts['port'] ?? 9124);
+
+        $fp = @fsockopen($host, $port, $errno, $errstr, 0.08);
+        if ($fp) {
+            fclose($fp);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Get embedded thermal printer engine directory path
      */
     protected function getEnginePath(): string
@@ -126,6 +153,22 @@ class NodeThermalPrinterController extends Controller
             $forceRefresh = $request->boolean('refresh', false);
 
             $printers = \Illuminate\Support\Facades\Cache::remember($forceRefresh ? 'installed_printers_' . time() : 'installed_printers', 86400, function () {
+                $bridgeUrl = $this->getBridgeUrl();
+
+                // 1. Try fetching printers directly from printer_bridge HTTP server
+                try {
+                    $response = Http::connectTimeout(1.0)->timeout(3.0)->get("{$bridgeUrl}/printers");
+                    if ($response->successful()) {
+                        $resData = $response->json();
+                        if (!empty($resData['printers']) && is_array($resData['printers'])) {
+                            return $resData['printers'];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("getPrinters HTTP query failed: " . $e->getMessage());
+                }
+
+                // 2. Fallback to local Windows detection if bridge HTTP is not reached
                 $exePath = base_path('thermal-printer-engine' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'list-printers.exe');
                 if (file_exists($exePath)) {
                     $rawJson = shell_exec("\"$exePath\"");
@@ -278,14 +321,15 @@ class NodeThermalPrinterController extends Controller
             $useMulti = $request->boolean('multi', true);
             $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
 
-            // 1. Try fast HTTP preview first
+            // 1. Try fast HTTP preview via printer_bridge
+            $bridgeUrl = $this->getBridgeUrl();
             try {
                 $payload = ['multi' => $useMulti];
                 if ($realInvoiceData) {
                     $payload['invoice'] = $realInvoiceData;
                 }
 
-                $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/preview', $payload);
+                $response = Http::connectTimeout(1.0)->timeout(3.5)->post("{$bridgeUrl}/preview", $payload);
 
                 if ($response->successful()) {
                     $resData = $response->json();
@@ -297,46 +341,13 @@ class NodeThermalPrinterController extends Controller
                     }
                 }
             } catch (\Throwable $e) {
-                // Auto-start fast node server in background if not running
-                $enginePath = $this->getEnginePath();
-                @pclose(@popen(sprintf('cd /d "%s" && start /B node server.js', $enginePath), 'r'));
-
-                try {
-                    usleep(350000); // 350ms wait for server bind
-                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/preview', $payload);
-                    if ($response->successful()) {
-                        $resData = $response->json();
-                        if (!empty($resData['preview_src'])) {
-                            return response()->json([
-                                'success' => true,
-                                'preview_src' => $resData['preview_src']
-                            ]);
-                        }
-                    }
-                } catch (\Throwable $ex) {
-                    Log::warning("generatePreview retry failed: " . $ex->getMessage());
-                }
-            }
-
-            // 2. Fallback CLI execution
-            $output = $this->executeCliWithInvoice('preview.js', $realInvoiceData, $useMulti);
-
-            $outputImg = $this->getEnginePath() . '\\output\\invoice-preview.png';
-            if (File::exists($outputImg)) {
-                $imageData = base64_encode(File::get($outputImg));
-                $src = 'data:image/png;base64,' . $imageData;
-
-                return response()->json([
-                    'success' => true,
-                    'preview_src' => $src,
-                    'output_log' => $output
-                ]);
+                Log::warning("generatePreview printer_bridge connection failed: " . $e->getMessage());
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'لم يتم العثور على صورة المعاينة المُولّدة'
-            ], 404);
+                'message' => 'تعذر توليد المعاينة: سيرفر الطباعة (printer_bridge) غير متصل.'
+            ], 503);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController generatePreview error: " . $e->getMessage());
             return response()->json([
@@ -408,13 +419,14 @@ class NodeThermalPrinterController extends Controller
     public function dispatchDirectPrint($invoiceId): bool
     {
         try {
-            $configFile = $this->getEnginePath() . DIRECTORY_SEPARATOR . 'config.json';
-            if (!File::exists($configFile)) {
-                $this->syncEngineConfig();
-            }
-
             $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
             if (!$realInvoiceData) {
+                return false;
+            }
+
+            // إذا كان سيرفر الطباعة غير شغال، لا يتم طباعة أي شيء
+            if (!$this->isBridgeDaemonActive()) {
+                Log::warning("dispatchDirectPrint: printer_bridge daemon is offline. Skipping print.");
                 return false;
             }
 
@@ -425,28 +437,13 @@ class NodeThermalPrinterController extends Controller
                 'invoice'     => $realInvoiceData
             ];
 
-            // 1. Check if Node daemon is listening on port 9124 via rapid socket probe (< 20ms)
-            $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
-            if ($fp) {
-                $isDaemonActive = true;
-                fclose($fp);
+            $bridgeUrl = $this->getBridgeUrl();
+            try {
+                Http::timeout(1.0)->post("{$bridgeUrl}/print", $payload);
+            } catch (\Throwable $e) {
+                Log::warning("dispatchDirectPrint HTTP dispatch: " . $e->getMessage());
             }
 
-            if ($isDaemonActive) {
-                // Daemon is live: post to daemon with async flag (< 2ms response).
-                // Once handed off to the daemon, NEVER trigger CLI fallback to guarantee no double-printing.
-                try {
-                    Http::timeout(1.0)->post('http://127.0.0.1:9124/print', $payload);
-                } catch (\Throwable $e) {
-                    Log::warning("dispatchDirectPrint HTTP dispatch: " . $e->getMessage());
-                }
-                return true;
-            }
-
-            // 2. Daemon is offline: execute CLI in background via non-blocking process (< 5ms)
-            // Single execution path: 100% real data, ZERO UI delay, ZERO duplicate prints.
-            $this->executeCliAsync('print.js', $realInvoiceData, true);
             return true;
         } catch (\Throwable $e) {
             Log::error("dispatchDirectPrint error: " . $e->getMessage());
@@ -460,7 +457,6 @@ class NodeThermalPrinterController extends Controller
     public function printDirect(Request $request)
     {
         try {
-            $this->syncEngineConfig();
             $invoiceId = $request->input('invoice_id');
             $useMulti = $request->boolean('multi', true);
             $isDemo = $request->boolean('demo', false);
@@ -482,14 +478,15 @@ class NodeThermalPrinterController extends Controller
                 ], 400);
             }
 
-            // 1. Check if Node daemon is active via fast socket probe (< 20ms)
-            $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
-            if ($fp) {
-                $isDaemonActive = true;
-                fclose($fp);
+            // التحقق من أن سيرفر الطباعة يعمل
+            if (!$this->isBridgeDaemonActive()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سيرفر الطباعة (printer_bridge) غير متصل، تم إلغاء الطباعة.'
+                ], 503);
             }
 
+            $bridgeUrl = $this->getBridgeUrl();
             $payload = [
                 'multi' => $useMulti,
                 'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80')
@@ -498,30 +495,20 @@ class NodeThermalPrinterController extends Controller
                 $payload['invoice'] = $realInvoiceData;
             }
 
-            if ($isDaemonActive) {
-                try {
-                    $response = Http::connectTimeout(1.0)->timeout(2.5)->post('http://127.0.0.1:9124/print', $payload);
-                    if ($response->successful()) {
-                        $resData = $response->json();
-                        return response()->json([
-                            'success' => true,
-                            'message' => 'تم إرسال الفاتورة بنجاح وبسرعة فائقة (' . ($resData['durationMs'] ?? '40') . 'ms)',
-                            'log' => $resData['message'] ?? 'Fast Print Server'
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning("printDirect HTTP dispatch: " . $e->getMessage());
-                }
+            $response = Http::connectTimeout(1.0)->timeout(2.5)->post("{$bridgeUrl}/print", $payload);
+            if ($response->successful()) {
+                $resData = $response->json();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'تم إرسال الفاتورة بنجاح وبسرعة فائقة (' . ($resData['durationMs'] ?? '40') . 'ms)',
+                    'log' => $resData['message'] ?? 'Fast Print Server'
+                ]);
             }
 
-            // 2. Fallback CLI direct execution with real invoice data
-            $output = $this->executeCliWithInvoice('print.js', $realInvoiceData, $useMulti);
-
             return response()->json([
-                'success' => true,
-                'message' => 'تم إرسال الفاتورة بنجاح إلى طابعة الفواتير الحرارية (Node RAW Engine)',
-                'log' => $output
-            ]);
+                'success' => false,
+                'message' => 'فشل إرسال أمر الطباعة إلى سيرفر printer_bridge'
+            ], 500);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController printDirect error: " . $e->getMessage());
             return response()->json([
@@ -565,63 +552,45 @@ class NodeThermalPrinterController extends Controller
                 'printerName'  => $printerName,
             ];
 
-            // 1. Fast socket probe to check port 9124
-            $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
-            if ($fp) {
-                $isDaemonActive = true;
-                fclose($fp);
+            // 1. Fast probe to check printer bridge
+            if (!$this->isBridgeDaemonActive()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سيرفر الطباعة (printer_bridge) غير متصل، تم إلغاء طباعة الملصق.'
+                ], 503);
             }
 
-            if ($isDaemonActive) {
-                try {
-                    $response = Http::connectTimeout(1.5)->timeout(8.0)->post('http://127.0.0.1:9124/print-label', [
-                        'printerName' => $printerName,
-                        'label'       => $labelData,
+            $bridgeUrl = $this->getBridgeUrl();
+
+            try {
+                $response = Http::connectTimeout(1.5)->timeout(8.0)->post("{$bridgeUrl}/print-label", [
+                    'printerName' => $printerName,
+                    'label'       => $labelData,
+                ]);
+                if ($response->successful()) {
+                    $resData = $response->json();
+                    return response()->json([
+                        'success'     => true,
+                        'message'     => 'تم إرسال ملصق الباركود بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
+                        'printerUsed' => $resData['printerUsed'] ?? $printerName,
+                        'durationMs'  => $resData['durationMs'] ?? null,
                     ]);
-                    if ($response->successful()) {
-                        $resData = $response->json();
-                        return response()->json([
-                            'success'     => true,
-                            'message'     => 'تم إرسال ملصق الباركود بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
-                            'printerUsed' => $resData['printerUsed'] ?? $printerName,
-                            'durationMs'  => $resData['durationMs'] ?? null,
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning("printLabelDirect HTTP dispatch: " . $e->getMessage());
-                    // في حال كان الخطأ بسبب انتهاء مهلة الاستجابة بعد الإرسال، نمنع إعادة الطباعة عبر CLI منعاً للتكرار
-                    if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
-                        return response()->json([
-                            'success'     => true,
-                            'message'     => 'تم إرسال ملصق الباركود إلى الطابعة ' . $printerName,
-                            'printerUsed' => $printerName,
-                        ]);
-                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("printLabelDirect HTTP dispatch: " . $e->getMessage());
+                if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
+                    return response()->json([
+                        'success'     => true,
+                        'message'     => 'تم إرسال ملصق الباركود إلى الطابعة ' . $printerName,
+                        'printerUsed' => $printerName,
+                    ]);
                 }
             }
 
-            // 2. Fallback CLI execution with temp json file
-            $enginePath = $this->getEnginePath();
-            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
-            if (!File::isDirectory($tempDir)) {
-                File::makeDirectory($tempDir, 0755, true);
-            }
-            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'label_' . time() . '_' . uniqid() . '.json';
-            File::put($tempFile, json_encode($labelData, JSON_UNESCAPED_UNICODE));
-
-            $cmd = sprintf('cd /d "%s" && node print-label.js --file="%s" --printer="%s"', $enginePath, $tempFile, $printerName);
-            $output = shell_exec("cmd /c \"$cmd\"");
-
-            if (File::exists($tempFile)) {
-                @File::delete($tempFile);
-            }
-
             return response()->json([
-                'success' => true,
-                'message' => 'تم إرسال الملصق بنجاح إلى طابعة الباركود',
-                'log'     => $output,
-            ]);
+                'success' => false,
+                'message' => 'تعذر إرسال أمر طباعة الملصق إلى سيرفر الطباعة.'
+            ], 500);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController printLabelDirect error: " . $e->getMessage());
             return response()->json([
@@ -690,65 +659,47 @@ class NodeThermalPrinterController extends Controller
                 ];
             }
 
-            // 1. Fast socket probe to check port 9124
-            $isDaemonActive = false;
-            $fp = @fsockopen('127.0.0.1', 9124, $errno, $errstr, 0.05);
-            if ($fp) {
-                $isDaemonActive = true;
-                fclose($fp);
+            // 1. Fast probe to check printer bridge
+            if (!$this->isBridgeDaemonActive()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سيرفر الطباعة (printer_bridge) غير متصل، تم إلغاء الطباعة الجماعية.'
+                ], 503);
             }
 
-            if ($isDaemonActive) {
-                try {
-                    $response = Http::connectTimeout(2.0)->timeout(15.0)->post('http://127.0.0.1:9124/print-batch-labels', [
-                        'printerName' => $printerName,
-                        'labels'      => $labels,
+            $bridgeUrl = $this->getBridgeUrl();
+
+            try {
+                $response = Http::connectTimeout(2.0)->timeout(15.0)->post("{$bridgeUrl}/print-batch-labels", [
+                    'printerName' => $printerName,
+                    'labels'      => $labels,
+                ]);
+                if ($response->successful()) {
+                    $resData = $response->json();
+                    return response()->json([
+                        'success'     => true,
+                        'message'     => 'تم إرسال ' . count($labels) . ' ملصق بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
+                        'printerUsed' => $resData['printerUsed'] ?? $printerName,
+                        'durationMs'  => $resData['durationMs'] ?? null,
+                        'count'       => count($labels),
                     ]);
-                    if ($response->successful()) {
-                        $resData = $response->json();
-                        return response()->json([
-                            'success'     => true,
-                            'message'     => 'تم إرسال ' . count($labels) . ' ملصق بنجاح إلى الطابعة ' . ($resData['printerUsed'] ?? $printerName),
-                            'printerUsed' => $resData['printerUsed'] ?? $printerName,
-                            'durationMs'  => $resData['durationMs'] ?? null,
-                            'count'       => count($labels),
-                        ]);
-                    }
-                } catch (\Throwable $e) {
-                    Log::warning("printBatchLabelsDirect HTTP dispatch: " . $e->getMessage());
-                    if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
-                        return response()->json([
-                            'success'     => true,
-                            'message'     => 'تم إرسال ' . count($labels) . ' ملصق إلى الطابعة ' . $printerName,
-                            'printerUsed' => $printerName,
-                            'count'       => count($labels),
-                        ]);
-                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("printBatchLabelsDirect HTTP dispatch: " . $e->getMessage());
+                if (str_contains($e->getMessage(), 'timed out') || str_contains($e->getMessage(), 'cURL error 28')) {
+                    return response()->json([
+                        'success'     => true,
+                        'message'     => 'تم إرسال ' . count($labels) . ' ملصق إلى الطابعة ' . $printerName,
+                        'printerUsed' => $printerName,
+                        'count'       => count($labels),
+                    ]);
                 }
             }
 
-            // 2. Fallback CLI execution with temp json file
-            $enginePath = $this->getEnginePath();
-            $tempDir = $enginePath . DIRECTORY_SEPARATOR . 'temp';
-            if (!File::isDirectory($tempDir)) {
-                File::makeDirectory($tempDir, 0755, true);
-            }
-            $tempFile = $tempDir . DIRECTORY_SEPARATOR . 'batch_labels_' . time() . '_' . uniqid() . '.json';
-            File::put($tempFile, json_encode(['labels' => $labels, 'printerName' => $printerName], JSON_UNESCAPED_UNICODE));
-
-            $cmd = sprintf('cd /d "%s" && node print-label.js --file="%s" --printer="%s"', $enginePath, $tempFile, $printerName);
-            $output = shell_exec("cmd /c \"$cmd\"");
-
-            if (File::exists($tempFile)) {
-                @File::delete($tempFile);
-            }
-
             return response()->json([
-                'success' => true,
-                'message' => 'تم إرسال ' . count($labels) . ' ملصق بنجاح إلى طابعة الباركود',
-                'log'     => $output,
-                'count'   => count($labels),
-            ]);
+                'success' => false,
+                'message' => 'تعذر إرسال أمر الطباعة الجماعية إلى سيرفر الطباعة.'
+            ], 500);
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController printBatchLabelsDirect error: " . $e->getMessage());
             return response()->json([

@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'printer_bridge' => [
+        'url' => env('PRINTER_BRIDGE_URL', 'http://127.0.0.1:9124'),
+    ],
+
 ];
