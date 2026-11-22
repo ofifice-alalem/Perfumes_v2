@@ -206,8 +206,12 @@ class BackupController extends Controller
 
     public function upload(Request $request): RedirectResponse
     {
+        // رفع الحد مؤقتاً للعمليات الكبيرة
+        @ini_set('memory_limit', '2048M');
+        @ini_set('max_execution_time', '600');
+
         $request->validate([
-            'file' => ['required', 'file', 'mimes:zip', 'max:524288'], // 512MB
+            'file' => ['required', 'file', 'mimes:zip', 'max:2097152'], // 2GB
         ]);
 
         if (!is_dir($this->backupDir)) {

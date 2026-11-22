@@ -391,7 +391,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
                     ) : (
                         <div className="flex flex-col items-center gap-1">
                             <p className="font-black text-slate-800 dark:text-slate-200 text-lg">انقر لاختيار ملف النسخة الاحتياطية (.zip)</p>
-                            <p className="text-sm font-bold text-slate-400">الحد الأقصى المسموح به: 512 ميجابايت</p>
+                            <p className="text-sm font-bold text-slate-400">الحد الأقصى المسموح به: 2 جيجابايت</p>
                         </div>
                     )}
 
