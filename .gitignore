@@ -1,4 +1,5 @@
 *.log
+printer_bridge
 .DS_Store
 .env
 .env.backup
