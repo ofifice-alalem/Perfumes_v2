@@ -73,7 +73,8 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
-                const printerName = payload.printerName || config.printer?.name || 'XP-80';
+                const activeConfig = payload.config ? { ...config, ...payload.config, store: { ...config.store, ...(payload.config.store || {}) } } : config;
+                const printerName = payload.printerName || activeConfig.printer?.name || 'XP-80';
                 const useMulti = payload.multi !== false;
                 const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
 
@@ -89,10 +90,10 @@ const server = http.createServer(async (req, res) => {
                     // Execute canvas rendering and Windows Spooler transmission in the background
                     (async () => {
                         try {
-                            const canvas = await renderInvoiceCanvas(invoiceData, config);
+                            const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
                             const escposBuffer = await encodePngToEscPosRaster(canvas, {
-                                cutPaper: config.printer?.cutPaper !== false,
-                                feedLinesAfterPrint: config.printer?.feedLinesAfterPrint || 4
+                                cutPaper: activeConfig.printer?.cutPaper !== false,
+                                feedLinesAfterPrint: activeConfig.printer?.feedLinesAfterPrint ?? 0
                             });
                             await printRawBuffer(printerName, escposBuffer);
                         } catch (bgErr) {
@@ -103,12 +104,12 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 // 1. Fast Canvas Render
-                const canvas = await renderInvoiceCanvas(invoiceData, config);
+                const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
 
                 // 2. Fast ESC/POS Encoding
                 const escposBuffer = await encodePngToEscPosRaster(canvas, {
-                    cutPaper: config.printer?.cutPaper !== false,
-                    feedLinesAfterPrint: config.printer?.feedLinesAfterPrint || 4
+                    cutPaper: activeConfig.printer?.cutPaper !== false,
+                    feedLinesAfterPrint: activeConfig.printer?.feedLinesAfterPrint ?? 0
                 });
 
                 // 3. Ultra-fast Native Win32 Spooling
@@ -148,10 +149,11 @@ const server = http.createServer(async (req, res) => {
                 }
 
                 const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
+                const activeConfig = payload.config ? { ...config, ...payload.config, store: { ...config.store, ...(payload.config.store || {}) } } : config;
                 const useMulti = payload.multi !== false;
                 const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
 
-                const canvas = await renderInvoiceCanvas(invoiceData, config);
+                const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
                 const pngBuffer = canvas.toBuffer ? canvas.toBuffer('image/png') : canvas;
 
                 const base64Src = 'data:image/png;base64,' + pngBuffer.toString('base64');

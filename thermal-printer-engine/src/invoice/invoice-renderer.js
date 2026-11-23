@@ -230,7 +230,30 @@ function drawPerfumeWithIncenseIcon(ctx, x, y, width = 88, height = 110, isRight
  * Draws the center store logo (either uploaded PNG image or oval badge with store name)
  * @returns {Promise<number>} Rendered height of the logo section
  */
-async function drawCenterLogoOrOval(ctx, cx, startY, rx = 170, ry = 80, storeName = '', storeSubname = '', logoPath = '') {
+async function drawCenterLogoOrOval(ctx, cx, startY, rx = 170, ry = 80, storeName = '', storeSubname = '', logoPath = '', logoBase64 = '') {
+    // 1. Try Base64 logo first (crucial for Docker -> Host bridge communication)
+    if (logoBase64) {
+        try {
+            const cleanB64 = logoBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+            const imgBuffer = Buffer.from(cleanB64, 'base64');
+            const logoImg = await loadImage(imgBuffer);
+            const maxW = 320;
+            const maxH = 120;
+            const aspect = logoImg.width / logoImg.height;
+            let drawW = maxW;
+            let drawH = maxW / aspect;
+            if (drawH > maxH) {
+                drawH = maxH;
+                drawW = maxH * aspect;
+            }
+            ctx.drawImage(logoImg, cx - drawW / 2, startY, drawW, drawH);
+            return drawH;
+        } catch (e) {
+            console.warn("Could not load logo from base64:", e.message);
+        }
+    }
+
+    // 2. Try file path
     if (logoPath) {
         const normalizedPath = path.normalize(logoPath);
         if (fs.existsSync(normalizedPath)) {
@@ -340,7 +363,7 @@ async function renderInvoiceCanvas(invoiceData, config) {
     drawPerfumeWithIncenseIcon(ctx, margin + 4, y, 88, 110, false);
     drawPerfumeWithIncenseIcon(ctx, width - margin - 92, y, 88, 110, true);
 
-    const renderedLogoH = await drawCenterLogoOrOval(ctx, width / 2, y, 170, 80, config.store?.name, config.store?.subname, config.store?.logoPath);
+    const renderedLogoH = await drawCenterLogoOrOval(ctx, width / 2, y, 170, 80, config.store?.name, config.store?.subname, config.store?.logoPath, config.store?.logoBase64);
 
     // المسافة الرأسية تضمن النزول أسفل الشعار وأيقونات العطور معاً
     y += Math.max(renderedLogoH, 110) + 18;

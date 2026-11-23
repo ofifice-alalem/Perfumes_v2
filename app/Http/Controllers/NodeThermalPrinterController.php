@@ -69,6 +69,66 @@ class NodeThermalPrinterController extends Controller
     }
 
     /**
+     * Build engine config data array with Base64 logo for zero-filesystem dependence
+     */
+    protected function buildEngineConfigPayload(): array
+    {
+        $storeName = $this->settingRepo->get('store_name', 'تاجوري للعطور الفاخرة');
+        $storeSubname = $this->settingRepo->get('store_subname', '');
+        $storeDetails = $this->settingRepo->get('store_details', "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432");
+        $thankYou = $this->settingRepo->get('thank_you_message', '✨ شكراً لزيارتكم! نتمنى لكم يوماً معطراً ✨');
+        $policyNotes = $this->settingRepo->get('policy_notes', '');
+        $printerName = $this->settingRepo->get('node_printer_name', 'XP-80');
+        $showQrCode = $this->settingRepo->get('show_qr_code', '1') === '1';
+
+        $storeLogoSetting = $this->settingRepo->get('store_logo', '/images/logo-black_white.png');
+        $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path(ltrim($storeLogoSetting, '/\\')));
+        if (!File::exists($logoFullPath)) {
+            $files = File::glob(public_path('images/receipt/logo_*.*'));
+            if (!empty($files)) {
+                usort($files, function($a, $b) {
+                    return File::lastModified($b) - File::lastModified($a);
+                });
+                $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $files[0]);
+            } else {
+                $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path('images/logo-black_white.png'));
+            }
+        }
+
+        $logoBase64 = '';
+        if (File::exists($logoFullPath)) {
+            $mime = File::mimeType($logoFullPath) ?: 'image/png';
+            $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(File::get($logoFullPath));
+        }
+
+        return [
+            'printer' => [
+                'name' => $printerName,
+                'paperWidthMm' => 80,
+                'printableWidthDots' => 576,
+                'feedLinesAfterPrint' => 0,
+                'cutPaper' => true
+            ],
+            'labelPrinter' => [
+                'name' => (string)($this->settingRepo->get('label_printer_name') ?: ''),
+                'widthMm' => (float)$this->settingRepo->get('label_width_mm', 50),
+                'heightMm' => (float)$this->settingRepo->get('label_height_mm', 25),
+            ],
+            'store' => [
+                'name' => $storeName,
+                'subname' => $storeSubname,
+                'address' => $storeDetails,
+                'phones' => '',
+                'logoPath' => $logoFullPath,
+                'logoBase64' => $logoBase64,
+            ],
+            'returnPolicy' => $policyNotes,
+            'footerText' => $thankYou,
+            'showQrCode' => $showQrCode
+        ];
+    }
+
+    /**
      * Synchronize database settings to embedded engine config.json
      */
     public function syncEngineConfig()
@@ -76,29 +136,9 @@ class NodeThermalPrinterController extends Controller
         try {
             $enginePath = $this->getEnginePath();
             $configFile = $enginePath . DIRECTORY_SEPARATOR . 'config.json';
+            $configData = $this->buildEngineConfigPayload();
 
-            $storeName = $this->settingRepo->get('store_name', 'تاجوري للعطور الفاخرة');
-            $storeSubname = $this->settingRepo->get('store_subname', '');
-            $storeDetails = $this->settingRepo->get('store_details', "طرابلس - شارع الجرابة (مقابل مجمع الذهب)\nهاتف: 091-2345678 / 092-8765432");
-            $thankYou = $this->settingRepo->get('thank_you_message', '✨ شكراً لزيارتكم! نتمنى لكم يوماً معطراً ✨');
-            $policyNotes = $this->settingRepo->get('policy_notes', '');
-            $printerName = $this->settingRepo->get('node_printer_name', 'XP-80');
-            $showQrCode = $this->settingRepo->get('show_qr_code', '1') === '1';
-
-            $storeLogoSetting = $this->settingRepo->get('store_logo', '/images/logo-black_white.png');
-            $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path(ltrim($storeLogoSetting, '/\\')));
-            if (!File::exists($logoFullPath)) {
-                $files = File::glob(public_path('images/receipt/logo_*.*'));
-                if (!empty($files)) {
-                    usort($files, function($a, $b) {
-                        return File::lastModified($b) - File::lastModified($a);
-                    });
-                    $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $files[0]);
-                } else {
-                    $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path('images/logo-black_white.png'));
-                }
-            }
-
+            $logoFullPath = $configData['store']['logoPath'] ?? '';
             $assetsDir = $enginePath . DIRECTORY_SEPARATOR . 'assets';
             if (!File::isDirectory($assetsDir)) {
                 File::makeDirectory($assetsDir, 0755, true);
@@ -110,30 +150,7 @@ class NodeThermalPrinterController extends Controller
                 @File::copy($logoFullPath, $engineLogoPath);
             }
 
-            $configData = [
-                'printer' => [
-                    'name' => $printerName,
-                    'paperWidthMm' => 80,
-                    'printableWidthDots' => 576,
-                    'feedLinesAfterPrint' => 1,
-                    'cutPaper' => true
-                ],
-                'labelPrinter' => [
-                    'name' => (string)($this->settingRepo->get('label_printer_name') ?: ''),
-                    'widthMm' => (float)$this->settingRepo->get('label_width_mm', 50),
-                    'heightMm' => (float)$this->settingRepo->get('label_height_mm', 25),
-                ],
-                'store' => [
-                    'name' => $storeName,
-                    'subname' => $storeSubname,
-                    'address' => $storeDetails,
-                    'phones' => '',
-                    'logoPath' => File::exists($engineLogoPath) ? $engineLogoPath : $logoFullPath
-                ],
-                'returnPolicy' => $policyNotes,
-                'footerText' => $thankYou,
-                'showQrCode' => $showQrCode
-            ];
+            $configData['store']['logoPath'] = File::exists($engineLogoPath) ? $engineLogoPath : $logoFullPath;
 
             // مزامنة الملفات مع جميع مسارات سيرفر الطباعة المعروفة (thermal-printer-engine و printer_bridge)
             $targetDirs = [
@@ -357,7 +374,10 @@ class NodeThermalPrinterController extends Controller
             // 1. Try fast HTTP preview via printer_bridge
             $bridgeUrl = $this->getBridgeUrl();
             try {
-                $payload = ['multi' => $useMulti];
+                $payload = [
+                    'multi'  => $useMulti,
+                    'config' => $this->buildEngineConfigPayload(),
+                ];
                 if ($realInvoiceData) {
                     $payload['invoice'] = $realInvoiceData;
                 }
@@ -468,7 +488,8 @@ class NodeThermalPrinterController extends Controller
                 'async'       => true,
                 'multi'       => true,
                 'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80'),
-                'invoice'     => $realInvoiceData
+                'invoice'     => $realInvoiceData,
+                'config'      => $this->buildEngineConfigPayload(),
             ];
 
             $bridgeUrl = $this->getBridgeUrl();
@@ -523,8 +544,9 @@ class NodeThermalPrinterController extends Controller
 
             $bridgeUrl = $this->getBridgeUrl();
             $payload = [
-                'multi' => $useMulti,
-                'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80')
+                'multi'       => $useMulti,
+                'printerName' => $this->settingRepo->get('node_printer_name', 'XP-80'),
+                'config'      => $this->buildEngineConfigPayload(),
             ];
             if ($realInvoiceData) {
                 $payload['invoice'] = $realInvoiceData;
