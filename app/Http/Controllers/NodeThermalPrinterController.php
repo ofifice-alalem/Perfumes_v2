@@ -28,7 +28,17 @@ class NodeThermalPrinterController extends Controller
      */
     protected function getBridgeUrl(): string
     {
-        return rtrim(config('services.printer_bridge.url', 'http://127.0.0.1:9124'), '/');
+        $url = config('services.printer_bridge.url');
+        if (!empty($url)) {
+            return rtrim($url, '/');
+        }
+
+        // إذا كان التطبيق يعمل داخل حاوية دوكر، يتم توجيه الطلب تلقائياً للجهاز المضيف
+        if (file_exists('/.dockerenv') || env('DOCKER_CONTAINER', false)) {
+            return 'http://host.docker.internal:9124';
+        }
+
+        return 'http://127.0.0.1:9124';
     }
 
     /**

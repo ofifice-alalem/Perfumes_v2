@@ -219,8 +219,7 @@ export default function InventoryCount({ categories, filters, data }: Props) {
                         {activeTab === 'paper' && (
                             <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 <div className="flex items-center gap-2">
-                                    <a href={buildExportUrl('excel')} target="_blank"
-                                        className="flex items-center justify-center gap-2 flex-1 h-12 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
+                                    <a href={buildExportUrl('excel')}className="flex items-center justify-center gap-2 flex-1 h-12 rounded-[14px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-bold text-sm">
                                         <FileSpreadsheet className="w-4 h-4" /> تصدير Excel
                                     </a>
                                     <a href={buildExportUrl('pdf')} target="_blank"

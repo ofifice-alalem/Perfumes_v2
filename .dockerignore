@@ -1,5 +1,6 @@
 .git
 .github
+vendor
 node_modules
 deploy_package/perfumes_bundle_offline.tar
 deploy_package/printer_bridge/node.exe
@@ -12,3 +13,4 @@ storage/logs/*.log
 storage/framework/cache/data/*
 storage/framework/sessions/*
 storage/framework/views/*
+bootstrap/cache/*.php

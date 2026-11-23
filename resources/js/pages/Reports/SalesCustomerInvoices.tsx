@@ -703,10 +703,7 @@ export default function SalesCustomerInvoices({
                     action={
                         <div className="flex items-center gap-3 flex-wrap">
                             <a
-                                href={buildExportUrl('excel')}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="h-12 px-5 rounded-[16px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white border-2 border-emerald-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
+                                href={buildExportUrl('excel')}className="h-12 px-5 rounded-[16px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white border-2 border-emerald-500/30 font-black text-base flex items-center gap-2 transition-all active:scale-95 shadow-sm cursor-pointer"
                                 title="تصدير إكسيل"
                             >
                                 <FileSpreadsheet className="w-5 h-5" />

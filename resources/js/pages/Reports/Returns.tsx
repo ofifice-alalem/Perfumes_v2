@@ -413,10 +413,7 @@ export default function Returns({ users, customers, suppliers, categories, produ
                 <div className="spatial-card p-4 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-3 flex-wrap">
                         <a
-                            href={buildExportUrl('excel')}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="h-12 px-6 rounded-[16px] bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-sm flex items-center gap-2.5 active:scale-95"
+                            href={buildExportUrl('excel')}className="h-12 px-6 rounded-[16px] bg-emerald-500/10 border-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all font-black text-sm flex items-center gap-2.5 active:scale-95"
                         >
                             <FileSpreadsheet className="w-5 h-5" /> تصدير Excel
                         </a>
