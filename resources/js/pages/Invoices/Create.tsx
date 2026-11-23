@@ -4,6 +4,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ModernSelect } from '@/components/ui/SpatialComponents';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { PrinterAlertModal } from '@/components/ui/PrinterAlertModal';
 import {
     X,
     ShoppingCart,
@@ -156,6 +157,7 @@ export default function InvoicesCreate({
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [createdInvId, setCreatedInvId] = useState<number | null>(null);
     const [reprintingToast, setReprintingToast] = useState(false);
+    const [printerAlertOpen, setPrinterAlertOpen] = useState(false);
 
     useEffect(() => {
         if (flash?.success) {
@@ -183,11 +185,11 @@ export default function InvoicesCreate({
             });
             const resData = await res.json();
             if (!resData.success) {
-                alert('تنبيه الطباعة: ' + (resData.message || 'تعذر إرسال الفاتورة إلى الطابعة'));
+                setPrinterAlertOpen(true);
             }
         } catch (err) {
             console.error('Node print error:', err);
-            alert('تعذر الاتصال بمحرك الطباعة الحرارية');
+            setPrinterAlertOpen(true);
         } finally {
             setReprintingToast(false);
         }
@@ -733,6 +735,12 @@ export default function InvoicesCreate({
                     onClose={() => setShowRecentDrawer(false)}
                     recentInvoices={recentInvoices || []}
                     onPrintNode={triggerNodePrint}
+                />
+
+                <PrinterAlertModal
+                    isOpen={printerAlertOpen}
+                    onClose={() => setPrinterAlertOpen(false)}
+                    message="قم بفحص سيرفر الطباعة"
                 />
             </AppShell>
         </>

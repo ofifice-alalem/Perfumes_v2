@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from '@inertiajs/react';
 import { History, X, Printer, Eye, CheckCircle2, User, Clock, Package, RefreshCw } from 'lucide-react';
+import { PrinterAlertModal } from '@/components/ui/PrinterAlertModal';
 import { RecentInvoiceItem } from '@/types/pos';
 
 interface RecentInvoicesDrawerProps {
@@ -25,6 +26,7 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
     const [previewInvoiceId, setPreviewInvoiceId] = useState<number | null>(null);
     const [previewSrc, setPreviewSrc] = useState<string | null>(null);
     const [loadingPreview, setLoadingPreview] = useState<boolean>(false);
+    const [printerAlertOpen, setPrinterAlertOpen] = useState(false);
 
     if (!isOpen) return null;
 
@@ -58,11 +60,11 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
             if (resData.success && resData.preview_src) {
                 setPreviewSrc(resData.preview_src);
             } else {
-                alert('تنبيه المعاينة: ' + (resData.message || 'تعذر توليد صورة المعاينة'));
+                setPrinterAlertOpen(true);
             }
         } catch (e) {
             console.error('Error loading receipt preview:', e);
-            alert('تعذر الاتصال بمحرك المعاينة الحرارية');
+            setPrinterAlertOpen(true);
         } finally {
             setLoadingPreview(false);
         }
@@ -270,6 +272,12 @@ export const RecentInvoicesDrawer: React.FC<RecentInvoicesDrawerProps> = ({
                     </div>
                 </div>
             )}
+
+            <PrinterAlertModal
+                isOpen={printerAlertOpen}
+                onClose={() => setPrinterAlertOpen(false)}
+                message="قم بفحص سيرفر الطباعة"
+            />
         </div>,
         document.body
     );

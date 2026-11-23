@@ -5,6 +5,7 @@ import { SpatialCard, ModernSelect } from '@/components/ui/SpatialComponents';
 import { DeleteModal } from '@/components/ui/DeleteModal';
 import { RestoreModal } from '@/components/ui/RestoreModal';
 import { NumberPadModal } from '@/components/ui/NumberPadModal';
+import { PrinterAlertModal } from '@/components/ui/PrinterAlertModal';
 import { ArrowRight, Plus, Trash2, Package, CreditCard, RotateCcw, RefreshCw, Edit, Printer, Zap, User, UserCheck, Clock } from 'lucide-react';
 
 interface PaymentMethod { id: number; name: string; }
@@ -205,6 +206,7 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
     };
 
     const [printingNode, setPrintingNode] = useState(false);
+    const [printerAlertOpen, setPrinterAlertOpen] = useState(false);
 
     const handleNodeDirectPrint = async () => {
         setPrintingNode(true);
@@ -219,11 +221,11 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
             });
             const resData = await res.json();
             if (!resData.success) {
-                alert('خطأ في الطباعة الفورية: ' + (resData.message || 'تعذر الاتصال بالمحرك'));
+                setPrinterAlertOpen(true);
             }
         } catch (e) {
             console.error('Error printing node direct:', e);
-            alert('تعذر الاتصال بمحرك الطباعة الحرارية');
+            setPrinterAlertOpen(true);
         } finally {
             setPrintingNode(false);
         }
@@ -795,6 +797,12 @@ export default function InvoicesShow({ invoice, paymentMethods, flash }: Props) 
 
             <NumberPadModal isOpen={showPad} title={padTitle} initialValue={padInitial} maxValue={padMax}
                 onClose={() => setShowPad(false)} onConfirm={v => { padCallback?.(v); setShowPad(false); }} />
+
+            <PrinterAlertModal
+                isOpen={printerAlertOpen}
+                onClose={() => setPrinterAlertOpen(false)}
+                message="قم بفحص سيرفر الطباعة"
+            />
         </>
     );
 }
