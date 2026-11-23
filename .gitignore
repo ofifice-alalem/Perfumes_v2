@@ -15,6 +15,7 @@ printer_bridge
 /.zed
 /auth.json
 node_modules/
+deploy_package/
 **/node_modules/
 thermal-printer-engine/node_modules/
 thermal-printer-engine/output/

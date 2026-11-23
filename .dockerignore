@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+deploy_package/perfumes_bundle_offline.tar
+deploy_package/printer_bridge/node.exe
+printer_bridge
+dist
+dist-electron
+tests
+storage/*.key
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
