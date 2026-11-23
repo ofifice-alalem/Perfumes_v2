@@ -71,7 +71,7 @@ class NodeThermalPrinterController extends Controller
     /**
      * Synchronize database settings to embedded engine config.json
      */
-    protected function syncEngineConfig()
+    public function syncEngineConfig()
     {
         try {
             $enginePath = $this->getEnginePath();
@@ -135,7 +135,30 @@ class NodeThermalPrinterController extends Controller
                 'showQrCode' => $showQrCode
             ];
 
-            File::put($configFile, json_encode($configData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+            // مزامنة الملفات مع جميع مسارات سيرفر الطباعة المعروفة (thermal-printer-engine و printer_bridge)
+            $targetDirs = [
+                $enginePath,
+                base_path('printer_bridge'),
+                'C:' . DIRECTORY_SEPARATOR . 'Users' . DIRECTORY_SEPARATOR . 'alhareth' . DIRECTORY_SEPARATOR . 'Desktop' . DIRECTORY_SEPARATOR . 'printer_bridge',
+            ];
+
+            foreach ($targetDirs as $targetDir) {
+                if (File::isDirectory($targetDir)) {
+                    $targetConfigFile = $targetDir . DIRECTORY_SEPARATOR . 'config.json';
+                    $targetAssetsDir = $targetDir . DIRECTORY_SEPARATOR . 'assets';
+                    if (!File::isDirectory($targetAssetsDir)) {
+                        @File::makeDirectory($targetAssetsDir, 0755, true);
+                    }
+                    $targetEngineLogo = $targetAssetsDir . DIRECTORY_SEPARATOR . 'current_logo' . $ext;
+                    if (File::exists($logoFullPath)) {
+                        @File::copy($logoFullPath, $targetEngineLogo);
+                    }
+
+                    $dirConfigData = $configData;
+                    $dirConfigData['store']['logoPath'] = File::exists($targetEngineLogo) ? $targetEngineLogo : $logoFullPath;
+                    @File::put($targetConfigFile, json_encode($dirConfigData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+                }
+            }
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController syncEngineConfig error: " . $e->getMessage());
         }
@@ -429,6 +452,7 @@ class NodeThermalPrinterController extends Controller
     public function dispatchDirectPrint($invoiceId): bool
     {
         try {
+            $this->syncEngineConfig();
             $realInvoiceData = $this->formatInvoiceForEngine($invoiceId);
             if (!$realInvoiceData) {
                 return false;
@@ -467,6 +491,7 @@ class NodeThermalPrinterController extends Controller
     public function printDirect(Request $request)
     {
         try {
+            $this->syncEngineConfig();
             $invoiceId = $request->input('invoice_id');
             $useMulti = $request->boolean('multi', true);
             $isDemo = $request->boolean('demo', false);

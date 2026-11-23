@@ -96,6 +96,13 @@ class SettingController extends Controller
             }
         }
 
+        // مزامنة إعدادات محرك الطباعة الحراري Node.js فوراً مع التعديلات الجديدة
+        try {
+            app(NodeThermalPrinterController::class)->syncEngineConfig();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("SettingController syncEngineConfig failed: " . $e->getMessage());
+        }
+
         return redirect()->back()->with('success', 'تم حفظ الإعدادات بنجاح!');
     }
 }

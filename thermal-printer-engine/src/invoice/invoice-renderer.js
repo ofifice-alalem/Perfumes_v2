@@ -228,16 +228,17 @@ function drawPerfumeWithIncenseIcon(ctx, x, y, width = 88, height = 110, isRight
 
 /**
  * Draws the center store logo (either uploaded PNG image or oval badge with store name)
+ * @returns {Promise<number>} Rendered height of the logo section
  */
-async function drawCenterLogoOrOval(ctx, cx, cy, rx = 170, ry = 80, storeName = '', storeSubname = '', logoPath = '') {
+async function drawCenterLogoOrOval(ctx, cx, startY, rx = 170, ry = 80, storeName = '', storeSubname = '', logoPath = '') {
     if (logoPath) {
         const normalizedPath = path.normalize(logoPath);
         if (fs.existsSync(normalizedPath)) {
             try {
                 const imgBuffer = fs.readFileSync(normalizedPath);
                 const logoImg = await loadImage(imgBuffer);
-                const maxW = 440;
-                const maxH = 180;
+                const maxW = 320;
+                const maxH = 120;
                 const aspect = logoImg.width / logoImg.height;
                 let drawW = maxW;
                 let drawH = maxW / aspect;
@@ -245,8 +246,8 @@ async function drawCenterLogoOrOval(ctx, cx, cy, rx = 170, ry = 80, storeName = 
                     drawH = maxH;
                     drawW = maxH * aspect;
                 }
-                ctx.drawImage(logoImg, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-                return;
+                ctx.drawImage(logoImg, cx - drawW / 2, startY, drawW, drawH);
+                return drawH;
             } catch (e) {
                 console.warn("Could not load logo image, falling back to oval badge:", e.message);
             }
@@ -256,6 +257,7 @@ async function drawCenterLogoOrOval(ctx, cx, cy, rx = 170, ry = 80, storeName = 
     ctx.save();
     ctx.fillStyle = '#000000';
 
+    const cy = startY + ry;
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -275,6 +277,7 @@ async function drawCenterLogoOrOval(ctx, cx, cy, rx = 170, ry = 80, storeName = 
     }
 
     ctx.restore();
+    return ry * 2;
 }
 
 /**
@@ -329,16 +332,18 @@ async function renderInvoiceCanvas(invoiceData, config) {
     ctx.fillStyle = '#000000';
     ctx.textBaseline = 'top';
 
-    let y = 6;
+    let y = 16;
 
     // -------------------------------------------------------------
-    // 1. TOP GRAPHICS (رسم الشعار المرفوع أو الشعار الافتراضي)
+    // 1. TOP GRAPHICS (أيقونات العطور على الجوانب والشعار في المنتصف)
     // -------------------------------------------------------------
     drawPerfumeWithIncenseIcon(ctx, margin + 4, y, 88, 110, false);
-    await drawCenterLogoOrOval(ctx, width / 2, y + 64, 170, 80, config.store?.name, config.store?.subname, config.store?.logoPath);
     drawPerfumeWithIncenseIcon(ctx, width - margin - 92, y, 88, 110, true);
 
-    y += 140;
+    const renderedLogoH = await drawCenterLogoOrOval(ctx, width / 2, y, 170, 80, config.store?.name, config.store?.subname, config.store?.logoPath);
+
+    // المسافة الرأسية تضمن النزول أسفل الشعار وأيقونات العطور معاً
+    y += Math.max(renderedLogoH, 110) + 18;
 
     // -------------------------------------------------------------
     // 2. STORE NAME & ADDRESS

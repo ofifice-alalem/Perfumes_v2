@@ -145,17 +145,43 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
     }
   };
 
-  const fetchNodePreview = async (invId?: string) => {
+  const saveCurrentSettings = async () => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, val]) => {
+      if (val !== null && val !== undefined) {
+        if (key === 'store_logo_file' && val instanceof File) {
+          formData.append(key, val);
+        } else if (key !== 'store_logo_file') {
+          formData.append(key, String(val));
+        }
+      }
+    });
+
+    const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+    await fetch('/settings', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: formData,
+    });
+  };
+
+  const fetchNodePreview = async (invId?: any, autoSave: boolean = true) => {
     setLoadingPreview(true);
     try {
-      const idToUse = invId !== undefined ? invId : previewInvoiceId;
+      if (autoSave) {
+        await saveCurrentSettings();
+      }
+      const actualInvId = typeof invId === 'string' ? invId : previewInvoiceId;
       const res = await fetch('/settings/node-printer/preview', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
         },
-        body: JSON.stringify({ multi: true, invoice_id: idToUse || null }),
+        body: JSON.stringify({ multi: true, invoice_id: actualInvId || null }),
       });
       const resData = await res.json();
       if (resData.success && resData.preview_src) {
@@ -172,6 +198,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
     setPrintingNode(true);
     setNodePrintStatus(null);
     try {
+      await saveCurrentSettings();
       const res = await fetch('/settings/node-printer/print', {
         method: 'POST',
         headers: {
@@ -481,7 +508,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
       desc: 'كشف طابعات الويندوز الموصولة (Win32 RAW)، المعاينة عالية الدقة عبر محرك Node، والطباعة الحرارية المباشرة السريعة.',
       action: () => {
         setActiveTab('node_receipt');
-        fetchNodePreview();
+        fetchNodePreview(undefined, false);
         fetchNodePrinters();
       },
       badge: 'Node.js RAW Engine',
@@ -1413,7 +1440,7 @@ export default function SettingsIndex({ settings, products = [] }: SettingsProps
                 <div className="flex flex-col gap-3 pt-2">
                   <button
                     type="button"
-                    onClick={fetchNodePreview}
+                    onClick={() => fetchNodePreview()}
                     disabled={loadingPreview}
                     className="w-full inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white font-black text-sm hover:bg-slate-300 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
                   >
