@@ -60,6 +60,69 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    if (url.pathname === '/config' && (req.method === 'POST' || req.method === 'PUT')) {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            try {
+                let payload = {};
+                if (bodyStr.trim()) {
+                    payload = JSON.parse(bodyStr);
+                }
+                const newConfig = payload.config || payload;
+                if (!newConfig || typeof newConfig !== 'object') {
+                    throw new Error('Invalid config payload');
+                }
+
+                loadConfig();
+                config = {
+                    ...config,
+                    ...newConfig,
+                    printer: { ...(config.printer || {}), ...(newConfig.printer || {}) },
+                    store: { ...(config.store || {}), ...(newConfig.store || {}) },
+                    labelPrinter: { ...(config.labelPrinter || {}), ...(newConfig.labelPrinter || {}) }
+                };
+
+                // Save to config.json
+                const configPath = path.join(__dirname, 'config.json');
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf8');
+
+                // If Base64 logo is provided, save it to assets/current_logo.png
+                if (config.store?.logoBase64 && typeof config.store.logoBase64 === 'string') {
+                    try {
+                        const assetsDir = path.join(__dirname, 'assets');
+                        if (!fs.existsSync(assetsDir)) {
+                            fs.mkdirSync(assetsDir, { recursive: true });
+                        }
+                        const cleanB64 = config.store.logoBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+                        const imgBuffer = Buffer.from(cleanB64, 'base64');
+                        const localLogoPath = path.join(assetsDir, 'current_logo.png');
+                        fs.writeFileSync(localLogoPath, imgBuffer);
+                        config.store.logoPath = localLogoPath;
+                        fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf8');
+                    } catch (logoErr) {
+                        console.warn("Could not write logo file to assets:", logoErr.message);
+                    }
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    message: 'Config updated and saved successfully',
+                    config: config
+                }));
+            } catch (err) {
+                console.error('Error updating config via bridge:', err.message);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Failed to update config: ' + err.message
+                }));
+            }
+        });
+        return;
+    }
+
     if (url.pathname === '/print' && req.method === 'POST') {
         let bodyStr = '';
         req.on('data', chunk => { bodyStr += chunk; });

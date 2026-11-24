@@ -176,6 +176,18 @@ class NodeThermalPrinterController extends Controller
                     @File::put($targetConfigFile, json_encode($dirConfigData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
                 }
             }
+
+            // إرسال الإعدادات الجديدة مباشرة إلى سيرفر الطباعة (المنفذ 9124)
+            if ($this->isBridgeDaemonActive()) {
+                try {
+                    $bridgeUrl = $this->getBridgeUrl();
+                    Http::connectTimeout(1.0)->timeout(3.0)->post("{$bridgeUrl}/config", [
+                        'config' => $configData
+                    ]);
+                } catch (\Throwable $netErr) {
+                    Log::warning("syncEngineConfig bridge HTTP update warning: " . $netErr->getMessage());
+                }
+            }
         } catch (\Throwable $e) {
             Log::error("NodeThermalPrinterController syncEngineConfig error: " . $e->getMessage());
         }
