@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جاري تشغيل المنظومة | طيب التاجوري</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.45);
+            --primary-light: #60a5fa;
+            --bg-dark-1: #13131a;
+            --bg-dark-2: #242432;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: radial-gradient(circle at 50% 15%, #2a2a38 0%, #111116 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* دوائر جمالية ضوئية في الخلفية بنمط Spatial */
+        .ambient-glow {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            pointer-events: none;
+            opacity: 0.5;
+            z-index: 1;
+        }
+        .glow-1 {
+            width: 420px;
+            height: 420px;
+            background: #1e3a8a;
+            top: -100px;
+            right: 15%;
+        }
+        .glow-2 {
+            width: 360px;
+            height: 360px;
+            background: #2563eb;
+            bottom: -80px;
+            left: 20%;
+        }
+
+        /* البطاقة الزجاجية Spatial Glass Card */
+        .launcher-card {
+            position: relative;
+            z-index: 10;
+            width: 92%;
+            max-width: 490px;
+            padding: 46px 36px 38px;
+            border-radius: 36px;
+            background: linear-gradient(145deg, rgba(32, 42, 68, 0.65) 0%, rgba(18, 22, 36, 0.75) 100%);
+            backdrop-filter: blur(50px);
+            -webkit-backdrop-filter: blur(50px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.25),
+                        0 0 45px rgba(37, 99, 235, 0.2);
+            text-align: center;
+            animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes cardAppear {
+            0% { opacity: 0; transform: translateY(24px) scale(0.96); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* حاوية الأيقونة مع تأثير النبض المتوهج */
+        .brand-icon-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .icon-halo {
+            position: absolute;
+            inset: -6px;
+            border-radius: 32px;
+            background: linear-gradient(135deg, var(--primary), #38bdf8);
+            opacity: 0.6;
+            filter: blur(12px);
+            animation: pulseGlow 2.8s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(0.95); opacity: 0.45; }
+            50% { transform: scale(1.08); opacity: 0.85; }
+        }
+
+        .icon-box {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(45, 60, 105, 0.9) 0%, rgba(20, 26, 46, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+        }
+
+        .icon-box svg {
+            width: 50px;
+            height: 50px;
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14.5px;
+            color: rgba(255, 255, 255, 0.65);
+            font-weight: 500;
+            margin-bottom: 30px;
+        }
+
+        /* مؤشر التحميل الدائري المخصص */
+        .loader-ring {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 22px;
+        }
+
+        .loader-ring svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .loader-ring circle {
+            fill: none;
+            stroke-width: 5;
+            stroke-linecap: round;
+        }
+
+        .loader-ring .track {
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+
+        .loader-ring .indicator {
+            stroke: var(--primary-light);
+            stroke-dasharray: 175;
+            stroke-dashoffset: 130;
+            transform-origin: 50% 50%;
+            animation: spinRing 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes spinRing {
+            0% {
+                stroke-dashoffset: 160;
+                transform: rotate(0deg);
+            }
+            50% {
+                stroke-dashoffset: 40;
+                transform: rotate(180deg);
+            }
+            100% {
+                stroke-dashoffset: 160;
+                transform: rotate(360deg);
+            }
+        }
+
+        /* حالة الاتصال والرسائل */
+        .status-container {
+            min-height: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .status-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e2e8f0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: color 0.3s ease;
+        }
+
+        .status-badge {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            box-shadow: 0 0 10px #3b82f6;
+            animation: statusPulse 1.4s infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .attempts-counter {
+            font-size: 12.5px;
+            color: rgba(255, 255, 255, 0.45);
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        /* شريط التقدم السفلي الدقيق */
+        .progress-bar-wrap {
+            width: 100%;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 25%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            border-radius: 999px;
+            animation: progressFlow 2.2s infinite ease-in-out;
+        }
+
+        @keyframes progressFlow {
+            0% { transform: translateX(250%) scaleX(0.4); }
+            50% { transform: translateX(0%) scaleX(1); }
+            100% { transform: translateX(-250%) scaleX(0.4); }
+        }
+
+        /* زر الدخول اليدوي / الرابط */
+        .manual-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-launch {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 11px 24px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-launch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.55);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+
+        .btn-launch:active {
+            transform: translateY(0);
+        }
+
+        .footer-note {
+            margin-top: 26px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <div class="launcher-card">
+        <!-- أيقونة المنظومة المتوهجة بتصميم Spatial -->
+        <div class="brand-icon-wrapper">
+            <div class="icon-halo"></div>
+            <div class="icon-box">
+                <!-- زجاجة عطر فاخرة متناغمة مع نشاط المنظومة -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M9 3h6v3H9z" />
+                    <path d="M10 6v2h4V6" />
+                    <rect x="5" y="8" width="14" height="13" rx="4" />
+                    <line x1="12" y1="12" x2="12" y2="16" />
+                    <circle cx="12" cy="14" r="1.5" />
+                </svg>
+            </div>
+        </div>
+
+        <h1>منظومة طيب التاجوري</h1>
+        <p class="subtitle">إدارة المبيعات والمخزون والعطور</p>
+
+        <!-- حلقة التحميل -->
+        <div class="loader-ring">
+            <svg viewBox="0 0 64 64">
+                <circle class="track" cx="32" cy="32" r="27"></circle>
+                <circle class="indicator" cx="32" cy="32" r="27"></circle>
+            </svg>
+        </div>
+
+        <!-- حالة التحميل والاتصال بالسيرفر -->
+        <div class="status-container">
+            <div class="status-text" id="statusText">
+                <span class="status-badge" id="statusBadge"></span>
+                <span id="statusLabel">جاري تشغيل المنظومة والاتصال بالسيرفر...</span>
+            </div>
+            <div class="attempts-counter" id="attemptsCounter">فحص السيرفر (محاولة 1)...</div>
+        </div>
+
+        <!-- شريط التقدم -->
+        <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+
+        <!-- زر الانتقال اليدوي إذا رغب المستخدم في الضغط عليه مباشرة -->
+        <div class="manual-action">
+            <a href="http://localhost:8000" id="directLink" class="btn-launch">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+                دخول مباشر للمنظومة
+            </a>
+        </div>
+
+        <div class="footer-note">
+            <span>الرابط المحلي: localhost:8000</span>
+            <span>•</span>
+            <span>Docker Container</span>
+        </div>
+    </div>
+
+    <script>
+        const TARGET_URL = "http://localhost:8000";
+        const CHECK_INTERVAL = 1200; // فحص كل 1.2 ثانية
+        let attempt = 0;
+        let isRedirecting = false;
+
+        const statusLabel = document.getElementById("statusLabel");
+        const statusBadge = document.getElementById("statusBadge");
+        const attemptsCounter = document.getElementById("attemptsCounter");
+        const progressBar = document.getElementById("progressBar");
+
+        async function checkServer() {
+            if (isRedirecting) return;
+            attempt++;
+            attemptsCounter.innerText = `فحص الاتصال (محاولة ${attempt})...`;
+
+            try {
+                /*
+                 * استخدام no-cache لضمان عدم الكاش
+                 * mode: 'no-cors' تضمن النجاح فور استجابة السيرفر وتفادي قيود CORS
+                 */
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+                await fetch(TARGET_URL + "/?t=" + Date.now(), {
+                    method: 'GET',
+                    mode: 'no-cors',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                // السيرفر استجاب وجاهز للعمل
+                isRedirecting = true;
+                statusBadge.style.backgroundColor = "#22c55e";
+                statusBadge.style.boxShadow = "0 0 12px #22c55e";
+                statusLabel.innerText = "تم تجهيز المنظومة بنجاح! جاري الفتح...";
+                attemptsCounter.innerText = "تم الاتصال بنجاح ✓";
+                progressBar.style.animation = "none";
+                progressBar.style.width = "100%";
+                progressBar.style.background = "#22c55e";
+
+                // انتقال تلقائي فوري وسلس
+                setTimeout(() => {
+                    window.location.replace(TARGET_URL);
+                }, 400);
+
+            } catch (err) {
+                // في حال عدم جاهزية السيرفر بعد
+                if (attempt > 6) {
+                    statusLabel.innerText = "جاري تهيئة الحاوية (Docker) وقواعد البيانات...";
+                } else {
+                    statusLabel.innerText = "جاري تشغيل المنظومة والاتصال بالسيرفر...";
+                }
+                setTimeout(checkServer, CHECK_INTERVAL);
+            }
+        }
+
+        // بدء الفحص فور تحميل الصفحة
+        window.addEventListener("DOMContentLoaded", () => {
+            setTimeout(checkServer, 500);
+        });
+    </script>
+</body>
+</html>
