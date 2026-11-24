@@ -81,9 +81,9 @@ class NodeThermalPrinterController extends Controller
         $printerName = $this->settingRepo->get('node_printer_name', 'XP-80');
         $showQrCode = $this->settingRepo->get('show_qr_code', '1') === '1';
 
-        $storeLogoSetting = $this->settingRepo->get('store_logo', '/images/logo-black_white.png');
-        $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path(ltrim($storeLogoSetting, '/\\')));
-        if (!File::exists($logoFullPath)) {
+        $storeLogoSetting = $this->settingRepo->get('store_logo') ?: '/images/logo-black_white.png';
+        $logoFullPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, public_path(ltrim((string)$storeLogoSetting, '/\\')));
+        if (!File::isFile($logoFullPath)) {
             $files = File::glob(public_path('images/receipt/logo_*.*'));
             if (!empty($files)) {
                 usort($files, function($a, $b) {
@@ -96,7 +96,7 @@ class NodeThermalPrinterController extends Controller
         }
 
         $logoBase64 = '';
-        if (File::exists($logoFullPath)) {
+        if (File::isFile($logoFullPath)) {
             $mime = File::mimeType($logoFullPath) ?: 'image/png';
             $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(File::get($logoFullPath));
         }
@@ -146,11 +146,11 @@ class NodeThermalPrinterController extends Controller
 
             $ext = strrchr($logoFullPath, '.') ?: '.png';
             $engineLogoPath = $assetsDir . DIRECTORY_SEPARATOR . 'current_logo' . $ext;
-            if (File::exists($logoFullPath)) {
+            if (File::isFile($logoFullPath)) {
                 @File::copy($logoFullPath, $engineLogoPath);
             }
 
-            $configData['store']['logoPath'] = File::exists($engineLogoPath) ? $engineLogoPath : $logoFullPath;
+            $configData['store']['logoPath'] = File::isFile($engineLogoPath) ? $engineLogoPath : $logoFullPath;
 
             // مزامنة الملفات مع جميع مسارات سيرفر الطباعة المعروفة (thermal-printer-engine و printer_bridge)
             $targetDirs = [
