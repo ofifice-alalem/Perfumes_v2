@@ -1,5 +1,4 @@
 *.log
-printer_bridge
 .DS_Store
 .env
 .env.backup
@@ -15,7 +14,6 @@ printer_bridge
 /.zed
 /auth.json
 node_modules/
-deploy_package/
 **/node_modules/
 thermal-printer-engine/node_modules/
 thermal-printer-engine/output/
@@ -52,3 +50,8 @@ frankenphp-worker.php
 
 # Portable runtime packaging
 /runtime/
+
+# Docker export bundle
+deploy_package/perfumes_bundle_offline.tar
+deploy_package/printer_bridge/node.exe
+

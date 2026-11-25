@@ -1,0 +1,71 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: perfumes_v2_app:latest
+    container_name: perfumes_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      APP_NAME: "منظومة السحابة"
+      APP_ENV: production
+      APP_KEY: "base64:3fqelcbJEgjTuoQGyQcUgNZjkfZ3lBPhr8DOKgFSjG0="
+      APP_DEBUG: "false"
+      APP_URL: "http://localhost:8000"
+      APP_LOCALE: "ar"
+      APP_FALLBACK_LOCALE: "en"
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: perfumes_v2
+      DB_USERNAME: perfumes_user
+      DB_PASSWORD: perfumes_secret_password
+      SESSION_DRIVER: file
+      SESSION_LIFETIME: 480
+      CACHE_STORE: file
+      QUEUE_CONNECTION: sync
+      PRINTER_BRIDGE_URL: "http://host.docker.internal:9124"
+    volumes:
+      - storage_data:/var/www/html/storage/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - perfumes_net
+
+  db:
+    image: mysql:8.0
+    container_name: perfumes_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: perfumes_v2
+      MYSQL_USER: perfumes_user
+      MYSQL_PASSWORD: perfumes_secret_password
+      MYSQL_ROOT_PASSWORD: root_master_password
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_master_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - perfumes_net
+
+volumes:
+  db_data:
+    name: perfumes_v2_db_data
+  storage_data:
+    name: perfumes_v2_storage_data
+
+networks:
+  perfumes_net:
+    driver: bridge

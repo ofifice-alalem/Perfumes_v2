@@ -1,0 +1,340 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { sampleInvoice, sampleMultiItemInvoice } = require('./src/invoice/invoice-data');
+const { renderInvoiceCanvas } = require('./src/invoice/invoice-renderer');
+const { encodePngToEscPosRaster } = require('./src/printer/escpos-encoder');
+const { printRawBuffer } = require('./src/printer/printer-service');
+
+const PORT = 9124;
+const HOST = '127.0.0.1';
+
+// Pre-load fonts and initial config on server boot
+let config = {};
+function loadConfig() {
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(configPath)) {
+            config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        }
+    } catch (e) {
+        console.error("Server config load error:", e.message);
+    }
+}
+loadConfig();
+
+function getInvoiceModules() {
+    try {
+        delete require.cache[require.resolve('./src/invoice/invoice-renderer')];
+        delete require.cache[require.resolve('./src/invoice/invoice-data')];
+    } catch (e) {}
+    const { sampleInvoice, sampleMultiItemInvoice } = require('./src/invoice/invoice-data');
+    const { renderInvoiceCanvas } = require('./src/invoice/invoice-renderer');
+    return { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas };
+}
+
+const server = http.createServer(async (req, res) => {
+    // CORS headers for local app
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
+    const url = new URL(req.url, `http://${HOST}:${PORT}`);
+
+    if (url.pathname === '/shutdown' || url.pathname === '/restart') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, message: 'Server shutting down...' }));
+        setTimeout(() => process.exit(0), 100);
+        return;
+    }
+
+    if (url.pathname === '/health' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+        return;
+    }
+
+    if (url.pathname === '/config' && (req.method === 'POST' || req.method === 'PUT')) {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            try {
+                let payload = {};
+                if (bodyStr.trim()) {
+                    payload = JSON.parse(bodyStr);
+                }
+                const newConfig = payload.config || payload;
+                if (!newConfig || typeof newConfig !== 'object') {
+                    throw new Error('Invalid config payload');
+                }
+
+                loadConfig();
+                config = {
+                    ...config,
+                    ...newConfig,
+                    printer: { ...(config.printer || {}), ...(newConfig.printer || {}) },
+                    store: { ...(config.store || {}), ...(newConfig.store || {}) },
+                    labelPrinter: { ...(config.labelPrinter || {}), ...(newConfig.labelPrinter || {}) }
+                };
+
+                // Save to config.json
+                const configPath = path.join(__dirname, 'config.json');
+                fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf8');
+
+                // If Base64 logo is provided, save it to assets/current_logo.png
+                if (config.store?.logoBase64 && typeof config.store.logoBase64 === 'string') {
+                    try {
+                        const assetsDir = path.join(__dirname, 'assets');
+                        if (!fs.existsSync(assetsDir)) {
+                            fs.mkdirSync(assetsDir, { recursive: true });
+                        }
+                        const cleanB64 = config.store.logoBase64.replace(/^data:image\/[a-zA-Z]+;base64,/, '');
+                        const imgBuffer = Buffer.from(cleanB64, 'base64');
+                        const localLogoPath = path.join(assetsDir, 'current_logo.png');
+                        fs.writeFileSync(localLogoPath, imgBuffer);
+                        config.store.logoPath = localLogoPath;
+                        fs.writeFileSync(configPath, JSON.stringify(config, null, 4), 'utf8');
+                    } catch (logoErr) {
+                        console.warn("Could not write logo file to assets:", logoErr.message);
+                    }
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    message: 'Config updated and saved successfully',
+                    config: config
+                }));
+            } catch (err) {
+                console.error('Error updating config via bridge:', err.message);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: 'Failed to update config: ' + err.message
+                }));
+            }
+        });
+        return;
+    }
+
+    if (url.pathname === '/print' && req.method === 'POST') {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            const startTime = Date.now();
+            try {
+                loadConfig();
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
+                const activeConfig = payload.config ? { ...config, ...payload.config, store: { ...config.store, ...(payload.config.store || {}) } } : config;
+                const printerName = payload.printerName || activeConfig.printer?.name || 'XP-80';
+                const useMulti = payload.multi !== false;
+                const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
+
+                // If async flag is requested (e.g. from POS checkout), respond 200 OK immediately (< 2ms)
+                if (payload.async) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        success: true,
+                        status: 'queued',
+                        message: 'Print job queued immediately'
+                    }));
+
+                    // Execute canvas rendering and Windows Spooler transmission in the background
+                    (async () => {
+                        try {
+                            const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
+                            const escposBuffer = await encodePngToEscPosRaster(canvas, {
+                                cutPaper: activeConfig.printer?.cutPaper !== false,
+                                feedLinesAfterPrint: activeConfig.printer?.feedLinesAfterPrint ?? 0
+                            });
+                            await printRawBuffer(printerName, escposBuffer);
+                        } catch (bgErr) {
+                            console.error("Background async print error:", bgErr.message);
+                        }
+                    })();
+                    return;
+                }
+
+                // 1. Fast Canvas Render
+                const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
+
+                // 2. Fast ESC/POS Encoding
+                const escposBuffer = await encodePngToEscPosRaster(canvas, {
+                    cutPaper: activeConfig.printer?.cutPaper !== false,
+                    feedLinesAfterPrint: activeConfig.printer?.feedLinesAfterPrint ?? 0
+                });
+
+                // 3. Ultra-fast Native Win32 Spooling
+                const result = await printRawBuffer(printerName, escposBuffer);
+
+                const durationMs = Date.now() - startTime;
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    message: result.message,
+                    printerUsed: result.printerUsed,
+                    durationMs
+                }));
+            } catch (err) {
+                const durationMs = Date.now() - startTime;
+                console.error("Print Error:", err.message);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message,
+                    durationMs
+                }));
+            }
+        });
+        return;
+    }
+
+    if (url.pathname === '/preview' && (req.method === 'GET' || req.method === 'POST')) {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            try {
+                loadConfig();
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                const { sampleInvoice, sampleMultiItemInvoice, renderInvoiceCanvas } = getInvoiceModules();
+                const activeConfig = payload.config ? { ...config, ...payload.config, store: { ...config.store, ...(payload.config.store || {}) } } : config;
+                const useMulti = payload.multi !== false;
+                const invoiceData = payload.invoice || (useMulti ? sampleMultiItemInvoice : sampleInvoice);
+
+                const canvas = await renderInvoiceCanvas(invoiceData, activeConfig);
+                const pngBuffer = canvas.toBuffer ? canvas.toBuffer('image/png') : canvas;
+
+                const base64Src = 'data:image/png;base64,' + pngBuffer.toString('base64');
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    preview_src: base64Src
+                }));
+            } catch (err) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message
+                }));
+            }
+        });
+        return;
+    }
+
+    if ((url.pathname === '/print-label' || url.pathname === '/print-batch-labels') && req.method === 'POST') {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            const startTime = Date.now();
+            try {
+                loadConfig();
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                let printerName = (payload.printerName || config.labelPrinter?.name || '').trim();
+                if (!printerName) {
+                    throw new Error("No printer name specified for label printing");
+                }
+                const labelsList = Array.isArray(payload.labels) && payload.labels.length > 0
+                    ? payload.labels
+                    : [payload.label || payload];
+
+                const { renderLabelCanvas } = require('./src/label/label-renderer');
+                const { encodeCanvasToTspl, encodeCanvasToEscPos } = require('./src/label/label-encoder');
+
+                const buffers = [];
+                for (const item of labelsList) {
+                    const canvas = await renderLabelCanvas(item);
+                    const protocol = item.protocol || 'tspl';
+                    if (protocol === 'escpos') {
+                        buffers.push(encodeCanvasToEscPos(canvas, item));
+                    } else {
+                        buffers.push(encodeCanvasToTspl(canvas, item));
+                    }
+                }
+
+                const rawBuffer = Buffer.concat(buffers);
+                const result = await printRawBuffer(printerName, rawBuffer);
+                const durationMs = Date.now() - startTime;
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    message: labelsList.length > 1
+                        ? `تم إرسال ${labelsList.length} ملصق بنجاح إلى الطابعة`
+                        : (result.message || 'تم إرسال الملصق بنجاح إلى الطابعة'),
+                    printerUsed: result.printerUsed || printerName,
+                    count: labelsList.length,
+                    durationMs
+                }));
+            } catch (err) {
+                const durationMs = Date.now() - startTime;
+                console.error("Print Label Error:", err.message);
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message,
+                    durationMs
+                }));
+            }
+        });
+        return;
+    }
+
+    if (url.pathname === '/preview-label' && (req.method === 'GET' || req.method === 'POST')) {
+        let bodyStr = '';
+        req.on('data', chunk => { bodyStr += chunk; });
+        req.on('end', async () => {
+            try {
+                let payload = {};
+                if (bodyStr.trim()) {
+                    try { payload = JSON.parse(bodyStr); } catch (e) {}
+                }
+
+                const labelData = payload.label || payload;
+                const { renderLabelCanvas } = require('./src/label/label-renderer');
+                const canvas = await renderLabelCanvas(labelData);
+                const pngBuffer = canvas.toBuffer ? canvas.toBuffer('image/png') : canvas;
+                const base64Src = 'data:image/png;base64,' + pngBuffer.toString('base64');
+
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: true,
+                    preview_src: base64Src
+                }));
+            } catch (err) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    success: false,
+                    message: err.message
+                }));
+            }
+        });
+        return;
+    }
+
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not Found' }));
+});
+
+server.listen(PORT, HOST, () => {
+    console.log(`⚡ Thermal Printer Persistent Speed Service running on http://${HOST}:${PORT}`);
+});
