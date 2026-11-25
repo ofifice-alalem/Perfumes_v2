@@ -18,34 +18,58 @@ fi
 
 CURRENT_USER="${SUDO_USER:-$USER}"
 
-echo "إنشاء خدمة الإقلاع التلقائي..."
+# التأكد من تمكين وتشغيل خدمة Docker Engine تلقائياً مع النظام
+echo "التحقق من تفعيل وتشغيل خدمة Docker..."
+systemctl enable --now docker 2>/dev/null || true
 
-cat <<EOF > "$SERVICE_FILE"
+# التبديل إلى سياق النظام الأساسي لدوكر
+if command -v docker &> /dev/null; then
+    docker context use default >/dev/null 2>&1 || true
+fi
+
+PRINTER_SERVICE_NAME="taqniya-printer"
+PRINTER_SERVICE_FILE="/etc/systemd/system/${PRINTER_SERVICE_NAME}.service"
+
+echo "إنشاء وتفعيل خدمة سيرفر الطباعة فائق السرعة..."
+
+cat <<EOF > "$PRINTER_SERVICE_FILE"
 [Unit]
-Description=Taqniya Cloud POS and Printer Bridge
-After=network.target docker.service
-Wants=docker.service
+Description=Taqniya Instant Thermal Printer Bridge
+After=network-online.target
+Wants=network-online.target
 
 [Service]
-Type=forking
+Type=simple
 User=$CURRENT_USER
-WorkingDirectory=$BASE_DIR
-ExecStart=/bin/bash $DIR/run_silent.sh
-ExecStop=/bin/bash $DIR/stop_docker.sh
-Restart=on-failure
-RestartSec=5s
+WorkingDirectory=$BASE_DIR/printer_bridge
+ExecStart=/usr/bin/node $BASE_DIR/printer_bridge/server.js
+Restart=always
+RestartSec=2s
+Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-chmod 644 "$SERVICE_FILE"
-chmod +x "$DIR/run_silent.sh"
-chmod +x "$DIR/run_docker.sh"
-chmod +x "$DIR/stop_docker.sh"
+chmod 644 "$PRINTER_SERVICE_FILE"
+
+echo "تفعيل التشغيل التلقائي لحاويات Docker..."
+cd "$BASE_DIR"
+if command -v docker-compose &> /dev/null; then
+    docker-compose up -d --remove-orphans
+else
+    docker compose up -d --remove-orphans
+fi
+
+# إزالة خدمة taqniya-pos القديمة إن وجدت لتفادي إيقاف الحاويات بالخطأ
+if [ -f "$SERVICE_FILE" ]; then
+    systemctl stop "$SERVICE_NAME.service" 2>/dev/null || true
+    systemctl disable "$SERVICE_NAME.service" 2>/dev/null || true
+    rm -f "$SERVICE_FILE"
+fi
 
 systemctl daemon-reload
-systemctl enable "$SERVICE_NAME.service"
+systemctl enable --now "$PRINTER_SERVICE_NAME.service"
 
 echo ""
 echo "===================================================="

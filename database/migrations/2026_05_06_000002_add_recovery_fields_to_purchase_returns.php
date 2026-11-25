@@ -9,18 +9,26 @@ return new class extends Migration {
     {
         // Add recovery tracking fields to purchase_returns
         Schema::table('purchase_returns', function (Blueprint $table) {
-            $table->decimal('recovered_amount', 10, 2)->default(0)->after('total');
-            $table->decimal('due_recovery', 10, 2)->default(0)->after('recovered_amount');
-            $table->enum('recovery_status', ['unpaid', 'partial', 'paid'])->default('unpaid')->after('due_recovery');
+            if (!Schema::hasColumn('purchase_returns', 'recovered_amount')) {
+                $table->decimal('recovered_amount', 10, 2)->default(0)->after('total');
+            }
+            if (!Schema::hasColumn('purchase_returns', 'due_recovery')) {
+                $table->decimal('due_recovery', 10, 2)->default(0)->after('recovered_amount');
+            }
+            if (!Schema::hasColumn('purchase_returns', 'recovery_status')) {
+                $table->enum('recovery_status', ['unpaid', 'partial', 'paid'])->default('unpaid')->after('due_recovery');
+            }
         });
 
         // Add purchase_return_id to supplier_settlements
         Schema::table('supplier_settlements', function (Blueprint $table) {
-            $table->foreignId('purchase_return_id')
-                ->nullable()
-                ->after('purchase_id')
-                ->constrained('purchase_returns')
-                ->nullOnDelete();
+            if (!Schema::hasColumn('supplier_settlements', 'purchase_return_id')) {
+                $table->foreignId('purchase_return_id')
+                    ->nullable()
+                    ->after('purchase_id')
+                    ->constrained('purchase_returns')
+                    ->nullOnDelete();
+            }
         });
     }
 

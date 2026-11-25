@@ -7,11 +7,25 @@ echo "===================================================="
 echo "  منظومة السحابة - تشغيل (Linux)"
 echo "===================================================="
 
-# 1. التحقق من Docker
+# 1. التحقق من Docker وتعيين السياق والتأكد من تشغيل الخدمة
 if ! command -v docker &> /dev/null; then
     echo "[خطأ فادح] Docker غير مثبت! يرجى تشغيل install_everything.sh أولاً."
     read -p "اضغط Enter للإغلاق..."
     exit 1
+fi
+
+# التبديل إلى سياق النظام الأساسي (تجاوز Docker Desktop إن وجد)
+docker context use default >/dev/null 2>&1 || true
+
+if ! docker info &> /dev/null; then
+    echo "خدمة Docker غير مشغلة. جاري تشغيل Docker Engine..."
+    sudo systemctl start docker 2>/dev/null || systemctl start docker 2>/dev/null
+    sleep 2
+    if ! docker info &> /dev/null; then
+        echo "[خطأ] تعذر الاتصال بـ Docker daemon! يرجى التأكد من تشغيلها يدوياً (sudo systemctl start docker)."
+        read -p "اضغط Enter للإغلاق..."
+        exit 1
+    fi
 fi
 
 # 2. تشغيل وسيط الطباعة
@@ -35,11 +49,12 @@ fi
 
 # 4. تشغيل الحاويات
 echo "[3/3] تشغيل حاويات النظام..."
+COMPOSE_CMD="docker compose"
 if command -v docker-compose &> /dev/null; then
-    docker-compose up -d
-else
-    docker compose up -d
+    COMPOSE_CMD="docker-compose"
 fi
+
+$COMPOSE_CMD up -d --remove-orphans
 
 echo ""
 echo "===================================================="

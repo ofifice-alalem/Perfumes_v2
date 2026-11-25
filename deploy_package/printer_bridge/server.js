@@ -7,7 +7,7 @@ const { encodePngToEscPosRaster } = require('./src/printer/escpos-encoder');
 const { printRawBuffer } = require('./src/printer/printer-service');
 
 const PORT = 9124;
-const HOST = '127.0.0.1';
+const HOST = '0.0.0.0';
 
 // Pre-load fonts and initial config on server boot
 let config = {};

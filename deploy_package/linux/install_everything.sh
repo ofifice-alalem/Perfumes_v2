@@ -31,8 +31,21 @@ fi
 echo ""
 echo "[3/4] التحقق من Docker و Docker Compose..."
 if ! command -v docker &> /dev/null; then
-    echo "Docker غير موجود. جاري تثبيت Docker تلقائياً..."
-    curl -fsSL https://get.docker.com | sh
+    echo "Docker غير موجود. جاري تثبيت Docker CE ومستودعاته الرسمية..."
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg
+    
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$UBUNTU_CODENAME") stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    apt-get update -y
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
     systemctl enable --now docker
 fi
 
@@ -44,22 +57,32 @@ fi
 echo ""
 echo "[4/4] تثبيت Node.js وحزم وسيط الطباعة..."
 if ! command -v node &> /dev/null; then
-    echo "جاري تثبيت Node.js الحديث..."
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    echo "جاري تثبيت Node.js الحديث (v20.x LTS) عبر مستودع NodeSource الرسمي..."
+    apt-get update -y
+    apt-get install -y ca-certificates curl gnupg
+    
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor --yes -o /etc/apt/keyrings/nodesource.gpg
+    chmod a+r /etc/apt/keyrings/nodesource.gpg
+
+    NODE_MAJOR=20
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_$NODE_MAJOR.x nodistro main" | \
+      tee /etc/apt/sources.list.d/nodesource.list > /dev/null
+
+    apt-get update -y
     apt-get install -y nodejs
 fi
 
 # الانتقال لمجلد وسيط الطباعة وتثبيت الحزم
 cd "$BASE_DIR/printer_bridge"
 if [ -f "package.json" ]; then
-    echo "تثبيت مكتبات الفواتير والباركود العربي..."
-    npm install --save \
-      "@napi-rs/canvas@^0.1.66" \
-      "@fontsource/cairo@^5.3.0" \
-      "arabic-persian-reshaper@^1.0.1" \
-      "bidi-js@^1.0.3" \
-      "qrcode@^1.5.4" \
-      "jsbarcode@^3.12.3" >/dev/null 2>&1 || true
+    echo "تثبيت مكتبات وسيط الطباعة والفواتير والباركود (jsbarcode, canvas, qrcode...)..."
+    npm install --omit=dev
+    
+    # التأكد من صلاحيات المجلد للمستخدم الحالي بعد تثبيت npm كـ root
+    if [ -n "$TARGET_USER" ]; then
+        chown -R "$TARGET_USER:$TARGET_USER" "$BASE_DIR/printer_bridge/node_modules" 2>/dev/null || true
+    fi
 fi
 
 echo ""
