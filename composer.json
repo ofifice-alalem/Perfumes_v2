@@ -16,6 +16,7 @@
         "laravel/octane": "^2.17",
         "laravel/tinker": "^3.0",
         "openspout/openspout": "^5.10",
+        "phpoffice/phpspreadsheet": "^1.30",
         "owen-it/laravel-auditing": "^14.0",
         "predis/predis": "^3.5",
         "prettus/l5-repository": "^1.0",

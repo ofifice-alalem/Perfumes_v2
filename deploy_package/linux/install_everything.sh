@@ -17,6 +17,14 @@ fi
 
 TARGET_USER="${SUDO_USER:-$USER}"
 
+# 0. إصلاح مصادر الـ APT وتعطيل مصادر cdrom المعطوبة في وضع التجريب (Live USB)
+if [ -f "/etc/apt/sources.list" ]; then
+    sed -i '/cdrom:/s/^/#/' /etc/apt/sources.list 2>/dev/null || true
+fi
+if [ -d "/etc/apt/sources.list.d" ]; then
+    sed -i '/cdrom:/s/^/#/' /etc/apt/sources.list.d/*.list 2>/dev/null || true
+fi
+
 echo "[1/4] منح صلاحيات التنفيذ لجميع ملفات النظام..."
 chmod +x "$DIR"/*.sh 2>/dev/null || true
 chmod +x "$BASE_DIR"/printer_bridge/*.sh 2>/dev/null || true
@@ -39,9 +47,17 @@ if ! command -v docker &> /dev/null; then
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
 
+    # تحديد اسم إصدار أوبونتو الأساسي (متوافق مع Ubuntu و Linux Mint ومشتقاتها)
+    . /etc/os-release
+    DISTRO_CODENAME="${UBUNTU_CODENAME:-$VERSION_CODENAME}"
+    if [ -z "$DISTRO_CODENAME" ] || [ "$ID" = "linuxmint" ]; then
+        # إذا كان لينكس مينت ولم يحدد UBUNTU_CODENAME، نستخرجه من upstream أو الافتراضي noble/jammy
+        DISTRO_CODENAME="${UBUNTU_CODENAME:-noble}"
+    fi
+
     echo \
       "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(. /etc/os-release && echo "$UBUNTU_CODENAME") stable" | \
+      $DISTRO_CODENAME stable" | \
       tee /etc/apt/sources.list.d/docker.list > /dev/null
 
     apt-get update -y
