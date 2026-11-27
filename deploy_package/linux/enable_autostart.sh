@@ -35,17 +35,18 @@ echo "إنشاء وتفعيل خدمة سيرفر الطباعة فائق الس
 cat <<EOF > "$PRINTER_SERVICE_FILE"
 [Unit]
 Description=Taqniya Instant Thermal Printer Bridge
-After=network-online.target
-Wants=network-online.target
+After=network-online.target cups.service cups.socket
+Wants=network-online.target cups.service
 
 [Service]
 Type=simple
 User=$CURRENT_USER
 WorkingDirectory=$BASE_DIR/printer_bridge
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/usr/bin/node $BASE_DIR/printer_bridge/server.js
 Restart=always
-RestartSec=2s
-Environment=NODE_ENV=production
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
